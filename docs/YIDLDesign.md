@@ -1,4 +1,18 @@
-# **V2 YIDL Compiler Design: The Meta-Lifecycle Engine**
+# **V2 YIDL Compiler Design: Historical Reference**
+
+> Historical reference only.
+>
+> This document is preserved as the original monolithic design note. It is no
+> longer the normative source of truth.
+>
+> Current normative design is split across:
+>
+> - `docs/YIDLFrontendDesign.md`
+> - `docs/YIDLCodegenDesign.md`
+> - `docs/YIDLRuntimeClassModel.md`
+>
+> Keep this file for history and context, but prefer the split design docs for
+> active design, coverage review, and follow-on edits.
 
 ## **1\. Executive Summary**
 
