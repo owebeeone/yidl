@@ -40,10 +40,17 @@ Artifacts:
 - `docs/validation/generated_example/`
 - `docs/validation/field_representability/`
 - `docs/validation/perf/`
+- `docs/validation/generated_example/README.md`
+- `docs/validation/field_representability/README.md`
+- `docs/validation/perf/README.md`
 
 Verification:
 
-- directories exist and are documented enough to guide contributors
+- directories exist
+- each subtree has a short README describing purpose, allowed contents, and
+  validation-only status
+- the validation scaffold is documented enough to guide contributors without
+  guessing where new study artifacts belong
 
 Failure means:
 
