@@ -20,7 +20,9 @@ During this phase, do **not** edit files under `pyrolyze/`.
 
 Before routine feature-slice implementation becomes the dominant workflow, complete the empirical design review described in **`dev-docs/PRE_IMPL_DESIGN_REVIEW.md`**.
 
-That review is the place to:
+**First concrete PRE_IMPL work:** execute the matrix study in **`dev-docs/PRE_IMPL_STUDY_DESIGN.md`** — scenario matrix, shared harness, behavioral and performance checks comparing reference `pyrolyze.lifecycle` to hand-crafted generated strategies under `docs/validation/`. That document is where we validate the mechanisms we will use to achieve lifecycle semantics in a comparable matrix.
+
+That review (and the study) is the place to:
 
 - implement the development-only `_yidl.py` fake compile-on-load bootstrap path as the first enabling step, so empirical YIDL work can run on day 1
 - validate `example/generated_factory_sample.py` as an architectural target
@@ -31,7 +33,7 @@ That review is the place to:
 
 This review stage is intentionally empirical and non-normative. Its purpose is to challenge the model before routine implementation pressure makes design drift harder to correct.
 
-The `_yidl.py` bootstrap path is the first concrete deliverable of this stage. It provides the temporary fake compile-on-load machinery needed to embed YIDL source in Python containers during development, and it should land before the generated example and representability validation work begins.
+The `_yidl.py` bootstrap path is an enabling deliverable of this stage. It provides the temporary fake compile-on-load machinery needed to embed YIDL source in Python containers during development. It is **not** a prerequisite for starting the **PRE_IMPL Study Design** matrix (reference lifecycle vs hand-crafted generated strategies in `docs/validation/`); land bootstrap when probes or workflows need YIDL-in-container, in line with **`dev-docs/impl-docs/pre_impl_design.md`** ordering.
 
 PRE_IMPL is a hard gate. Routine per-feature implementation work must not begin until this stage is complete. Any bootstrap work that lands before PRE_IMPL completion is provisional and does not waive the gate for the main feature cycle.
 

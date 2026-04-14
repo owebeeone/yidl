@@ -6,6 +6,8 @@ The purpose of this stage is empirical model verification. Before scaling up the
 
 This stage is intentionally exploratory. It does **not** define the final normative implementation. It exists to discover design stress, representability gaps, and performance surprises early enough to change direction safely.
 
+For **how** that evidence is gathered first — scenario matrix, adapters, behavioral and performance runners, outputs under `docs/validation/` — follow **`dev-docs/PRE_IMPL_STUDY_DESIGN.md`**.
+
 PRE_IMPL is a hard gate for the main feature cycle in `dev-docs/PROCESS.md`. Routine per-feature implementation work must not begin until this stage is complete. Bootstrap infrastructure may land during this stage, but it does not count as waiving the gate.
 
 ## Goals
