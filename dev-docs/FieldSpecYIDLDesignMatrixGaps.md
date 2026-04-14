@@ -21,14 +21,13 @@ Tie-breaking should prefer consistency with:
 - `dev-docs/RuntimeExtractionPlan.md`
 - the split YIDL design docs
 
-## GAP-TG — transaction groups are not first-class in the YIDL design
+## GAP-TG — transaction-group semantics still need completion details
 
 Shortcoming:
 
-`tx_group` and related multi-group semantics appear throughout lifecycle helper
-behavior, but the split design docs still do not give named transaction groups
-their own first-class design section. The matrix can only mark `TG` as
-provisional, which weakens coverage for every helper that depends on it.
+`tx_group` and related multi-group semantics now have explicit ownership in the
+split design docs, but the completion details remain thin. In particular,
+visibility across groups and cross-group interaction rules are still open.
 
 Recommendations:
 
@@ -47,8 +46,8 @@ Preferred:
 Reason:
 
 This matches lifecycle more faithfully and reduces ambiguity in both codegen and
-field-helper coverage. It is primarily a runtime/class-model gap, with a small
-frontend/spec consequence.
+field-helper coverage. It is primarily a runtime/class-model completion gap,
+with a small frontend/spec consequence.
 
 Generated example fix:
 

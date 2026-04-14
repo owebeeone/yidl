@@ -47,6 +47,19 @@ Output:
 The harvester owns source-level composition and schema extraction. It does not
 own the full runtime layout.
 
+### 2.1 Harvested `tx_group`
+
+When a helper or related source declaration includes `tx_group`, the harvester
+must preserve that value in harvested/spec metadata so later codegen and the
+runtime/class model can place the field or hook into the correct transaction
+group.
+
+At the frontend layer, `tx_group` is:
+
+- harvested source/spec metadata
+- not itself a runtime execution rule
+- expected to survive binding into the spec-like structure consumed by codegen
+
 ## 3. YIDL source parsing
 
 The parser reads YIDL source into a strict typed AST.

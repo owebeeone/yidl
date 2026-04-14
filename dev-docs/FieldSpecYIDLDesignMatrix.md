@@ -74,7 +74,7 @@ Practical derivation rule:
 | **EL** | **Evict-last** staging (refcount / binding teardown order) | `YIDLRuntimeClassModel.md` §6 |
 | **CL** | **Closure capture** — `exec` factory, `LOAD_DEREF`, spec locals | `YIDLCodegenDesign.md` §5 |
 | **TR** | **AST transform** — behavior snippets → physical store access | `YIDLCodegenDesign.md` §2 |
-| **TG** | **Named transaction groups** — multi-group begin/commit isolation | Runtime-class-model open issue; not yet first-class (**TBD** in split design) |
+| **TG** | **Named transaction groups** — multi-group begin/commit isolation | `YIDLRuntimeClassModel.md` §5a, `YIDLFrontendDesign.md` §2.1 (visibility details still open) |
 
 ---
 

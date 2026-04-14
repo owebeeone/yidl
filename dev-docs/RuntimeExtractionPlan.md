@@ -47,7 +47,9 @@ Legend: **needs** = generated or hand-crafted code must cooperate with this runt
    Freeze a short **protocol checklist** (methods `TransactionManager` calls on contexts: `_commit_transaction`, `_rollback_transaction`, `validate_commit_for`, `commit_order_key_for`, etc.) derived from `GroupTransactionManager` + `LifecycleTransaction`. Generated `Bar` and later YIDL-owned runtime modules must satisfy this without relying on `LifecycleContextState` internals.
 
 3. **Phase C — YIDL-owned runtime modules, slice by slice**  
-   Re-home **R1 + R2** and a **minimal** context interface into small YIDL-owned runtime modules with **no** `managed_context` / `LCKind`. This move should happen per feature slice as required runtime pieces become understood and tested, rather than as one large late extraction. The target direction is that YIDL becomes authoritative and `pyrolyze` can later depend on YIDL for lifecycle runtime behavior.
+   Re-home **R1 + R2** and a **minimal** context interface into small YIDL-owned runtime modules with **no** `managed_context` / `LCKind`. This move should happen per feature slice as required runtime pieces become understood and tested, rather than as one large late extraction. The initial practical move is to lift/copy the relevant `TransactionManager` behavior from `lifecycle.py` into YIDL-owned runtime modules, preserve the known semantics, and then evolve from that owned baseline. The target direction is that YIDL becomes authoritative and `pyrolyze` can later depend on YIDL for lifecycle runtime behavior.
+
+   For multi-group behavior, the intended policy is **separate by default**. YIDL should not invent richer cross-group semantics unless they are made explicit. If an application needs groups to coordinate, the runtime may expose tools that let application code tie groups explicitly rather than inferring coupling automatically.
 
 4. **Phase D — Generated commit path**  
    Replace generic `__class_ftable_commit_field__` dispatch with per-class `_lc_commit` / `_lc_rollback` emitted from YIDL; runtime semantics are then supplied by YIDL-owned runtime modules rather than remaining anchored in `pyrolyze.lifecycle`.

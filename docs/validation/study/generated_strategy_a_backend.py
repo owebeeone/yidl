@@ -5,25 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from study.contract import StudySubject
-
-
-class _GeneratedTransaction:
-    def __enter__(self) -> "_GeneratedTransaction":
-        return self
-
-    def __exit__(
-        self,
-        exc_type: type[BaseException] | None,
-        exc: BaseException | None,
-        tb: Any,
-    ) -> bool:
-        del exc_type, exc, tb
-        return False
-
-
-class _GeneratedTransactionManager:
-    def begin(self) -> _GeneratedTransaction:
-        return _GeneratedTransaction()
+from yidl.runtime import TransactionManager
 
 
 class GeneratedStrategyACounterSubject(StudySubject):
@@ -52,4 +34,4 @@ class GeneratedStrategyACounterSubject(StudySubject):
         return Counter
 
     def build_transaction_manager(self) -> Any:
-        return _GeneratedTransactionManager()
+        return TransactionManager()
