@@ -12,6 +12,7 @@ Subdirectories are fixed up front so contributors know where new artifacts go:
 | `generated_example/` | Behavioral validation: reference lifecycle vs hand-crafted generated strategies; shared scenario harness entry points live alongside this tree as the study grows. |
 | `field_representability/` | Focused probes for unclear helper kinds or edge cases. |
 | `perf/` | Dedicated performance runners and measurement helpers (same scenarios as behavior, separate execution layer). |
+| `study/` | PRE_IMPL harness: scenario + backend ABCs, lifecycle vs `generated_strategy_a` smoke (see `study/CONTRACT.md`). |
 
 Normative study intent: `dev-docs/PRE_IMPL_STUDY_DESIGN.md`.  
 Ordered execution: `dev-docs/PRE_IMPL_STUDY_IMPL_PLAN.md`.

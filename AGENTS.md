@@ -8,6 +8,9 @@ This file defines repository-specific coding instructions for `yidl`.
 - If analysis surfaces a problem, describe it and wait for direction rather than patching the tree unprompted.
 
 ## Design Rules
+- Prefer **`abc.ABC`** with **`@abstractmethod`** for explicit shared contracts when
+  nominal inheritance is practical. Prefer **`typing.Protocol`** only when an ABC
+  is awkward (e.g. typing third-party or existing types you must not subclass).
 - In compiler-only, parser/frontend, IR, spec, and other non-generated support paths, strongly prefer `@dataclass` for classes that primarily hold state.
 - Prefer `frozen=True` for those dataclasses when mutation is not required by the design.
 - Generated YIDL classes must not use `@dataclass` in this phase. Generated classes should be emitted as plain undecorated Python. Tests may still use dataclasses where helpful.
@@ -40,6 +43,17 @@ Use a strict red/green/refactor workflow for behavior changes.
 3. Refactor: Improve structure and readability while preserving behavior.
 4. Verify targeted scope: Re-run the focused test subset.
 5. Verify full regression: Run the full relevant regression scope before finalizing.
+
+## Test file naming
+- Test **file** and **module** names should describe **behavior or the surface under
+  test**, not ephemeral process labels (phase numbers, impl-plan step ids, ticket
+  ids, dates). Plans and phases change; names should stay meaningful over time.
+- Prefer **stable, coarse scope** in the filename when the file is mainly wiring,
+  harness, or smoke over several cases (e.g. `test_study_harness.py`). Put finer
+  scenario or API detail in **test function names** and docstrings, not a long
+  filename that duplicates them.
+- When one file is **one focused behavioral story**, a more specific module name
+  is appropriate—still semantic, still no process ids.
 
 ## Test-Led Semantics Guardrail
 - Do not change public semantics, runtime semantics, code-generation semantics, or source-container semantics merely to make a test pass without user consultation.

@@ -35,5 +35,6 @@ include = ["src/yidl", "docs", "example", "tests", "dev-docs", "spec"]
 # If another installed package registers a broken pytest plugin, use:
 #   PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 python -m pytest
 [tool.pytest.ini_options]
-pythonpath = ["src"]
-testpaths = ["tests"]
+# ``.`` keeps ``tests`` importable; ``docs/validation`` exposes the ``study`` package.
+pythonpath = [".", "src", "docs/validation"]
+testpaths = ["tests", "docs/validation/study"]

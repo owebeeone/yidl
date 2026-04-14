@@ -3,6 +3,9 @@
 This directory is for empirical validation of the hand-crafted generated target
 shape and generated strategy variants.
 
+Shared harness (scenario + backend ABCs, lifecycle vs generated placeholders):
+`../study/` — see `../study/CONTRACT.md`.
+
 Allowed contents include:
 
 - generated-strategy validation implementations
