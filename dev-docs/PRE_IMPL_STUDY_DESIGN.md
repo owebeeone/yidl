@@ -137,6 +137,11 @@ Include:
 The point of the matrix is not completeness. It is to give repeatable evidence
 about the core generated shape.
 
+Implementation detail for the study should live in code where practical. Use
+READMEs primarily to say what is here and how areas are organized; do not use
+them as the primary home for matrices, runner configuration, or other
+executable study facts that belong in code.
+
 ## 6. Recommended field/helper study set
 
 The study should not choose field/helper cases ad hoc. Use a staged field/helper

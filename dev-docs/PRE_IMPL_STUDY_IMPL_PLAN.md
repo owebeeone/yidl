@@ -23,6 +23,11 @@ This document should be read alongside:
   an explicit design deferral is recorded.
 - If a sub-phase reveals a `design_gap` or `design_conflict`, stop and record
   that before continuing.
+- Implementation artifacts should be code-focused wherever possible. Put
+  executable study facts, matrices, and runner configuration in code. READMEs
+  should primarily say what is here, not duplicate operational detail that
+  belongs in code. Prefer brief code comments over moving implementation detail
+  into prose.
 
 ## Phase 0 — Study harness bootstrap
 
@@ -61,14 +66,20 @@ Failure means:
 Work:
 
 - choose the initial Python versions to exercise with `uv`
+- add a shared Python resource that records the study matrix so validation and
+  performance runners can import the same version set rather than hard-coding
+  it in multiple places
 
 Artifacts:
 
-- recorded version matrix in the study docs or validation README
+- shared Python version-matrix resource under `docs/validation/perf/`
 
 Verification:
 
 - the chosen versions are concrete enough to run without further design debate
+- study runners have one Python-owned source of truth for the matrix
+- exact Python version strings live in the shared Python resource rather than in
+  a README
 
 Failure means:
 
@@ -120,7 +131,8 @@ Failure means:
 Phase 0 is complete when:
 
 - the validation scaffold exists
-- the Python version matrix is chosen
+- the Python version matrix is chosen and recorded in the shared Python
+  resource
 - the scenario contract exists
 - lifecycle and generated adapter skeletons can both be targeted by the study
   harness

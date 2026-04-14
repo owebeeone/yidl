@@ -3,6 +3,10 @@
 ## Scope
 This file defines repository-specific coding instructions for `yidl`.
 
+## Agent requests: review vs edit
+- When the user asks to **review**, **verify**, or **analyze** (or similar: assess, report, check), respond with **read-only analysis** only. **Do not** change files, run refactors, or “fix” docs or code unless they **explicitly** ask for edits, fixes, implementation, or an update.
+- If analysis surfaces a problem, describe it and wait for direction rather than patching the tree unprompted.
+
 ## Design Rules
 - In compiler-only, parser/frontend, IR, spec, and other non-generated support paths, strongly prefer `@dataclass` for classes that primarily hold state.
 - Prefer `frozen=True` for those dataclasses when mutation is not required by the design.
