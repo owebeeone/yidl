@@ -1,0 +1,39 @@
+[build-system]
+requires = ["hatchling>=1.24"]
+build-backend = "hatchling.build"
+
+[project]
+name = "yidl"
+version = "0.1.0"
+description = "YIDL: declarative Ahead-of-Time metacompiler DSL for lifecycle / transducer specs"
+requires-python = ">=3.10"
+authors = [{ name = "YIDL contributors" }]
+keywords = ["dsl", "compiler", "codegen", "lifecycle"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Intended Audience :: Developers",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+]
+
+[project.scripts]
+yidl-compile = "yidl.cli:main"
+
+[project.optional-dependencies]
+dev = ["pytest>=7.0"]
+
+[tool.hatch.build]
+sources = ["src"]
+
+[tool.hatch.build.targets.sdist]
+include = ["src/yidl", "docs", "example", "tests", "dev-docs", "spec"]
+
+# Run: python -m pytest
+# If another installed package registers a broken pytest plugin, use:
+#   PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 python -m pytest
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]

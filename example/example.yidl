@@ -1,0 +1,366 @@
+# ============================================================================
+# PYROLYZE LIFECYCLE V2 - YIDL SPECIFICATION
+# ============================================================================
+
+# ----------------------------------------------------------------------------
+# 1. GLOBAL STORES (Physical Memory Locations)
+# ----------------------------------------------------------------------------
+# Stores expose standard abstract operations to the Transducer:
+# .read(), .write(val), .has(), .pop()
+store PublishedStore : type=Slotted, location="self._published"
+store WorkingStore   : type=Slotted, location="self._working"
+store InstanceStore  : type=Attr,    location="self"
+store HiddenStore    : type=Hidden,  location="hidden"
+
+# ----------------------------------------------------------------------------
+# 2. SURFACES (Logical Execution/Code Generation Boundaries)
+# ----------------------------------------------------------------------------
+surface Init         : phase=construction
+surface Current      : phase=execution  
+surface Working      : phase=execution  
+surface Proxy        : phase=execution  
+surface Commit       : phase=transaction
+surface Rollback     : phase=transaction
+surface ClassMeta    : phase=class_generation
+
+# ============================================================================
+# 3. FIELD TRANSDUCERS (The Data Dictionary)
+# ============================================================================
+
+# ----------------------------------------------------------------------------
+# MANAGED: Authoritative published state with copy-on-read transitions
+# ----------------------------------------------------------------------------
+transducer ManagedField: fieldhelper=managed
+    inputs:
+        name: @id
+        annotation: @type
+        default: ?@object(Any) = None
+        default_factory: ?@lambda[@self] = None
+        initial_working: ?@object(Any) = None
+        tx_group: @str = "DEFAULT_TRANSACTION"
+        freeze: ?@lambda[@working] = None
+        thaw: ?@lambda[@published] = None
+
+    compile_assert:
+        freeze <=> thaw
+        default NAND default_factory
+
+    behavior Init:
+        store = PublishedStore
+        %%
+            if default_factory is not None:
+                store.write(default_factory(self))
+            else:
+                store.write(default)
+            
+            if initial_working is not None:
+                WorkingStore.write(initial_working)
+
+    behavior Current:
+        store = PublishedStore
+        get: native
+        set: %% raise RuntimeError("Cannot mutate managed field on Current view.")
+
+    behavior Working:
+        store = WorkingStore
+        fallback = PublishedStore
+        
+        get: %%
+            # Thaw-on-Read (Copy-on-Read) Paradox
+            if not store.has():
+                if thaw is not None:
+                    store.write(thaw(fallback.read()))
+                else:
+                    store.write(fallback.read())
+            return store.read()
+        
+        set(val, old_val): %%
+            store.write(val)
+            txm.mark_dirty(tx_group)
+
+    behavior Proxy:
+        get: %% return getattr(Working, name) if tx_active(tx_group) else getattr(Current, name)
+        set(val): %%
+            assert tx_active(tx_group), "Must be in transaction"
+            setattr(Working, name, val)
+
+    behavior Commit:
+        store = PublishedStore
+        source = WorkingStore
+        %%
+            if source.has():
+                if freeze is not None:
+                    store.write(freeze(source.pop()))
+                else:
+                    store.write(source.pop())
+
+    behavior Rollback:
+        store = WorkingStore
+        %%
+            if store.has():
+                store.pop()
+
+# ----------------------------------------------------------------------------
+# BINDING / OWNED: Retained external resources with overwrite safety
+# ----------------------------------------------------------------------------
+transducer BindingField: fieldhelper=binding, owned
+    inputs:
+        name: @id
+        annotation: @type
+        default: ?@object(Any) = None
+        tx_group: @str = "DEFAULT_TRANSACTION"
+
+    behavior Init:
+        store = PublishedStore
+        %%
+            store.write(default)
+            if store.read():
+                store.read().inc_ref()
+
+    behavior Current:
+        store = PublishedStore
+        get: native
+        set: %% raise RuntimeError("Cannot mutate binding field on Current view.")
+
+    behavior Working:
+        store = WorkingStore
+        fallback = PublishedStore
+        
+        get: %% return store.read() if store.has() else fallback.read()
+        
+        # Safe Overwrite Matrix: Stage new -> Update tree -> Evict old LAST
+        set(val, old_val): %%
+            if val:
+                val.inc_ref()
+                
+            store.write(val)
+            txm.mark_dirty(tx_group)
+            
+            if old_val:
+                old_val.dec_ref()
+
+    behavior Proxy:
+        get: %% return getattr(Working, name) if tx_active(tx_group) else getattr(Current, name)
+        set(val): %%
+            assert tx_active(tx_group), "Must be in transaction"
+            setattr(Working, name, val)
+
+    behavior Commit:
+        store = PublishedStore
+        source = WorkingStore
+        %%
+            if source.has():
+                new_binding = source.pop()
+                old_binding = store.read()
+                
+                if new_binding:
+                    new_binding.accepted()
+                    
+                store.write(new_binding)
+                
+                if old_binding:
+                    old_binding._close()
+
+    behavior Rollback:
+        store = WorkingStore
+        %%
+            if store.has():
+                staged = store.pop()
+                if staged:
+                    staged._close()
+
+# ----------------------------------------------------------------------------
+# LOCAL_STORE: Non-transactional caches (Homed on the main Proxy instance)
+# ----------------------------------------------------------------------------
+transducer LocalStoreField: fieldhelper=local_store
+    inputs:
+        name: @id
+        annotation: @type
+        default_factory: @lambda[@self]
+        home: @store = InstanceStore  # Tells the compiler where to put the physical slot
+
+    behavior Init:
+        store = home
+        %%
+            store.write(default_factory(self))
+
+    behavior Proxy:
+        # Because it's homed on the Proxy (InstanceStore), we don't generate 
+        # @property descriptors. It acts as a raw Python attribute on self.
+        store = home
+        get: native
+        set: native
+
+    behavior Current, Working:
+        # Views must reach back up to the proxy instance to read the homed variable
+        store = home
+        get: %% return getattr(home, name)
+        set(val): %% setattr(home, name, val)
+
+# ----------------------------------------------------------------------------
+# TRANSIENT: Pass-scratch and lazily instantiated working state
+# ----------------------------------------------------------------------------
+transducer TransientField: fieldhelper=transient
+    inputs:
+        name: @id
+        annotation: @type
+        default: ?@object(Any) = None
+        default_factory: ?@lambda[@self] = None
+        working_default_factory: ?@lambda[@self, @current, @working] = None
+        tx_group: @str = "DEFAULT_TRANSACTION"
+
+    compile_assert:
+        default NAND default_factory
+
+    behavior Init:
+        store = PublishedStore
+        %%
+            if default_factory is not None:
+                store.write(default_factory(self))
+            else:
+                store.write(default)
+
+    behavior Current:
+        store = PublishedStore
+        get: native
+        set: %% raise RuntimeError("Cannot mutate transient field on Current view.")
+
+    behavior Working:
+        store = WorkingStore
+        fallback = PublishedStore
+        
+        get: %%
+            if not store.has():
+                if working_default_factory is not None:
+                    store.write(working_default_factory(self, Current, Working))
+                else:
+                    store.write(fallback.read())
+            return store.read()
+        
+        set(val, old_val): %%
+            store.write(val)
+
+    behavior Proxy:
+        get: %% return getattr(Working, name) if tx_active(tx_group) else getattr(Current, name)
+        set(val): %%
+            assert tx_active(tx_group), "Must be in transaction"
+            setattr(Working, name, val)
+
+    behavior Commit, Rollback:
+        store = WorkingStore
+        %%
+            if store.has():
+                store.pop()
+
+# ----------------------------------------------------------------------------
+# DERIVED: Cache that resets on transaction boundaries
+# ----------------------------------------------------------------------------
+transducer DerivedField: fieldhelper=derived
+    inputs:
+        name: @id
+        annotation: @type
+        default_factory: @lambda[@self]
+
+    behavior Init:
+        store = PublishedStore
+        %%
+            store.write(default_factory(self))
+
+    behavior Proxy, Current, Working:
+        store = PublishedStore
+        get: native
+        set: native
+
+    behavior Commit, Rollback:
+        store = PublishedStore
+        %%
+            store.write(default_factory(self))
+
+# ----------------------------------------------------------------------------
+# INIT_VAR: Construction-only variables (local/hidden scope)
+# ----------------------------------------------------------------------------
+transducer InitVarField: fieldhelper=init_var
+    inputs:
+        name: @id
+        annotation: @type
+        default: ?@object(Any) = None
+
+    behavior Init:
+        store = HiddenStore
+        %%
+            store.write(default)
+
+    behavior Proxy, Current, Working:
+        get: %% raise RuntimeError("Init variables are only available during construction.")
+        set: %% raise RuntimeError("Init variables are only available during construction.")
+
+# ----------------------------------------------------------------------------
+# CONST: Read-only at construction
+# ----------------------------------------------------------------------------
+transducer ConstField: fieldhelper=const
+    inputs:
+        name: @id
+        annotation: @type
+        default: ?@object(Any) = None
+        default_factory: ?@lambda[@self] = None
+
+    compile_assert:
+        default NAND default_factory
+
+    behavior Init:
+        store = InstanceStore
+        %%
+            if default_factory is not None:
+                store.write(default_factory(self))
+            else:
+                store.write(default)
+
+    behavior Proxy, Current, Working:
+        store = InstanceStore
+        get: native
+        set: %% raise RuntimeError("Const fields cannot be mutated after initialization.")
+
+# ----------------------------------------------------------------------------
+# STATIC: Write-once value
+# ----------------------------------------------------------------------------
+transducer StaticField: fieldhelper=static
+    inputs:
+        name: @id
+        annotation: @type
+        default: ?@object(Any) = None
+
+    behavior Init:
+        %%
+            InstanceStore.write_key(name + "_is_set", default is not None)
+            if default is not None:
+                InstanceStore.write_key(name, default)
+
+    behavior Proxy, Current, Working:
+        get: %%
+            assert InstanceStore.read_key(name + "_is_set"), "Static field not initialized"
+            return InstanceStore.read_key(name)
+            
+        set(val, old_val): %%
+            assert not InstanceStore.read_key(name + "_is_set"), "Static field already set"
+            InstanceStore.write_key(name, val)
+            InstanceStore.write_key(name + "_is_set", True)
+
+# ============================================================================
+# 4. METADATA TRANSDUCERS (Class-Level Policy Hooks)
+# ============================================================================
+
+transducer CommitValidatorMeta: classhelper=commit_validator
+    inputs:
+        default: @lambda[@self]
+        tx_group: @str = "DEFAULT_TRANSACTION"
+
+    behavior ClassMeta:
+        map_insert: __lc_validators__[{tx_group}] = {default}
+
+transducer CommitOrderKeyMeta: classhelper=commit_order_key
+    inputs:
+        default: @object(tuple)
+        tx_group: @str = "DEFAULT_TRANSACTION"
+
+    behavior ClassMeta:
+        map_insert: __lc_order_keys__[{tx_group}] = {default}
