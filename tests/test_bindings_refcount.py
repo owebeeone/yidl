@@ -1,3 +1,9 @@
+"""Parity tests for ``yidl.runtime.bindings_refcount`` (explicit inc_ref/dec_ref).
+
+Semantics differ from ``test_bindings.py`` in a few places (e.g. COW materialize
+clears the frozen snapshot backing; ``BindingBase`` has no ``__del__``—use ``dec_ref``).
+"""
+
 from __future__ import annotations
 
 from collections.abc import Mapping
@@ -8,11 +14,11 @@ import weakref
 
 import pytest
 
-from yidl.runtime.bindings import BindingBase
-from yidl.runtime.bindings import BindingDict
-from yidl.runtime.bindings import BindingList
-from yidl.runtime.bindings import FrozenBindingDict
-from yidl.runtime.bindings import FrozenBindingList
+from yidl.runtime.bindings_refcount import BindingBase
+from yidl.runtime.bindings_refcount import BindingDict
+from yidl.runtime.bindings_refcount import BindingList
+from yidl.runtime.bindings_refcount import FrozenBindingDict
+from yidl.runtime.bindings_refcount import FrozenBindingList
 
 _spy_dc = (
     dataclass(eq=False, slots=True, weakref_slot=True)
@@ -30,7 +36,8 @@ class SpyBinding(BindingBase):
         self.closed = True
 
 
-def test_binding_base_finalize_runs_close_when_collected() -> None:
+def test_binding_base_close_runs_when_dec_ref_hits_zero() -> None:
+    """Refcount ``BindingBase`` has no ``__del__``; teardown is explicit ``dec_ref``."""
     events: list[int] = []
 
     @dataclass(eq=False, slots=True)
@@ -39,8 +46,7 @@ def test_binding_base_finalize_runs_close_when_collected() -> None:
             events.append(1)
 
     t = Track()
-    del t
-    gc.collect()
+    t.dec_ref()
     assert events == [1]
 
 
@@ -278,8 +284,7 @@ def test_cow_dict_mutation_materializes_copy_frozen_unchanged() -> None:
     b = SpyBinding("b")
     cow["x"] = b
     assert cow._cow_parent is None
-    assert len(frozen) == 1
-    assert frozen["k"] is a
+    assert len(frozen) == 0
     assert cow["k"] is a and cow["x"] is b
 
 
@@ -342,7 +347,7 @@ def test_cow_list_mutation_materializes_frozen_unchanged() -> None:
     b = SpyBinding("b")
     cow.append(b)
     assert cow._cow_parent is None
-    assert len(frozen) == 1
+    assert len(frozen) == 0
     assert cow[0] is a and cow[1] is b
 
 
