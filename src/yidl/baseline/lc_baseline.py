@@ -1,7 +1,7 @@
 """
 Augmented incrementally so parity tests can target a stable handcrafted surface.
 
-Tests select implementation via ``LC_PARITY_IMPL`` (see dev-docs/PROCESS.md).
+Tests select implementation via ``LC_PARITY_IMPL`` (see dev-docs/history/PROCESS.md).
 """
 
 

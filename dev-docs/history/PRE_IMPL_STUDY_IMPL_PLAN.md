@@ -325,6 +325,17 @@ or
 
 Goal: measure whether the generated shape is plausible on the core path.
 
+Spec: `dev-docs/StageAPerformanceMatrixPlan.md` — locks the subjects,
+scenario matrix, driver shape, batch structure, metrics, DCE-prevention
+invariants, reporting format, and exit gate for this phase. Read that
+document before starting 4a.
+
+Out of scope for this phase: the init-detection mechanism used inside
+`generated_strategy_a` is chosen by the separate init-detection
+micro-bench (`dev-docs/OptimalReferencePlan.md §Phase 3`). Phase 4
+consumes that winner via the strategy-A factory; it does not re-evaluate
+mechanism-space here.
+
 ### 4a. Implement performance runners
 
 Work:

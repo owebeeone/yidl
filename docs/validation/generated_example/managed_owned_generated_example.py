@@ -1,50 +1,29 @@
-"""Hand-curated generated managed-owned example for PRE_IMPL validation."""
+"""Hand-curated generated multi-facade owned example for PRE_IMPL validation."""
 
 from __future__ import annotations
 
 from dataclasses import dataclass
+from dataclasses import field
 from typing import Any
+from typing import Iterable
 
+from yidl.runtime import BindingBase
+from yidl.runtime import BindingList
 from yidl.runtime import DEFAULT_TRANSACTION
 from yidl.runtime import TransactionManager
-
-
-MISSING = object()
 
 
 class YidlCantWriteWithoutActiveTransaction(RuntimeError):
     pass
 
 
-class SpyBinding:
-    """Validation-only ref-counted binding with lifecycle-like semantics."""
+class SpyBinding(BindingBase):
+    """Validation-only binding that records whether it was closed accepted/not."""
 
     def __init__(self, label: str) -> None:
+        super().__init__()
         self.label = label
-        self.ref_count = 1
-        self.is_accepted = False
-        self.is_closed = False
         self.closed_states: list[bool] = []
-
-    def inc_ref(self) -> None:
-        if self.is_closed or self.ref_count <= 0:
-            raise RuntimeError("cannot retain a closed binding")
-        self.ref_count += 1
-
-    def accepted(self) -> None:
-        if self.is_closed:
-            raise RuntimeError("cannot accept a closed binding")
-        self.is_accepted = True
-
-    def dec_ref(self) -> None:
-        if self.ref_count <= 0:
-            raise AssertionError("dec_ref called without a matching inc_ref")
-        self.ref_count -= 1
-        if self.ref_count == 0:
-            if self.is_closed:
-                raise AssertionError("binding closed more than once")
-            self.is_closed = True
-            self._close()
 
     def _close(self) -> None:
         self.closed_states.append(self.is_accepted)
@@ -54,6 +33,16 @@ class OwnedSource:
     """User-declared source shape before YIDL code generation."""
 
     child: SpyBinding | None
+    child_list: BindingList
+
+    def describe_child(self) -> str:
+        child = getattr(self, "child", None)
+        if child is None:
+            return "<none>"
+        return child.label
+
+    def describe_child_list(self) -> tuple[str, ...]:
+        return tuple(child.label for child in getattr(self, "child_list", ()))
 
 
 @dataclass(frozen=True)
@@ -61,18 +50,36 @@ class YidlFieldMeta:
     public_name: str
     tx_group: str
     kind: str
+    store_name: str
 
 
-class YidlFieldState:
-    __slots__ = ("working_value", "working_tx_id")
+@dataclass(slots=True)
+class _KildFieldRuntimeState:
+    tx_group: str
+    has_working_value: bool = False
+    working_tx_id: int | None = None
+    previous_committed_value: object | None = None
 
-    def __init__(self) -> None:
-        self.working_value: SpyBinding | None | object = MISSING
-        self.working_tx_id: int | None = None
+
+@dataclass(slots=True)
+class _KildCurrentStore:
+    child: SpyBinding | None = None
+    child_list: BindingList = field(default_factory=BindingList)
+
+
+@dataclass(slots=True)
+class _KildCommitScratchStore:
+    previous_child: SpyBinding | None = None
+    previous_child_list: BindingList | None = None
 
 
 class YidlState:
-    __slots__ = ("transaction_manager", "field_meta", "owned_child")
+    __slots__ = (
+        "transaction_manager",
+        "field_meta",
+        "field_state",
+        "rollback_errors",
+    )
 
     def __init__(self, *, transaction_manager: TransactionManager) -> None:
         self.transaction_manager = transaction_manager
@@ -81,49 +88,123 @@ class YidlState:
                 public_name="child",
                 tx_group=DEFAULT_TRANSACTION,
                 kind="owned",
+                store_name="child",
+            ),
+            "child_list": YidlFieldMeta(
+                public_name="child_list",
+                tx_group=DEFAULT_TRANSACTION,
+                kind="owned_list",
+                store_name="child_list",
             ),
         }
-        self.owned_child = YidlFieldState()
+        self.field_state = {
+            "child": _KildFieldRuntimeState(tx_group=DEFAULT_TRANSACTION),
+            "child_list": _KildFieldRuntimeState(tx_group=DEFAULT_TRANSACTION),
+        }
+        self.rollback_errors: list[BaseException] = []
+
+
+def _mirror_user_class_names(emit: type, user_cls: type) -> None:
+    emit.__name__ = user_cls.__name__
+    emit.__qualname__ = user_cls.__qualname__
+    emit.__module__ = user_cls.__module__
+
+
+def _accept_owned_value(value: SpyBinding | None) -> None:
+    if value is not None:
+        value.accepted()
+
+
+def _accept_owned_list(value: BindingList) -> None:
+    for item in value:
+        item.accepted()
+
+
+def _best_effort_close_owned_value(value: SpyBinding | None, errors: list[BaseException]) -> None:
+    if value is None:
+        return
+    try:
+        value.dec_ref()
+    except BaseException as exc:
+        errors.append(exc)
+
+
+def _best_effort_clear_owned_list(value: BindingList | None, errors: list[BaseException]) -> None:
+    if value is None:
+        return
+    try:
+        value.clear()
+    except BaseException as exc:
+        errors.append(exc)
+
+
+def _normalize_owned_list(value: BindingList | Iterable[SpyBinding] | None) -> BindingList:
+    if value is None:
+        return BindingList()
+    if isinstance(value, BindingList):
+        return value
+    normalized = BindingList()
+    for child in value:
+        normalized.append(child)
+    return normalized
 
 
 def build_generated_owned_context(source_cls: type = OwnedSource) -> type:
-    """Generate the proxy and child surfaces for the validation example."""
+    """Generate a proxy plus current/working facades for one owned example."""
 
-    del source_cls
-    field_name = "child"
+    base = source_cls
 
-    class _CurrentView:
-        __slots__ = ("_owner",)
+    class _CurrentView(base):
+        __slots__ = ("__kild_owner",)
 
-        def __init__(self, owner: Any) -> None:
-            self._owner = owner
-
-        @property
-        def child(self) -> SpyBinding | None:
-            return self._owner._current_child
-
-    class _WorkingView:
-        __slots__ = ("_owner",)
-
-        def __init__(self, owner: Any) -> None:
-            self._owner = owner
+        def __init__(self, owner: "GeneratedOwnedContext") -> None:
+            super().__init__()
+            self.__kild_owner = owner
 
         @property
         def child(self) -> SpyBinding | None:
-            field_state = self._owner._yidl_state.owned_child
-            if field_state.working_value is not MISSING:
-                return field_state.working_value
-            return self._owner._current_child
+            return self.__kild_owner._GeneratedOwnedContext__kild_current_store.child
+
+        @property
+        def child_list(self) -> BindingList:
+            return self.__kild_owner._GeneratedOwnedContext__kild_current_store.child_list
+
+    class _WorkingView(base):
+        __slots__ = ("__kild_owner",)
+
+        def __init__(self, owner: "GeneratedOwnedContext") -> None:
+            super().__init__()
+            self.__kild_owner = owner
+
+        @property
+        def child(self) -> SpyBinding | None:
+            state = self.__kild_owner._kild_field_state("child")
+            if state.has_working_value:
+                return self.__kild_owner._GeneratedOwnedContext__kild_working_child
+            return self.__kild_owner._GeneratedOwnedContext__kild_current_store.child
 
         @child.setter
         def child(self, value: SpyBinding | None) -> None:
-            self._owner._stage_owned_value(value)
+            self.__kild_owner._kild_stage_child(value)
 
-    class GeneratedOwnedContext:
+        @property
+        def child_list(self) -> BindingList:
+            state = self.__kild_owner._kild_field_state("child_list")
+            if state.has_working_value:
+                return self.__kild_owner._GeneratedOwnedContext__kild_working_child_list
+            return self.__kild_owner._GeneratedOwnedContext__kild_current_store.child_list
+
+        @child_list.setter
+        def child_list(self, value: BindingList | Iterable[SpyBinding] | None) -> None:
+            self.__kild_owner._kild_stage_child_list(value)
+
+    class GeneratedOwnedContext(base):
         __slots__ = (
-            "_current_child",
-            "_deferred_commit_cleanup",
-            "_yidl_state",
+            "__kild_commit_scratch_store",
+            "__kild_current_store",
+            "__kild_state",
+            "__kild_working_child",
+            "__kild_working_child_list",
             "current",
             "working",
         )
@@ -133,57 +214,93 @@ def build_generated_owned_context(source_cls: type = OwnedSource) -> type:
             *,
             transaction_manager: TransactionManager,
             child: SpyBinding | None = None,
+            child_list: BindingList | Iterable[SpyBinding] | None = None,
         ) -> None:
-            self._current_child = child
-            self._deferred_commit_cleanup: list[tuple[SpyBinding, str]] = []
-            self._yidl_state = YidlState(transaction_manager=transaction_manager)
+            super().__init__()
+            self.__kild_current_store = _KildCurrentStore()
+            self.__kild_commit_scratch_store = _KildCommitScratchStore()
+            self.__kild_state = YidlState(transaction_manager=transaction_manager)
+            self.__kild_working_child: SpyBinding | None = None
+            self.__kild_working_child_list = BindingList()
             self.current = _CurrentView(self)
             self.working = _WorkingView(self)
 
             if child is not None:
+                self.__kild_current_store.child = child
                 child.accepted()
+            if child_list is not None:
+                normalized = _normalize_owned_list(child_list)
+                self.__kild_current_store.child_list = normalized
+                _accept_owned_list(normalized)
 
-        def _field_meta(self) -> YidlFieldMeta:
-            return self._yidl_state.field_meta[field_name]
+        def _kild_field_meta(self, name: str) -> YidlFieldMeta:
+            return self.__kild_state.field_meta[name]
 
-        def _field_state(self) -> YidlFieldState:
-            return self._yidl_state.owned_child
+        def _kild_field_state(self, name: str) -> _KildFieldRuntimeState:
+            return self.__kild_state.field_state[name]
 
-        def _active_tx_id(self) -> int:
-            meta = self._field_meta()
-            tx = self._yidl_state.transaction_manager.active_transaction_for(meta.tx_group)
+        def _kild_active_tx_id(self, name: str) -> int:
+            meta = self._kild_field_meta(name)
+            tx = self.__kild_state.transaction_manager.active_transaction_for(meta.tx_group)
             if tx is None:
                 raise YidlCantWriteWithoutActiveTransaction(meta.public_name)
             return tx.tx_id
 
-        def _ensure_enlisted(self, tx_id: int) -> None:
-            field_state = self._field_state()
-            if field_state.working_tx_id == tx_id:
+        def _kild_ensure_enlisted(self, name: str, tx_id: int) -> None:
+            state = self._kild_field_state(name)
+            if state.working_tx_id == tx_id:
                 return
-            self._yidl_state.transaction_manager.enlist(self, self._field_meta().tx_group)
-            field_state.working_tx_id = tx_id
+            self.__kild_state.transaction_manager.enlist(self, self._kild_field_meta(name).tx_group)
+            state.working_tx_id = tx_id
 
-        def _stage_owned_value(self, value: SpyBinding | None) -> None:
-            tx_id = self._active_tx_id()
-            self._ensure_enlisted(tx_id)
-
-            field_state = self._field_state()
-            visible = field_state.working_value if field_state.working_value is not MISSING else self._current_child
+        def _kild_stage_child(self, value: SpyBinding | None) -> None:
+            tx_id = self._kild_active_tx_id("child")
+            self._kild_ensure_enlisted("child", tx_id)
+            state = self._kild_field_state("child")
+            visible = self.__kild_working_child if state.has_working_value else self.__kild_current_store.child
             if visible is value:
                 return
+            if state.has_working_value and self.__kild_working_child is not None and self.__kild_working_child is not self.__kild_current_store.child:
+                _best_effort_close_owned_value(self.__kild_working_child, self.__kild_state.rollback_errors)
+            self.__kild_working_child = value
+            state.has_working_value = True
 
-            field_state.working_value = value
+        def _kild_stage_child_list(self, value: BindingList | Iterable[SpyBinding] | None) -> None:
+            tx_id = self._kild_active_tx_id("child_list")
+            self._kild_ensure_enlisted("child_list", tx_id)
+            state = self._kild_field_state("child_list")
+            normalized = _normalize_owned_list(value)
+            visible = self.__kild_working_child_list if state.has_working_value else self.__kild_current_store.child_list
+            if visible is normalized:
+                return
+            if state.has_working_value and self.__kild_working_child_list is not self.__kild_current_store.child_list:
+                _best_effort_clear_owned_list(self.__kild_working_child_list, self.__kild_state.rollback_errors)
+            self.__kild_working_child_list = normalized
+            state.has_working_value = True
 
         @property
         def child(self) -> SpyBinding | None:
-            tx = self._yidl_state.transaction_manager.active_transaction_for(DEFAULT_TRANSACTION)
-            if tx is not None and self._field_state().working_tx_id == tx.tx_id:
-                return self.working.child
-            return self.current.child
+            tx = self.__kild_state.transaction_manager.active_transaction_for(DEFAULT_TRANSACTION)
+            state = self._kild_field_state("child")
+            if tx is not None and state.working_tx_id == tx.tx_id and state.has_working_value:
+                return self.__kild_working_child
+            return self.__kild_current_store.child
 
         @child.setter
         def child(self, value: SpyBinding | None) -> None:
             self.working.child = value
+
+        @property
+        def child_list(self) -> BindingList:
+            tx = self.__kild_state.transaction_manager.active_transaction_for(DEFAULT_TRANSACTION)
+            state = self._kild_field_state("child_list")
+            if tx is not None and state.working_tx_id == tx.tx_id and state.has_working_value:
+                return self.__kild_working_child_list
+            return self.__kild_current_store.child_list
+
+        @child_list.setter
+        def child_list(self, value: BindingList | Iterable[SpyBinding] | None) -> None:
+            self.working.child_list = value
 
         def commit_order_key_for(self, tx_group: str = DEFAULT_TRANSACTION) -> tuple[object, ...]:
             del tx_group
@@ -197,54 +314,83 @@ def build_generated_owned_context(source_cls: type = OwnedSource) -> type:
             del tx_group
             return True
 
-        def _commit_transaction(self, tx_id: int, tx_group: str = DEFAULT_TRANSACTION) -> object:
-            meta = self._field_meta()
-            field_state = self._field_state()
-            if tx_group != meta.tx_group or field_state.working_tx_id != tx_id:
-                return self.current
+        def _commit_transaction(self, tx_id: int, tx_group: str = DEFAULT_TRANSACTION) -> _CurrentView:
+            self._kild_commit_child(tx_id, tx_group)
+            self._kild_commit_child_list(tx_id, tx_group)
+            return self.current
 
-            next_value = field_state.working_value
-            current = self._current_child
-            if next_value is MISSING:
-                field_state.working_tx_id = None
-                return self.current
+        def _rollback_transaction(self, tx_id: int, tx_group: str = DEFAULT_TRANSACTION) -> _CurrentView:
+            self._kild_rollback_child(tx_id, tx_group)
+            self._kild_rollback_child_list(tx_id, tx_group)
+            return self.current
 
-            if next_value is not None and next_value is not current:
-                next_value.accepted()
+        def _kild_commit_child(self, tx_id: int, tx_group: str) -> None:
+            meta = self._kild_field_meta("child")
+            state = self._kild_field_state("child")
+            if tx_group != meta.tx_group or state.working_tx_id != tx_id or not state.has_working_value:
+                return
+            current = self.__kild_current_store.child
+            next_value = self.__kild_working_child
+            self.__kild_commit_scratch_store.previous_child = current
+            state.previous_committed_value = current
+            _accept_owned_value(next_value)
+            self.__kild_current_store.child = next_value
+            state.has_working_value = False
+            state.working_tx_id = None
+            self.__kild_working_child = None
             if current is not None and current is not next_value:
-                self._deferred_commit_cleanup.append((current, "dec_ref"))
+                _best_effort_close_owned_value(current, self.__kild_state.rollback_errors)
+            self.__kild_commit_scratch_store.previous_child = None
+            state.previous_committed_value = None
 
-            self._current_child = next_value
-            field_state.working_value = MISSING
-            field_state.working_tx_id = None
+        def _kild_commit_child_list(self, tx_id: int, tx_group: str) -> None:
+            meta = self._kild_field_meta("child_list")
+            state = self._kild_field_state("child_list")
+            if tx_group != meta.tx_group or state.working_tx_id != tx_id or not state.has_working_value:
+                return
+            current = self.__kild_current_store.child_list
+            next_value = self.__kild_working_child_list
+            self.__kild_commit_scratch_store.previous_child_list = current
+            state.previous_committed_value = current
+            _accept_owned_list(next_value)
+            self.__kild_current_store.child_list = next_value
+            state.has_working_value = False
+            state.working_tx_id = None
+            self.__kild_working_child_list = BindingList()
+            if current is not next_value:
+                _best_effort_clear_owned_list(current, self.__kild_state.rollback_errors)
+            self.__kild_commit_scratch_store.previous_child_list = None
+            state.previous_committed_value = None
 
-            pending = list(self._deferred_commit_cleanup)
-            self._deferred_commit_cleanup.clear()
-            for binding, op_name in pending:
-                getattr(binding, op_name)()
-            return self.current
+        def _kild_rollback_child(self, tx_id: int, tx_group: str) -> None:
+            meta = self._kild_field_meta("child")
+            state = self._kild_field_state("child")
+            if tx_group != meta.tx_group or state.working_tx_id != tx_id or not state.has_working_value:
+                return
+            if self.__kild_working_child is not None and self.__kild_working_child is not self.__kild_current_store.child:
+                _best_effort_close_owned_value(self.__kild_working_child, self.__kild_state.rollback_errors)
+            state.has_working_value = False
+            state.working_tx_id = None
+            self.__kild_working_child = None
 
-        def _rollback_transaction(self, tx_id: int, tx_group: str = DEFAULT_TRANSACTION) -> object:
-            meta = self._field_meta()
-            field_state = self._field_state()
-            if tx_group != meta.tx_group or field_state.working_tx_id != tx_id:
-                return self.current
-
-            staged = field_state.working_value
-            current = self._current_child
-            if staged is not MISSING and staged is not None and staged is not current:
-                staged.dec_ref()
-
-            field_state.working_value = MISSING
-            field_state.working_tx_id = None
-            self._deferred_commit_cleanup.clear()
-            return self.current
+        def _kild_rollback_child_list(self, tx_id: int, tx_group: str) -> None:
+            meta = self._kild_field_meta("child_list")
+            state = self._kild_field_state("child_list")
+            if tx_group != meta.tx_group or state.working_tx_id != tx_id or not state.has_working_value:
+                return
+            if self.__kild_working_child_list is not self.__kild_current_store.child_list:
+                _best_effort_clear_owned_list(self.__kild_working_child_list, self.__kild_state.rollback_errors)
+            state.has_working_value = False
+            state.working_tx_id = None
+            self.__kild_working_child_list = BindingList()
 
         def close(self) -> None:
-            current = self._current_child
-            if current is not None:
-                current.dec_ref()
-                self._current_child = None
+            _best_effort_close_owned_value(self.__kild_current_store.child, self.__kild_state.rollback_errors)
+            _best_effort_clear_owned_list(self.__kild_current_store.child_list, self.__kild_state.rollback_errors)
+            self.__kild_current_store.child = None
+            self.__kild_current_store.child_list = BindingList()
 
-    GeneratedOwnedContext.__name__ = "GeneratedOwnedContext"
+    _mirror_user_class_names(_CurrentView, base)
+    _mirror_user_class_names(_WorkingView, base)
+    _mirror_user_class_names(GeneratedOwnedContext, base)
     return GeneratedOwnedContext

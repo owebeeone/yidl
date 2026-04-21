@@ -1,7 +1,7 @@
 # ============================================================================
 # YIDL — lifecycle baseline parity spec
 # ============================================================================
-# Grows with each row in dev-docs/IMPL_PROGRESS.md.
+# Grows with each row in dev-docs/history/IMPL_PROGRESS.md.
 # Companion hand-crafted Python: src/yidl/handcrafted/lifecycle_sample.py
 #
 # Stores / surfaces: align with docs/YIDLDesign.md and pyrolyze lifecycle.

@@ -14,8 +14,8 @@ Subdirectories are fixed up front so contributors know where new artifacts go:
 | `perf/` | Dedicated performance runners and measurement helpers (same scenarios as behavior, separate execution layer). |
 | `study/` | PRE_IMPL harness: scenario + backend ABCs, lifecycle vs `generated_strategy_a` smoke (see `study/CONTRACT.md`). |
 
-Normative study intent: `dev-docs/PRE_IMPL_STUDY_DESIGN.md`.  
-Ordered execution: `dev-docs/PRE_IMPL_STUDY_IMPL_PLAN.md`.
+Normative study intent: `dev-docs/history/PRE_IMPL_STUDY_DESIGN.md`.  
+Ordered execution: `dev-docs/history/PRE_IMPL_STUDY_IMPL_PLAN.md`.
 
 Typical contents also include:
 

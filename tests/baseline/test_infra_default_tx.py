@@ -1,4 +1,4 @@
-"""infra_default_tx — DEFAULT group transaction path (see dev-docs/IMPL_PROGRESS.md)."""
+"""infra_default_tx — DEFAULT group transaction path (see dev-docs/history/IMPL_PROGRESS.md)."""
 
 from __future__ import annotations
 
