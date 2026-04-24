@@ -11,6 +11,11 @@ This file defines repository-specific coding instructions for `yidl`.
 - Prefer **`abc.ABC`** with **`@abstractmethod`** for explicit shared contracts when
   nominal inheritance is practical. Prefer **`typing.Protocol`** only when an ABC
   is awkward (e.g. typing third-party or existing types you must not subclass).
+- Do not introduce enums without explicit project-owner approval. Do not work
+  around this with magic strings, magic integers, sentinel strings, or other
+  passive tags when the concept has semantics. Semantic concepts should be
+  represented by objects/classes that can own behavior, validation, lowering,
+  and documentation.
 - In compiler-only, parser/frontend, IR, spec, and other non-generated support paths, strongly prefer `@dataclass` for classes that primarily hold state.
 - Prefer `frozen=True` for those dataclasses when mutation is not required by the design.
 - Generated YIDL classes must not use `@dataclass` in this phase. Generated classes should be emitted as plain undecorated Python. Tests may still use dataclasses where helpful.

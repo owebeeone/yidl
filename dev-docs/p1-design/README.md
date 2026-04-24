@@ -9,7 +9,7 @@ here.
 
 ## Canonical Summary
 
-`YidlDesignSummary.md`
+`../YidlDesignSummary.md`
 
 Short, dense, decision-oriented summary of the whole P1 design. This should be
 the only required read for understanding the current direction.
@@ -24,15 +24,17 @@ It should cover:
 - callable injection/wrapper lowering
 - per-helper field operation model
 - grammar mapping boundary
+- transducer artifact and generated-library shape
 - P1 implementation order
 
 ## Drill-Down Documents
 
-These documents expand the summary by component.
+These documents expand the summary by component. They are current design
+surface, not historical notes.
 
 | Document | Purpose |
 |---|---|
-| `GeneratedClassLayout.md` | Main facade, secondary facades, `YidlState`, stores, weakref cache, and transaction manager integration. |
+| `GeneratedClassLayout.md` | Main facade, secondary facades, single state/store object, weakref cache, and transaction manager integration. |
 | `LifecycleStoreClassifications.md` | Field value homes, hidden initvar homes, tx-indexed control state, and runtime scratch structures. |
 | `StateRefNamingPlan.md` | Semantic state references, flat slot naming, and dynamic accessor fallback. |
 | `VirtualFieldMapper.md` | Virtual surface declarations and Astichi lowering from semantic paths to collapsed physical names. |
@@ -52,10 +54,22 @@ These documents expand the summary by component.
 - Thin dynamic accessors remain available for external libraries and transitional
   helper code.
 - Field descriptors carry semantic refs and may cache lowered names.
-- Transaction groups are independent; each field belongs to exactly one tx id.
+- Transaction groups are independent; transaction-aware value fields may belong
+  to at most one tx id.
 - Class metadata includes immutable tx-name `<->` tx-id mappings for utilities.
 - The main facade owns strong refs to live secondary facades.
-- `YidlState` owns weak refs to facades and recreates them as needed.
+- The single state/store object owns weak refs to facades and recreates them
+  as needed.
+- Existing YIDL-owned runtime surfaces such as `TransactionManager`,
+  `GroupTransactionManager`, `LifecycleTransaction`, `DEFAULT_TRANSACTION`,
+  and `BindingBase` should keep their names and observable semantics where
+  practical.
+- YIDL code and tests must not import `pyrolyze`; reference behavior needed
+  for parity lives in YIDL-owned code or copied `test-deps/`.
+- Copied lifecycle/freezable reference files are tests-only: no public API,
+  runtime, generated code, or pip-installed package may import or include them.
+- Dependency direction is one-way: future `pyrolyze` may import YIDL
+  resources, never the reverse.
 
 ## First Concrete Subsystems
 
@@ -72,5 +86,5 @@ Build and validate these before broad lifecycle codegen:
 Use `dev-docs/history/` as source material only.
 
 When a historical note contains a still-current decision, copy the decision into
-`YidlDesignSummary.md` or the relevant P1 drill-down document. Do not require
-future readers to reconstruct current design by reading history.
+`../YidlDesignSummary.md` or the relevant P1 drill-down document. Do not
+require future readers to reconstruct current design by reading history.
