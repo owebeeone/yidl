@@ -82,6 +82,17 @@ TxGroup = fieldspec_property("tx_group", object)
    2. init true vs false
    3. literal default vs factory default vs no default
    4. transaction-aware vs not
+5. Property definitions keep stable semantic names such as `Init`, `Default`,
+   `FieldName`, and `FieldAnno`.
+6. Callable/resource binding names are separate from property definition names.
+7. The default binding-name rule is: derive a snake_case parameter name from the
+   property definition name:
+   1. `Init -> init`
+   2. `Default -> default`
+   3. `FieldName -> field_name`
+   4. `FieldAnno -> field_anno`
+8. A later capsule may override that derived binding name when needed, but the
+   derived snake_case name is the default contract.
 
 ### 5.2 Field Specifier Profiles
 
@@ -291,6 +302,35 @@ The important part is not this exact API. The important part is:
 1. rules are facet-local
 2. snippets are Astichi composables
 3. snippet needs are bound from semantic properties
+4. callable/resource parameter names are binding names such as `init`,
+   `default`, `field_name`, and `field_anno`, not the property definition names
+   `Init`, `Default`, `FieldName`, and `FieldAnno`
+
+Additional selector/resource sketch:
+
+```python
+builder = build_from(BaseCapsule)
+builder.property.add.FieldName(str)
+builder.property.add.FieldAnno(object, default=UNSPECIFIED)
+builder.spec.add.field_spec.FieldName.FieldAnno.Init.Default
+builder.method.add.Main.named("__init__").on(INIT_ONLY_METHOD_SHELL)\
+    .define.params.specs(lambda init: init)\
+    .define.prep.any()\
+    .define.field_init.specs(lambda field_name: True)\
+    .define.finalize.any()\
+    .done()
+
+builder.resource.add.init_param.into.params.specs(lambda init: init)\
+    .on(INIT_ONLY_PARAM_RESOURCE)\
+    .define.field_name.spec.field_name()\
+    .define.anno.spec.compute(
+        lambda field_anno: field_anno if field_anno is not UNSPECIFIED else None
+    )\
+    .define.default_value.spec.compute(
+        lambda default: default if default is not UNSPECIFIED else UNSPECIFIED
+    )\
+    .done()
+```
 
 ## 11. What Replaces "Transducer"
 

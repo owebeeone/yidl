@@ -25,6 +25,7 @@ def test_builder_creates_base_capsule() -> None:
     assert base_capsule.facades[0].default is True
 
     assert [prop.name for prop in base_capsule.properties] == ["Init", "Default"]
+    assert [prop.property_name for prop in base_capsule.properties] == ["init", "default"]
     assert base_capsule.properties[0].value_type is bool
     assert base_capsule.properties[0].default is True
     assert base_capsule.properties[1].value_type is T
@@ -32,3 +33,13 @@ def test_builder_creates_base_capsule() -> None:
 
     assert [spec.name for spec in base_capsule.specs] == ["base_spec"]
     assert base_capsule.specs[0].property_names == ("Init", "Default")
+
+
+def test_builder_allows_property_name_override() -> None:
+    builder = capsule.build()
+    builder.property.add.TxGroup(object, property_name="tx_name")
+
+    built = builder.build()
+
+    assert built.properties[0].name == "TxGroup"
+    assert built.properties[0].property_name == "tx_name"
