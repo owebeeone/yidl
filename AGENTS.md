@@ -3,6 +3,12 @@
 ## Scope
 This file defines repository-specific coding instructions for `yidl`.
 
+## Active docs
+- `dev-docs/YidlDesignSummary.md` is the canonical semantic/design summary.
+- `dev-docs/YidlCodingRules.md` is the definitive implementation/coding-rules
+  document.
+- `dev-docs/history/` is archival only.
+
 ## Agent requests: review vs edit
 - When the user asks to **review**, **verify**, or **analyze** (or similar: assess, report, check), respond with **read-only analysis** only. **Do not** change files, run refactors, or “fix” docs or code unless they **explicitly** ask for edits, fixes, implementation, or an update.
 - If analysis surfaces a problem, describe it and wait for direction rather than patching the tree unprompted.
@@ -48,6 +54,15 @@ Use a strict red/green/refactor workflow for behavior changes.
 3. Refactor: Improve structure and readability while preserving behavior.
 4. Verify targeted scope: Re-run the focused test subset.
 5. Verify full regression: Run the full relevant regression scope before finalizing.
+
+## Test coverage shape
+- Prefer canonical fixture, `gold_src`, golden, snapshot, or integration-style
+  coverage for successful end-to-end behavior when that harness already exists.
+- Keep bespoke unit tests focused on narrow mechanics, recognition/parsing
+  checks, diagnostics, and failure modes the canonical harness does not express
+  cleanly.
+- Avoid duplicating the same success-path assertions in both bespoke tests and
+  canonical output tests.
 
 ## Test file naming
 - Test **file** and **module** names should describe **behavior or the surface under

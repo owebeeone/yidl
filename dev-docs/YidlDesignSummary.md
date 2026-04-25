@@ -4,7 +4,8 @@ Canonical, self-contained design summary for YIDL P1 (first lifecycle-generation
 phase). Every current decision, API-relevant rule, and locked directional choice
 lives here in enumerated form. Drill-down documents expand — they do not
 override — anything below. History under `dev-docs/history/` is source material
-only; the history documents do not require it to be read.
+only; the history documents do not require it to be read. Implementation and
+process rules live in `dev-docs/YidlCodingRules.md`.
 
 ## 1. Purpose And Scope
 
