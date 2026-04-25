@@ -71,13 +71,31 @@ class ResolvedInitField:
     init: bool = True
     default: Any = UNSPECIFIED
 
+ParameterSnippet = """
+def astichi_params(*, field_name__astichi_arg__: astichi_hole(anno) = astichi_hole(default_value)):
+    pass
+"""
+
+MethodSnippet = """
+def method_name__astichi_arg__(self, method_params__astichi_param_hole__):
+    astichi_hole(method_preparation)
+    astichi_hole(method_body)
+    astichi_hole(method_cleanup)
+"""
 
 def build_init_only_capsule() -> YidlCapsule:
     builder = build_from(BaseCapsule)
     builder.property.add.FieldName(str)
     builder.property.add.FieldAnno(object, default=UNSPECIFIED)
+    # "field_spec" is defined to contain a field name, annotation, and init/default values.
     builder.spec.add.field_spec.FieldName.FieldAnno.Init.Default
-    builder.method.add.Main.named("__init__").params.body
+    # uses the Main facade and defines the __init__ method.
+    builder.method.add.Main.InitMethod(
+        "__init__", 
+        method_snippet=MethodSnippet, # holes - method_preparation, method_body, method_cleanup
+        parameter_snippet=ParameterSnippet) # holes - field_name, anno, default_value
+    builder.InitMethod.params.over.spec.filter(lambda spec: spec.init)
+    builder.InitMethod.body.over.spec
     return builder.build()
 
 

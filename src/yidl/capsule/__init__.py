@@ -21,7 +21,6 @@ from .init_only_capsule import (
     build_init_only_capsule,
     render_init_only_class,
 )
-from .spec_lambda import SpecContext, inspect_names, spec_compute, spec_filter
 
 __all__ = [
     "BaseCapsule",
@@ -34,7 +33,6 @@ __all__ = [
     "CapsuleSpecInstance",
     "CapsuleSpecValue",
     "InitOnlyCapsule",
-    "SpecContext",
     "UNSPECIFIED",
     "UnspecifiedType",
     "YidlCapsule",
@@ -42,8 +40,5 @@ __all__ = [
     "build_from",
     "build_base_capsule",
     "build_init_only_capsule",
-    "inspect_names",
     "render_init_only_class",
-    "spec_compute",
-    "spec_filter",
 ]
