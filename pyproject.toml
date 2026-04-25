@@ -37,3 +37,6 @@ include = ["src/yidl", "docs", "example", "tests", "dev-docs", "spec"]
 # ``.`` keeps ``tests`` importable; ``docs/validation`` exposes the ``study`` package.
 pythonpath = [".", "src", "docs/validation"]
 testpaths = ["tests", "docs/validation/study"]
+
+[tool.yidl.test-matrix]
+python = ["3.12", "3.13", "3.14"]

@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import ast
-from dataclasses import dataclass
-from typing import Any, Iterable
+from collections.abc import Callable, Iterable, Mapping
+from dataclasses import dataclass, field
+import textwrap
+from typing import Any
 
 from .base_capsule import BaseCapsule
 from .core import CapsuleSpecInstance, UNSPECIFIED, YidlCapsule, build_from
@@ -27,41 +29,35 @@ INIT_ONLY_FIELD_INIT_RESOURCE = """
 self.field_name__astichi_arg__ = field_value__astichi_arg__
 """
 
-# Planned lambda-selector shape once the selector/binding engine exists.
-# Property definitions keep semantic names such as `Init`, `Default`,
-# `FieldName`, and `FieldAnno`. Callable/resource parameter names use the
-# derived binding names `init`, `default`, `field_name`, and `field_anno`
-# unless a later capsule overrides that mapping.
-#
-# def build_init_only_capsule() -> YidlCapsule:
-#     builder = build_from(BaseCapsule)
-#     builder.property.add.FieldName(str)
-#     builder.property.add.FieldAnno(object, default=UNSPECIFIED)
-#     builder.spec.add.field_spec.FieldName.FieldAnno.Init.Default
-#     builder.method.add.Main.named("__init__").on(INIT_ONLY_METHOD_SHELL)\
-#         .define.params.specs(lambda init: init)\
-#         .define.prep.any()\
-#         .define.field_init.specs(lambda field_name: True)\
-#         .define.finalize.any()\
-#         .done()
-#     builder.resource.add.init_param.into.params.specs(lambda init: init)\
-#         .on(INIT_ONLY_PARAM_RESOURCE)\
-#         .define.field_name.spec.field_name()\
-#         .define.anno.spec.compute(
-#             lambda field_anno: field_anno if field_anno is not UNSPECIFIED else None
-#         )\
-#         .define.default_value.spec.compute(
-#             lambda default: default if default is not UNSPECIFIED else UNSPECIFIED
-#         )\
-#         .done()
-#     builder.resource.add.field_assign.into.field_init.specs(lambda field_name: True)\
-#         .on(INIT_ONLY_FIELD_INIT_RESOURCE)\
-#         .define.field_name.spec.field_name()\
-#         .define.field_value.spec.compute(
-#             lambda field_name, init, default: field_name if init else default
-#         )\
-#         .done()
-#     return builder.build()
+_FACTORY_ROOT_SRC = """
+def make_wrapper_class(class_definition):
+    astichi_hole(factory_locals)
+    class class_name__astichi_arg__(astichi_ref("_y_wrapped_class")):
+        astichi_hole(class_defs)
+        astichi_hole(class_methods)
+    return class_name__astichi_arg__
+"""
+
+_CLASS_DEFINITION_LOCAL_SRC = """
+astichi_ref("_y_class_definition")._ = astichi_pass(class_definition, outer_bind=True)
+"""
+
+_WRAPPED_CLASS_LOCAL_SRC = """
+astichi_ref("_y_wrapped_class")._ = astichi_ref("_y_class_definition").wrapped_class
+"""
+
+_CLASS_DEFINITION_ATTR_SRC = """
+__yidl_class_definition__ = astichi_ref("_y_class_definition")
+"""
+
+_INIT_METHOD_SRC = """
+def __init__(self__astichi_keep__, method_params__astichi_param_hole__):
+    astichi_hole(method_body)
+"""
+
+_PASS_SRC = """
+pass
+"""
 
 
 @dataclass(frozen=True, slots=True)
@@ -71,35 +67,231 @@ class ResolvedInitField:
     init: bool = True
     default: Any = UNSPECIFIED
 
-ParameterSnippet = """
-def astichi_params(*, field_name__astichi_arg__: astichi_hole(anno) = astichi_hole(default_value)):
-    pass
-"""
 
-MethodSnippet = """
-def method_name__astichi_arg__(self, method_params__astichi_param_hole__):
-    astichi_hole(method_preparation)
-    astichi_hole(method_body)
-    astichi_hole(method_cleanup)
-"""
+@dataclass(frozen=True, slots=True)
+class InitOnlyFieldSpec:
+    init: bool = True
+    default: Any = UNSPECIFIED
+
+
+@dataclass(frozen=True, slots=True)
+class InitOnlyClassDefinition:
+    class_name: str
+    wrapped_class: type[Any]
+    fields: tuple[ResolvedInitField, ...] = ()
+    fields_by_name: dict[str, ResolvedInitField] = field(init=False, repr=False)
+
+    def __post_init__(self) -> None:
+        object.__setattr__(
+            self,
+            "fields_by_name",
+            {field.field_name: field for field in self.fields},
+        )
+
+
+def field_spec(*, init: bool = True, default: Any = UNSPECIFIED) -> InitOnlyFieldSpec:
+    """Declare an init-only managed field on a decorated class."""
+
+    if not isinstance(init, bool):
+        raise TypeError(f"init must be bool, got {type(init).__name__}")
+    return InitOnlyFieldSpec(init=init, default=default)
+
 
 def build_init_only_capsule() -> YidlCapsule:
     builder = build_from(BaseCapsule)
     builder.property.add.FieldName(str)
     builder.property.add.FieldAnno(object, default=UNSPECIFIED)
-    # "field_spec" is defined to contain a field name, annotation, and init/default values.
     builder.spec.add.field_spec.FieldName.FieldAnno.Init.Default
-    # uses the Main facade and defines the __init__ method.
-    builder.method.add.Main.InitMethod(
-        "__init__", 
-        method_snippet=MethodSnippet, # holes - method_preparation, method_body, method_cleanup
-        parameter_snippet=ParameterSnippet) # holes - field_name, anno, default_value
-    builder.InitMethod.params.over.spec.filter(lambda spec: spec.init)
-    builder.InitMethod.body.over.spec
+    builder.method.add.Main.named("__init__").params.body
     return builder.build()
 
 
 InitOnlyCapsule = build_init_only_capsule()
+
+
+def compile_capsule(
+    capsule: YidlCapsule = InitOnlyCapsule,
+    namespace: Mapping[str, Any] | None = None,
+) -> Callable[[type[Any]], type[Any]]:
+    """Compile a capsule into a class decorator.
+
+    The current discovery slice only supports the concrete ``InitOnlyCapsule``.
+    ``namespace`` is reserved for the broader capsule compiler surface.
+    """
+
+    del namespace
+    if capsule != InitOnlyCapsule:
+        raise NotImplementedError("compile_capsule currently supports InitOnlyCapsule only")
+    return compile_init_only_capsule(capsule=capsule)
+
+
+def compile_init_only_capsule(
+    *,
+    capsule: YidlCapsule = InitOnlyCapsule,
+) -> Callable[[type[Any]], type[Any]]:
+    """Return a decorator that emits an init-only wrapper class."""
+
+    def decorate(decorated_class: type[Any]) -> type[Any]:
+        class_definition = class_definition_from_class(decorated_class, capsule=capsule)
+        _strip_field_spec_markers(decorated_class)
+        factory_source = emit_init_only_factory_source(class_definition)
+        wrapped_class = _materialize_init_only_wrapper_class(
+            class_definition,
+            factory_source,
+        )
+        wrapped_class.__module__ = decorated_class.__module__
+        wrapped_class.__qualname__ = decorated_class.__qualname__
+        wrapped_class.__doc__ = decorated_class.__doc__
+        wrapped_class.__annotations__ = dict(getattr(decorated_class, "__annotations__", {}))
+        wrapped_class.__wrapped__ = decorated_class
+        wrapped_class.__yidl_class_definition__ = class_definition
+        wrapped_class.__yidl_factory_source__ = factory_source
+        return wrapped_class
+
+    return decorate
+
+
+def class_definition_from_class(
+    decorated_class: type[Any],
+    *,
+    capsule: YidlCapsule = InitOnlyCapsule,
+) -> InitOnlyClassDefinition:
+    """Scan a decorated class for ``field_spec(...)`` declarations."""
+
+    annotations = dict(getattr(decorated_class, "__annotations__", {}))
+    unannotated_fields = tuple(
+        name
+        for name, value in decorated_class.__dict__.items()
+        if isinstance(value, InitOnlyFieldSpec) and name not in annotations
+    )
+    if unannotated_fields:
+        raise ValueError(
+            "field_spec requires annotations for managed fields: "
+            f"{unannotated_fields!r}"
+        )
+
+    fields: list[ResolvedInitField] = []
+    for field_name, field_anno in annotations.items():
+        value = decorated_class.__dict__.get(field_name, UNSPECIFIED)
+        if not isinstance(value, InitOnlyFieldSpec):
+            continue
+        spec_values: dict[str, Any] = {
+            "field_name": field_name,
+            "field_anno": field_anno,
+            "init": value.init,
+        }
+        if value.default is not UNSPECIFIED:
+            spec_values["default"] = value.default
+        fields.append(
+            _resolve_field_spec(
+                capsule,
+                CapsuleSpecInstance.from_values("field_spec", **spec_values),
+            )
+        )
+
+    return InitOnlyClassDefinition(
+        class_name=decorated_class.__name__,
+        wrapped_class=decorated_class,
+        fields=tuple(fields),
+    )
+
+
+def emit_init_only_factory_source(class_definition: InitOnlyClassDefinition) -> str:
+    """Emit the Astichi-built wrapper factory source for ``class_definition``."""
+
+    astichi = _import_astichi()
+    builder = astichi.build()
+    builder.add.Root(
+        _piece(_FACTORY_ROOT_SRC),
+        arg_names={"class_name": class_definition.class_name},
+        keep_names=[
+            class_definition.class_name,
+            "class_definition",
+            "_y_class_definition",
+            "_y_wrapped_class",
+        ],
+    )
+    builder.add.ClassDefinitionLocal(
+        _piece(_CLASS_DEFINITION_LOCAL_SRC),
+        keep_names=["class_definition", "_y_class_definition"],
+    )
+    builder.add.WrappedClassLocal(
+        _piece(_WRAPPED_CLASS_LOCAL_SRC),
+        keep_names=["_y_class_definition", "_y_wrapped_class"],
+    )
+    builder.add.ClassDefinitionAttr(_piece(_CLASS_DEFINITION_ATTR_SRC))
+    builder.add.InitMethod(_piece(_INIT_METHOD_SRC))
+    builder.Root.factory_locals.add.ClassDefinitionLocal(order=0)
+    builder.Root.factory_locals.add.WrappedClassLocal(order=1)
+    builder.Root.class_defs.add.ClassDefinitionAttr(order=0)
+    builder.Root.class_methods.add.InitMethod(order=0)
+
+    for order, field_definition in enumerate(class_definition.fields):
+        hoist_order = 10 + (order * 10)
+        if field_definition.init:
+            anno_local_name = _anno_local_name(field_definition.field_name)
+            builder.add.AnnoLocal[order](
+                _piece(_anno_local_src(anno_local_name, field_definition.field_name)),
+                keep_names=[anno_local_name, "_y_class_definition"],
+            )
+            builder.Root.factory_locals.add.AnnoLocal[order](order=hoist_order)
+            if field_definition.default is not UNSPECIFIED:
+                default_local_name = _default_local_name(field_definition.field_name)
+                builder.add.DefaultLocal[order](
+                    _piece(_default_local_src(default_local_name, field_definition.field_name)),
+                    keep_names=[default_local_name, "_y_class_definition"],
+                )
+                builder.Root.factory_locals.add.DefaultLocal[order](order=hoist_order + 1)
+            builder.add.Param[order](
+                _piece(
+                    _defaulted_param_src(
+                        field_definition.field_name,
+                        anno_local_name,
+                        _default_local_name(field_definition.field_name),
+                    )
+                    if field_definition.default is not UNSPECIFIED
+                    else _required_param_src(
+                        field_definition.field_name,
+                        anno_local_name,
+                    )
+                ),
+                keep_names=[
+                    field_definition.field_name,
+                    anno_local_name,
+                    _default_local_name(field_definition.field_name),
+                ],
+            )
+            builder.InitMethod.method_params.add.Param[order](order=order)
+            builder.add.Assign[order](
+                _piece(_param_assign_src(field_definition.field_name)),
+                keep_names=[field_definition.field_name, "self"],
+            )
+            builder.InitMethod.method_body.add.Assign[order](
+                order=order,
+                arg_names={"self": "self"},
+            )
+            continue
+
+        default_local_name = _default_local_name(field_definition.field_name)
+        builder.add.DefaultLocal[order](
+            _piece(_default_local_src(default_local_name, field_definition.field_name)),
+            keep_names=[default_local_name, "_y_class_definition"],
+        )
+        builder.Root.factory_locals.add.DefaultLocal[order](order=hoist_order)
+        builder.add.Assign[order](
+            _piece(_default_assign_src(field_definition.field_name, default_local_name)),
+            keep_names=[field_definition.field_name, default_local_name, "self"],
+        )
+        builder.InitMethod.method_body.add.Assign[order](
+            order=order,
+            arg_names={"self": "self"},
+        )
+
+    if not class_definition.fields:
+        builder.add.Pass(_piece(_PASS_SRC))
+        builder.InitMethod.method_body.add.Pass(order=0)
+
+    return builder.build().materialize().emit(provenance=False)
 
 
 def render_init_only_class(
@@ -118,6 +310,95 @@ def render_init_only_class(
     )
     ast.fix_missing_locations(module)
     return ast.unparse(module)
+
+
+def _materialize_init_only_wrapper_class(
+    class_definition: InitOnlyClassDefinition,
+    factory_source: str,
+) -> type[Any]:
+    namespace: dict[str, object] = {"__name__": class_definition.wrapped_class.__module__}
+    exec(compile(factory_source, "<yidl.init_only.factory>", "exec"), namespace)
+    make_wrapper_class = namespace["make_wrapper_class"]
+    if not callable(make_wrapper_class):
+        raise TypeError("generated init-only factory is not callable")
+    wrapped_class = make_wrapper_class(class_definition)
+    if not isinstance(wrapped_class, type):
+        raise TypeError("generated init-only wrapper is not a class")
+    return wrapped_class
+
+
+def _strip_field_spec_markers(decorated_class: type[Any]) -> None:
+    annotations = getattr(decorated_class, "__annotations__", {})
+    for field_name in annotations:
+        value = decorated_class.__dict__.get(field_name, UNSPECIFIED)
+        if isinstance(value, InitOnlyFieldSpec):
+            delattr(decorated_class, field_name)
+
+
+def _import_astichi() -> Any:
+    import astichi
+
+    return astichi
+
+
+def _piece(src: str):
+    return _import_astichi().compile(textwrap.dedent(src).strip() + "\n")
+
+
+def _anno_local_name(field_name: str) -> str:
+    return f"_y_{field_name}_anno"
+
+
+def _default_local_name(field_name: str) -> str:
+    return f"_y_{field_name}_default"
+
+
+def _anno_local_src(local_name: str, field_name: str) -> str:
+    return f"""
+astichi_ref("{local_name}")._ = astichi_ref("_y_class_definition").fields_by_name[{field_name!r}].field_anno
+"""
+
+
+def _default_local_src(local_name: str, field_name: str) -> str:
+    return f"""
+astichi_ref("{local_name}")._ = astichi_ref("_y_class_definition").fields_by_name[{field_name!r}].default
+"""
+
+
+def _required_param_src(field_name: str, anno_local_name: str) -> str:
+    return f"""
+def astichi_params(
+    *,
+    {field_name}: astichi_ref("{anno_local_name}"),
+):
+    pass
+"""
+
+
+def _defaulted_param_src(
+    field_name: str,
+    anno_local_name: str,
+    default_local_name: str,
+) -> str:
+    return f"""
+def astichi_params(
+    *,
+    {field_name}: astichi_ref("{anno_local_name}")=astichi_ref("{default_local_name}"),
+):
+    pass
+"""
+
+
+def _param_assign_src(field_name: str) -> str:
+    return f"""
+self__astichi_arg__.{field_name} = astichi_pass({field_name}, outer_bind=True)
+"""
+
+
+def _default_assign_src(field_name: str, default_local_name: str) -> str:
+    return f"""
+self__astichi_arg__.{field_name} = astichi_ref("{default_local_name}")
+"""
 
 
 def _resolve_field_spec(
@@ -266,7 +547,14 @@ def _spec_named(capsule: YidlCapsule, spec_name: str):
 
 __all__ = [
     "InitOnlyCapsule",
+    "InitOnlyClassDefinition",
+    "InitOnlyFieldSpec",
     "ResolvedInitField",
     "build_init_only_capsule",
+    "class_definition_from_class",
+    "compile_capsule",
+    "compile_init_only_capsule",
+    "emit_init_only_factory_source",
+    "field_spec",
     "render_init_only_class",
 ]

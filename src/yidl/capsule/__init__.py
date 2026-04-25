@@ -18,7 +18,14 @@ from .core import (
 )
 from .init_only_capsule import (
     InitOnlyCapsule,
+    InitOnlyClassDefinition,
+    InitOnlyFieldSpec,
     build_init_only_capsule,
+    class_definition_from_class,
+    compile_capsule,
+    compile_init_only_capsule,
+    emit_init_only_factory_source,
+    field_spec,
     render_init_only_class,
 )
 
@@ -33,6 +40,8 @@ __all__ = [
     "CapsuleSpecInstance",
     "CapsuleSpecValue",
     "InitOnlyCapsule",
+    "InitOnlyClassDefinition",
+    "InitOnlyFieldSpec",
     "UNSPECIFIED",
     "UnspecifiedType",
     "YidlCapsule",
@@ -40,5 +49,10 @@ __all__ = [
     "build_from",
     "build_base_capsule",
     "build_init_only_capsule",
+    "class_definition_from_class",
+    "compile_capsule",
+    "compile_init_only_capsule",
+    "emit_init_only_factory_source",
+    "field_spec",
     "render_init_only_class",
 ]
