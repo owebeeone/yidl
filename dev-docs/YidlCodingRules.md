@@ -70,8 +70,45 @@ or revive historical rules in place.
 7. If a parser boundary is still needed in the system, it must be one explicit
    compiler/build boundary outside generated decorator and generated
    field-spec/helper execution, not a per-field or incremental runtime habit.
+8. Astichi is new and YIDL is its first real production use case. When clean
+   YIDL generation needs an Astichi bug fix or a missing Astichi surface,
+   prefer improving Astichi over encoding a YIDL-side workaround.
+9. Do not hide Astichi gaps behind long-term YIDL kludges such as bespoke
+   string formatting, feature-specific AST surgery, or semantic shortcuts.
+   Missing Python construct surfaces such as exceptions, `match`, `elif`,
+   `else`, or `for`-`else` should be added to Astichi when YIDL needs them.
+10. A workaround for an Astichi limitation is allowed only as a temporary,
+   documented stopgap with an explicit follow-up to remove it from the
+   long-term generator path.
 
-## 5. Support-Code Style
+## 5. Generator Architecture
+
+1. YIDL generation is composable-resource driven. Features define the tools
+   needed to generate them: Astichi composables, holes/ports, construct
+   surfaces, spec properties, filters/selectors, and rules.
+2. The compiler connects those declared resources by evaluating rules over
+   resolved specs and wiring matching contributions into surfaces. It should
+   not grow bespoke per-feature emitter loops for each new capability.
+3. For common Python constructs, prefer canonical Astichi class/function/
+   component recipes with standardized hole names over parallel YIDL-only
+   metadata.
+4. Class constructs are part of the same model. Methods, class variables,
+   slots, helper declarations, and future class-body constructs should expose
+   named surfaces that rules can target.
+5. Field/spec-specific behavior should be expressed as rule selection and
+   binding into reusable composable resources, not as feature-specific source
+   formatting or one-off AST assembly scattered through emitters.
+6. A small amount of hand-coded assembly is acceptable only as a transitional
+   discovery surface. Once a construct is understood, promote it into the
+   declarative construct/resource/rule model.
+7. The desired direction for surfaces such as slots is construct based. A
+   human-facing fluent spelling such as
+   `builder.classvar.add.Main.named("__slots__").items` may explain the shape,
+   but the generator/mapper path must use Astichi's data-driven builder API
+   rather than synthesizing attribute chains. A rule over selected `field_spec`
+   instances then contributes one slot item into the named `items` surface.
+
+## 6. Support-Code Style
 
 1. In compiler-only, parser/frontend, IR, spec, and other non-generated support
    paths, strongly prefer `@dataclass` for classes that primarily hold state.
@@ -92,7 +129,7 @@ or revive historical rules in place.
 9. If implementation reveals that a planned boundary is wrong, update the plan
    and adopt the cleaner boundary rather than widening the mistake.
 
-## 6. Validation And Repository Hygiene
+## 7. Validation And Repository Hygiene
 
 1. Validation-only experiments, probes, generated examples, and performance
    checks belong under `docs/validation/` until deliberately promoted.
@@ -101,7 +138,7 @@ or revive historical rules in place.
 3. Do not store absolute filesystem paths in committed files; use paths
    relative to the `yidl` repository root.
 
-## 7. Development Process
+## 8. Development Process
 
 1. Use strict red/green/refactor for behavior changes.
    1. Red: add or update the test first and confirm it fails.
@@ -122,7 +159,7 @@ or revive historical rules in place.
 6. Prefer clarifying or simplifying the model over adding generic flags,
    escape hatches, or cross-cutting special cases to force one slice through.
 
-## 8. Test Guidance
+## 9. Test Guidance
 
 1. Prefer explicit assertions over golden strings unless the output shape
    itself is the behavior under test.

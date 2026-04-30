@@ -874,6 +874,23 @@ independent snippets without respecting the pipeline they imply.
    composition, freeze/thaw insertion, binding refcount bodies, owned
    evict-last bodies, commit/rollback body synthesis, 3-phase init field
    unroll.
+8. Generator architecture rule: YIDL features should declare reusable Astichi
+   composable resources plus construct surfaces, spec properties,
+   filters/selectors, and rules. The compiler connects those ports by
+   evaluating rules over resolved specs. New features should not add bespoke
+   per-feature emitter loops once their construct shape is understood. For
+   common class/function constructs, prefer canonical Astichi component recipes
+   and standardized hole names over parallel YIDL-only interface metadata.
+9. Astichi improvement rule: YIDL should prefer fixing or extending Astichi
+   over working around Astichi gaps in the generator. If YIDL needs a missing
+   Python construct surface, add that surface to Astichi rather than hiding the
+   gap behind feature-specific source formatting or AST surgery. Temporary
+   workarounds must be documented and kept out of the long-term generator path.
+10. Data-driven builder rule: fluent Astichi builder paths are useful
+    human-facing notation, but YIDL's mapper must call Astichi through explicit
+    named/data-driven builder APIs. The mapper must not synthesize Python
+    attribute chains to reach `builder.add.<Name>`, `builder.Root.slot`, or
+    similar fluent-only surfaces.
 
 ## 27. Grammar And Source Containers
 

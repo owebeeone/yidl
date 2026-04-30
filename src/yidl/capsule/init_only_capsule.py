@@ -5,6 +5,7 @@ from __future__ import annotations
 import ast
 from collections.abc import Callable, Iterable, Mapping
 from dataclasses import dataclass, field
+from functools import cache
 import textwrap
 from typing import Any
 
@@ -58,6 +59,49 @@ def __init__(self__astichi_keep__, method_params__astichi_param_hole__):
 _PASS_SRC = """
 pass
 """
+
+_ANNO_LOCAL_SRC = """
+astichi_ref(external=local_name)._ = astichi_pass(_y_class_definition, outer_bind=True).fields_by_name[astichi_bind_external(field_name)].field_anno
+"""
+
+_DEFAULT_LOCAL_SRC = """
+astichi_ref(external=local_name)._ = astichi_pass(_y_class_definition, outer_bind=True).fields_by_name[astichi_bind_external(field_name)].default
+"""
+
+_REQUIRED_PARAM_SRC = """
+def astichi_params(
+    *,
+    field_name__astichi_arg__: astichi_pass(anno_local, outer_bind=True),
+):
+    pass
+"""
+
+_DEFAULTED_PARAM_SRC = """
+def astichi_params(
+    *,
+    field_name__astichi_arg__: astichi_pass(anno_local, outer_bind=True)=astichi_pass(default_local, outer_bind=True),
+):
+    pass
+"""
+
+_PARAM_ASSIGN_SRC = """
+astichi_import(self)
+self.astichi_ref(external=target_path)._ = astichi_pass(field_value, outer_bind=True)
+"""
+
+_DEFAULT_ASSIGN_SRC = """
+astichi_import(self)
+self.astichi_ref(external=target_path)._ = astichi_pass(default_local, outer_bind=True)
+"""
+
+_FIELD_RESOURCE_SOURCES = {
+    "AnnoLocal": _ANNO_LOCAL_SRC,
+    "DefaultLocal": _DEFAULT_LOCAL_SRC,
+    "RequiredParam": _REQUIRED_PARAM_SRC,
+    "DefaultedParam": _DEFAULTED_PARAM_SRC,
+    "ParamAssign": _PARAM_ASSIGN_SRC,
+    "DefaultAssign": _DEFAULT_ASSIGN_SRC,
+}
 
 
 @dataclass(frozen=True, slots=True)
@@ -221,6 +265,14 @@ def emit_init_only_factory_source(class_definition: InitOnlyClassDefinition) -> 
     )
     builder.add.ClassDefinitionAttr(_piece(_CLASS_DEFINITION_ATTR_SRC))
     builder.add.InitMethod(_piece(_INIT_METHOD_SRC))
+    registered_field_resources: set[str] = set()
+
+    def ensure_field_resource(name: str) -> None:
+        if name in registered_field_resources:
+            return
+        builder.add(name, _piece(_FIELD_RESOURCE_SOURCES[name]))
+        registered_field_resources.add(name)
+
     builder.Root.factory_locals.add.ClassDefinitionLocal(order=0)
     builder.Root.factory_locals.add.WrappedClassLocal(order=1)
     builder.Root.class_defs.add.ClassDefinitionAttr(order=0)
@@ -230,61 +282,74 @@ def emit_init_only_factory_source(class_definition: InitOnlyClassDefinition) -> 
         hoist_order = 10 + (order * 10)
         if field_definition.init:
             anno_local_name = _anno_local_name(field_definition.field_name)
-            builder.add.AnnoLocal[order](
-                _piece(_anno_local_src(anno_local_name, field_definition.field_name)),
-                keep_names=[anno_local_name, "_y_class_definition"],
+            ensure_field_resource("AnnoLocal")
+            builder.Root.factory_locals.add.AnnoLocal(
+                order=hoist_order,
+                bind={
+                    "local_name": anno_local_name,
+                    "field_name": field_definition.field_name,
+                },
+                keep_names=[anno_local_name],
             )
-            builder.Root.factory_locals.add.AnnoLocal[order](order=hoist_order)
             if field_definition.default is not UNSPECIFIED:
                 default_local_name = _default_local_name(field_definition.field_name)
-                builder.add.DefaultLocal[order](
-                    _piece(_default_local_src(default_local_name, field_definition.field_name)),
-                    keep_names=[default_local_name, "_y_class_definition"],
+                ensure_field_resource("DefaultLocal")
+                builder.Root.factory_locals.add.DefaultLocal(
+                    order=hoist_order + 1,
+                    bind={
+                        "local_name": default_local_name,
+                        "field_name": field_definition.field_name,
+                    },
+                    keep_names=[default_local_name],
                 )
-                builder.Root.factory_locals.add.DefaultLocal[order](order=hoist_order + 1)
-            builder.add.Param[order](
-                _piece(
-                    _defaulted_param_src(
-                        field_definition.field_name,
-                        anno_local_name,
-                        _default_local_name(field_definition.field_name),
-                    )
-                    if field_definition.default is not UNSPECIFIED
-                    else _required_param_src(
-                        field_definition.field_name,
-                        anno_local_name,
-                    )
-                ),
-                keep_names=[
-                    field_definition.field_name,
-                    anno_local_name,
-                    _default_local_name(field_definition.field_name),
-                ],
+            param_resource = (
+                "DefaultedParam"
+                if field_definition.default is not UNSPECIFIED
+                else "RequiredParam"
             )
-            builder.InitMethod.method_params.add.Param[order](order=order)
-            builder.add.Assign[order](
-                _piece(_param_assign_src(field_definition.field_name)),
-                keep_names=[field_definition.field_name, "self"],
-            )
-            builder.InitMethod.method_body.add.Assign[order](
+            ensure_field_resource(param_resource)
+            param_arg_names = {"anno_local": anno_local_name}
+            if field_definition.default is not UNSPECIFIED:
+                param_arg_names["default_local"] = _default_local_name(
+                    field_definition.field_name
+                )
+            builder.InitMethod.method_params.add(
+                param_resource,
                 order=order,
-                arg_names={"self": "self"},
+                arg_names={
+                    "field_name": field_definition.field_name,
+                    **param_arg_names,
+                },
+            )
+            ensure_field_resource("ParamAssign")
+            builder.InitMethod.method_body.add.ParamAssign(
+                order=order,
+                arg_names={
+                    "self": "self",
+                    "field_value": field_definition.field_name,
+                },
+                bind={"target_path": f"{field_definition.field_name}"},
             )
             continue
 
         default_local_name = _default_local_name(field_definition.field_name)
-        builder.add.DefaultLocal[order](
-            _piece(_default_local_src(default_local_name, field_definition.field_name)),
-            keep_names=[default_local_name, "_y_class_definition"],
+        ensure_field_resource("DefaultLocal")
+        builder.Root.factory_locals.add.DefaultLocal(
+            order=hoist_order,
+            bind={
+                "local_name": default_local_name,
+                "field_name": field_definition.field_name,
+            },
+            keep_names=[default_local_name],
         )
-        builder.Root.factory_locals.add.DefaultLocal[order](order=hoist_order)
-        builder.add.Assign[order](
-            _piece(_default_assign_src(field_definition.field_name, default_local_name)),
-            keep_names=[field_definition.field_name, default_local_name, "self"],
-        )
-        builder.InitMethod.method_body.add.Assign[order](
+        ensure_field_resource("DefaultAssign")
+        builder.InitMethod.method_body.add.DefaultAssign(
             order=order,
-            arg_names={"self": "self"},
+            arg_names={
+                "self": "self",
+                "default_local": default_local_name,
+            },
+            bind={"target_path": f"{field_definition.field_name}"},
         )
 
     if not class_definition.fields:
@@ -341,6 +406,7 @@ def _import_astichi() -> Any:
     return astichi
 
 
+@cache
 def _piece(src: str):
     return _import_astichi().compile(textwrap.dedent(src).strip() + "\n")
 
@@ -351,54 +417,6 @@ def _anno_local_name(field_name: str) -> str:
 
 def _default_local_name(field_name: str) -> str:
     return f"_y_{field_name}_default"
-
-
-def _anno_local_src(local_name: str, field_name: str) -> str:
-    return f"""
-astichi_ref("{local_name}")._ = astichi_ref("_y_class_definition").fields_by_name[{field_name!r}].field_anno
-"""
-
-
-def _default_local_src(local_name: str, field_name: str) -> str:
-    return f"""
-astichi_ref("{local_name}")._ = astichi_ref("_y_class_definition").fields_by_name[{field_name!r}].default
-"""
-
-
-def _required_param_src(field_name: str, anno_local_name: str) -> str:
-    return f"""
-def astichi_params(
-    *,
-    {field_name}: astichi_ref("{anno_local_name}"),
-):
-    pass
-"""
-
-
-def _defaulted_param_src(
-    field_name: str,
-    anno_local_name: str,
-    default_local_name: str,
-) -> str:
-    return f"""
-def astichi_params(
-    *,
-    {field_name}: astichi_ref("{anno_local_name}")=astichi_ref("{default_local_name}"),
-):
-    pass
-"""
-
-
-def _param_assign_src(field_name: str) -> str:
-    return f"""
-self__astichi_arg__.{field_name} = astichi_pass({field_name}, outer_bind=True)
-"""
-
-
-def _default_assign_src(field_name: str, default_local_name: str) -> str:
-    return f"""
-self__astichi_arg__.{field_name} = astichi_ref("{default_local_name}")
-"""
 
 
 def _resolve_field_spec(
