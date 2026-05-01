@@ -94,6 +94,48 @@ def test_collection_spec_turns_equality_condition_into_lookup_key() -> None:
     }
 
 
+def test_union_collection_accepts_variant_records_and_indexes_variant_facts() -> None:
+    dds = DataDefinitionSystem()
+    name = dds.property("Name", str, default=REQUIRED, storage_name="name")
+    init = dds.property("Init", bool, default=True, storage_name="init")
+    tx_group = dds.property("TxGroup", str, default=REQUIRED, storage_name="tx_group")
+    field_specs = dds.union("FieldSpecs")
+    plain_field = field_specs.variant("PlainField", name, init)
+    managed_field = field_specs.variant("ManagedField", name, tx_group)
+    fields = dds.collection("Fields", field_specs, cardinality=dds.many, identity=name)
+
+    plain = plain_field.record(name="count")
+    managed = managed_field.record(name="owner", tx_group="main")
+
+    assert field_specs in dds.unions
+    assert field_specs.variants == (plain_field, managed_field)
+    assert fields.identity_of(plain) == "count"
+    assert fields.identity_of(managed) == "owner"
+    assert set(fields.fact_keys(plain)) == {
+        fields.lookup_key(name, "count"),
+        fields.lookup_key(init, True),
+    }
+    assert set(fields.fact_keys(managed)) == {
+        fields.lookup_key(name, "owner"),
+        fields.lookup_key(tx_group, "main"),
+    }
+
+    with pytest.raises(TypeError, match="create a concrete variant record"):
+        fields.record(name="label")
+
+
+def test_union_collection_identity_must_exist_on_all_variants() -> None:
+    dds = DataDefinitionSystem()
+    name = dds.property("Name", str, default=REQUIRED, storage_name="name")
+    tx_group = dds.property("TxGroup", str, default=REQUIRED, storage_name="tx_group")
+    field_specs = dds.union("FieldSpecs")
+    field_specs.variant("PlainField", name)
+    field_specs.variant("ManagedField", name, tx_group)
+
+    with pytest.raises(ValueError, match="must exist on all variants"):
+        dds.collection("Fields", field_specs, cardinality=dds.many, identity=tx_group)
+
+
 def test_transform_spec_derives_collection_records_without_holding_data() -> None:
     dds = DataDefinitionSystem()
     name = dds.property("Name", str, default=REQUIRED, storage_name="name")
@@ -125,6 +167,37 @@ def test_transform_spec_derives_collection_records_without_holding_data() -> Non
     assert derived is not None
     assert derived.name == "count"
     assert transform.derive(label) is None
+
+
+def test_transform_spec_can_read_from_union_source_variants() -> None:
+    dds = DataDefinitionSystem()
+    name = dds.property("Name", str, default=REQUIRED, storage_name="name")
+    init = dds.property("Init", bool, default=True, storage_name="init")
+    tx_group = dds.property("TxGroup", str, default=REQUIRED, storage_name="tx_group")
+    field_specs = dds.union("FieldSpecs")
+    plain_field = field_specs.variant("PlainField", name, init)
+    managed_field = field_specs.variant("ManagedField", name, tx_group)
+    fields = dds.collection("Fields", field_specs, cardinality=dds.many, identity=name)
+    init_field_spec = dds.record("InitField", name)
+    init_fields = dds.collection(
+        "InitFields",
+        init_field_spec,
+        cardinality=dds.many,
+        identity=name,
+    )
+    transform = dds.transform(
+        "FieldsToInitFields",
+        source=fields,
+        target=init_fields,
+        when=(init.eq(True),),
+        values={name: name.read()},
+    )
+
+    derived = transform.derive(plain_field.record(name="count"))
+
+    assert derived is not None
+    assert derived.name == "count"
+    assert transform.derive(managed_field.record(name="owner", tx_group="main")) is None
 
 
 def test_transform_spec_can_compute_new_properties() -> None:

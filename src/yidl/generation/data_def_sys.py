@@ -35,6 +35,7 @@ class DataDefinitionSystem:
         "_properties",
         "_records",
         "_transforms",
+        "_unions",
         "many",
         "single",
     )
@@ -42,6 +43,7 @@ class DataDefinitionSystem:
     def __init__(self) -> None:
         self._properties: dict[str, PropertySpec] = {}
         self._records: dict[str, RecordSpec] = {}
+        self._unions: dict[str, UnionSpec] = {}
         self._collections: dict[str, CollectionSpec] = {}
         self._transforms: dict[str, TransformSpec] = {}
         self.single = SingleCollectionCardinality()
@@ -54,6 +56,10 @@ class DataDefinitionSystem:
     @property
     def records(self) -> tuple[RecordSpec, ...]:
         return tuple(self._records.values())
+
+    @property
+    def unions(self) -> tuple[UnionSpec, ...]:
+        return tuple(self._unions.values())
 
     @property
     def collections(self) -> tuple[CollectionSpec, ...]:
@@ -105,14 +111,26 @@ class DataDefinitionSystem:
         _require_name(name, "record name")
         if name in self._records:
             raise ValueError(f"record {name!r} is already defined")
+        if name in self._unions:
+            raise ValueError(f"record {name!r} conflicts with an existing union")
         spec = RecordSpec(self, name, properties)
         self._records[name] = spec
+        return spec
+
+    def union(self, name: str) -> UnionSpec:
+        _require_name(name, "union name")
+        if name in self._unions:
+            raise ValueError(f"union {name!r} is already defined")
+        if name in self._records:
+            raise ValueError(f"union {name!r} conflicts with an existing record")
+        spec = UnionSpec(self, name)
+        self._unions[name] = spec
         return spec
 
     def collection(
         self,
         name: str,
-        record: RecordSpec,
+        record: RecordSpec | UnionSpec,
         *,
         cardinality: CollectionCardinality,
         identity: PropertySpec | None = None,
@@ -121,9 +139,9 @@ class DataDefinitionSystem:
         if name in self._collections:
             raise ValueError(f"collection {name!r} is already defined")
         if record.system is not self:
-            raise ValueError("collection record belongs to another data-definition system")
+            raise ValueError("collection record shape belongs to another data-definition system")
         if identity is not None:
-            record.require_property(identity)
+            record.require_identity_property(identity)
         spec = CollectionSpec(
             system=self,
             name=name,
@@ -234,6 +252,9 @@ class RecordSpec:
         if prop not in self.properties:
             raise ValueError(f"record {self.name!r} has no property {prop.name!r}")
 
+    def require_identity_property(self, prop: PropertySpec) -> None:
+        self.require_property(prop)
+
     def record_class(self) -> type[object]:
         if self._record_class is None:
             self._record_class = _make_record_class(self)
@@ -253,6 +274,62 @@ class RecordSpec:
         record_spec = getattr(type(record), "__dds_record_spec__", None)
         if not _record_specs_match(record_spec, self):
             raise TypeError(f"expected {self.name} record, got {type(record).__name__}")
+
+    def __repr__(self) -> str:
+        return self.name
+
+
+class UnionSpec:
+    """Named union of concrete record variants."""
+
+    __slots__ = ("_variants", "name", "system")
+
+    def __init__(self, system: DataDefinitionSystem, name: str) -> None:
+        self.system = system
+        self.name = name
+        self._variants: dict[str, RecordSpec] = {}
+
+    @property
+    def variants(self) -> tuple[RecordSpec, ...]:
+        return tuple(self._variants.values())
+
+    def variant(self, name: str, *properties: PropertySpec) -> RecordSpec:
+        if name in self._variants:
+            raise ValueError(f"union {self.name!r} already has variant {name!r}")
+        spec = self.system.record(name, *properties)
+        self._variants[name] = spec
+        return spec
+
+    def require_property(self, prop: PropertySpec) -> None:
+        if prop.system is not self.system:
+            raise ValueError(f"property {prop.name!r} belongs to another data-definition system")
+        if not any(prop in variant.properties for variant in self.variants):
+            raise ValueError(f"union {self.name!r} has no variant with property {prop.name!r}")
+
+    def require_identity_property(self, prop: PropertySpec) -> None:
+        if prop.system is not self.system:
+            raise ValueError(f"property {prop.name!r} belongs to another data-definition system")
+        missing = [
+            variant.name
+            for variant in self.variants
+            if prop not in variant.properties
+        ]
+        if missing:
+            names = ", ".join(missing)
+            raise ValueError(
+                f"union {self.name!r} identity property {prop.name!r} "
+                f"must exist on all variants; missing from: {names}"
+            )
+
+    def record_spec_for(self, record: object) -> RecordSpec:
+        record_spec = getattr(type(record), "__dds_record_spec__", None)
+        for variant in self.variants:
+            if _record_specs_match(record_spec, variant):
+                return variant
+        raise TypeError(f"expected {self.name} variant record, got {type(record).__name__}")
+
+    def validate_record(self, record: object) -> None:
+        self.record_spec_for(record)
 
     def __repr__(self) -> str:
         return self.name
@@ -290,49 +367,58 @@ class ManyCollectionCardinality(CollectionCardinality):
 class CollectionSpec:
     """Schema for a singular or repeated record collection."""
 
-    __slots__ = ("_record_spec", "cardinality", "identity", "name", "system")
+    __slots__ = ("_record_shape", "cardinality", "identity", "name", "system")
 
     def __init__(
         self,
         *,
         system: DataDefinitionSystem,
         name: str,
-        record: RecordSpec,
+        record: RecordSpec | UnionSpec,
         cardinality: CollectionCardinality,
         identity: PropertySpec | None,
     ) -> None:
         self.system = system
         self.name = name
-        self._record_spec = record
+        self._record_shape = record
         self.cardinality = cardinality
         self.identity = identity
 
     @property
-    def record_spec(self) -> RecordSpec:
-        return self._record_spec
+    def record_spec(self) -> RecordSpec | UnionSpec:
+        return self._record_shape
+
+    @property
+    def record_shape(self) -> RecordSpec | UnionSpec:
+        return self._record_shape
 
     def record_instance(self, **values: object) -> object:
-        return self._record_spec.record(**values)
+        if isinstance(self._record_shape, UnionSpec):
+            raise TypeError(
+                f"collection {self.name!r} uses union {self._record_shape.name!r}; "
+                "create a concrete variant record instead"
+            )
+        return self._record_shape.record(**values)
 
     def record(self, **values: object) -> object:
         return self.record_instance(**values)
 
     def identity_of(self, record: object) -> object:
-        self._record_spec.validate_record(record)
+        self._record_shape.validate_record(record)
         if self.identity is None:
             return None
         return self.identity.value_from(record)
 
     def lookup_key(self, prop: PropertySpec, value: object) -> LookupKey:
-        self._record_spec.require_property(prop)
+        self._record_shape.require_property(prop)
         prop.validate(value)
         return LookupKey(self, prop, value)
 
     def fact_keys(self, record: object) -> tuple[LookupKey, ...]:
-        self._record_spec.validate_record(record)
+        record_spec = _record_spec_for_shape(self._record_shape, record)
         return tuple(
             self.lookup_key(prop, prop.value_from(record))
-            for prop in self._record_spec.properties
+            for prop in record_spec.properties
         )
 
     def __repr__(self) -> str:
@@ -379,6 +465,8 @@ class PropertyEquals:
         self.value = value
 
     def matches(self, record: object) -> bool:
+        if not hasattr(record, self.property.storage_name):
+            return False
         return self.property.value_from(record) == self.value
 
     def lookup_key(self, collection: CollectionSpec) -> LookupKey:
@@ -474,6 +562,8 @@ class TransformSpec:
         return all(condition.matches(source) for condition in self.conditions)
 
     def derive(self, source: object) -> object | None:
+        if isinstance(self.target.record_shape, UnionSpec):
+            raise ValueError("transform target collections must use a concrete record shape")
         if not self.matches(source):
             return None
         values = {
@@ -874,6 +964,16 @@ def _property_specs_match(candidate: PropertySpec, expected: PropertySpec) -> bo
     return candidate.default == expected.default
 
 
+def _record_spec_for_shape(
+    shape: RecordSpec | UnionSpec,
+    record: object,
+) -> RecordSpec:
+    if isinstance(shape, UnionSpec):
+        return shape.record_spec_for(record)
+    shape.validate_record(record)
+    return shape
+
+
 def _coerce_value_expression(value: ValueExpression | object) -> ValueExpression:
     if isinstance(value, ValueExpression):
         return value
@@ -935,6 +1035,7 @@ __all__ = [
     "RequiredValue",
     "SingleCollectionCardinality",
     "TransformSpec",
+    "UnionSpec",
     "dds_property",
     "dds_record_spec",
 ]
