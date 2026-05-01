@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import is_dataclass
+import inspect
 
 import pytest
 
@@ -19,17 +20,42 @@ def test_record_spec_generates_plain_slotted_record_class() -> None:
     record = field_record(default=3)
 
     assert not is_dataclass(record)
-    assert field_record.__dds_record_spec__ is field_spec
-    assert field_record.__slots__ == ("init", "default", "_dds_frozen")
+    assert field_record.__name__ == "FieldSpec"
+    assert field_record.__dds_record_spec__.name == "FieldSpec"
+    assert field_record.__slots__ == ("init", "default")
+    assert inspect.get_annotations(field_record, eval_str=True) == {
+        "init": bool,
+        "default": object,
+    }
     assert record.init is True
     assert record.default == 3
+    assert repr(record) == "FieldSpec(init=True, default=3)"
     assert field_spec.values_of(record) == {
         init: True,
         default: 3,
     }
+    signature = inspect.signature(field_record)
+    assert list(signature.parameters) == ["init", "default"]
+    assert signature.parameters["init"].default is True
+    assert signature.parameters["default"].default is inspect.Parameter.empty
+    assert signature.parameters["init"].annotation is bool
+    assert signature.parameters["default"].annotation is object
 
     with pytest.raises(AttributeError, match="immutable"):
         record.init = False
+
+
+def test_record_spec_generates_empty_record_class() -> None:
+    dds = DataDefinitionSystem()
+    empty_spec = dds.record("Empty")
+    empty_record = empty_spec.record_class()
+
+    record = empty_record()
+
+    assert empty_record.__name__ == "Empty"
+    assert empty_record.__dds_record_spec__.name == "Empty"
+    assert empty_record.__slots__ == ()
+    assert repr(record) == "Empty()"
 
 
 def test_record_class_validates_required_unknown_and_typed_values() -> None:
@@ -39,13 +65,13 @@ def test_record_class_validates_required_unknown_and_typed_values() -> None:
     field_spec = dds.record("FieldSpec", init, name)
     field_record = field_spec.record_class()
 
-    with pytest.raises(TypeError, match="missing required value"):
+    with pytest.raises(TypeError, match="required keyword-only argument: 'name'"):
         field_record()
 
     with pytest.raises(TypeError, match="Init must be bool"):
         field_record(init="yes", name="count")
 
-    with pytest.raises(TypeError, match="unexpected values"):
+    with pytest.raises(TypeError, match="unexpected keyword argument 'extra'"):
         field_record(name="count", extra=True)
 
 

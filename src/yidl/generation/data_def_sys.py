@@ -10,6 +10,9 @@ from __future__ import annotations
 
 from collections.abc import Callable, Mapping, Sequence
 import re
+import textwrap
+
+import astichi
 
 
 class RequiredValue:
@@ -248,7 +251,7 @@ class RecordSpec:
 
     def validate_record(self, record: object) -> None:
         record_spec = getattr(type(record), "__dds_record_spec__", None)
-        if record_spec is not self:
+        if not _record_specs_match(record_spec, self):
             raise TypeError(f"expected {self.name} record, got {type(record).__name__}")
 
     def __repr__(self) -> str:
@@ -491,48 +494,384 @@ class TransformSpec:
         return self.name
 
 
-def _make_record_class(spec: RecordSpec) -> type[object]:
-    storage_names = tuple(prop.storage_name for prop in spec.properties)
-    slots = (*storage_names, "_dds_frozen")
+class _DdsPropertyDefinition:
+    __slots__ = ("default", "name", "storage_name", "value_type")
 
-    def __init__(self: object, **values: object) -> None:
-        remaining = dict(values)
-        for prop in spec.properties:
-            if prop.storage_name in remaining:
-                raw_value = remaining.pop(prop.storage_name)
-            elif prop.default is not REQUIRED:
-                raw_value = prop.default
-            else:
-                raise TypeError(
-                    f"missing required value for {spec.name}.{prop.storage_name}"
-                )
-            object.__setattr__(self, prop.storage_name, prop.validate(raw_value))
-        if remaining:
-            names = tuple(sorted(remaining))
-            raise TypeError(f"unexpected values for {spec.name}: {names!r}")
-        object.__setattr__(self, "_dds_frozen", True)
+    def __init__(
+        self,
+        name: str,
+        value_type: type[object] | tuple[type[object], ...],
+        *,
+        default: object,
+        storage_name: str | None,
+    ) -> None:
+        self.name = name
+        self.value_type = value_type
+        self.default = default
+        self.storage_name = storage_name
 
-    def __setattr__(self: object, name: str, value: object) -> None:
-        if getattr(self, "_dds_frozen", False):
-            raise AttributeError(f"{spec.name} records are immutable")
-        object.__setattr__(self, name, value)
 
-    def __repr__(self: object) -> str:
-        values = ", ".join(
-            f"{prop.storage_name}={getattr(self, prop.storage_name)!r}"
-            for prop in spec.properties
+def dds_property(
+    name: str,
+    value_type: type[object] | tuple[type[object], ...],
+    *,
+    default: object = REQUIRED,
+    storage_name: str | None = None,
+) -> _DdsPropertyDefinition:
+    return _DdsPropertyDefinition(
+        name,
+        value_type,
+        default=default,
+        storage_name=storage_name,
+    )
+
+
+def dds_record_spec(name: str, *properties: _DdsPropertyDefinition) -> RecordSpec:
+    dds = DataDefinitionSystem()
+    resolved = [
+        dds.property(
+            prop.name,
+            prop.value_type,
+            default=prop.default,
+            storage_name=prop.storage_name,
         )
-        return f"{spec.name}Record({values})"
+        for prop in properties
+    ]
+    return dds.record(name, *resolved)
 
-    namespace = {
-        "__dds_record_spec__": spec,
-        "__init__": __init__,
-        "__module__": __name__,
-        "__repr__": __repr__,
-        "__setattr__": __setattr__,
-        "__slots__": slots,
+
+def _compile_template(source: str) -> astichi.Composable:
+    return astichi.compile(textwrap.dedent(source).strip() + "\n")
+
+
+_RECORD_CLASS = _compile_template(
+    """
+from yidl.generation.data_def_sys import REQUIRED, dds_property, dds_record_spec
+
+class record_class_name__astichi_arg__:
+    __slots__ = astichi_bind_external(slot_names)
+    __dds_record_spec__ = dds_record_spec(
+        astichi_bind_external(record_name),
+        astichi_hole(property_specs),
+    )
+    astichi_hole(body)
+"""
+)
+
+_EMPTY_RECORD_CLASS = _compile_template(
+    """
+from yidl.generation.data_def_sys import dds_record_spec
+
+class record_class_name__astichi_arg__:
+    __slots__ = ()
+    __dds_record_spec__ = dds_record_spec(astichi_bind_external(record_name))
+
+    def __init__(self):
+        pass
+
+    def __repr__(self):
+        return astichi_bind_external(record_name) + "()"
+"""
+)
+
+_REQUIRED_PROPERTY_SPEC = _compile_template(
+    """
+dds_property(
+    astichi_bind_external(property_name),
+    astichi_ref(external=value_type_path),
+    default=REQUIRED,
+    storage_name=astichi_bind_external(storage_name),
+)
+"""
+)
+
+_DEFAULTED_PROPERTY_SPEC = _compile_template(
+    """
+dds_property(
+    astichi_bind_external(property_name),
+    astichi_ref(external=value_type_path),
+    default=astichi_bind_external(default_value),
+    storage_name=astichi_bind_external(storage_name),
+)
+"""
+)
+
+_FIELD_ANNOTATION = _compile_template(
+    """
+field_name__astichi_arg__: astichi_ref(external=value_type_path)
+"""
+)
+
+_INIT_METHOD = _compile_template(
+    """
+def __init__(self, params__astichi_param_hole__):
+    astichi_hole(body)
+"""
+)
+
+_REQUIRED_PARAM = _compile_template(
+    """
+def astichi_params(*, field_name__astichi_arg__: astichi_ref(external=value_type_path)):
+    pass
+"""
+)
+
+_DEFAULTED_PARAM = _compile_template(
+    """
+def astichi_params(
+    *,
+    field_name__astichi_arg__: astichi_ref(external=value_type_path)
+    = astichi_bind_external(default_value),
+):
+    pass
+"""
+)
+
+_VALIDATE_TYPE = _compile_template(
+    """
+if not isinstance(
+    astichi_pass(field_name, outer_bind=True),
+    astichi_ref(external=value_type_path),
+):
+    raise TypeError(
+        astichi_bind_external(error_prefix)
+        + type(astichi_pass(field_name, outer_bind=True)).__name__
+    )
+"""
+)
+
+_INIT_ASSIGN = _compile_template(
+    """
+object.__setattr__(
+    astichi_pass(self, outer_bind=True),
+    astichi_bind_external(field_name_literal),
+    astichi_pass(field_name, outer_bind=True),
+)
+"""
+)
+
+_SETATTR_METHOD = _compile_template(
+    """
+def __setattr__(self, name, value):
+    if name in astichi_bind_external(frozen_names):
+        raise AttributeError(astichi_bind_external(error_message))
+    object.__setattr__(self, name, value)
+"""
+)
+
+_REPR_METHOD = _compile_template(
+    """
+def __repr__(self):
+    pieces = []
+    astichi_hole(parts)
+    return astichi_bind_external(record_name) + "(" + ", ".join(pieces) + ")"
+"""
+)
+
+_REPR_PART = _compile_template(
+    """
+astichi_pass(pieces, outer_bind=True).append(
+    astichi_bind_external(label)
+    + repr(astichi_pass(self, outer_bind=True).astichi_ref(external=field_path))
+)
+"""
+)
+
+
+def _make_record_class(spec: RecordSpec) -> type[object]:
+    class_name = spec.name
+    namespace: dict[str, object] = {"__name__": __name__}
+    composable = _materialize_record_class(spec, namespace=namespace)
+    return _execute_record_class(composable, class_name, namespace)
+
+
+def _emit_record_class_source(spec: RecordSpec) -> str:
+    return _materialize_record_class(spec).emit(provenance=False)
+
+
+def _materialize_record_class(
+    spec: RecordSpec,
+    *,
+    namespace: dict[str, object] | None = None,
+) -> astichi.Composable:
+    class_name = spec.name
+    if not spec.properties:
+        return (
+            _EMPTY_RECORD_CLASS
+            .bind(
+                record_name=class_name,
+            )
+            .bind_identifier(record_class_name=class_name)
+            .with_keep_names([class_name])
+            .materialize()
+        )
+
+    builder = astichi.build()
+    builder.add.Root(
+        _RECORD_CLASS.bind(
+            record_name=spec.name,
+            slot_names=tuple(prop.storage_name for prop in spec.properties),
+        ),
+        arg_names={"record_class_name": class_name},
+        keep_names=[class_name],
+    )
+    builder.add.InitMethod(_INIT_METHOD)
+    builder.add.SetAttrMethod(
+        _SETATTR_METHOD.bind(
+            frozen_names=tuple(prop.storage_name for prop in spec.properties),
+            error_message=f"{spec.name} records are immutable",
+        ),
+        keep_names=["AttributeError", "object"],
+    )
+    builder.add.ReprMethod(_REPR_METHOD.bind(record_name=class_name))
+
+    body_base_order = len(spec.properties)
+    builder.Root.body.add.InitMethod(order=body_base_order)
+    builder.Root.body.add.SetAttrMethod(order=body_base_order + 1)
+    builder.Root.body.add.ReprMethod(order=body_base_order + 2)
+
+    for order, prop in enumerate(spec.properties):
+        _add_record_property(builder, namespace, order, prop)
+
+    return builder.build().materialize()
+
+
+def _add_record_property(
+    builder: astichi.BuilderHandle,
+    namespace: dict[str, object] | None,
+    order: int,
+    prop: PropertySpec,
+) -> None:
+    value_type_path = _value_type_ref_path(prop.value_type)
+    property_spec = _REQUIRED_PROPERTY_SPEC
+    property_bind: dict[str, object] = {
+        "property_name": prop.name,
+        "storage_name": prop.storage_name,
+        "value_type_path": value_type_path,
     }
-    return type(f"{spec.name}Record", (), namespace)
+    if prop.default is not REQUIRED:
+        property_spec = _DEFAULTED_PROPERTY_SPEC
+        property_bind["default_value"] = prop.default
+
+    builder.add.PropertySpec[order](
+        property_spec.bind(property_bind),
+        keep_names=[
+            "REQUIRED",
+            "dds_property",
+            *_value_type_keep_names(prop.value_type),
+        ],
+    )
+    builder.Root.property_specs.add.PropertySpec[order](order=order)
+
+    builder.add.FieldAnnotation[order](
+        _FIELD_ANNOTATION.bind(value_type_path=value_type_path),
+        arg_names={"field_name": prop.storage_name},
+        keep_names=_value_type_keep_names(prop.value_type),
+    )
+    builder.Root.body.add.FieldAnnotation[order](order=order)
+
+    param_piece = _REQUIRED_PARAM
+    param_bind: dict[str, object] = {"value_type_path": value_type_path}
+    if prop.default is not REQUIRED:
+        param_piece = _DEFAULTED_PARAM
+        param_bind["default_value"] = prop.default
+    builder.add.Param[order](
+        param_piece.bind(param_bind),
+        arg_names={"field_name": prop.storage_name},
+        keep_names=[
+            prop.storage_name,
+            *_value_type_keep_names(prop.value_type),
+        ],
+    )
+    builder.InitMethod.params.add.Param[order](order=order)
+
+    if prop.value_type is not object:
+        builder.add.TypeCheck[order](
+            _VALIDATE_TYPE.bind(
+                error_prefix=(
+                    f"{prop.name} must be {_type_name(prop.value_type)}, got "
+                ),
+                value_type_path=value_type_path,
+            ),
+            arg_names={"field_name": prop.storage_name},
+            keep_names=[
+                "TypeError",
+                "isinstance",
+                "type",
+                *_value_type_keep_names(prop.value_type),
+            ],
+        )
+        builder.InitMethod.body.add.TypeCheck[order](order=order)
+
+    builder.add.InitAssign[order](
+        _INIT_ASSIGN.bind(
+            field_name_literal=prop.storage_name,
+        ),
+        arg_names={"field_name": prop.storage_name},
+        keep_names=["object"],
+    )
+    builder.InitMethod.body.add.InitAssign[order](order=order)
+
+    builder.add.ReprPart[order](
+        _REPR_PART.bind(
+            field_path=prop.storage_name,
+            label=f"{prop.storage_name}=",
+        ),
+        keep_names=["repr"],
+    )
+    builder.ReprMethod.parts.add.ReprPart[order](order=order)
+
+
+def _execute_record_class(
+    composable: astichi.Composable,
+    class_name: str,
+    namespace: dict[str, object],
+) -> type[object]:
+    code = compile(composable.tree, f"<yidl.dds.{class_name}>", "exec", dont_inherit=True)
+    exec(code, namespace)
+    record_class = namespace[class_name]
+    if not isinstance(record_class, type):
+        raise TypeError(f"generated {class_name} is not a class")
+    return record_class
+
+
+def _value_type_ref_path(value_type: type[object] | tuple[type[object], ...]) -> str:
+    if isinstance(value_type, tuple):
+        raise ValueError("tuple value-type emission is not implemented yet")
+    if value_type.__module__ != "builtins":
+        raise ValueError(
+            f"cannot emit non-builtin value type {value_type.__module__}.{value_type.__qualname__}"
+        )
+    return value_type.__qualname__
+
+
+def _value_type_keep_names(value_type: type[object] | tuple[type[object], ...]) -> tuple[str, ...]:
+    return (_value_type_ref_path(value_type),)
+
+
+def _record_specs_match(candidate: object, expected: RecordSpec) -> bool:
+    if not isinstance(candidate, RecordSpec):
+        return False
+    if candidate.name != expected.name:
+        return False
+    if len(candidate.properties) != len(expected.properties):
+        return False
+    return all(
+        _property_specs_match(left, right)
+        for left, right in zip(candidate.properties, expected.properties, strict=True)
+    )
+
+
+def _property_specs_match(candidate: PropertySpec, expected: PropertySpec) -> bool:
+    if candidate.name != expected.name:
+        return False
+    if candidate.storage_name != expected.storage_name:
+        return False
+    if candidate.value_type is not expected.value_type:
+        return False
+    if candidate.default is REQUIRED or expected.default is REQUIRED:
+        return candidate.default is expected.default
+    return candidate.default == expected.default
 
 
 def _coerce_value_expression(value: ValueExpression | object) -> ValueExpression:
@@ -596,4 +935,6 @@ __all__ = [
     "RequiredValue",
     "SingleCollectionCardinality",
     "TransformSpec",
+    "dds_property",
+    "dds_record_spec",
 ]
