@@ -8,6 +8,7 @@ import pytest
 from yidl.generation.data_def_sys import ComputedValue
 from yidl.generation.data_def_sys import DataDefinitionSystem
 from yidl.generation.data_def_sys import REQUIRED
+from yidl.generation.data_schema import DataDefinitionSystem as SchemaDataDefinitionSystem
 
 
 def test_record_spec_generates_plain_slotted_record_class() -> None:
@@ -43,6 +44,10 @@ def test_record_spec_generates_plain_slotted_record_class() -> None:
 
     with pytest.raises(AttributeError, match="immutable"):
         record.init = False
+
+
+def test_data_schema_module_exposes_same_schema_facade() -> None:
+    assert issubclass(DataDefinitionSystem, SchemaDataDefinitionSystem)
 
 
 def test_record_spec_generates_empty_record_class() -> None:
