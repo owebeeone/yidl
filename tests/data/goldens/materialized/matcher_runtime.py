@@ -1,5 +1,5 @@
 from itertools import product
-from yidl.generation.data_def_sys import MatcherResult, NOT_PROVIDED
+from yidl.generation.data_def_sys import MatcherResult, NOT_PROVIDED, from_astichi_code
 
 class GetterMatcher:
 
@@ -19,10 +19,10 @@ class GetterMatcher:
         if cached is not NOT_PROVIDED:
             return self._finish(None, cached, records, values)
         if values[0:3] == (False, str, True):
-            return self._finish(cache_key, (ManagedGetter, 'managed-string-no-init', 3.0), records, values)
+            return self._finish(cache_key, (from_astichi_code("{'getter': 'managed'}"), 'managed-string-no-init', 3.0), records, values)
         if values[0:2] == (False, str):
-            return self._finish(cache_key, (PlainGetter, 'plain-string-no-init', 2.0), records, values)
-        return self._finish(cache_key, (DefaultGetter, None, 0.0), records, values)
+            return self._finish(cache_key, (from_astichi_code("{'getter': 'plain'}"), 'plain-string-no-init', 2.0), records, values)
+        return self._finish(cache_key, (from_astichi_code('astichi_pyimport(module="yidl.generation.data_def_sys", names=("REQUIRED",))\nREQUIRED\n'), None, 0.0), records, values)
 
     def _finish(self, cache_key, selection, records, values):
         if cache_key is not None:

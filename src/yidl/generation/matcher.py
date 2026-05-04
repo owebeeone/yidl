@@ -16,6 +16,8 @@ from astichi.model import value_to_ast
 from yidl.generation.data_schema import CollectionSpec
 from yidl.generation.data_schema import ComputedCollectionSpec
 from yidl.generation.data_schema import PropertySpec
+from yidl.generation.matcher_values import MatcherGeneratedValue
+from yidl.generation.matcher_values import constructor_expr_for
 
 
 class NotProvidedValue:
@@ -104,7 +106,7 @@ class MatcherRuleSpec:
     name: str
     conditions: tuple[MatcherCondition, ...]
     weight: float
-    resource: object
+    resource: MatcherGeneratedValue
 
     @property
     def score(self) -> float:
@@ -116,7 +118,7 @@ class MatcherRuleSpec:
 
 @dataclass(frozen=True)
 class MatcherResult:
-    resource: object
+    resource: MatcherGeneratedValue
     rule: str | None
     score: float
     records: tuple[object, ...]
@@ -160,7 +162,7 @@ class MatcherSpec:
         return tuple(self._rules)
 
     @property
-    def default_resource(self) -> object:
+    def default_resource(self) -> MatcherGeneratedValue | object:
         return self._default_resource
 
     @property
@@ -225,10 +227,11 @@ class MatcherSpec:
         self,
         *,
         when: Sequence[MatcherCondition],
-        resource: object,
+        resource: MatcherGeneratedValue,
         weight: float = 1.0,
         name: str | None = None,
     ) -> MatcherRuleSpec:
+        _require_generated_value(resource, "matcher rule resource")
         if weight <= 0:
             raise ValueError("matcher rule weight must be greater than zero")
         resolved_conditions = tuple(when)
@@ -248,7 +251,8 @@ class MatcherSpec:
         self._rules.append(spec)
         return spec
 
-    def default(self, resource: object) -> object:
+    def default(self, resource: MatcherGeneratedValue) -> MatcherGeneratedValue:
+        _require_generated_value(resource, "matcher default resource")
         self._default_resource = resource
         return resource
 
@@ -260,14 +264,12 @@ class MatcherSpec:
         self,
         *,
         class_name: str | None = None,
-        resource_names: SourceNameMap,
         evaluator_names: SourceNameMap = (),
         value_names: SourceNameMap = (),
     ) -> str:
         return emit_matcher_runtime_source(
             self,
             class_name=class_name,
-            resource_names=resource_names,
             evaluator_names=evaluator_names,
             value_names=value_names,
         )
@@ -393,7 +395,6 @@ def emit_matcher_runtime_source(
     matcher: MatcherSpec,
     *,
     class_name: str | None = None,
-    resource_names: SourceNameMap,
     evaluator_names: SourceNameMap = (),
     value_names: SourceNameMap = (),
 ) -> str:
@@ -402,7 +403,6 @@ def emit_matcher_runtime_source(
     return _materialize_matcher_runtime(
         matcher,
         class_name=class_name or f"{matcher.name}Matcher",
-        resource_names=resource_names,
         evaluator_names=evaluator_names,
         value_names=value_names,
     ).emit(provenance=False)
@@ -412,7 +412,6 @@ def _materialize_matcher_runtime(
     matcher: MatcherSpec,
     *,
     class_name: str,
-    resource_names: SourceNameMap,
     evaluator_names: SourceNameMap,
     value_names: SourceNameMap,
 ) -> astichi.Composable:
@@ -430,6 +429,7 @@ def _materialize_matcher_runtime(
             "NOT_PROVIDED",
             "TypeError",
             "ValueError",
+            "from_astichi_code",
             "getattr",
             "len",
             "product",
@@ -455,11 +455,11 @@ def _materialize_matcher_runtime(
         builder.Root.value_entries.add.ValueEntry[order](order=order)
     for order, rule in enumerate(_rules_by_descending_score(matcher)):
         builder.add.RuleCheck[order](
-            _rule_check_piece(rule, matcher, resource_names, value_names),
+            _rule_check_piece(rule, matcher, value_names),
         )
         builder.Root.rule_checks.add.RuleCheck[order](order=order)
     builder.add.DefaultResult(
-        _default_result_piece(matcher, resource_names),
+        _default_result_piece(matcher),
     )
     builder.Root.default_result.add.DefaultResult()
     return builder.build().materialize()
@@ -468,7 +468,6 @@ def _materialize_matcher_runtime(
 def _rule_check_piece(
     rule: MatcherRuleSpec,
     matcher: MatcherSpec,
-    resource_names: SourceNameMap,
     value_names: SourceNameMap,
 ) -> astichi.Composable:
     builder = astichi.build()
@@ -480,13 +479,14 @@ def _rule_check_piece(
     bind_values: dict[str, object] = {
         "rule_score": rule.score,
         "rule_name": rule.name,
-        "resource_path": _source_path_for(rule.resource, resource_names, "resource"),
     }
     builder.add.Root(
         _RULE_CHECK.bind(bind_values),
     )
     builder.add.Actual(_actual_values_piece(indexes))
     builder.Root.actual_values.add.Actual()
+    builder.add.Resource(_generated_value_piece(rule.resource))
+    builder.Root.resource.add.Resource()
     for order, condition in enumerate(rule.conditions):
         builder.add.Expected[order](
             _expected_value_piece(condition.value, value_names),
@@ -534,17 +534,14 @@ def _expected_value_piece(value: object, value_names: SourceNameMap) -> astichi.
 
 def _default_result_piece(
     matcher: MatcherSpec,
-    resource_names: SourceNameMap,
 ) -> astichi.Composable:
     if matcher.default_resource is _NO_DEFAULT:
         return _DEFAULT_NONE
-    return _DEFAULT_RESOURCE.bind(
-        resource_path=_source_path_for(
-            matcher.default_resource,
-            resource_names,
-            "default resource",
-        )
-    )
+    builder = astichi.build()
+    builder.add.Root(_DEFAULT_RESOURCE)
+    builder.add.Resource(_generated_value_piece(matcher.default_resource))
+    builder.Root.resource.add.Resource()
+    return builder.build()
 
 
 def _rules_by_descending_score(matcher: MatcherSpec) -> tuple[MatcherRuleSpec, ...]:
@@ -601,6 +598,13 @@ def _contiguous_index_runs(indexes: tuple[int, ...]) -> tuple[tuple[int, int], .
 
 def _literal_piece(value: object) -> BasicComposable:
     return _expr_piece(value_to_ast(value))
+
+
+def _generated_value_piece(value: MatcherGeneratedValue) -> BasicComposable:
+    return _expr_piece(
+        constructor_expr_for(value),
+        keep_names=["from_astichi_code"],
+    )
 
 
 def _source_ref_piece(path: str) -> BasicComposable:
@@ -703,6 +707,11 @@ def _require_ref_path(value: str, label: str) -> None:
         _require_name(part, f"{label} source path component")
 
 
+def _require_generated_value(value: object, label: str) -> None:
+    if not isinstance(value, MatcherGeneratedValue):
+        raise TypeError(f"{label} must be a MatcherGeneratedValue")
+
+
 def _type_name(value_type: type[object] | tuple[type[object], ...]) -> str:
     if isinstance(value_type, tuple):
         return " or ".join(item.__name__ for item in value_type)
@@ -716,7 +725,7 @@ def _compile_template(source: str) -> astichi.Composable:
 _MATCHER_CLASS = _compile_template(
     """
 from itertools import product
-from yidl.generation.data_def_sys import MatcherResult, NOT_PROVIDED
+from yidl.generation.data_def_sys import MatcherResult, NOT_PROVIDED, from_astichi_code
 
 
 class matcher_class_name__astichi_arg__:
@@ -819,7 +828,7 @@ if astichi_hole(actual_values) == (*astichi_hole(expected_values),):
     return astichi_pass(self, outer_bind=True)._finish(
         astichi_pass(cache_key, outer_bind=True),
         (
-            astichi_ref(external=resource_path),
+            astichi_hole(resource),
             astichi_bind_external(rule_name),
             astichi_bind_external(rule_score),
         ),
@@ -838,7 +847,7 @@ None
 _DEFAULT_RESOURCE = _compile_template(
     """
 (
-    astichi_ref(external=resource_path),
+    astichi_hole(resource),
     None,
     0.0,
 )

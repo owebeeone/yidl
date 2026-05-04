@@ -4,6 +4,7 @@ import pytest
 
 from yidl.generation.data_def_sys import DataDefinitionSystem
 from yidl.generation.data_def_sys import REQUIRED
+from yidl.generation.data_def_sys import from_literal
 
 
 def test_container_exposes_concrete_computed_and_matcher_views() -> None:
@@ -34,7 +35,7 @@ def test_container_exposes_concrete_computed_and_matcher_views() -> None:
     )
     matcher = dds.matcher("InitGetter")
     field = matcher.input("field", init_fields)
-    count_resource = object()
+    count_resource = from_literal("count")
     matcher.rule(
         name="count",
         when=(field.prop(name).eq("count"),),

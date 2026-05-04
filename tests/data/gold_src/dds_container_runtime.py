@@ -4,9 +4,10 @@ from support.golden_case import run_case
 from yidl.generation.data_def_sys import DataDefinitionSystem
 from yidl.generation.data_def_sys import REQUIRED
 from yidl.generation.data_def_sys import emit_container_runtime_source
+from yidl.generation.data_def_sys import from_literal
 
 
-CountResource = object()
+CountResource = from_literal({"resource": "count"})
 
 
 def _build_dds() -> DataDefinitionSystem:
@@ -46,14 +47,11 @@ def _build_dds() -> DataDefinitionSystem:
 
 
 def render_case() -> str:
-    return emit_container_runtime_source(
-        _build_dds(),
-        resource_names=((CountResource, "CountResource"),),
-    )
+    return emit_container_runtime_source(_build_dds())
 
 
 def validate_case(source: str) -> None:
-    namespace = {"CountResource": CountResource}
+    namespace = {}
     exec(source, namespace)
 
     builder = namespace["new_builder"]()
@@ -79,7 +77,7 @@ def validate_case(source: str) -> None:
     assert container.Fields.by_identity("count") is count
     assert container.ClassInput.one().name == "Example"
     assert len(results) == 1
-    assert results[0].resource is CountResource
+    assert results[0].resource == CountResource
     assert results[0].records == (count,)
     assert "class InitGetterMatcher" in source
     assert "class _GeneratedMatcherNamespace" in source
@@ -92,7 +90,7 @@ def validate_case(source: str) -> None:
     assert "dds.computed_collection(" not in source
     assert "RuntimeProperty(" in source
     assert "RuntimeContainerSpec(" in source
-    assert "astichi_" not in source
+    assert "astichi_hole" not in source
 
 
 if __name__ == "__main__":

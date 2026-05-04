@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from yidl.generation import data_schema as _data_schema
 from yidl.generation import data_container as _data_container
+from yidl.generation import matcher_values as _matcher_values
 from yidl.generation import container_runtime_source as _container_runtime_source
 from yidl.generation.container_runtime_source import *  # noqa: F403
 from yidl.generation.container_runtime_source import SourceNameMap
@@ -12,6 +13,7 @@ from yidl.generation.data_container import *  # noqa: F403
 from yidl.generation.data_schema import *  # noqa: F403
 from yidl.generation.data_schema import _emit_record_class_source
 from yidl.generation.data_schema import DataDefinitionSystem as _SchemaDataDefinitionSystem
+from yidl.generation.matcher_values import *  # noqa: F403
 from yidl.generation.matcher import *  # noqa: F403
 from yidl.generation.matcher import MatcherSpec
 from yidl.generation import matcher as _matcher
@@ -40,13 +42,11 @@ class DataDefinitionSystem(_SchemaDataDefinitionSystem):
     def emit_container_runtime_source(
         self,
         *,
-        resource_names: SourceNameMap = (),
         evaluator_names: SourceNameMap = (),
         value_names: SourceNameMap = (),
     ) -> str:
         return emit_container_runtime_source(
             self,
-            resource_names=resource_names,
             evaluator_names=evaluator_names,
             value_names=value_names,
         )
@@ -57,6 +57,7 @@ __all__ = [
     *_data_container.__all__,
     *_data_schema.__all__,
     *_matcher.__all__,
+    *_matcher_values.__all__,
     "DataDefinitionSystem",
     "_emit_record_class_source",
 ]

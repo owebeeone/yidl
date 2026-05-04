@@ -1,21 +1,15 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
-
 from support.golden_case import run_case
 from yidl.generation.data_def_sys import DataDefinitionSystem
 from yidl.generation.data_def_sys import REQUIRED
+from yidl.generation.data_def_sys import from_literal
 
 
-@dataclass(frozen=True)
-class MatcherResource:
-    name: str
-
-
-FullRange = MatcherResource("full")
-SegmentRange = MatcherResource("segments")
-OddRange = MatcherResource("odd")
-DefaultRange = MatcherResource("default")
+FullRange = from_literal({"range": "full"})
+SegmentRange = from_literal({"range": "segments"})
+OddRange = from_literal({"range": "odd"})
+DefaultRange = from_literal({"range": "default"})
 
 
 def _build_matcher():
@@ -64,23 +58,12 @@ def render_case() -> str:
     matcher, _ = _build_matcher()
     return matcher.emit_runtime_source(
         class_name="RangeMatcher",
-        resource_names=(
-            (FullRange, "FullRange"),
-            (SegmentRange, "SegmentRange"),
-            (OddRange, "OddRange"),
-            (DefaultRange, "DefaultRange"),
-        ),
     )
 
 
 def validate_case(source: str) -> None:
     _, record_spec = _build_matcher()
-    namespace = {
-        "FullRange": FullRange,
-        "SegmentRange": SegmentRange,
-        "OddRange": OddRange,
-        "DefaultRange": DefaultRange,
-    }
+    namespace = {}
     exec(source, namespace)
     runtime = namespace["RangeMatcher"]()
 
@@ -100,20 +83,20 @@ def validate_case(source: str) -> None:
     odd_result = runtime.resolve(odd_record)
     default_result = runtime.resolve(default_record)
 
-    assert full_result.resource is FullRange
+    assert full_result.resource == FullRange
     assert full_result.rule == "full"
     assert full_result.score == 10.0
-    assert segment_result.resource is SegmentRange
+    assert segment_result.resource == SegmentRange
     assert segment_result.rule == "segments"
     assert segment_result.score == 6.0
-    assert odd_result.resource is OddRange
+    assert odd_result.resource == OddRange
     assert odd_result.rule == "odd"
     assert odd_result.score == 5.0
-    assert default_result.resource is DefaultRange
+    assert default_result.resource == DefaultRange
     assert default_result.rule is None
     assert source.index("values[0:10]") < source.index("values[0:2] + values[4:6] + values[8:10]")
     assert "values[1:2] + values[3:4] + values[5:6] + values[7:8] + values[9:10]" in source
-    assert "astichi_" not in source
+    assert "astichi_hole" not in source
 
 
 if __name__ == "__main__":

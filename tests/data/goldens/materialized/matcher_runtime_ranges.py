@@ -1,5 +1,5 @@
 from itertools import product
-from yidl.generation.data_def_sys import MatcherResult, NOT_PROVIDED
+from yidl.generation.data_def_sys import MatcherResult, NOT_PROVIDED, from_astichi_code
 
 class RangeMatcher:
 
@@ -19,12 +19,12 @@ class RangeMatcher:
         if cached is not NOT_PROVIDED:
             return self._finish(None, cached, records, values)
         if values[0:10] == (0, 1, 2, 3, 4, 5, 6, 7, 8, 9):
-            return self._finish(cache_key, (FullRange, 'full', 10.0), records, values)
+            return self._finish(cache_key, (from_astichi_code("{'range': 'full'}"), 'full', 10.0), records, values)
         if values[0:2] + values[4:6] + values[8:10] == (0, 1, 4, 5, 8, 9):
-            return self._finish(cache_key, (SegmentRange, 'segments', 6.0), records, values)
+            return self._finish(cache_key, (from_astichi_code("{'range': 'segments'}"), 'segments', 6.0), records, values)
         if values[1:2] + values[3:4] + values[5:6] + values[7:8] + values[9:10] == (1, 3, 5, 7, 9):
-            return self._finish(cache_key, (OddRange, 'odd', 5.0), records, values)
-        return self._finish(cache_key, (DefaultRange, None, 0.0), records, values)
+            return self._finish(cache_key, (from_astichi_code("{'range': 'odd'}"), 'odd', 5.0), records, values)
+        return self._finish(cache_key, (from_astichi_code("{'range': 'default'}"), None, 0.0), records, values)
 
     def _finish(self, cache_key, selection, records, values):
         if cache_key is not None:

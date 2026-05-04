@@ -1,21 +1,19 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
-
 from support.golden_case import run_case
 from yidl.generation.data_def_sys import DataDefinitionSystem
 from yidl.generation.data_def_sys import REQUIRED
 from yidl.generation.data_def_sys import emit_matcher_runtime_source
+from yidl.generation.data_def_sys import from_astichi_code
+from yidl.generation.data_def_sys import from_literal
 
 
-@dataclass(frozen=True)
-class MatcherResource:
-    name: str
-
-
-PlainGetter = MatcherResource("plain")
-ManagedGetter = MatcherResource("managed")
-DefaultGetter = MatcherResource("default")
+PlainGetter = from_literal({"getter": "plain"})
+ManagedGetter = from_literal({"getter": "managed"})
+DefaultGetter = from_astichi_code(
+    'astichi_pyimport(module="yidl.generation.data_def_sys", names=("REQUIRED",))\n'
+    "REQUIRED\n"
+)
 
 
 def is_managed_field(record: object) -> bool:
@@ -70,11 +68,6 @@ def render_case() -> str:
     return emit_matcher_runtime_source(
         matcher,
         class_name="GetterMatcher",
-        resource_names=(
-            (PlainGetter, "PlainGetter"),
-            (ManagedGetter, "ManagedGetter"),
-            (DefaultGetter, "DefaultGetter"),
-        ),
         evaluator_names=((is_managed_field, "is_managed_field"),),
     )
 
@@ -82,9 +75,6 @@ def render_case() -> str:
 def validate_case(source: str) -> None:
     _, plain_field, managed_field = _build_matcher()
     namespace = {
-        "PlainGetter": PlainGetter,
-        "ManagedGetter": ManagedGetter,
-        "DefaultGetter": DefaultGetter,
         "is_managed_field": is_managed_field,
     }
     exec(source, namespace)
@@ -98,17 +88,17 @@ def validate_case(source: str) -> None:
     managed_result = runtime.resolve(managed_record)
     default_result = runtime.resolve(default_record)
 
-    assert plain_result.resource is PlainGetter
+    assert plain_result.resource == PlainGetter
     assert plain_result.rule == "plain-string-no-init"
     assert plain_result.score == 2.0
-    assert managed_result.resource is ManagedGetter
+    assert managed_result.resource == ManagedGetter
     assert managed_result.rule == "managed-string-no-init"
     assert managed_result.score == 3.0
-    assert default_result.resource is DefaultGetter
+    assert default_result.resource == DefaultGetter
     assert default_result.rule is None
     equivalent_result = runtime.resolve(plain_record_equivalent)
     assert equivalent_result is not plain_result
-    assert equivalent_result.resource is PlainGetter
+    assert equivalent_result.resource == PlainGetter
     assert equivalent_result.records == (plain_record_equivalent,)
     sequence_resources = [
         result.resource
@@ -119,13 +109,15 @@ def validate_case(source: str) -> None:
         ManagedGetter,
         DefaultGetter,
     ]
+    assert plain_result.resource.to_generator().emit(provenance=False).strip() == "{'getter': 'plain'}"
+    assert "astichi_pyimport" in default_result.resource.source
     assert "matches.append" not in source
     assert "id(" not in source
     assert "cached = self._cache.get(values, NOT_PROVIDED)" in source
     assert "score = 0.0" not in source
     assert "> score" not in source
     assert source.index("values[0:3]") < source.index("values[0:2]")
-    assert "astichi_" not in source
+    assert "from_astichi_code" in source
 
 
 if __name__ == "__main__":

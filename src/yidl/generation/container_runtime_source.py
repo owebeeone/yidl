@@ -22,7 +22,6 @@ SourceNameMap = Mapping[object, str] | Sequence[tuple[object, str]]
 def emit_container_runtime_source(
     system: DataDefinitionSystem,
     *,
-    resource_names: SourceNameMap = (),
     evaluator_names: SourceNameMap = (),
     value_names: SourceNameMap = (),
 ) -> str:
@@ -131,7 +130,6 @@ def emit_container_runtime_source(
             emit_matcher_runtime_source(
                 matcher,
                 class_name=_matcher_runtime_class_name(matcher),
-                resource_names=resource_names,
                 evaluator_names=evaluator_names,
                 value_names=value_names,
             ).rstrip().splitlines()

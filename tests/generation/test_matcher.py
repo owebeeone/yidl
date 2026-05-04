@@ -1,17 +1,11 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
-
 import pytest
 
 from yidl.generation.data_def_sys import DataDefinitionSystem
 from yidl.generation.data_def_sys import NOT_PROVIDED
 from yidl.generation.data_def_sys import REQUIRED
-
-
-@dataclass(frozen=True)
-class Resource:
-    name: str
+from yidl.generation.data_def_sys import from_literal
 
 
 def test_more_specific_rule_wins_over_less_specific_rule() -> None:
@@ -36,8 +30,8 @@ def test_more_specific_rule_wins_over_less_specific_rule() -> None:
         value=lambda record: isinstance(record, managed_field.record_class()),
         value_type=bool,
     )
-    plain_resource = Resource("plain")
-    managed_resource = Resource("managed")
+    plain_resource = from_literal("plain")
+    managed_resource = from_literal("managed")
     matcher.rule(
         name="plain-string-no-init",
         when=(
@@ -91,8 +85,8 @@ def test_weight_breaks_same_specificity_tie() -> None:
     fields = dds.collection("Fields", field_spec, cardinality=dds.many, identity=name)
     matcher = dds.matcher("Getter")
     field = matcher.input("field", fields)
-    default_resource = Resource("default")
-    preferred_resource = Resource("preferred")
+    default_resource = from_literal("default")
+    preferred_resource = from_literal("preferred")
     matcher.rule(
         name="init-rule",
         when=(field.prop(init).eq(False),),
@@ -130,12 +124,12 @@ def test_equal_score_overlapping_rules_reject_before_runtime() -> None:
     matcher.rule(
         name="first",
         when=(field.prop(init).eq(False),),
-        resource=Resource("first"),
+        resource=from_literal("first"),
     )
     matcher.rule(
         name="second",
         when=(field.prop(annotation).eq(str),),
-        resource=Resource("second"),
+        resource=from_literal("second"),
     )
 
     with pytest.raises(ValueError, match="equal-score overlapping rules"):
@@ -150,8 +144,8 @@ def test_equal_score_conflicting_rules_are_allowed() -> None:
     fields = dds.collection("Fields", field_spec, cardinality=dds.many, identity=name)
     matcher = dds.matcher("Getter")
     field = matcher.input("field", fields)
-    false_resource = Resource("false")
-    true_resource = Resource("true")
+    false_resource = from_literal("false")
+    true_resource = from_literal("true")
     matcher.rule(
         name="false",
         when=(field.prop(init).eq(False),),
@@ -187,7 +181,7 @@ def test_conflicting_conditions_inside_one_rule_reject() -> None:
             field.prop(init).eq(False),
             field.prop(init).eq(True),
         ),
-        resource=Resource("impossible"),
+        resource=from_literal("impossible"),
     )
 
     with pytest.raises(ValueError, match="conflicting conditions"):
@@ -204,7 +198,7 @@ def test_missing_variant_property_can_match_not_provided() -> None:
     fields = dds.collection("Fields", field_specs, cardinality=dds.many, identity=name)
     matcher = dds.matcher("Getter")
     field = matcher.input("field", fields)
-    no_tx_resource = Resource("no-tx")
+    no_tx_resource = from_literal("no-tx")
     matcher.rule(
         name="no-tx",
         when=(field.prop(tx_id).eq(NOT_PROVIDED),),
@@ -226,12 +220,12 @@ def test_default_resource_is_returned_when_no_rule_matches() -> None:
     fields = dds.collection("Fields", field_spec, cardinality=dds.many, identity=name)
     matcher = dds.matcher("Getter")
     field = matcher.input("field", fields)
-    default_resource = Resource("default")
+    default_resource = from_literal("default")
     matcher.default(default_resource)
     matcher.rule(
         name="not-init",
         when=(field.prop(init).eq(False),),
-        resource=Resource("not-init"),
+        resource=from_literal("not-init"),
     )
 
     result = matcher.runtime().resolve(field_spec.record(name="count", init=True))
@@ -277,7 +271,7 @@ def test_evaluated_field_can_depend_on_multiple_inputs() -> None:
         ),
         value_type=bool,
     )
-    visible_resource = Resource("visible")
+    visible_resource = from_literal("visible")
     matcher.rule(
         name="visible",
         when=(visible.eq(True),),
@@ -312,7 +306,7 @@ def test_matcher_cache_reuses_value_selection_for_equal_records() -> None:
     fields = dds.collection("Fields", field_spec, cardinality=dds.many, identity=name)
     matcher = dds.matcher("Getter")
     field = matcher.input("field", fields)
-    resource = Resource("resource")
+    resource = from_literal("resource")
     matcher.rule(
         name="count",
         when=(field.prop(name).eq("count"),),
@@ -341,7 +335,7 @@ def test_resources_are_returned_unchanged() -> None:
     fields = dds.collection("Fields", field_spec, cardinality=dds.many, identity=name)
     matcher = dds.matcher("Getter")
     field = matcher.input("field", fields)
-    resource = object()
+    resource = from_literal("resource")
     matcher.rule(
         name="count",
         when=(field.prop(name).eq("count"),),
@@ -352,3 +346,36 @@ def test_resources_are_returned_unchanged() -> None:
 
     assert result is not None
     assert result.resource is resource
+
+
+def test_rule_resource_must_be_generated_value() -> None:
+    dds = DataDefinitionSystem()
+    name = dds.property("Name", str, default=REQUIRED, storage_name="name")
+    field_spec = dds.record("FieldSpec", name)
+    fields = dds.collection("Fields", field_spec, cardinality=dds.many, identity=name)
+    matcher = dds.matcher("Getter")
+    field = matcher.input("field", fields)
+
+    with pytest.raises(TypeError, match="matcher rule resource"):
+        matcher.rule(
+            name="count",
+            when=(field.prop(name).eq("count"),),
+            resource=object(),
+        )
+
+
+def test_default_resource_must_be_generated_value() -> None:
+    dds = DataDefinitionSystem()
+    matcher = dds.matcher("Getter")
+
+    with pytest.raises(TypeError, match="matcher default resource"):
+        matcher.default(object())
+
+
+def test_generated_value_caches_generator() -> None:
+    value = from_literal("resource")
+
+    first = value.to_generator()
+    second = value.to_generator()
+
+    assert first is second

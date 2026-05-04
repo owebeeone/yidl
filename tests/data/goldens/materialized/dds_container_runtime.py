@@ -116,7 +116,7 @@ ManagedInitFieldsCollection = RuntimeComputedCollection('ManagedInitFields', sou
 _RUNTIME_SPEC = RuntimeContainerSpec(collections=(FieldsCollection, ClassInputCollection), computed_collections=(InitFieldsCollection, ManagedInitFieldsCollection))
 
 from itertools import product
-from yidl.generation.data_def_sys import MatcherResult, NOT_PROVIDED
+from yidl.generation.data_def_sys import MatcherResult, NOT_PROVIDED, from_astichi_code
 
 class InitGetterMatcher:
 
@@ -136,7 +136,7 @@ class InitGetterMatcher:
         if cached is not NOT_PROVIDED:
             return self._finish(None, cached, records, values)
         if values[0:1] == ('count',):
-            return self._finish(cache_key, (CountResource, 'count', 1.0), records, values)
+            return self._finish(cache_key, (from_astichi_code("{'resource': 'count'}"), 'count', 1.0), records, values)
         return self._finish(cache_key, None, records, values)
 
     def _finish(self, cache_key, selection, records, values):

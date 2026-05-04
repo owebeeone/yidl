@@ -6,9 +6,11 @@ YIDL needs a generic rule matcher that can be defined during the YIDL
 definition/specification phase, emitted as normal Python source, and evaluated
 during decoration.
 
-The matcher is not Astichi-specific. Its output is an opaque resource. A
-resource may wrap an Astichi composable, but the matcher core only selects and
-returns resources.
+The matcher selects generated-value resources. In V1, every matcher resource is
+a `MatcherGeneratedValue`: the Astichi compile inputs needed by the later build
+stage. The matcher does not decide whether that generated value is used as an
+expression, a statement block, a function shell, or another Astichi composable
+shape.
 
 The matcher exists to let capsules and facades contribute default behavior and
 selective overrides without hard-coding every generated shape.
@@ -25,7 +27,7 @@ This proposal covers the matcher in isolation:
 - weighted tie breaking
 - runtime generated matcher behavior
 - cached evaluation
-- resource output
+- generated-value resource output
 
 It does not define the Astichi build mapper. The build mapper consumes selected
 resources later.
@@ -61,9 +63,12 @@ The evaluator must be source-emittable. The first implementation can require an
 importable generated-module binding or helper function. Later implementations
 may add a structured expression API for inline generated code.
 
-Rules attach resources:
+Rules attach generated values:
 
 ```python
+StringNoInitGetter = from_literal({"getter": "plain"})
+ManagedStringNoInitGetter = from_astichi_code("...")
+
 Getter.rule(
     when=(
         field.prop(Init).eq(False),
@@ -312,7 +317,7 @@ visible in either more specific conditions or an explicit weight adjustment.
 
 ## Defaults
 
-A matcher may define a default resource:
+A matcher may define a default generated value:
 
 ```python
 Getter.default(DefaultGetter)
@@ -338,7 +343,7 @@ Runtime matcher responsibilities:
   generated code
 - evaluate rules lazily
 - cache results by tuple identity/value key
-- return selected resources and match tuples
+- return selected generated values and match tuples
 
 Example runtime use:
 
@@ -347,7 +352,7 @@ container = builder.build()
 
 result = container.matchers.Getter.resolve(field, facade)
 if result is not None:
-    resource = result.resource
+    generated_value = result.resource
     match_tuple = result.match_tuple
 ```
 
@@ -368,14 +373,14 @@ The first implementation should follow these invariants.
 
 Definition objects:
 
-- `MatcherSpec` owns name, inputs, rules, default resource, evaluated fields,
+- `MatcherSpec` owns name, inputs, rules, default generated value, evaluated fields,
   and tuple schema.
 - `MatcherInputSpec` owns input name and source collection/computed collection.
 - `ScopedPropertyRef` is `(input, property)`.
 - `MatcherEvaluatedFieldSpec` owns name, input dependencies, evaluator, and
   optional value type.
-- `MatcherRuleSpec` owns conditions, weight, resource, and diagnostic name.
-- `MatcherResult` owns selected resource, selected rule, score, records tuple,
+- `MatcherRuleSpec` owns conditions, weight, generated value, and diagnostic name.
+- `MatcherResult` owns selected generated value, selected rule, score, records tuple,
   and values tuple.
 - `MatcherResult.rule` is a diagnostic rule-name string or `None`, not a
   definition-time `MatcherRuleSpec` object. Generated and in-memory runtimes
@@ -426,7 +431,7 @@ Caching:
 
 - `resolve(*records)` extracts `values` first and caches the winning
   selection by the positional values tuple.
-- Cached entries store only the selected resource/rule/score. `resolve(...)`
+- Cached entries store only the selected generated value/rule/score. `resolve(...)`
   still returns a fresh `MatcherResult` with the concrete records passed to
   that call.
 - If the values tuple is unhashable, runtime skips caching for that tuple and
@@ -436,10 +441,15 @@ Caching:
 
 Resource protocol:
 
-- Matcher core treats resources as opaque.
-- For code generation, every resource must be source-emittable.
-- V1 can require resources to be emitted as generated module binding names.
-- Astichi resources are wrappers outside matcher core.
+- Matcher rules and defaults accept only `MatcherGeneratedValue`.
+- `from_literal(value)` creates a generated value from a Python literal that can
+  be rendered as source.
+- `from_astichi_code(source, file_name=..., line_number=..., offset=...,
+  arg_names=..., keep_names=..., source_kind=...)` creates a generated value
+  from the parameters needed by `astichi.compile(...)`.
+- Generated runtime source reconstructs selected resources with
+  `from_astichi_code(...)`; there is no separate `resource_names` binding table
+  in V1.
 
 Generated runtime shape:
 
@@ -453,11 +463,12 @@ sequence() -> Iterator[MatcherResult]
 
 Diagnostics:
 
-- Equal-score overlap errors include matcher name, score, candidate
-  rules/resources, and the compatible condition positions.
+- Equal-score overlap errors include matcher name, score, candidate rules, and
+  the compatible condition positions.
 - Invalid scoped property or evaluated field references fail during definition
   or code generation.
-- Non-emittable resources or evaluators fail during code generation.
+- Non-`MatcherGeneratedValue` resources fail during definition. Non-emittable
+  evaluators fail during code generation.
 
 ## Caching
 
@@ -483,35 +494,28 @@ function of the extracted tuple values, not object identity. Equivalent records
 should reuse the same selected resource/rule/score while preserving the concrete
 records in each returned result.
 
-## Resources
+## Generated Values
 
-Matcher resources are opaque to the matcher core.
+Matcher resources are `MatcherGeneratedValue` objects.
 
-A resource may be:
+Two constructors are supported in V1:
 
-- an Astichi composable wrapper
-- a generated operation function
-- a value object
-- another matcher-selected resource
+- `from_literal(value)` for source-renderable Python literals
+- `from_astichi_code(...)` for arbitrary Astichi source plus compile metadata
 
-The only matcher requirement is that resources can be emitted into the generated
-spec module and returned by runtime matcher evaluation.
+The generated value is intentionally not validated as an expression, statement,
+or function at matcher time. That validation belongs to the build stage that
+consumes the selected value. The matcher only needs to emit and return the
+compile inputs faithfully.
 
-Astichi-specific resources should be wrapped outside matcher core. The wrapper
-can carry:
-
-- the Astichi composable or importable recipe
-- static metadata
-- binding strategy
-- diagnostics name
-
-The matcher result returns the wrapper as an opaque resource.
+The matcher result returns the generated value. A later stage can call
+`result.resource.to_generator()` when it needs the Astichi composable.
 
 ## Dependency Between Matchers
 
-Some resources selected by one matcher may depend on resources selected by
-another matcher. The matcher core should allow resources to be opaque enough to
-perform that lookup later.
+Some generated values selected by one matcher may depend on generated values
+selected by another matcher. The matcher core should allow the later build stage
+to perform that lookup explicitly.
 
 Do not predefine a fixed set of matcher targets such as
 `PropertyGetterMatcher`. Matchers are user/developer-declared surfaces. A
@@ -519,7 +523,7 @@ capsule can introduce a new matcher if it introduces a new decision point.
 
 Cycles between matchers are a later diagnostic problem. The first matcher core
 should keep evaluation lazy and explicit so dependency cycles are visible when a
-resource asks for another matcher result.
+build-stage resource asks for another matcher result.
 
 ## Relationship To DDSContainer
 
@@ -532,7 +536,7 @@ for field in container.InitSignatureFields.sequence():
     ...
 ```
 
-The container does not decide which resource wins. The matcher does.
+The container does not decide which generated value wins. The matcher does.
 
 The matcher does not own records. It reads from the frozen container and caches
 its own results.
@@ -551,6 +555,8 @@ Initial coverage:
 - explicit `NOT_PROVIDED` condition can match
 - evaluated field condition can match
 - evaluated field can depend on multiple inputs
-- default resource is returned when no rule matches
+- default generated value is returned when no rule matches
 - matcher cache returns stable result for repeated tuple evaluation
-- resources are opaque objects and are returned unchanged
+- generated values are returned unchanged by the in-memory runtime
+- generated runtime source reconstructs equivalent generated values without a
+  resource-name binding table
