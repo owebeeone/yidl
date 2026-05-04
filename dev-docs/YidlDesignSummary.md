@@ -892,6 +892,62 @@ independent snippets without respecting the pipeline they imply.
     attribute chains to reach `builder.add.<Name>`, `builder.Root.slot`, or
     similar fluent-only surfaces.
 
+### 26.1 Data Definition, Container, And Matcher System
+
+This is the current implemented generation-data substrate. It is a schema and
+resolved-data layer, not the whole capsule/codegen engine.
+
+1. `DataDefinitionSystem` is schema-only. It defines properties, record
+   shapes, unions, concrete collections, computed collections, transforms, and
+   matchers. It does not store decoration-time data.
+2. `PropertySpec` objects own semantic name, Python value type, default, and
+   generated storage name. Property names are semantic; generated record
+   constructor keywords are storage names.
+3. `RecordSpec` emits plain slotted Python record classes with
+   `__dds_record_spec__`. Generated YIDL record classes are not dataclasses.
+   Record constructors validate declared types and defaults.
+4. `UnionSpec` groups concrete record variants into one logical collection
+   shape. A union collection accepts variant records, but records are created
+   through concrete variants.
+5. `CollectionSpec` defines a concrete stored collection. Cardinality is an
+   object behavior (`single` or `many`), not an enum. Collections may declare
+   an identity property; duplicate identities reject unless a later production
+   layer explicitly chooses replacement.
+6. `ComputedCollectionSpec` is a named filtered view over another collection or
+   computed collection. It returns existing source records and is not stored as
+   its own record set.
+7. `DDSContainerBuilder` is the mutable decoration-time holder. It accepts
+   records for concrete collections, enforces cardinality and identity, and
+   freezes to a `DDSContainer`.
+8. `DDSContainer` is the immutable resolved-data object. It exposes named
+   collection views with `sequence()`, `one()`, `by_identity(...)`, and
+   `contains(...)`. Querying a view must not mutate or lazily derive data.
+9. Runtime container source emission produces normal Python modules containing
+   runtime property/record/union/collection descriptors, generated record
+   classes, computed views, matchers, and `new_builder()`. It must not rebuild
+   a source-time `DataDefinitionSystem` with `dds.property(...)` calls.
+10. `TransformSpec` currently describes single-source derived record creation
+    and can derive one record in memory. It is not yet the production runner:
+    there is no emitted ordered/fixpoint transform execution, merge policy, or
+    target-port resource graph in the implemented container layer.
+11. `MatcherSpec` defines Eq-only rule matchers over concrete/computed
+    collection views. Match tuples are fixed positional tuples, not dicts.
+    Rules run in descending score order; equal-score overlapping rules reject
+    before runtime.
+12. Matcher evaluated fields are explicit callable-derived tuple entries.
+    In-memory runtime may use any callable; source emission requires an
+    explicit generated/importable evaluator name.
+13. `MatcherResult` contains the selected generated value, rule name or
+    `None`, score, concrete input records, and extracted tuple values.
+14. Matcher resources are `MatcherGeneratedValue` objects. `from_literal(...)`
+    stores source-renderable Python literals; `from_astichi_code(...)` stores
+    Astichi compile inputs. `to_generator()` compiles lazily and caches the
+    resulting `astichi.Composable`.
+15. The next missing layer is data production: generated operations that
+    derive records, apply merge policies, produce ordered target-port
+    resources, and turn matcher results into build resources. That design
+    lives in `dev-docs/YidlDataProductionDesign.md`.
+
 ## 27. Grammar And Source Containers
 
 ### 27.1 Grammar boundary
@@ -1268,3 +1324,13 @@ Implementation order:
 50. `UNSPECIFIED` is spec/decorator state; `VOID` is runtime slot state.
     Avoid database-reserved absent-value terminology in YIDL generated code
     and active design docs.
+51. DDS is the schema and resolved-data substrate. It stores no
+    decoration-time data until a `DDSContainerBuilder` is created for one
+    decorated class.
+52. `DDSContainer` is immutable after freeze. Derived data must be produced
+    before freeze by generated operations, not lazily during query.
+53. Matcher resources are `MatcherGeneratedValue` objects; raw arbitrary
+    Python objects are not matcher resources.
+54. The current transform API is not the final production runner. Ordered
+    production execution, merge policies, target ports, and matcher-result
+    productions remain the next DDS/codegen layer.
