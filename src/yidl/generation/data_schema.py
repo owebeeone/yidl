@@ -32,6 +32,7 @@ class DataDefinitionSystem:
 
     __slots__ = (
         "_collections",
+        "_computed_collections",
         "_properties",
         "_records",
         "_transforms",
@@ -45,6 +46,7 @@ class DataDefinitionSystem:
         self._records: dict[str, RecordSpec] = {}
         self._unions: dict[str, UnionSpec] = {}
         self._collections: dict[str, CollectionSpec] = {}
+        self._computed_collections: dict[str, ComputedCollectionSpec] = {}
         self._transforms: dict[str, TransformSpec] = {}
         self.single = SingleCollectionCardinality()
         self.many = ManyCollectionCardinality()
@@ -64,6 +66,10 @@ class DataDefinitionSystem:
     @property
     def collections(self) -> tuple[CollectionSpec, ...]:
         return tuple(self._collections.values())
+
+    @property
+    def computed_collections(self) -> tuple[ComputedCollectionSpec, ...]:
+        return tuple(self._computed_collections.values())
 
     @property
     def transforms(self) -> tuple[TransformSpec, ...]:
@@ -136,7 +142,7 @@ class DataDefinitionSystem:
         identity: PropertySpec | None = None,
     ) -> CollectionSpec:
         _require_name(name, "collection name")
-        if name in self._collections:
+        if name in self._collections or name in self._computed_collections:
             raise ValueError(f"collection {name!r} is already defined")
         if record.system is not self:
             raise ValueError("collection record shape belongs to another data-definition system")
@@ -151,6 +157,34 @@ class DataDefinitionSystem:
         )
         self._collections[name] = spec
         return spec
+
+    def computed_collection(
+        self,
+        name: str,
+        *,
+        source: CollectionSpec | ComputedCollectionSpec,
+        when: Sequence[PropertyEquals] = (),
+    ) -> ComputedCollectionSpec:
+        _require_name(name, "computed collection name")
+        if name in self._collections or name in self._computed_collections:
+            raise ValueError(f"collection {name!r} is already defined")
+        if source.system is not self:
+            raise ValueError("computed collection source belongs to another data-definition system")
+        for condition in when:
+            source.record_shape.require_property(condition.property)
+        spec = ComputedCollectionSpec(
+            system=self,
+            name=name,
+            source=source,
+            conditions=tuple(when),
+        )
+        self._computed_collections[name] = spec
+        return spec
+
+    def container_builder(self) -> DDSContainerBuilder:
+        from yidl.generation.data_container import DDSContainerBuilder
+
+        return DDSContainerBuilder(self)
 
     def transform(
         self,
@@ -259,6 +293,13 @@ class RecordSpec:
         if self._record_class is None:
             self._record_class = _make_record_class(self)
         return self._record_class
+
+    def bind_record_class(self, record_class: type[object]) -> type[object]:
+        record_spec = getattr(record_class, "__dds_record_spec__", None)
+        if record_spec is not self:
+            raise TypeError(f"{record_class.__name__} is not bound to record {self.name}")
+        self._record_class = record_class
+        return record_class
 
     def record(self, **values: object) -> object:
         return self.record_class()(**values)
@@ -420,6 +461,55 @@ class CollectionSpec:
             self.lookup_key(prop, prop.value_from(record))
             for prop in record_spec.properties
         )
+
+    def __repr__(self) -> str:
+        return self.name
+
+
+class ComputedCollectionSpec:
+    """Named filtered view over another collection source."""
+
+    __slots__ = ("conditions", "name", "source", "system")
+
+    def __init__(
+        self,
+        *,
+        system: DataDefinitionSystem,
+        name: str,
+        source: CollectionSpec | ComputedCollectionSpec,
+        conditions: tuple[PropertyEquals, ...],
+    ) -> None:
+        self.system = system
+        self.name = name
+        self.source = source
+        self.conditions = conditions
+
+    @property
+    def record_spec(self) -> RecordSpec | UnionSpec:
+        return self.source.record_spec
+
+    @property
+    def record_shape(self) -> RecordSpec | UnionSpec:
+        return self.source.record_shape
+
+    @property
+    def identity(self) -> PropertySpec | None:
+        return self.source.identity
+
+    def identity_of(self, record: object) -> object:
+        return self.source.identity_of(record)
+
+    def lookup_key(self, prop: PropertySpec, value: object) -> LookupKey:
+        return self.source.lookup_key(prop, value)
+
+    def fact_keys(self, record: object) -> tuple[LookupKey, ...]:
+        return self.source.fact_keys(record)
+
+    def matches(self, record: object) -> bool:
+        if isinstance(self.source, ComputedCollectionSpec) and not self.source.matches(record):
+            return False
+        self.record_shape.validate_record(record)
+        return all(condition.matches(record) for condition in self.conditions)
 
     def __repr__(self) -> str:
         return self.name
@@ -1023,6 +1113,7 @@ def _type_name(value_type: type[object] | tuple[type[object], ...]) -> str:
 __all__ = [
     "CollectionCardinality",
     "CollectionSpec",
+    "ComputedCollectionSpec",
     "ComputedValue",
     "DataDefinitionSystem",
     "LookupKey",

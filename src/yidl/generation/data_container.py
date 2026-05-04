@@ -1,0 +1,554 @@
+"""Decoration-time containers for DDS records."""
+
+from __future__ import annotations
+
+from collections.abc import Iterable, Iterator
+
+from yidl.generation.data_schema import CollectionSpec
+from yidl.generation.data_schema import ComputedCollectionSpec
+from yidl.generation.data_schema import DataDefinitionSystem
+from yidl.generation.data_schema import PropertyEquals
+from yidl.generation.matcher import NOT_PROVIDED
+
+
+class RuntimeProperty:
+    """Emitted-runtime property descriptor."""
+
+    __slots__ = ("default", "name", "storage_name", "value_type")
+
+    def __init__(
+        self,
+        name: str,
+        value_type: type[object] | tuple[type[object], ...],
+        *,
+        default: object,
+        storage_name: str,
+    ) -> None:
+        self.name = name
+        self.value_type = value_type
+        self.default = default
+        self.storage_name = storage_name
+
+    def eq(self, value: object) -> RuntimePropertyEquals:
+        return RuntimePropertyEquals(self, value)
+
+    def value_from(self, record: object) -> object:
+        return getattr(record, self.storage_name)
+
+    def validate(self, value: object) -> object:
+        if self.value_type is object:
+            return value
+        if not isinstance(value, self.value_type):
+            raise TypeError(
+                f"{self.name} must be {_type_name(self.value_type)}, "
+                f"got {type(value).__name__}"
+            )
+        return value
+
+    def __repr__(self) -> str:
+        return self.name
+
+
+class RuntimePropertyEquals:
+    """Eq-only emitted-runtime condition."""
+
+    __slots__ = ("property", "value")
+
+    def __init__(self, property: RuntimeProperty, value: object) -> None:
+        self.property = property
+        self.value = value
+
+    def matches(self, record: object) -> bool:
+        actual = getattr(record, self.property.storage_name, NOT_PROVIDED)
+        return actual == self.value
+
+
+class RuntimeRecord:
+    """Emitted-runtime record descriptor."""
+
+    __slots__ = ("_record_class", "name", "properties")
+
+    def __init__(self, name: str, properties: tuple[RuntimeProperty, ...]) -> None:
+        self.name = name
+        self.properties = properties
+        self._record_class: type[object] | None = None
+
+    def bind_record_class(self, record_class: type[object]) -> type[object]:
+        record_spec = getattr(record_class, "__dds_record_spec__", None)
+        if record_spec is not self:
+            raise TypeError(f"{record_class.__name__} is not bound to record {self.name}")
+        self._record_class = record_class
+        return record_class
+
+    def require_property(self, prop: RuntimeProperty) -> None:
+        if prop not in self.properties:
+            raise ValueError(f"record {self.name!r} has no property {prop.name!r}")
+
+    def record_class(self) -> type[object]:
+        if self._record_class is None:
+            raise TypeError(f"record {self.name!r} has no bound runtime class")
+        return self._record_class
+
+    def record(self, **values: object) -> object:
+        return self.record_class()(**values)
+
+    def validate_record(self, record: object) -> None:
+        if getattr(type(record), "__dds_record_spec__", None) is not self:
+            raise TypeError(f"expected {self.name} record, got {type(record).__name__}")
+
+    def values_of(self, record: object) -> dict[RuntimeProperty, object]:
+        self.validate_record(record)
+        return {
+            prop: prop.value_from(record)
+            for prop in self.properties
+        }
+
+    def __repr__(self) -> str:
+        return self.name
+
+
+class RuntimeUnion:
+    """Emitted-runtime union descriptor."""
+
+    __slots__ = ("name", "variants")
+
+    def __init__(self, name: str, variants: tuple[RuntimeRecord, ...]) -> None:
+        self.name = name
+        self.variants = variants
+
+    def require_property(self, prop: RuntimeProperty) -> None:
+        if not any(prop in variant.properties for variant in self.variants):
+            raise ValueError(f"union {self.name!r} has no variant with property {prop.name!r}")
+
+    def record_spec_for(self, record: object) -> RuntimeRecord:
+        record_spec = getattr(type(record), "__dds_record_spec__", None)
+        for variant in self.variants:
+            if record_spec is variant:
+                return variant
+        raise TypeError(f"expected {self.name} variant record, got {type(record).__name__}")
+
+    def validate_record(self, record: object) -> None:
+        self.record_spec_for(record)
+
+    def __repr__(self) -> str:
+        return self.name
+
+
+class RuntimeCollection:
+    """Emitted-runtime concrete collection descriptor."""
+
+    __slots__ = ("_allows_multiple", "_system", "identity", "name", "record_shape")
+
+    def __init__(
+        self,
+        name: str,
+        record_shape: RuntimeRecord | RuntimeUnion,
+        *,
+        allows_multiple: bool,
+        identity: RuntimeProperty | None = None,
+    ) -> None:
+        self.name = name
+        self.record_shape = record_shape
+        self.identity = identity
+        self._allows_multiple = allows_multiple
+        self._system: RuntimeContainerSpec | None = None
+
+    @property
+    def cardinality(self) -> RuntimeCollection:
+        return self
+
+    @property
+    def record_spec(self) -> RuntimeRecord | RuntimeUnion:
+        return self.record_shape
+
+    @property
+    def system(self) -> RuntimeContainerSpec | None:
+        return self._system
+
+    def allows_multiple(self) -> bool:
+        return self._allows_multiple
+
+    def record(self, **values: object) -> object:
+        if isinstance(self.record_shape, RuntimeUnion):
+            raise TypeError(
+                f"collection {self.name!r} uses union {self.record_shape.name!r}; "
+                "create a concrete variant record instead"
+            )
+        return self.record_shape.record(**values)
+
+    def identity_of(self, record: object) -> object:
+        self.record_shape.validate_record(record)
+        if self.identity is None:
+            return None
+        return self.identity.value_from(record)
+
+    def fact_keys(self, record: object) -> tuple[tuple[RuntimeProperty, object], ...]:
+        record_spec = (
+            self.record_shape.record_spec_for(record)
+            if isinstance(self.record_shape, RuntimeUnion)
+            else self.record_shape
+        )
+        return tuple((prop, prop.value_from(record)) for prop in record_spec.properties)
+
+    def __repr__(self) -> str:
+        return self.name
+
+
+class RuntimeComputedCollection:
+    """Emitted-runtime computed collection descriptor."""
+
+    __slots__ = ("_system", "conditions", "name", "source")
+
+    def __init__(
+        self,
+        name: str,
+        *,
+        source: CollectionViewSpec,
+        when: tuple[RuntimePropertyEquals, ...],
+    ) -> None:
+        self.name = name
+        self.source = source
+        self.conditions = when
+        self._system: RuntimeContainerSpec | None = None
+
+    @property
+    def identity(self) -> RuntimeProperty | None:
+        return self.source.identity
+
+    @property
+    def record_shape(self) -> RuntimeRecord | RuntimeUnion:
+        return self.source.record_shape
+
+    @property
+    def record_spec(self) -> RuntimeRecord | RuntimeUnion:
+        return self.source.record_spec
+
+    @property
+    def system(self) -> RuntimeContainerSpec | None:
+        return self._system
+
+    def identity_of(self, record: object) -> object:
+        return self.source.identity_of(record)
+
+    def matches(self, record: object) -> bool:
+        if _is_computed_collection(self.source) and not self.source.matches(record):
+            return False
+        self.record_shape.validate_record(record)
+        return all(condition.matches(record) for condition in self.conditions)
+
+    def __repr__(self) -> str:
+        return self.name
+
+
+class RuntimeContainerSpec:
+    """Emitted-runtime schema descriptor for one generated container module."""
+
+    __slots__ = ("collections", "computed_collections", "matchers")
+
+    def __init__(
+        self,
+        *,
+        collections: tuple[RuntimeCollection, ...],
+        computed_collections: tuple[RuntimeComputedCollection, ...] = (),
+        matchers: tuple[object, ...] = (),
+    ) -> None:
+        self.collections = collections
+        self.computed_collections = computed_collections
+        self.matchers = matchers
+        for collection in (*collections, *computed_collections):
+            collection._system = self
+
+
+ConcreteCollectionSpec = CollectionSpec | RuntimeCollection
+ComputedCollectionViewSpec = ComputedCollectionSpec | RuntimeComputedCollection
+CollectionViewSpec = ConcreteCollectionSpec | ComputedCollectionViewSpec
+
+
+class DDSContainerBuilder:
+    """Mutable record holder for one decoration run."""
+
+    __slots__ = ("_frozen", "_identity_indexes", "_records", "_system")
+
+    def __init__(self, system: DataDefinitionSystem | RuntimeContainerSpec) -> None:
+        self._system = system
+        self._records: dict[ConcreteCollectionSpec, list[object]] = {
+            collection: []
+            for collection in system.collections
+        }
+        self._identity_indexes: dict[ConcreteCollectionSpec, dict[object, object]] = {
+            collection: {}
+            for collection in system.collections
+            if collection.identity is not None
+        }
+        self._frozen = False
+
+    @property
+    def system(self) -> DataDefinitionSystem | RuntimeContainerSpec:
+        return self._system
+
+    def add(self, collection: ConcreteCollectionSpec, record: object) -> DDSContainerBuilder:
+        self._require_mutable()
+        self._require_concrete_collection(collection)
+        collection.record_shape.validate_record(record)
+        records = self._records[collection]
+        if not collection.cardinality.allows_multiple() and records:
+            if any(existing is record for existing in records):
+                return self
+            raise ValueError(f"single collection {collection.name!r} already has a record")
+        identity_index = self._identity_indexes.get(collection)
+        if identity_index is not None:
+            identity = collection.identity_of(record)
+            existing = identity_index.get(identity)
+            if existing is not None:
+                if existing is record:
+                    return self
+                raise ValueError(
+                    f"duplicate identity {identity!r} in collection {collection.name!r}"
+                )
+            identity_index[identity] = record
+        elif any(existing is record for existing in records):
+            return self
+        records.append(record)
+        return self
+
+    def record(self, collection: ConcreteCollectionSpec, **values: object) -> object:
+        record = collection.record(**values)
+        self.add(collection, record)
+        return record
+
+    def records(self, collection: CollectionViewSpec) -> tuple[object, ...]:
+        if _is_computed_collection(collection):
+            return tuple(_CollectionView(self._frozen_container(), collection).sequence())
+        self._require_concrete_collection(collection)
+        return tuple(self._records[collection])
+
+    def matching(
+        self,
+        collection: CollectionViewSpec,
+        *conditions: PropertyEquals,
+    ) -> tuple[object, ...]:
+        return tuple(
+            record
+            for record in self.records(collection)
+            if all(condition.matches(record) for condition in conditions)
+        )
+
+    def by_identity(self, collection: CollectionViewSpec, value: object) -> object | None:
+        return _CollectionView(self._frozen_container(), collection).by_identity(value)
+
+    def freeze(self) -> DDSContainer:
+        self._frozen = True
+        return self._frozen_container()
+
+    def _frozen_container(self) -> DDSContainer:
+        records = {
+            collection: tuple(items)
+            for collection, items in self._records.items()
+        }
+        identity_indexes = {
+            collection: dict(index)
+            for collection, index in self._identity_indexes.items()
+        }
+        return DDSContainer(
+            self._system,
+            records=records,
+            identity_indexes=identity_indexes,
+        )
+
+    def _require_mutable(self) -> None:
+        if self._frozen:
+            raise RuntimeError("DDSContainerBuilder is frozen")
+
+    def _require_concrete_collection(self, collection: ConcreteCollectionSpec) -> None:
+        if collection not in self._records:
+            raise ValueError("collection belongs to another data-definition system")
+
+
+class DDSContainer:
+    """Immutable resolved DDS data for one decoration run."""
+
+    __slots__ = ("_identity_indexes", "_records", "_system", "matchers")
+
+    def __init__(
+        self,
+        system: DataDefinitionSystem | RuntimeContainerSpec,
+        *,
+        records: dict[ConcreteCollectionSpec, tuple[object, ...]],
+        identity_indexes: dict[ConcreteCollectionSpec, dict[object, object]],
+    ) -> None:
+        self._system = system
+        self._records = records
+        self._identity_indexes = identity_indexes
+        self.matchers = _MatcherViewNamespace(self)
+
+    @property
+    def system(self) -> DataDefinitionSystem | RuntimeContainerSpec:
+        return self._system
+
+    def view(self, collection: CollectionViewSpec) -> _CollectionView:
+        self._require_collection(collection)
+        return _CollectionView(self, collection)
+
+    def records(self, collection: CollectionViewSpec) -> tuple[object, ...]:
+        return tuple(self.view(collection).sequence())
+
+    def matching(
+        self,
+        collection: CollectionViewSpec,
+        *conditions: PropertyEquals,
+    ) -> tuple[object, ...]:
+        return tuple(
+            record
+            for record in self.view(collection).sequence()
+            if all(condition.matches(record) for condition in conditions)
+        )
+
+    def by_identity(self, collection: CollectionViewSpec, value: object) -> object | None:
+        return self.view(collection).by_identity(value)
+
+    def __getattr__(self, name: str) -> _CollectionView:
+        collection = _collection_named(self._system, name)
+        if collection is None:
+            raise AttributeError(name)
+        return self.view(collection)
+
+    def _require_collection(self, collection: CollectionViewSpec) -> None:
+        if _is_concrete_collection(collection) and collection not in self._records:
+            raise ValueError("unknown collection")
+        if (
+            _is_computed_collection(collection)
+            and collection not in self._system.computed_collections
+        ):
+            raise ValueError("unknown computed collection")
+
+
+class _CollectionView:
+    __slots__ = ("_collection", "_container")
+
+    def __init__(self, container: DDSContainer, collection: CollectionViewSpec) -> None:
+        self._container = container
+        self._collection = collection
+
+    @property
+    def collection(self) -> CollectionViewSpec:
+        return self._collection
+
+    @property
+    def container(self) -> tuple[object, ...]:
+        return tuple(self.sequence())
+
+    def sequence(self) -> Iterator[object]:
+        if _is_concrete_collection(self._collection):
+            yield from self._container._records.get(self._collection, ())
+            return
+        for record in self._container.view(self._collection.source).sequence():
+            if all(condition.matches(record) for condition in self._collection.conditions):
+                yield record
+
+    def one(self) -> object | None:
+        records = tuple(self.sequence())
+        if len(records) > 1:
+            raise ValueError(f"collection {self._collection.name!r} has multiple records")
+        if not records:
+            return None
+        return records[0]
+
+    def by_identity(self, value: object) -> object | None:
+        if self._collection.identity is None:
+            raise ValueError(f"collection {self._collection.name!r} has no identity")
+        if _is_concrete_collection(self._collection):
+            return self._container._identity_indexes.get(self._collection, {}).get(value)
+        record = self._container.view(self._collection.source).by_identity(value)
+        if record is None:
+            return None
+        if not all(condition.matches(record) for condition in self._collection.conditions):
+            return None
+        return record
+
+    def contains(self, value: object) -> bool:
+        return self.by_identity(value) is not None
+
+    def __iter__(self) -> Iterator[object]:
+        return self.sequence()
+
+
+class _MatcherViewNamespace:
+    __slots__ = ("_container", "_runtimes")
+
+    def __init__(self, container: DDSContainer) -> None:
+        self._container = container
+        self._runtimes: dict[str, _ContainerMatcherRuntime] = {}
+
+    def __getattr__(self, name: str) -> _ContainerMatcherRuntime:
+        existing = self._runtimes.get(name)
+        if existing is not None:
+            return existing
+        for matcher in getattr(self._container.system, "matchers", ()):
+            if matcher.name == name:
+                runtime = _ContainerMatcherRuntime(self._container, matcher.runtime())
+                self._runtimes[name] = runtime
+                return runtime
+        raise AttributeError(name)
+
+
+class _ContainerMatcherRuntime:
+    __slots__ = ("_container", "_runtime")
+
+    def __init__(self, container: DDSContainer, runtime: object) -> None:
+        self._container = container
+        self._runtime = runtime
+
+    @property
+    def matcher(self) -> object:
+        return self._runtime.matcher
+
+    def resolve(self, *records: object) -> object:
+        return self._runtime.resolve(*records)
+
+    def sequence(self) -> Iterator[object]:
+        sequences: list[Iterable[object]] = [
+            self._container.view(input_spec.source).sequence()
+            for input_spec in self._runtime.matcher.inputs
+        ]
+        yield from self._runtime.sequence(*sequences)
+
+
+def _collection_named(
+    system: DataDefinitionSystem | RuntimeContainerSpec,
+    name: str,
+) -> CollectionViewSpec | None:
+    for collection in system.collections:
+        if collection.name == name:
+            return collection
+    for collection in system.computed_collections:
+        if collection.name == name:
+            return collection
+    return None
+
+
+def _is_concrete_collection(collection: CollectionViewSpec) -> bool:
+    return isinstance(collection, (CollectionSpec, RuntimeCollection))
+
+
+def _is_computed_collection(collection: CollectionViewSpec) -> bool:
+    return isinstance(collection, (ComputedCollectionSpec, RuntimeComputedCollection))
+
+
+def _type_name(value_type: type[object] | tuple[type[object], ...]) -> str:
+    if isinstance(value_type, tuple):
+        return " or ".join(item.__name__ for item in value_type)
+    return value_type.__name__
+
+
+__all__ = [
+    "CollectionViewSpec",
+    "DDSContainer",
+    "DDSContainerBuilder",
+    "RuntimeCollection",
+    "RuntimeComputedCollection",
+    "RuntimeContainerSpec",
+    "RuntimeProperty",
+    "RuntimePropertyEquals",
+    "RuntimeRecord",
+    "RuntimeUnion",
+]

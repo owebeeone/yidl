@@ -14,6 +14,7 @@ from astichi.model import CompileOrigin
 from astichi.model import value_to_ast
 
 from yidl.generation.data_schema import CollectionSpec
+from yidl.generation.data_schema import ComputedCollectionSpec
 from yidl.generation.data_schema import PropertySpec
 
 
@@ -35,7 +36,7 @@ _NO_DEFAULT = object()
 class MatcherInputSpec:
     matcher: MatcherSpec
     name: str
-    source: CollectionSpec
+    source: CollectionSpec | ComputedCollectionSpec
     index: int
 
     def prop(self, property: PropertySpec) -> ScopedPropertyRef:
@@ -163,6 +164,10 @@ class MatcherSpec:
         return self._default_resource
 
     @property
+    def has_default_resource(self) -> bool:
+        return self._default_resource is not _NO_DEFAULT
+
+    @property
     def tuple_schema(self) -> tuple[MatcherTupleRef, ...]:
         resolved: list[MatcherTupleRef] = []
         for rule in self._rules:
@@ -171,7 +176,11 @@ class MatcherSpec:
                     resolved.append(condition.ref)
         return tuple(resolved)
 
-    def input(self, name: str, source: CollectionSpec) -> MatcherInputSpec:
+    def input(
+        self,
+        name: str,
+        source: CollectionSpec | ComputedCollectionSpec,
+    ) -> MatcherInputSpec:
         _require_name(name, "matcher input name")
         if self._system is not None and source.system is not self._system:
             raise ValueError(
