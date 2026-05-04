@@ -235,7 +235,7 @@ class DataDefinitionSystem:
         self,
         name: str,
         *,
-        source: CollectionSpec | ComputedCollectionSpec,
+        source: CollectionSpec | ComputedCollectionSpec | MatcherResultSource,
         target: CollectionSpec,
         when: Sequence[PropertyEquals] = (),
         identity: ValueExpression | object | None = None,
@@ -257,10 +257,17 @@ class DataDefinitionSystem:
             raise TypeError(
                 f"production policy must be a WritePolicy, got {type(resolved_policy).__name__}"
             )
-        for condition in when:
-            source.record_shape.require_property(condition.property)
+        if isinstance(source, MatcherResultSource):
+            if when:
+                raise ValueError("matcher-result productions do not support property when= conditions")
+        else:
+            for condition in when:
+                source.record_shape.require_property(condition.property)
         resolved_values = {
-            prop: _coerce_value_expression(expr)
+            prop: _resolve_production_value_expression(
+                source,
+                _coerce_value_expression(expr),
+            )
             for prop, expr in (values or {}).items()
         }
         for prop in resolved_values:
@@ -268,7 +275,10 @@ class DataDefinitionSystem:
         identity_expression = (
             None
             if identity is None
-            else _coerce_value_expression(identity)
+            else _resolve_production_value_expression(
+                source,
+                _coerce_value_expression(identity),
+            )
         )
         if target.identity is not None and identity_expression is None:
             identity_expression = resolved_values.get(target.identity)
@@ -704,6 +714,20 @@ class ComputedCollectionSpec:
         return self.name
 
 
+class MatcherResultSource:
+    """Production source over all results from a matcher."""
+
+    __slots__ = ("matcher", "name", "system")
+
+    def __init__(self, matcher: object) -> None:
+        self.matcher = matcher
+        self.name = f"{getattr(matcher, 'name')}.results"
+        self.system = getattr(matcher, "system")
+
+    def __repr__(self) -> str:
+        return self.name
+
+
 class LookupKey:
     """Hashable key used by an equality-only rule index."""
 
@@ -806,6 +830,86 @@ class ComputedValue(ValueExpression):
         return self.name
 
 
+class MatchResource(ValueExpression):
+    """Resource selected by a matcher result."""
+
+    __slots__ = ()
+
+    def evaluate(self, source: object) -> object:
+        return source.resource
+
+
+class MatchTupleValue(ValueExpression):
+    """Value from a matcher result tuple."""
+
+    __slots__ = ("index",)
+
+    def __init__(self, index: int) -> None:
+        if index < 0:
+            raise ValueError("matcher tuple value index must be non-negative")
+        self.index = index
+
+    def evaluate(self, source: object) -> object:
+        return source.values[self.index]
+
+
+class MatchRecordProperty(ValueExpression):
+    """Property read from one matcher input record."""
+
+    __slots__ = ("input_index", "input_name", "property")
+
+    def __init__(
+        self,
+        input_name: str,
+        property: PropertySpec,
+        *,
+        input_index: int | None = None,
+    ) -> None:
+        _require_name(input_name, "matcher input name")
+        self.input_name = input_name
+        self.property = property
+        self.input_index = input_index
+
+    def bind(self, input_index: int) -> MatchRecordProperty:
+        return MatchRecordProperty(
+            self.input_name,
+            self.property,
+            input_index=input_index,
+        )
+
+    def evaluate(self, source: object) -> object:
+        if self.input_index is None:
+            raise RuntimeError("matcher record expression is not bound to an input")
+        return self.property.value_from(source.records[self.input_index])
+
+
+class _MatchRecordAccessor:
+    __slots__ = ("input_name",)
+
+    def __init__(self, input_name: str) -> None:
+        _require_name(input_name, "matcher input name")
+        self.input_name = input_name
+
+    def prop(self, property: PropertySpec) -> MatchRecordProperty:
+        return MatchRecordProperty(self.input_name, property)
+
+
+class _MatchExpressionFactory:
+    __slots__ = ()
+
+    def resource(self) -> MatchResource:
+        return MatchResource()
+
+    def record(self, input_name: str) -> _MatchRecordAccessor:
+        return _MatchRecordAccessor(input_name)
+
+    def value(self, index: int) -> MatchTupleValue:
+        return MatchTupleValue(index)
+
+
+match = _MatchExpressionFactory()
+
+
 def literal(value: object) -> LiteralValue:
     return LiteralValue(value)
 
@@ -902,7 +1006,7 @@ class ProductionSpec:
         *,
         system: DataDefinitionSystem,
         name: str,
-        source: CollectionSpec | ComputedCollectionSpec,
+        source: CollectionSpec | ComputedCollectionSpec | MatcherResultSource,
         target: CollectionSpec,
         conditions: tuple[PropertyEquals, ...],
         identity: ValueExpression | None,
@@ -919,6 +1023,8 @@ class ProductionSpec:
         self.policy = policy
 
     def matches(self, source: object) -> bool:
+        if isinstance(self.source, MatcherResultSource):
+            return True
         self.source.record_shape.validate_record(source)
         return all(condition.matches(source) for condition in self.conditions)
 
@@ -1350,6 +1456,52 @@ def _coerce_value_expression(value: ValueExpression | object) -> ValueExpression
     return LiteralValue(value)
 
 
+def _resolve_production_value_expression(
+    source: CollectionSpec | ComputedCollectionSpec | MatcherResultSource,
+    expression: ValueExpression,
+) -> ValueExpression:
+    if isinstance(source, MatcherResultSource):
+        return _resolve_matcher_result_expression(source, expression)
+    if isinstance(expression, _MATCH_EXPRESSIONS):
+        raise ValueError("match expressions require source=matcher.results()")
+    if isinstance(expression, ReadProperty):
+        source.record_shape.require_property(expression.property)
+    return expression
+
+
+def _resolve_matcher_result_expression(
+    source: MatcherResultSource,
+    expression: ValueExpression,
+) -> ValueExpression:
+    if isinstance(expression, ReadProperty):
+        raise ValueError(
+            "matcher-result productions must read input records with "
+            "match.record(...).prop(...)"
+        )
+    if isinstance(expression, MatchRecordProperty):
+        input_spec = _matcher_input_named(source.matcher, expression.input_name)
+        input_spec.source.record_shape.require_property(expression.property)
+        return expression.bind(input_spec.index)
+    if isinstance(expression, MatchTupleValue):
+        tuple_length = len(source.matcher.tuple_schema)
+        if expression.index >= tuple_length:
+            raise ValueError(
+                f"matcher tuple value index {expression.index} is out of range "
+                f"for matcher {source.matcher.name!r}"
+            )
+    return expression
+
+
+_MATCH_EXPRESSIONS = (MatchResource, MatchRecordProperty, MatchTupleValue)
+
+
+def _matcher_input_named(matcher: object, name: str) -> object:
+    for input_spec in matcher.inputs:
+        if input_spec.name == name:
+            return input_spec
+    raise ValueError(f"matcher {matcher.name!r} has no input {name!r}")
+
+
 def _unique_properties(
     system: DataDefinitionSystem,
     properties: Sequence[PropertySpec],
@@ -1397,6 +1549,10 @@ __all__ = [
     "ComputedValue",
     "DataDefinitionSystem",
     "LookupKey",
+    "MatchRecordProperty",
+    "MatchResource",
+    "MatchTupleValue",
+    "MatcherResultSource",
     "ManyCollectionCardinality",
     "PortAddress",
     "PortIndexSpec",
@@ -1417,5 +1573,6 @@ __all__ = [
     "dds_property",
     "dds_record_spec",
     "literal",
+    "match",
     "read",
 ]

@@ -9,6 +9,10 @@ from yidl.generation.data_schema import ComputedValue
 from yidl.generation.data_schema import ComputedCollectionSpec
 from yidl.generation.data_schema import DataDefinitionSystem
 from yidl.generation.data_schema import LiteralValue
+from yidl.generation.data_schema import MatchRecordProperty
+from yidl.generation.data_schema import MatcherResultSource
+from yidl.generation.data_schema import MatchResource
+from yidl.generation.data_schema import MatchTupleValue
 from yidl.generation.data_schema import PortAddress
 from yidl.generation.data_schema import PropertySpec
 from yidl.generation.data_schema import REQUIRED
@@ -217,6 +221,11 @@ def _emit_container_builder_lines(matchers: Sequence[MatcherSpec]) -> list[str]:
             "    def children_at(self, port_address):",
             "        return self._builder.children_at(port_address)",
             "",
+            "    def _snapshot(self):",
+            "        container = self._builder._snapshot()",
+            "        container.matchers = _GeneratedMatcherNamespace(container)",
+            "        return container",
+            "",
             "    def record(self, *args, **kwargs):",
             "        return self._builder.record(*args, **kwargs)",
             "",
@@ -263,13 +272,20 @@ def _emit_production_lines(
     evaluator_names: SourceNameMap,
     value_names: SourceNameMap,
 ) -> list[str]:
-    source_var = collection_vars[production.source]
     target_var = collection_vars[production.target]
     record_class = production.target.record_shape.name
-    lines = [
-        f"def {_production_func_name(production)}(builder):",
-        f"    for source in builder.records({source_var}):",
-    ]
+    if isinstance(production.source, MatcherResultSource):
+        lines = [
+            f"def {_production_func_name(production)}(builder):",
+            "    snapshot = builder._snapshot()",
+            f"    for source in snapshot.matchers.{production.source.matcher.name}.sequence():",
+        ]
+    else:
+        source_var = collection_vars[production.source]
+        lines = [
+            f"def {_production_func_name(production)}(builder):",
+            f"    for source in builder.records({source_var}):",
+        ]
     if production.conditions:
         lines.extend(
             [
@@ -435,6 +451,17 @@ def _value_expression_expr(
             f"computed value {expression.name}",
         )
         return f"{helper}({source_name})"
+    if isinstance(expression, MatchResource):
+        return f"{source_name}.resource"
+    if isinstance(expression, MatchRecordProperty):
+        if expression.input_index is None:
+            raise ValueError("matcher record expression is not bound to an input")
+        return (
+            f"{source_name}.records[{expression.input_index}]"
+            f".{expression.property.storage_name}"
+        )
+    if isinstance(expression, MatchTupleValue):
+        return f"{source_name}.values[{expression.index}]"
     raise TypeError(f"unsupported value expression {type(expression).__name__}")
 
 
@@ -535,6 +562,11 @@ def _value_expr(value: object, source_names: SourceNameMap, label: str) -> str:
         return "NOT_PROVIDED"
     if isinstance(value, type):
         return _type_expr(value)
+    if isinstance(value, tuple):
+        return _tuple_expr(
+            _value_expr(item, source_names, label)
+            for item in value
+        )
     if value is None or isinstance(value, (bool, int, float, str)):
         return repr(value)
     return _source_path_for(value, source_names, label)

@@ -15,6 +15,7 @@ from astichi.model import value_to_ast
 
 from yidl.generation.data_schema import CollectionSpec
 from yidl.generation.data_schema import ComputedCollectionSpec
+from yidl.generation.data_schema import MatcherResultSource
 from yidl.generation.data_schema import PropertySpec
 from yidl.generation.matcher_values import MatcherGeneratedValue
 from yidl.generation.matcher_values import constructor_expr_for
@@ -150,6 +151,10 @@ class MatcherSpec:
         self._default_resource: object = _NO_DEFAULT
 
     @property
+    def system(self) -> object | None:
+        return self._system
+
+    @property
     def inputs(self) -> tuple[MatcherInputSpec, ...]:
         return tuple(self._inputs)
 
@@ -255,6 +260,9 @@ class MatcherSpec:
         _require_generated_value(resource, "matcher default resource")
         self._default_resource = resource
         return resource
+
+    def results(self) -> MatcherResultSource:
+        return MatcherResultSource(self)
 
     def runtime(self) -> MatcherRuntime:
         self.validate()

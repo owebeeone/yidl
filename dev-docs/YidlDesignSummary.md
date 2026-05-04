@@ -937,8 +937,9 @@ resolved-data layer, not the whole capsule/codegen engine.
    calls.
 11. `TransformSpec` remains a compatibility/in-memory helper. The emitted
     production runner is `ProductionSpec` / `ProductionGroupSpec`; it reads
-    collection or computed-collection sources, builds target records through
-    source-emittable value expressions, and writes with explicit policy.
+    collection, computed-collection, or matcher-result sources, builds target
+    records through source-emittable value expressions, and writes with
+    explicit policy.
 12. `MatcherSpec` defines Eq-only rule matchers over concrete/computed
     collection views. Match tuples are fixed positional tuples, not dicts.
     Rules run in descending score order; equal-score overlapping rules reject
@@ -952,9 +953,14 @@ resolved-data layer, not the whole capsule/codegen engine.
     stores source-renderable Python literals; `from_astichi_code(...)` stores
     Astichi compile inputs. `to_generator()` compiles lazily and caches the
     resulting `astichi.Composable`.
-16. The remaining DDS production work is matcher-result productions and, only
-    if real reuse pressure requires it, fragment/capsule merge. That design
-    lives in `dev-docs/YidlDataProductionDesign.md`.
+16. Matcher-result productions use `matcher.results()` as a production source
+    and `match.resource()`, `match.record("input").prop(Property)`, and
+    `match.value(index)` as value expressions. Generated operation code reads
+    matcher results through a stable builder snapshot.
+17. The remaining DDS production work is builder-phase matcher views, only if
+    snapshot semantics prove insufficient, and fragment/capsule merge, only if
+    real reuse pressure requires it. That design lives in
+    `dev-docs/YidlDataProductionDesign.md`.
 
 ## 27. Grammar And Source Containers
 
@@ -1340,6 +1346,7 @@ Implementation order:
 53. Matcher resources are `MatcherGeneratedValue` objects; raw arbitrary
     Python objects are not matcher resources.
 54. The current transform API is not the final production runner.
-    `ProductionSpec` / `ProductionGroupSpec` now cover collection/computed
-    collection production, merge policies, and target ports. Matcher-result
-    productions and any fragment merge remain future DDS/codegen work.
+    `ProductionSpec` / `ProductionGroupSpec` now cover collection,
+    computed-collection, and matcher-result production, merge policies, and
+    target ports. Builder-phase matcher views and fragment merge remain future
+    DDS/codegen work only if reuse pressure requires them.

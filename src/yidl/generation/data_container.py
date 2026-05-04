@@ -524,6 +524,9 @@ class DDSContainerBuilder:
     def children_at(self, port_address: PortAddress | RuntimePortAddress) -> tuple[object, ...]:
         return self._frozen_container().children_at(port_address)
 
+    def _snapshot(self) -> DDSContainer:
+        return self._frozen_container()
+
     def freeze(self) -> DDSContainer:
         self._frozen = True
         return self._frozen_container()

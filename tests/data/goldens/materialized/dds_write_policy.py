@@ -63,6 +63,11 @@ class _GeneratedContainerBuilder:
     def children_at(self, port_address):
         return self._builder.children_at(port_address)
 
+    def _snapshot(self):
+        container = self._builder._snapshot()
+        container.matchers = _GeneratedMatcherNamespace(container)
+        return container
+
     def record(self, *args, **kwargs):
         return self._builder.record(*args, **kwargs)
 
