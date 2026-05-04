@@ -1,6 +1,7 @@
 from yidl.generation.data_def_sys import AddIfAbsent, DDSContainerBuilder, NOT_PROVIDED, REQUIRED
 from yidl.generation.data_def_sys import RejectDuplicate, ReplaceExisting
 from yidl.generation.data_def_sys import RuntimeCollection, RuntimeComputedCollection, RuntimeContainerSpec
+from yidl.generation.data_def_sys import RuntimePort, RuntimePortIndex
 from yidl.generation.data_def_sys import RuntimeProperty, RuntimeRecord, RuntimeUnion
 _NameProperty = RuntimeProperty('Name', str, default=REQUIRED, storage_name='name')
 _InitProperty = RuntimeProperty('Init', bool, default=True, storage_name='init')
@@ -114,7 +115,7 @@ ClassInputCollection = RuntimeCollection('ClassInput', _ClassInputSpec, allows_m
 InitFieldsCollection = RuntimeComputedCollection('InitFields', source=FieldsCollection, when=(_InitProperty.eq(True),))
 ManagedInitFieldsCollection = RuntimeComputedCollection('ManagedInitFields', source=InitFieldsCollection, when=(_KindProperty.eq('managed'),))
 
-_RUNTIME_SPEC = RuntimeContainerSpec(collections=(FieldsCollection, ClassInputCollection), computed_collections=(InitFieldsCollection, ManagedInitFieldsCollection))
+_RUNTIME_SPEC = RuntimeContainerSpec(collections=(FieldsCollection, ClassInputCollection), computed_collections=(InitFieldsCollection, ManagedInitFieldsCollection), ports=(), port_index=None)
 
 from itertools import product
 from yidl.generation.data_def_sys import MatcherResult, NOT_PROVIDED, from_astichi_code
@@ -182,6 +183,9 @@ class _GeneratedContainerBuilder:
     def write(self, *args, **kwargs):
         self._builder.write(*args, **kwargs)
         return self
+
+    def children_at(self, port_address):
+        return self._builder.children_at(port_address)
 
     def record(self, *args, **kwargs):
         return self._builder.record(*args, **kwargs)

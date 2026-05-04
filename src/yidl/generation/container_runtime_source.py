@@ -31,12 +31,14 @@ def emit_container_runtime_source(
         "from yidl.generation.data_def_sys import AddIfAbsent, DDSContainerBuilder, NOT_PROVIDED, REQUIRED",
         "from yidl.generation.data_def_sys import RejectDuplicate, ReplaceExisting",
         "from yidl.generation.data_def_sys import RuntimeCollection, RuntimeComputedCollection, RuntimeContainerSpec",
+        "from yidl.generation.data_def_sys import RuntimePort, RuntimePortIndex",
         "from yidl.generation.data_def_sys import RuntimeProperty, RuntimeRecord, RuntimeUnion",
     ]
     prop_vars = _property_vars(system)
     record_vars: dict[RecordSpec, str] = {}
     union_vars: dict[UnionSpec, str] = {}
     collection_vars: dict[CollectionSpec | ComputedCollectionSpec, str] = {}
+    port_vars = _port_vars(system)
 
     for prop in system.properties:
         lines.append(
@@ -117,10 +119,31 @@ def emit_container_runtime_source(
     if system.computed_collections:
         lines.append("")
 
+    for port in system.ports:
+        lines.append(
+            f"{port_vars[port]} = RuntimePort("
+            f"{port.name!r}, "
+            f"allows_multiple={port.cardinality.allows_multiple()!r}"
+            ")"
+        )
+    if system.ports:
+        lines.append("")
+
+    port_index = system.port_index_spec
+    port_index_expr = (
+        "None"
+        if port_index is None
+        else "RuntimePortIndex("
+        f"target={prop_vars[port_index.target]}, "
+        f"order={prop_vars[port_index.order]}"
+        ")"
+    )
     lines.append(
         "_RUNTIME_SPEC = RuntimeContainerSpec("
         f"collections={_tuple_expr(collection_vars[collection] for collection in system.collections)}, "
-        f"computed_collections={_tuple_expr(collection_vars[collection] for collection in system.computed_collections)}"
+        f"computed_collections={_tuple_expr(collection_vars[collection] for collection in system.computed_collections)}, "
+        f"ports={_tuple_expr(port_vars[port] for port in system.ports)}, "
+        f"port_index={port_index_expr}"
         ")"
     )
     lines.append("")
@@ -170,6 +193,9 @@ def _emit_container_builder_lines(matchers: Sequence[MatcherSpec]) -> list[str]:
             "    def write(self, *args, **kwargs):",
             "        self._builder.write(*args, **kwargs)",
             "        return self",
+            "",
+            "    def children_at(self, port_address):",
+            "        return self._builder.children_at(port_address)",
             "",
             "    def record(self, *args, **kwargs):",
             "        return self._builder.record(*args, **kwargs)",
@@ -320,6 +346,20 @@ def _union_var(union: UnionSpec) -> str:
 
 def _collection_var(collection: CollectionSpec | ComputedCollectionSpec) -> str:
     return f"{collection.name}Collection"
+
+
+def _port_vars(system: DataDefinitionSystem) -> dict[object, str]:
+    return {port: _port_var(port.name) for port in system.ports}
+
+
+def _port_var(name: str) -> str:
+    parts = [
+        part
+        for token in name.split(".")
+        for part in token.split("_")
+        if part
+    ]
+    return "".join(part[:1].upper() + part[1:] for part in parts) + "Port"
 
 
 def _matcher_runtime_class_name(matcher: MatcherSpec) -> str:

@@ -33,6 +33,8 @@ class DataDefinitionSystem:
     __slots__ = (
         "_collections",
         "_computed_collections",
+        "_port_index",
+        "_ports",
         "_properties",
         "_records",
         "_transforms",
@@ -47,6 +49,8 @@ class DataDefinitionSystem:
         self._unions: dict[str, UnionSpec] = {}
         self._collections: dict[str, CollectionSpec] = {}
         self._computed_collections: dict[str, ComputedCollectionSpec] = {}
+        self._ports: dict[str, PortSpec] = {}
+        self._port_index: PortIndexSpec | None = None
         self._transforms: dict[str, TransformSpec] = {}
         self.single = SingleCollectionCardinality()
         self.many = ManyCollectionCardinality()
@@ -70,6 +74,14 @@ class DataDefinitionSystem:
     @property
     def computed_collections(self) -> tuple[ComputedCollectionSpec, ...]:
         return tuple(self._computed_collections.values())
+
+    @property
+    def ports(self) -> tuple[PortSpec, ...]:
+        return tuple(self._ports.values())
+
+    @property
+    def port_index_spec(self) -> PortIndexSpec | None:
+        return self._port_index
 
     @property
     def transforms(self) -> tuple[TransformSpec, ...]:
@@ -185,6 +197,27 @@ class DataDefinitionSystem:
         from yidl.generation.data_container import DDSContainerBuilder
 
         return DDSContainerBuilder(self)
+
+    def port(self, name: str, *, cardinality: CollectionCardinality) -> PortSpec:
+        _require_label(name, "port name")
+        if name in self._ports:
+            raise ValueError(f"port {name!r} is already defined")
+        spec = PortSpec(system=self, name=name, cardinality=cardinality)
+        self._ports[name] = spec
+        return spec
+
+    def port_index(self, *, target: PropertySpec, order: PropertySpec) -> PortIndexSpec:
+        if self._port_index is not None:
+            raise ValueError("port index is already defined")
+        if target.system is not self or order.system is not self:
+            raise ValueError("port index properties must belong to this data-definition system")
+        if target.value_type is not object:
+            raise TypeError("port index target property must have value_type=object")
+        if order.value_type is not int:
+            raise TypeError("port index order property must have value_type=int")
+        spec = PortIndexSpec(system=self, target=target, order=order)
+        self._port_index = spec
+        return spec
 
     def transform(
         self,
@@ -403,6 +436,66 @@ class ManyCollectionCardinality(CollectionCardinality):
 
     def __repr__(self) -> str:
         return "many"
+
+
+class PortSpec:
+    """Semantic build destination."""
+
+    __slots__ = ("cardinality", "name", "system")
+
+    def __init__(
+        self,
+        *,
+        system: DataDefinitionSystem,
+        name: str,
+        cardinality: CollectionCardinality,
+    ) -> None:
+        self.system = system
+        self.name = name
+        self.cardinality = cardinality
+
+    def of(self, owner_identity: object) -> PortAddress:
+        return PortAddress(self, owner_identity)
+
+    def __repr__(self) -> str:
+        return self.name
+
+
+class PortAddress:
+    """One owner-scoped port target."""
+
+    __slots__ = ("owner_identity", "port")
+
+    def __init__(self, port: PortSpec, owner_identity: object) -> None:
+        self.port = port
+        self.owner_identity = owner_identity
+
+    def __eq__(self, other: object) -> bool:
+        return (
+            isinstance(other, PortAddress)
+            and self.port is other.port
+            and self.owner_identity == other.owner_identity
+        )
+
+    def __repr__(self) -> str:
+        return f"{self.port.name}.of({self.owner_identity!r})"
+
+
+class PortIndexSpec:
+    """Configured properties used for ordered port-child queries."""
+
+    __slots__ = ("order", "system", "target")
+
+    def __init__(
+        self,
+        *,
+        system: DataDefinitionSystem,
+        target: PropertySpec,
+        order: PropertySpec,
+    ) -> None:
+        self.system = system
+        self.target = target
+        self.order = order
 
 
 class CollectionSpec:
@@ -1118,6 +1211,9 @@ __all__ = [
     "DataDefinitionSystem",
     "LookupKey",
     "ManyCollectionCardinality",
+    "PortAddress",
+    "PortIndexSpec",
+    "PortSpec",
     "PropertyEquals",
     "PropertySpec",
     "REQUIRED",

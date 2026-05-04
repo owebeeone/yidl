@@ -8,6 +8,8 @@ from collections.abc import Iterable, Iterator
 from yidl.generation.data_schema import CollectionSpec
 from yidl.generation.data_schema import ComputedCollectionSpec
 from yidl.generation.data_schema import DataDefinitionSystem
+from yidl.generation.data_schema import PortAddress
+from yidl.generation.data_schema import PortIndexSpec
 from yidl.generation.data_schema import PropertyEquals
 from yidl.generation.matcher import NOT_PROVIDED
 
@@ -325,10 +327,63 @@ class RuntimeComputedCollection:
         return self.name
 
 
+class RuntimePort:
+    """Emitted-runtime build destination."""
+
+    __slots__ = ("_allows_multiple", "name")
+
+    def __init__(self, name: str, *, allows_multiple: bool) -> None:
+        self.name = name
+        self._allows_multiple = allows_multiple
+
+    @property
+    def cardinality(self) -> RuntimePort:
+        return self
+
+    def allows_multiple(self) -> bool:
+        return self._allows_multiple
+
+    def of(self, owner_identity: object) -> RuntimePortAddress:
+        return RuntimePortAddress(self, owner_identity)
+
+    def __repr__(self) -> str:
+        return self.name
+
+
+class RuntimePortAddress:
+    """Emitted-runtime owner-scoped port target."""
+
+    __slots__ = ("owner_identity", "port")
+
+    def __init__(self, port: RuntimePort, owner_identity: object) -> None:
+        self.port = port
+        self.owner_identity = owner_identity
+
+    def __eq__(self, other: object) -> bool:
+        return (
+            isinstance(other, RuntimePortAddress)
+            and self.port is other.port
+            and self.owner_identity == other.owner_identity
+        )
+
+    def __repr__(self) -> str:
+        return f"{self.port.name}.of({self.owner_identity!r})"
+
+
+class RuntimePortIndex:
+    """Emitted-runtime properties used for ordered port-child queries."""
+
+    __slots__ = ("order", "target")
+
+    def __init__(self, *, target: RuntimeProperty, order: RuntimeProperty) -> None:
+        self.target = target
+        self.order = order
+
+
 class RuntimeContainerSpec:
     """Emitted-runtime schema descriptor for one generated container module."""
 
-    __slots__ = ("collections", "computed_collections", "matchers")
+    __slots__ = ("collections", "computed_collections", "matchers", "port_index", "ports")
 
     def __init__(
         self,
@@ -336,10 +391,14 @@ class RuntimeContainerSpec:
         collections: tuple[RuntimeCollection, ...],
         computed_collections: tuple[RuntimeComputedCollection, ...] = (),
         matchers: tuple[object, ...] = (),
+        ports: tuple[RuntimePort, ...] = (),
+        port_index: RuntimePortIndex | None = None,
     ) -> None:
         self.collections = collections
         self.computed_collections = computed_collections
         self.matchers = matchers
+        self.ports = ports
+        self.port_index = port_index
         for collection in (*collections, *computed_collections):
             collection._system = self
 
@@ -352,7 +411,14 @@ CollectionViewSpec = ConcreteCollectionSpec | ComputedCollectionViewSpec
 class DDSContainerBuilder:
     """Mutable record holder for one decoration run."""
 
-    __slots__ = ("_frozen", "_identity_indexes", "_records", "_system")
+    __slots__ = (
+        "_frozen",
+        "_identity_indexes",
+        "_next_write_order",
+        "_records",
+        "_system",
+        "_write_orders",
+    )
 
     def __init__(self, system: DataDefinitionSystem | RuntimeContainerSpec) -> None:
         self._system = system
@@ -365,6 +431,8 @@ class DDSContainerBuilder:
             for collection in system.collections
             if collection.identity is not None
         }
+        self._write_orders: dict[int, int] = {}
+        self._next_write_order = 0
         self._frozen = False
 
     @property
@@ -388,6 +456,7 @@ class DDSContainerBuilder:
         self._require_mutable()
         self._require_concrete_collection(collection)
         collection.record_shape.validate_record(record)
+        self._validate_port_record(record)
         records = self._records[collection]
         identity_index = self._identity_indexes.get(collection)
         if identity_index is None and policy.requires_identity:
@@ -414,13 +483,17 @@ class DDSContainerBuilder:
                 )
                 if replacement is existing:
                     return self
+                self._validate_single_port(replacement, replacing=existing)
+                self._replace_write_order(existing, replacement)
                 records[records.index(existing)] = replacement
                 identity_index[identity] = replacement
                 return self
             identity_index[identity] = record
         elif any(existing is record for existing in records):
             return self
+        self._validate_single_port(record)
         records.append(record)
+        self._remember_write_order(record)
         return self
 
     def record(self, collection: ConcreteCollectionSpec, **values: object) -> object:
@@ -448,6 +521,9 @@ class DDSContainerBuilder:
     def by_identity(self, collection: CollectionViewSpec, value: object) -> object | None:
         return _CollectionView(self._frozen_container(), collection).by_identity(value)
 
+    def children_at(self, port_address: PortAddress | RuntimePortAddress) -> tuple[object, ...]:
+        return self._frozen_container().children_at(port_address)
+
     def freeze(self) -> DDSContainer:
         self._frozen = True
         return self._frozen_container()
@@ -465,7 +541,62 @@ class DDSContainerBuilder:
             self._system,
             records=records,
             identity_indexes=identity_indexes,
+            write_orders=dict(self._write_orders),
         )
+
+    def _remember_write_order(self, record: object) -> None:
+        self._write_orders[id(record)] = self._next_write_order
+        self._next_write_order += 1
+
+    def _replace_write_order(self, existing: object, replacement: object) -> None:
+        order = self._write_orders.pop(id(existing), self._next_write_order)
+        self._write_orders[id(replacement)] = order
+        if order == self._next_write_order:
+            self._next_write_order += 1
+
+    def _validate_port_record(self, record: object) -> None:
+        port_index = _system_port_index(self._system)
+        if port_index is None:
+            return
+        target = getattr(record, port_index.target.storage_name, NOT_PROVIDED)
+        if target is NOT_PROVIDED:
+            return
+        if not _is_port_address(target):
+            raise TypeError(
+                f"{port_index.target.name} must be a PortAddress, "
+                f"got {type(target).__name__}"
+            )
+        order = getattr(record, port_index.order.storage_name, NOT_PROVIDED)
+        if order is NOT_PROVIDED:
+            raise ValueError(
+                f"port-indexed record with {port_index.target.name!r} "
+                f"must also define {port_index.order.name!r}"
+            )
+        port_index.order.validate(order)
+
+    def _validate_single_port(
+        self,
+        record: object,
+        *,
+        replacing: object | None = None,
+    ) -> None:
+        port_index = _system_port_index(self._system)
+        if port_index is None:
+            return
+        target = getattr(record, port_index.target.storage_name, NOT_PROVIDED)
+        if target is NOT_PROVIDED or target.port.cardinality.allows_multiple():
+            return
+        for records in self._records.values():
+            for existing in records:
+                if existing is record or existing is replacing:
+                    continue
+                existing_target = getattr(
+                    existing,
+                    port_index.target.storage_name,
+                    NOT_PROVIDED,
+                )
+                if existing_target == target:
+                    raise ValueError(f"single port {target!r} already has a child")
 
     def _require_mutable(self) -> None:
         if self._frozen:
@@ -479,7 +610,7 @@ class DDSContainerBuilder:
 class DDSContainer:
     """Immutable resolved DDS data for one decoration run."""
 
-    __slots__ = ("_identity_indexes", "_records", "_system", "matchers")
+    __slots__ = ("_identity_indexes", "_records", "_system", "_write_orders", "matchers")
 
     def __init__(
         self,
@@ -487,10 +618,12 @@ class DDSContainer:
         *,
         records: dict[ConcreteCollectionSpec, tuple[object, ...]],
         identity_indexes: dict[ConcreteCollectionSpec, dict[object, object]],
+        write_orders: dict[int, int] | None = None,
     ) -> None:
         self._system = system
         self._records = records
         self._identity_indexes = identity_indexes
+        self._write_orders = {} if write_orders is None else write_orders
         self.matchers = _MatcherViewNamespace(self)
 
     @property
@@ -517,6 +650,35 @@ class DDSContainer:
 
     def by_identity(self, collection: CollectionViewSpec, value: object) -> object | None:
         return self.view(collection).by_identity(value)
+
+    def children_at(self, port_address: PortAddress | RuntimePortAddress) -> tuple[object, ...]:
+        if not _is_port_address(port_address):
+            raise TypeError(
+                f"port_address must be a PortAddress, got {type(port_address).__name__}"
+            )
+        port_index = _system_port_index(self._system)
+        if port_index is None:
+            raise ValueError("data-definition system has no port index")
+        children: list[object] = []
+        for records in self._records.values():
+            for record in records:
+                target = getattr(record, port_index.target.storage_name, NOT_PROVIDED)
+                if target == port_address:
+                    children.append(record)
+        if (
+            not port_address.port.cardinality.allows_multiple()
+            and len(children) > 1
+        ):
+            raise ValueError(f"single port {port_address!r} has multiple children")
+        return tuple(
+            sorted(
+                children,
+                key=lambda record: (
+                    getattr(record, port_index.order.storage_name),
+                    self._write_orders.get(id(record), 0),
+                ),
+            )
+        )
 
     def __getattr__(self, name: str) -> _CollectionView:
         collection = _collection_named(self._system, name)
@@ -646,6 +808,18 @@ def _is_computed_collection(collection: CollectionViewSpec) -> bool:
     return isinstance(collection, (ComputedCollectionSpec, RuntimeComputedCollection))
 
 
+def _is_port_address(value: object) -> bool:
+    return isinstance(value, (PortAddress, RuntimePortAddress))
+
+
+def _system_port_index(
+    system: DataDefinitionSystem | RuntimeContainerSpec,
+) -> PortIndexSpec | RuntimePortIndex | None:
+    if isinstance(system, RuntimeContainerSpec):
+        return system.port_index
+    return system.port_index_spec
+
+
 def _type_name(value_type: type[object] | tuple[type[object], ...]) -> str:
     if isinstance(value_type, tuple):
         return " or ".join(item.__name__ for item in value_type)
@@ -662,6 +836,9 @@ __all__ = [
     "RuntimeCollection",
     "RuntimeComputedCollection",
     "RuntimeContainerSpec",
+    "RuntimePort",
+    "RuntimePortAddress",
+    "RuntimePortIndex",
     "RuntimeProperty",
     "RuntimePropertyEquals",
     "RuntimeRecord",

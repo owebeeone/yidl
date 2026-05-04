@@ -4,45 +4,52 @@ from yidl.generation.data_def_sys import RuntimeCollection, RuntimeComputedColle
 from yidl.generation.data_def_sys import RuntimePort, RuntimePortIndex
 from yidl.generation.data_def_sys import RuntimeProperty, RuntimeRecord, RuntimeUnion
 _NameProperty = RuntimeProperty('Name', str, default=REQUIRED, storage_name='name')
-_ValueProperty = RuntimeProperty('Value', int, default=REQUIRED, storage_name='value')
+_TargetPortProperty = RuntimeProperty('TargetPort', object, default=REQUIRED, storage_name='target_port')
+_OrderProperty = RuntimeProperty('Order', int, default=0, storage_name='order')
 
-_ItemSpec = RuntimeRecord('Item', (_NameProperty, _ValueProperty))
+_ComponentSpec = RuntimeRecord('Component', (_NameProperty, _TargetPortProperty, _OrderProperty))
 
-class Item:
-    __slots__ = ('name', 'value')
-    __dds_record_spec__ = _ItemSpec
+class Component:
+    __slots__ = ('name', 'target_port', 'order')
+    __dds_record_spec__ = _ComponentSpec
     name: str
-    value: int
+    target_port: object
+    order: int
 
-    def __init__(self, *, name: str, value: int):
+    def __init__(self, *, name: str, target_port: object, order: int=0):
         if not isinstance(name, str):
             raise TypeError(
                 'Name must be str, got '
                 + type(name).__name__
             )
         object.__setattr__(self, 'name', name)
-        if not isinstance(value, int):
+        object.__setattr__(self, 'target_port', target_port)
+        if not isinstance(order, int):
             raise TypeError(
-                'Value must be int, got '
-                + type(value).__name__
+                'Order must be int, got '
+                + type(order).__name__
             )
-        object.__setattr__(self, 'value', value)
+        object.__setattr__(self, 'order', order)
 
     def __setattr__(self, name, value):
-        if name in ('name', 'value'):
-            raise AttributeError('Item records are immutable')
+        if name in ('name', 'target_port', 'order'):
+            raise AttributeError('Component records are immutable')
         object.__setattr__(self, name, value)
 
     def __repr__(self):
         pieces = []
         pieces.append('name=' + repr(self.name))
-        pieces.append('value=' + repr(self.value))
-        return 'Item' + '(' + ', '.join(pieces) + ')'
-_ItemSpec.bind_record_class(Item)
+        pieces.append('target_port=' + repr(self.target_port))
+        pieces.append('order=' + repr(self.order))
+        return 'Component' + '(' + ', '.join(pieces) + ')'
+_ComponentSpec.bind_record_class(Component)
 
-ItemsCollection = RuntimeCollection('Items', _ItemSpec, allows_multiple=True, identity=_NameProperty)
+ComponentsCollection = RuntimeCollection('Components', _ComponentSpec, allows_multiple=True, identity=_NameProperty)
 
-_RUNTIME_SPEC = RuntimeContainerSpec(collections=(ItemsCollection,), computed_collections=(), ports=(), port_index=None)
+ClassBodyPort = RuntimePort('Class.body', allows_multiple=True)
+ClassNamePort = RuntimePort('Class.name', allows_multiple=False)
+
+_RUNTIME_SPEC = RuntimeContainerSpec(collections=(ComponentsCollection,), computed_collections=(), ports=(ClassBodyPort, ClassNamePort), port_index=RuntimePortIndex(target=_TargetPortProperty, order=_OrderProperty))
 
 class _GeneratedMatcherNamespace:
     def __init__(self, container):
