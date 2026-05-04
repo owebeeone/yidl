@@ -5,11 +5,16 @@ from __future__ import annotations
 from collections.abc import Mapping, Sequence
 
 from yidl.generation.data_schema import CollectionSpec
+from yidl.generation.data_schema import ComputedValue
 from yidl.generation.data_schema import ComputedCollectionSpec
 from yidl.generation.data_schema import DataDefinitionSystem
+from yidl.generation.data_schema import LiteralValue
+from yidl.generation.data_schema import PortAddress
 from yidl.generation.data_schema import PropertySpec
 from yidl.generation.data_schema import REQUIRED
+from yidl.generation.data_schema import ReadProperty
 from yidl.generation.data_schema import RecordSpec
+from yidl.generation.data_schema import ProductionSpec
 from yidl.generation.data_schema import UnionSpec
 from yidl.generation.matcher import MatcherSpec
 from yidl.generation.matcher import NOT_PROVIDED
@@ -160,6 +165,21 @@ def emit_container_runtime_source(
         )
         lines.append("")
 
+    for production in system.productions:
+        lines.extend(
+            _emit_production_lines(
+                production,
+                collection_vars=collection_vars,
+                port_vars=port_vars,
+                evaluator_names=evaluator_names,
+                value_names=value_names,
+            )
+        )
+        lines.append("")
+    if system.productions:
+        lines.extend(_emit_operation_runner_lines(system))
+        lines.append("")
+
     lines.extend(_emit_container_builder_lines(matchers))
     return "\n".join(lines).rstrip() + "\n"
 
@@ -232,6 +252,69 @@ def _emit_container_matcher_lines(matcher: MatcherSpec) -> list[str]:
         for input_spec in matcher.inputs
     )
     lines.append(f"        yield from self._runtime.sequence({sequence_args})")
+    return lines
+
+
+def _emit_production_lines(
+    production: ProductionSpec,
+    *,
+    collection_vars: Mapping[CollectionSpec | ComputedCollectionSpec, str],
+    port_vars: Mapping[object, str],
+    evaluator_names: SourceNameMap,
+    value_names: SourceNameMap,
+) -> list[str]:
+    source_var = collection_vars[production.source]
+    target_var = collection_vars[production.target]
+    record_class = production.target.record_shape.name
+    lines = [
+        f"def {_production_func_name(production)}(builder):",
+        f"    for source in builder.records({source_var}):",
+    ]
+    if production.conditions:
+        lines.extend(
+            [
+                f"        if not ({_condition_check_expr(production.conditions, value_names)}):",
+                "            continue",
+            ]
+        )
+    values = ", ".join(
+        f"{item.property.storage_name}="
+        f"{_value_expression_expr(item.expression, 'source', port_vars, evaluator_names, value_names)}"
+        for item in production.values
+    )
+    lines.extend(
+        [
+            f"        record = {record_class}({values})",
+            f"        builder.write({target_var}, record, policy={production.policy.name})",
+        ]
+    )
+    return lines
+
+
+def _emit_operation_runner_lines(system: DataDefinitionSystem) -> list[str]:
+    production_groups = system.production_groups
+    if production_groups:
+        productions = tuple(
+            production
+            for group in production_groups
+            for production in group.productions
+        )
+    else:
+        productions = system.productions
+    lines = ["def run_operations(builder):"]
+    for production in productions:
+        lines.append(f"    {_production_func_name(production)}(builder)")
+    if not productions:
+        lines.append("    pass")
+    lines.extend(
+        [
+            "    return builder",
+            "",
+            "def build_container(builder):",
+            "    run_operations(builder)",
+            "    return builder.freeze()",
+        ]
+    )
     return lines
 
 
@@ -322,6 +405,53 @@ def _conditions_expr(
     return _tuple_expr(items)
 
 
+def _condition_check_expr(
+    conditions: Sequence[object],
+    value_names: SourceNameMap,
+) -> str:
+    checks = [
+        f"getattr(source, {condition.property.storage_name!r}, NOT_PROVIDED) == "
+        f"{_value_expr(condition.value, value_names, 'condition value')}"
+        for condition in conditions
+    ]
+    return " and ".join(checks) if checks else "True"
+
+
+def _value_expression_expr(
+    expression: object,
+    source_name: str,
+    port_vars: Mapping[object, str],
+    evaluator_names: SourceNameMap,
+    value_names: SourceNameMap,
+) -> str:
+    if isinstance(expression, ReadProperty):
+        return f"{source_name}.{expression.property.storage_name}"
+    if isinstance(expression, LiteralValue):
+        return _literal_expr(expression.value, port_vars, value_names)
+    if isinstance(expression, ComputedValue):
+        helper = _source_path_for(
+            expression.func,
+            evaluator_names,
+            f"computed value {expression.name}",
+        )
+        return f"{helper}({source_name})"
+    raise TypeError(f"unsupported value expression {type(expression).__name__}")
+
+
+def _literal_expr(
+    value: object,
+    port_vars: Mapping[object, str],
+    value_names: SourceNameMap,
+) -> str:
+    if isinstance(value, PortAddress):
+        return (
+            f"{port_vars[value.port]}.of("
+            f"{_value_expr(value.owner_identity, value_names, 'port owner identity')}"
+            ")"
+        )
+    return _value_expr(value, value_names, "literal value")
+
+
 def _record_shape_expr(
     shape: RecordSpec | UnionSpec,
     record_vars: Mapping[RecordSpec, str],
@@ -364,6 +494,19 @@ def _port_var(name: str) -> str:
 
 def _matcher_runtime_class_name(matcher: MatcherSpec) -> str:
     return f"{matcher.name}Matcher"
+
+
+def _production_func_name(production: ProductionSpec) -> str:
+    return "run_" + _snake_name(production.name)
+
+
+def _snake_name(name: str) -> str:
+    chars: list[str] = []
+    for index, char in enumerate(name):
+        if char.isupper() and index and (not name[index - 1].isupper()):
+            chars.append("_")
+        chars.append(char.lower() if char.isalnum() else "_")
+    return "".join(chars)
 
 
 def _tuple_expr(items: object) -> str:

@@ -35,6 +35,8 @@ class DataDefinitionSystem:
         "_computed_collections",
         "_port_index",
         "_ports",
+        "_production_groups",
+        "_productions",
         "_properties",
         "_records",
         "_transforms",
@@ -51,6 +53,8 @@ class DataDefinitionSystem:
         self._computed_collections: dict[str, ComputedCollectionSpec] = {}
         self._ports: dict[str, PortSpec] = {}
         self._port_index: PortIndexSpec | None = None
+        self._productions: dict[str, ProductionSpec] = {}
+        self._production_groups: dict[str, ProductionGroupSpec] = {}
         self._transforms: dict[str, TransformSpec] = {}
         self.single = SingleCollectionCardinality()
         self.many = ManyCollectionCardinality()
@@ -78,6 +82,14 @@ class DataDefinitionSystem:
     @property
     def ports(self) -> tuple[PortSpec, ...]:
         return tuple(self._ports.values())
+
+    @property
+    def productions(self) -> tuple[ProductionSpec, ...]:
+        return tuple(self._productions.values())
+
+    @property
+    def production_groups(self) -> tuple[ProductionGroupSpec, ...]:
+        return tuple(self._production_groups.values())
 
     @property
     def port_index_spec(self) -> PortIndexSpec | None:
@@ -217,6 +229,90 @@ class DataDefinitionSystem:
             raise TypeError("port index order property must have value_type=int")
         spec = PortIndexSpec(system=self, target=target, order=order)
         self._port_index = spec
+        return spec
+
+    def production(
+        self,
+        name: str,
+        *,
+        source: CollectionSpec | ComputedCollectionSpec,
+        target: CollectionSpec,
+        when: Sequence[PropertyEquals] = (),
+        identity: ValueExpression | object | None = None,
+        values: Mapping[PropertySpec, ValueExpression | object] | None = None,
+        policy: object | None = None,
+    ) -> ProductionSpec:
+        from yidl.generation.data_container import RejectDuplicate
+        from yidl.generation.data_container import WritePolicy
+
+        _require_name(name, "production name")
+        if name in self._productions:
+            raise ValueError(f"production {name!r} is already defined")
+        if source.system is not self or target.system is not self:
+            raise ValueError("production source and target must belong to the same data-definition system")
+        if isinstance(target.record_shape, UnionSpec):
+            raise ValueError("production target collections must use a concrete record")
+        resolved_policy = RejectDuplicate if policy is None else policy
+        if not isinstance(resolved_policy, WritePolicy):
+            raise TypeError(
+                f"production policy must be a WritePolicy, got {type(resolved_policy).__name__}"
+            )
+        for condition in when:
+            source.record_shape.require_property(condition.property)
+        resolved_values = {
+            prop: _coerce_value_expression(expr)
+            for prop, expr in (values or {}).items()
+        }
+        for prop in resolved_values:
+            target.record_shape.require_property(prop)
+        identity_expression = (
+            None
+            if identity is None
+            else _coerce_value_expression(identity)
+        )
+        if target.identity is not None and identity_expression is None:
+            identity_expression = resolved_values.get(target.identity)
+        elif target.identity is None and identity_expression is not None:
+            raise ValueError("identity= requires a target collection identity")
+        if target.identity is not None and identity_expression is not None:
+            resolved_values.setdefault(target.identity, identity_expression)
+        missing = [
+            prop.name
+            for prop in target.record_shape.properties
+            if prop.default is REQUIRED and prop not in resolved_values
+        ]
+        if missing:
+            names = ", ".join(missing)
+            raise ValueError(f"missing required target value: {names}")
+        spec = ProductionSpec(
+            system=self,
+            name=name,
+            source=source,
+            target=target,
+            conditions=tuple(when),
+            identity=identity_expression,
+            values=tuple(
+                ProductionValue(prop, expression)
+                for prop, expression in resolved_values.items()
+            ),
+            policy=resolved_policy,
+        )
+        self._productions[name] = spec
+        return spec
+
+    def production_group(
+        self,
+        name: str,
+        *productions: ProductionSpec,
+    ) -> ProductionGroupSpec:
+        _require_name(name, "production group name")
+        if name in self._production_groups:
+            raise ValueError(f"production group {name!r} is already defined")
+        for production in productions:
+            if production.system is not self:
+                raise ValueError("production group entries must belong to the same data-definition system")
+        spec = ProductionGroupSpec(system=self, name=name, productions=tuple(productions))
+        self._production_groups[name] = spec
         return spec
 
     def transform(
@@ -710,6 +806,18 @@ class ComputedValue(ValueExpression):
         return self.name
 
 
+def literal(value: object) -> LiteralValue:
+    return LiteralValue(value)
+
+
+def read(prop: PropertySpec) -> ReadProperty:
+    return ReadProperty(prop)
+
+
+def call(name: str, func: Callable[[object], object]) -> ComputedValue:
+    return ComputedValue(name, func)
+
+
 class TransformValue:
     __slots__ = ("expression", "property")
 
@@ -765,6 +873,85 @@ class TransformSpec:
 
     def __repr__(self) -> str:
         return self.name
+
+
+class ProductionValue:
+    __slots__ = ("expression", "property")
+
+    def __init__(self, property: PropertySpec, expression: ValueExpression) -> None:
+        self.property = property
+        self.expression = expression
+
+
+class ProductionSpec:
+    """Specification for generated builder operations."""
+
+    __slots__ = (
+        "conditions",
+        "identity",
+        "name",
+        "policy",
+        "source",
+        "system",
+        "target",
+        "values",
+    )
+
+    def __init__(
+        self,
+        *,
+        system: DataDefinitionSystem,
+        name: str,
+        source: CollectionSpec | ComputedCollectionSpec,
+        target: CollectionSpec,
+        conditions: tuple[PropertyEquals, ...],
+        identity: ValueExpression | None,
+        values: tuple[ProductionValue, ...],
+        policy: object,
+    ) -> None:
+        self.system = system
+        self.name = name
+        self.source = source
+        self.target = target
+        self.conditions = conditions
+        self.identity = identity
+        self.values = values
+        self.policy = policy
+
+    def matches(self, source: object) -> bool:
+        self.source.record_shape.validate_record(source)
+        return all(condition.matches(source) for condition in self.conditions)
+
+    def make_record(self, source: object) -> object | None:
+        if not self.matches(source):
+            return None
+        values = {
+            item.property.storage_name: item.property.validate(
+                item.expression.evaluate(source)
+            )
+            for item in self.values
+        }
+        return self.target.record(**values)
+
+    def __repr__(self) -> str:
+        return self.name
+
+
+class ProductionGroupSpec:
+    """Ordered set of productions run as one generated operation group."""
+
+    __slots__ = ("name", "productions", "system")
+
+    def __init__(
+        self,
+        *,
+        system: DataDefinitionSystem,
+        name: str,
+        productions: tuple[ProductionSpec, ...],
+    ) -> None:
+        self.system = system
+        self.name = name
+        self.productions = productions
 
 
 class _DdsPropertyDefinition:
@@ -1214,6 +1401,9 @@ __all__ = [
     "PortAddress",
     "PortIndexSpec",
     "PortSpec",
+    "ProductionGroupSpec",
+    "ProductionSpec",
+    "ProductionValue",
     "PropertyEquals",
     "PropertySpec",
     "REQUIRED",
@@ -1223,6 +1413,9 @@ __all__ = [
     "SingleCollectionCardinality",
     "TransformSpec",
     "UnionSpec",
+    "call",
     "dds_property",
     "dds_record_spec",
+    "literal",
+    "read",
 ]

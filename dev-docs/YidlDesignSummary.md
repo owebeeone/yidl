@@ -911,41 +911,49 @@ resolved-data layer, not the whole capsule/codegen engine.
    through concrete variants.
 5. `CollectionSpec` defines a concrete stored collection. Cardinality is an
    object behavior (`single` or `many`), not an enum. Collections may declare
-   an identity property; duplicate identities reject unless a later production
-   layer explicitly chooses replacement.
+   an identity property. Ordinary insertion uses strict duplicate rejection;
+   explicit `builder.write(..., policy=...)` supports add-if-absent and
+   replacement where the collection has an identity.
 6. `ComputedCollectionSpec` is a named filtered view over another collection or
    computed collection. It returns existing source records and is not stored as
    its own record set.
-7. `DDSContainerBuilder` is the mutable decoration-time holder. It accepts
-   records for concrete collections, enforces cardinality and identity, and
-   freezes to a `DDSContainer`.
-8. `DDSContainer` is the immutable resolved-data object. It exposes named
+7. `PortSpec` / `PortAddress` define semantic build destinations. A DDS can
+   configure one port index from ordinary target/order properties. Port
+   cardinality constrains children at one port address, not the size of the
+   backing collection.
+8. `DDSContainerBuilder` is the mutable decoration-time holder. It accepts
+   records for concrete collections, enforces cardinality, identity, and
+   port-index constraints, supports explicit write policies, and freezes to
+   a `DDSContainer`.
+9. `DDSContainer` is the immutable resolved-data object. It exposes named
    collection views with `sequence()`, `one()`, `by_identity(...)`, and
-   `contains(...)`. Querying a view must not mutate or lazily derive data.
-9. Runtime container source emission produces normal Python modules containing
+   `contains(...)`, plus `children_at(port_address)` for ordered port
+   children. Querying a view must not mutate or lazily derive data.
+10. Runtime container source emission produces normal Python modules containing
    runtime property/record/union/collection descriptors, generated record
-   classes, computed views, matchers, and `new_builder()`. It must not rebuild
-   a source-time `DataDefinitionSystem` with `dds.property(...)` calls.
-10. `TransformSpec` currently describes single-source derived record creation
-    and can derive one record in memory. It is not yet the production runner:
-    there is no emitted ordered/fixpoint transform execution, merge policy, or
-    target-port resource graph in the implemented container layer.
-11. `MatcherSpec` defines Eq-only rule matchers over concrete/computed
+   classes, computed views, ports, matchers, generated production operations,
+   `run_operations(...)`, `build_container(...)`, and `new_builder()`. It must
+   not rebuild a source-time `DataDefinitionSystem` with `dds.property(...)`
+   calls.
+11. `TransformSpec` remains a compatibility/in-memory helper. The emitted
+    production runner is `ProductionSpec` / `ProductionGroupSpec`; it reads
+    collection or computed-collection sources, builds target records through
+    source-emittable value expressions, and writes with explicit policy.
+12. `MatcherSpec` defines Eq-only rule matchers over concrete/computed
     collection views. Match tuples are fixed positional tuples, not dicts.
     Rules run in descending score order; equal-score overlapping rules reject
     before runtime.
-12. Matcher evaluated fields are explicit callable-derived tuple entries.
+13. Matcher evaluated fields are explicit callable-derived tuple entries.
     In-memory runtime may use any callable; source emission requires an
     explicit generated/importable evaluator name.
-13. `MatcherResult` contains the selected generated value, rule name or
+14. `MatcherResult` contains the selected generated value, rule name or
     `None`, score, concrete input records, and extracted tuple values.
-14. Matcher resources are `MatcherGeneratedValue` objects. `from_literal(...)`
+15. Matcher resources are `MatcherGeneratedValue` objects. `from_literal(...)`
     stores source-renderable Python literals; `from_astichi_code(...)` stores
     Astichi compile inputs. `to_generator()` compiles lazily and caches the
     resulting `astichi.Composable`.
-15. The next missing layer is data production: generated operations that
-    derive records, apply merge policies, produce ordered target-port
-    resources, and turn matcher results into build resources. That design
+16. The remaining DDS production work is matcher-result productions and, only
+    if real reuse pressure requires it, fragment/capsule merge. That design
     lives in `dev-docs/YidlDataProductionDesign.md`.
 
 ## 27. Grammar And Source Containers
@@ -1331,6 +1339,7 @@ Implementation order:
     before freeze by generated operations, not lazily during query.
 53. Matcher resources are `MatcherGeneratedValue` objects; raw arbitrary
     Python objects are not matcher resources.
-54. The current transform API is not the final production runner. Ordered
-    production execution, merge policies, target ports, and matcher-result
-    productions remain the next DDS/codegen layer.
+54. The current transform API is not the final production runner.
+    `ProductionSpec` / `ProductionGroupSpec` now cover collection/computed
+    collection production, merge policies, and target ports. Matcher-result
+    productions and any fragment merge remain future DDS/codegen work.
