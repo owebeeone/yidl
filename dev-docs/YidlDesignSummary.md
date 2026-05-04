@@ -961,6 +961,12 @@ resolved-data layer, not the whole capsule/codegen engine.
     snapshot semantics prove insufficient, and fragment/capsule merge, only if
     real reuse pressure requires it. That design lives in
     `dev-docs/YidlDataProductionDesign.md`.
+18. Definition composition is currently handled with direct DDS extension:
+    contributors call `ensure_*` helpers to share semantic definitions and are
+    sequenced with `DataDefinitionSystem.extend(...)`. This covers the first
+    capsule-composition pressure case without adding a parallel fragment graph.
+    A separate fragment object remains deferred until direct extension becomes
+    awkward.
 
 ## 27. Grammar And Source Containers
 
@@ -1350,3 +1356,10 @@ Implementation order:
     computed-collection, and matcher-result production, merge policies, and
     target ports. Builder-phase matcher views and fragment merge remain future
     DDS/codegen work only if reuse pressure requires them.
+55. DDS capsule composition starts with direct contributors, not a new
+    fragment model. Use `ensure_property`, `ensure_record`,
+    `ensure_collection`, `ensure_computed_collection`, `ensure_port`,
+    `ensure_port_index`, `ensure_production_group`, `ensure_matcher`, and
+    `MatcherSpec.ensure_input` when multiple contributors share the same
+    semantic surface. Identical definitions reuse; incompatible definitions
+    reject.

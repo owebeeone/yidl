@@ -425,33 +425,37 @@ builder, conceptually `builder._snapshot()`, and run the existing generated
 container matcher runtime over that snapshot. The snapshot helper stays private
 until builder-phase matcher pressure justifies a public API.
 
-## Fragment / Capsule Merge
+## Definition Extension And Fragment Pressure
 
-`ae_concept_2.py` has `Fragment.merge(...)`. DDS needs the same idea at the
-definition level.
+`ae_concept_2.py` has `Fragment.merge(...)`. The first implemented DDS answer
+is direct definition extension: contributors call `ensure_*` helpers on one
+`DataDefinitionSystem`, and `dds.extend(...)` applies those contributors in
+order.
 
-A production fragment contributes:
+This lets independently authored capsule-like contributors share:
 
 - record/union/collection definitions, when defining a new concept
 - computed collections
 - matchers and matcher rules
 - productions
-- production groups or group insertions
+- production groups
 - port declarations
 
-Merge rules:
+Direct-extension merge rules:
 
-1. Semantic objects merge by identity, not by incidental string labels alone.
+1. Semantic objects merge by identity and full definition, not by incidental
+   string labels alone.
 2. Duplicate definitions of the same semantic object must either be identical
    or reject.
 3. New matcher rules append to the target matcher.
-4. Slice 3 production groups are write-once. Fragment merge may add ordered
-   group insertion or extension when concrete reuse pressure requires it.
+4. Production groups are write-once and may be reused only with the identical
+   production sequence.
 5. Replacement behavior applies to produced records at decoration time, not to
    definition objects unless explicitly declared.
 
-This is the foundation for capsule/facade inheritance: a derived capsule adds
-or replaces production behavior without copying the whole base capsule.
+A separate production fragment object remains deferred. Add it only when direct
+extension becomes awkward, for example if contributors need ordered insertion
+into an existing production group without owning the whole group.
 
 ## Source Emission Requirements
 
@@ -529,11 +533,13 @@ that looks like a mini container or mini matcher, that is a DDS API gap.
 The implementation plan splits this into Slice 4a for frozen/snapshot matcher
 sources and Slice 4b for builder-phase matcher sources, if 4b is needed.
 
-### Slice 5: Fragment Merge
+### Slice 5: Definition Extension
 
-- Add definition-time fragment object and merge behavior only when earlier
-  slices and `ae_concept_3.py` demonstrate real reuse pressure.
-- Tests: base fragment defaults plus derived fragment override without
+- Add direct `DataDefinitionSystem.extend(...)` and idempotent `ensure_*`
+  helpers for shared semantic definitions.
+- Keep a separate fragment object deferred until direct extension demonstrates
+  real limits.
+- Tests: independent contributors share schema/matchers without
   duplicating the whole base graph.
 
 ## Non-Goals For This Layer

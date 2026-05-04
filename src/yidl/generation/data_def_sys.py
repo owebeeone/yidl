@@ -39,6 +39,12 @@ class DataDefinitionSystem(_SchemaDataDefinitionSystem):
         self._matchers[name] = spec
         return spec
 
+    def ensure_matcher(self, name: str) -> MatcherSpec:
+        existing = self._matchers.get(name)
+        if existing is not None:
+            return existing
+        return self.matcher(name)
+
     def emit_container_runtime_source(
         self,
         *,

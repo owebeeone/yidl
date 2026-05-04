@@ -518,7 +518,7 @@ Golden tests:
   resources, emits source, executes it, runs operations, and validates target
   records contain the selected generated values.
 
-## Slice 5: Fragment Merge (Contingent)
+## Slice 5: Definition Extension
 
 ### Purpose
 
@@ -529,36 +529,23 @@ This maps to `ae_concept_2.py`'s `Fragment.merge(...)`.
 
 ### APIs
 
-Do not implement this slice automatically. Trigger it only when slices 1-4 and
-the rolling `ae_concept_3.py` show real reuse pressure that direct
-`DataDefinitionSystem` extension cannot handle cleanly.
+The rolling `ae_concept_3.py` pressure test reached the first composition
+need: independently authored contributors must be able to share schema,
+ports, matchers, and production groups without passing around a giant registry
+object.
 
-Introduce a production fragment object only if direct extension becomes
-awkward. The fragment should contribute existing semantic objects, not wrap
-them in a parallel model.
-
-Possible shape:
+The V1 implementation uses direct extension rather than a separate fragment
+object:
 
 ```python
-fragment = dds.fragment("InitCapsule")
-fragment.production(...)
-fragment.matcher_rule(...)
-fragment.production_group(...)
-
-combined = dds.compose(base_fragment, managed_fragment)
+dds.extend(base_schema, init_capsule, managed_capsule)
 ```
 
-Alternative: keep one `DataDefinitionSystem` and add explicit extension
-methods:
+Contributors use `ensure_*` helpers to reuse identical semantic definitions
+and reject incompatible duplicates. Introduce a production fragment object only
+if direct extension later becomes awkward.
 
-```python
-dds.extend(managed_capsule_definition)
-```
-
-Choose the smallest API after slices 1-4 reveal pressure. Do not implement
-fragment merge before production/matcher operations exist.
-
-Merge rules:
+V1 merge rules:
 
 - duplicate semantic definitions must be identical or reject
 - matcher rules append to existing matchers
@@ -583,13 +570,13 @@ Bespoke tests:
 - duplicate incompatible property/record/collection definitions reject
 - identical shared definitions do not duplicate
 - rules append to an existing matcher
-- production group insertion order is stable
+- `extend(...)` applies contributors in order
 
 Golden tests:
 
-- Add `tests/data/gold_src/dds_fragment_merge.py` only when source emission
-  changes. If fragment merge is definition-time only and emitted source is
-  already covered by production goldens, bespoke tests may be enough.
+- Add `tests/data/gold_src/dds_definition_extensions.py` to show independent
+  contributors sharing schema and matchers while emitting ordinary generated
+  runtime source.
 
 ## `ae_concept_3.py` Rolling Work Item
 

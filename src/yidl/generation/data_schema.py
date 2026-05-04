@@ -137,6 +137,31 @@ class DataDefinitionSystem:
         self._properties[name] = spec
         return spec
 
+    def ensure_property(
+        self,
+        name: str,
+        value_type: type[object] | tuple[type[object], ...],
+        *,
+        default: object = REQUIRED,
+        storage_name: str | None = None,
+    ) -> PropertySpec:
+        existing = self._properties.get(name)
+        if existing is None:
+            return self.property(
+                name,
+                value_type,
+                default=default,
+                storage_name=storage_name,
+            )
+        resolved_storage_name = _to_snake_case(name) if storage_name is None else storage_name
+        if (
+            existing.value_type != value_type
+            or existing.default != default
+            or existing.storage_name != resolved_storage_name
+        ):
+            raise ValueError(f"property {name!r} is already defined differently")
+        return existing
+
     def record(self, name: str, *properties: PropertySpec) -> RecordSpec:
         _require_name(name, "record name")
         if name in self._records:
@@ -147,6 +172,15 @@ class DataDefinitionSystem:
         self._records[name] = spec
         return spec
 
+    def ensure_record(self, name: str, *properties: PropertySpec) -> RecordSpec:
+        existing = self._records.get(name)
+        if existing is None:
+            return self.record(name, *properties)
+        expected = _unique_properties(self, properties)
+        if existing.properties != expected:
+            raise ValueError(f"record {name!r} is already defined differently")
+        return existing
+
     def union(self, name: str) -> UnionSpec:
         _require_name(name, "union name")
         if name in self._unions:
@@ -156,6 +190,12 @@ class DataDefinitionSystem:
         spec = UnionSpec(self, name)
         self._unions[name] = spec
         return spec
+
+    def ensure_union(self, name: str) -> UnionSpec:
+        existing = self._unions.get(name)
+        if existing is not None:
+            return existing
+        return self.union(name)
 
     def collection(
         self,
@@ -182,6 +222,31 @@ class DataDefinitionSystem:
         self._collections[name] = spec
         return spec
 
+    def ensure_collection(
+        self,
+        name: str,
+        record: RecordSpec | UnionSpec,
+        *,
+        cardinality: CollectionCardinality,
+        identity: PropertySpec | None = None,
+    ) -> CollectionSpec:
+        existing = self._collections.get(name)
+        if existing is None:
+            return self.collection(
+                name,
+                record,
+                cardinality=cardinality,
+                identity=identity,
+            )
+        if (
+            existing.record_shape is not record
+            or existing.identity is not identity
+            or existing.cardinality.allows_multiple()
+            != cardinality.allows_multiple()
+        ):
+            raise ValueError(f"collection {name!r} is already defined differently")
+        return existing
+
     def computed_collection(
         self,
         name: str,
@@ -205,10 +270,37 @@ class DataDefinitionSystem:
         self._computed_collections[name] = spec
         return spec
 
+    def ensure_computed_collection(
+        self,
+        name: str,
+        *,
+        source: CollectionSpec | ComputedCollectionSpec,
+        when: Sequence[PropertyEquals] = (),
+    ) -> ComputedCollectionSpec:
+        existing = self._computed_collections.get(name)
+        if existing is None:
+            return self.computed_collection(name, source=source, when=when)
+        if (
+            existing.source is not source
+            or not _conditions_equal(existing.conditions, tuple(when))
+        ):
+            raise ValueError(
+                f"computed collection {name!r} is already defined differently"
+            )
+        return existing
+
     def container_builder(self) -> DDSContainerBuilder:
         from yidl.generation.data_container import DDSContainerBuilder
 
         return DDSContainerBuilder(self)
+
+    def extend(
+        self,
+        *contributors: Callable[[DataDefinitionSystem], object],
+    ) -> DataDefinitionSystem:
+        for contributor in contributors:
+            contributor(self)
+        return self
 
     def port(self, name: str, *, cardinality: CollectionCardinality) -> PortSpec:
         _require_label(name, "port name")
@@ -217,6 +309,14 @@ class DataDefinitionSystem:
         spec = PortSpec(system=self, name=name, cardinality=cardinality)
         self._ports[name] = spec
         return spec
+
+    def ensure_port(self, name: str, *, cardinality: CollectionCardinality) -> PortSpec:
+        existing = self._ports.get(name)
+        if existing is None:
+            return self.port(name, cardinality=cardinality)
+        if existing.cardinality.allows_multiple() != cardinality.allows_multiple():
+            raise ValueError(f"port {name!r} is already defined differently")
+        return existing
 
     def port_index(self, *, target: PropertySpec, order: PropertySpec) -> PortIndexSpec:
         if self._port_index is not None:
@@ -230,6 +330,19 @@ class DataDefinitionSystem:
         spec = PortIndexSpec(system=self, target=target, order=order)
         self._port_index = spec
         return spec
+
+    def ensure_port_index(
+        self,
+        *,
+        target: PropertySpec,
+        order: PropertySpec,
+    ) -> PortIndexSpec:
+        existing = self._port_index
+        if existing is None:
+            return self.port_index(target=target, order=order)
+        if existing.target is not target or existing.order is not order:
+            raise ValueError("port index is already defined differently")
+        return existing
 
     def production(
         self,
@@ -324,6 +437,20 @@ class DataDefinitionSystem:
         spec = ProductionGroupSpec(system=self, name=name, productions=tuple(productions))
         self._production_groups[name] = spec
         return spec
+
+    def ensure_production_group(
+        self,
+        name: str,
+        *productions: ProductionSpec,
+    ) -> ProductionGroupSpec:
+        existing = self._production_groups.get(name)
+        if existing is None:
+            return self.production_group(name, *productions)
+        if existing.productions != tuple(productions):
+            raise ValueError(
+                f"production group {name!r} is already defined differently"
+            )
+        return existing
 
     def transform(
         self,
@@ -479,6 +606,17 @@ class UnionSpec:
         spec = self.system.record(name, *properties)
         self._variants[name] = spec
         return spec
+
+    def ensure_variant(self, name: str, *properties: PropertySpec) -> RecordSpec:
+        existing = self._variants.get(name)
+        if existing is None:
+            return self.variant(name, *properties)
+        expected = _unique_properties(self.system, properties)
+        if existing.properties != expected:
+            raise ValueError(
+                f"union {self.name!r} variant {name!r} is already defined differently"
+            )
+        return existing
 
     def require_property(self, prop: PropertySpec) -> None:
         if prop.system is not self.system:
@@ -1454,6 +1592,19 @@ def _coerce_value_expression(value: ValueExpression | object) -> ValueExpression
     if isinstance(value, ValueExpression):
         return value
     return LiteralValue(value)
+
+
+def _conditions_equal(
+    left: tuple[PropertyEquals, ...],
+    right: tuple[PropertyEquals, ...],
+) -> bool:
+    if len(left) != len(right):
+        return False
+    return all(
+        left_item.property is right_item.property
+        and left_item.value == right_item.value
+        for left_item, right_item in zip(left, right, strict=True)
+    )
 
 
 def _resolve_production_value_expression(

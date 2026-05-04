@@ -199,6 +199,21 @@ class MatcherSpec:
         self._inputs.append(spec)
         return spec
 
+    def ensure_input(
+        self,
+        name: str,
+        source: CollectionSpec | ComputedCollectionSpec,
+    ) -> MatcherInputSpec:
+        for existing in self._inputs:
+            if existing.name == name:
+                if existing.source is not source:
+                    raise ValueError(
+                        f"matcher {self.name!r} input {name!r} is already "
+                        "defined differently"
+                    )
+                return existing
+        return self.input(name, source)
+
     def evaluated_field(
         self,
         name: str,
