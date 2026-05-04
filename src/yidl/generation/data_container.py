@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from abc import ABC, abstractmethod
 from collections.abc import Iterable, Iterator
 
 from yidl.generation.data_schema import CollectionSpec
@@ -9,6 +10,90 @@ from yidl.generation.data_schema import ComputedCollectionSpec
 from yidl.generation.data_schema import DataDefinitionSystem
 from yidl.generation.data_schema import PropertyEquals
 from yidl.generation.matcher import NOT_PROVIDED
+
+
+class WritePolicy(ABC):
+    """Record merge behavior for explicit builder writes."""
+
+    __slots__ = ("name", "requires_identity")
+
+    def __init__(self, name: str, *, requires_identity: bool) -> None:
+        self.name = name
+        self.requires_identity = requires_identity
+
+    @abstractmethod
+    def resolve_existing(
+        self,
+        *,
+        existing: object,
+        new_record: object,
+        collection_name: str,
+        identity: object,
+    ) -> object:
+        raise NotImplementedError
+
+    def __repr__(self) -> str:
+        return self.name
+
+
+class _AddIfAbsentPolicy(WritePolicy):
+    __slots__ = ()
+
+    def __init__(self) -> None:
+        super().__init__("AddIfAbsent", requires_identity=True)
+
+    def resolve_existing(
+        self,
+        *,
+        existing: object,
+        new_record: object,
+        collection_name: str,
+        identity: object,
+    ) -> object:
+        return existing
+
+
+class _ReplaceExistingPolicy(WritePolicy):
+    __slots__ = ()
+
+    def __init__(self) -> None:
+        super().__init__("ReplaceExisting", requires_identity=True)
+
+    def resolve_existing(
+        self,
+        *,
+        existing: object,
+        new_record: object,
+        collection_name: str,
+        identity: object,
+    ) -> object:
+        return new_record
+
+
+class _RejectDuplicatePolicy(WritePolicy):
+    __slots__ = ()
+
+    def __init__(self) -> None:
+        super().__init__("RejectDuplicate", requires_identity=False)
+
+    def resolve_existing(
+        self,
+        *,
+        existing: object,
+        new_record: object,
+        collection_name: str,
+        identity: object,
+    ) -> object:
+        if existing is new_record:
+            return existing
+        raise ValueError(
+            f"duplicate identity {identity!r} in collection {collection_name!r}"
+        )
+
+
+AddIfAbsent = _AddIfAbsentPolicy()
+ReplaceExisting = _ReplaceExistingPolicy()
+RejectDuplicate = _RejectDuplicatePolicy()
 
 
 class RuntimeProperty:
@@ -287,24 +372,51 @@ class DDSContainerBuilder:
         return self._system
 
     def add(self, collection: ConcreteCollectionSpec, record: object) -> DDSContainerBuilder:
+        return self.write(collection, record, policy=RejectDuplicate)
+
+    def write(
+        self,
+        collection: ConcreteCollectionSpec,
+        record: object,
+        *,
+        policy: WritePolicy = RejectDuplicate,
+    ) -> DDSContainerBuilder:
+        if not isinstance(policy, WritePolicy):
+            raise TypeError(
+                f"write policy must be a WritePolicy, got {type(policy).__name__}"
+            )
         self._require_mutable()
         self._require_concrete_collection(collection)
         collection.record_shape.validate_record(record)
         records = self._records[collection]
-        if not collection.cardinality.allows_multiple() and records:
-            if any(existing is record for existing in records):
+        identity_index = self._identity_indexes.get(collection)
+        if identity_index is None and policy.requires_identity:
+            raise ValueError(
+                f"{policy.name} requires an identity for collection {collection.name!r}"
+            )
+        identity = collection.identity_of(record) if identity_index is not None else None
+        existing = (
+            identity_index.get(identity)
+            if identity_index is not None
+            else None
+        )
+        if not collection.cardinality.allows_multiple() and records and existing is None:
+            if any(existing_record is record for existing_record in records):
                 return self
             raise ValueError(f"single collection {collection.name!r} already has a record")
-        identity_index = self._identity_indexes.get(collection)
         if identity_index is not None:
-            identity = collection.identity_of(record)
-            existing = identity_index.get(identity)
             if existing is not None:
-                if existing is record:
-                    return self
-                raise ValueError(
-                    f"duplicate identity {identity!r} in collection {collection.name!r}"
+                replacement = policy.resolve_existing(
+                    existing=existing,
+                    new_record=record,
+                    collection_name=collection.name,
+                    identity=identity,
                 )
+                if replacement is existing:
+                    return self
+                records[records.index(existing)] = replacement
+                identity_index[identity] = replacement
+                return self
             identity_index[identity] = record
         elif any(existing is record for existing in records):
             return self
@@ -541,9 +653,12 @@ def _type_name(value_type: type[object] | tuple[type[object], ...]) -> str:
 
 
 __all__ = [
+    "AddIfAbsent",
     "CollectionViewSpec",
     "DDSContainer",
     "DDSContainerBuilder",
+    "RejectDuplicate",
+    "ReplaceExisting",
     "RuntimeCollection",
     "RuntimeComputedCollection",
     "RuntimeContainerSpec",
@@ -551,4 +666,5 @@ __all__ = [
     "RuntimePropertyEquals",
     "RuntimeRecord",
     "RuntimeUnion",
+    "WritePolicy",
 ]

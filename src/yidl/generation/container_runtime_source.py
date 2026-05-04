@@ -28,7 +28,8 @@ def emit_container_runtime_source(
     """Emit a Python module containing DDS records, collections, and matchers."""
 
     lines: list[str] = [
-        "from yidl.generation.data_def_sys import DDSContainerBuilder, NOT_PROVIDED, REQUIRED",
+        "from yidl.generation.data_def_sys import AddIfAbsent, DDSContainerBuilder, NOT_PROVIDED, REQUIRED",
+        "from yidl.generation.data_def_sys import RejectDuplicate, ReplaceExisting",
         "from yidl.generation.data_def_sys import RuntimeCollection, RuntimeComputedCollection, RuntimeContainerSpec",
         "from yidl.generation.data_def_sys import RuntimeProperty, RuntimeRecord, RuntimeUnion",
     ]
@@ -164,6 +165,10 @@ def _emit_container_builder_lines(matchers: Sequence[MatcherSpec]) -> list[str]:
             "",
             "    def add(self, *args, **kwargs):",
             "        self._builder.add(*args, **kwargs)",
+            "        return self",
+            "",
+            "    def write(self, *args, **kwargs):",
+            "        self._builder.write(*args, **kwargs)",
             "        return self",
             "",
             "    def record(self, *args, **kwargs):",

@@ -1,4 +1,5 @@
-from yidl.generation.data_def_sys import DDSContainerBuilder, NOT_PROVIDED, REQUIRED
+from yidl.generation.data_def_sys import AddIfAbsent, DDSContainerBuilder, NOT_PROVIDED, REQUIRED
+from yidl.generation.data_def_sys import RejectDuplicate, ReplaceExisting
 from yidl.generation.data_def_sys import RuntimeCollection, RuntimeComputedCollection, RuntimeContainerSpec
 from yidl.generation.data_def_sys import RuntimeProperty, RuntimeRecord, RuntimeUnion
 _NameProperty = RuntimeProperty('Name', str, default=REQUIRED, storage_name='name')
@@ -176,6 +177,10 @@ class _GeneratedContainerBuilder:
 
     def add(self, *args, **kwargs):
         self._builder.add(*args, **kwargs)
+        return self
+
+    def write(self, *args, **kwargs):
+        self._builder.write(*args, **kwargs)
         return self
 
     def record(self, *args, **kwargs):
