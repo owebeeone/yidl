@@ -10,6 +10,7 @@ from yidl.generation.data_def_sys import NOT_PROVIDED
 from yidl.generation.data_def_sys import REQUIRED
 from yidl.generation.data_def_sys import constructor_expr_for
 from yidl.generation.data_def_sys import from_astichi_code
+from yidl.generation.data_def_sys import from_import
 from yidl.generation.data_def_sys import from_literal
 
 
@@ -384,6 +385,26 @@ def test_generated_value_caches_generator() -> None:
     second = value.to_generator()
 
     assert first is second
+
+
+def test_imported_generated_value_caches_generator_and_emits_import() -> None:
+    value = from_import("math", "sqrt")
+
+    first = value.to_generator()
+    second = value.to_generator()
+
+    assert first is second
+    source = first.materialize().emit(provenance=False)
+    assert "from math import sqrt" in source
+    assert source.strip().endswith("sqrt")
+    assert ast.unparse(constructor_expr_for(value)) == "from_import('math', 'sqrt')"
+
+
+def test_imported_generated_value_rejects_invalid_source_path() -> None:
+    with pytest.raises(ValueError, match="import module"):
+        from_import("not-a-module", "sqrt")
+    with pytest.raises(ValueError, match="import name"):
+        from_import("math", "not-a-name")
 
 
 def test_astichi_generated_values_keep_python_builtins_by_default() -> None:

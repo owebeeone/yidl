@@ -8,6 +8,7 @@ from yidl.generation.data_def_sys import DataDefinitionSystem
 from yidl.generation.data_def_sys import DDSContainer
 from yidl.generation.data_def_sys import DDSContainerBuilder
 from yidl.generation.data_def_sys import GeneratedValue
+from yidl.generation.data_def_sys import ImportedGeneratedValue
 from yidl.generation.data_def_sys import MatcherGeneratedValue
 from yidl.generation.data_def_sys import MatcherSpec
 from yidl.generation.data_def_sys import NOT_PROVIDED
@@ -17,6 +18,7 @@ from yidl.generation.data_def_sys import ReplaceExisting
 from yidl.generation.data_def_sys import emit_container_runtime_source
 from yidl.generation.data_def_sys import emit_matcher_runtime_source
 from yidl.generation.data_def_sys import from_astichi_code
+from yidl.generation.data_def_sys import from_import
 from yidl.generation.data_def_sys import from_literal
 from yidl.generation.data_def_sys import lookup
 
@@ -29,6 +31,7 @@ __all__ = [
     "DDSContainer",
     "DDSContainerBuilder",
     "GeneratedValue",
+    "ImportedGeneratedValue",
     "MatcherGeneratedValue",
     "MatcherSpec",
     "NOT_PROVIDED",
@@ -38,6 +41,7 @@ __all__ = [
     "emit_container_runtime_source",
     "emit_matcher_runtime_source",
     "from_astichi_code",
+    "from_import",
     "from_literal",
     "lookup",
 ]

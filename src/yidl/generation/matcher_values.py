@@ -97,7 +97,31 @@ class AstichiTemplateValue:
         return result or None
 
 
-GeneratedValue = MatcherGeneratedValue | AstichiTemplateValue
+@dataclass(frozen=True)
+class ImportedGeneratedValue:
+    """Imported symbol selected as a generated value."""
+
+    module: str
+    name: str
+    _generator: astichi.Composable | None = field(
+        default=None,
+        init=False,
+        repr=False,
+        compare=False,
+    )
+
+    def to_generator(self) -> astichi.Composable:
+        if self._generator is not None:
+            return self._generator
+        generator = astichi.compile(
+            f"astichi_pyimport(module={self.module}, names=({self.name},))\n"
+            f"{self.name}\n"
+        )
+        object.__setattr__(self, "_generator", generator)
+        return generator
+
+
+GeneratedValue = MatcherGeneratedValue | AstichiTemplateValue | ImportedGeneratedValue
 
 
 def from_literal(value: object) -> MatcherGeneratedValue:
@@ -134,6 +158,14 @@ def from_astichi_code(
     )
 
 
+def from_import(module: str, name: str) -> ImportedGeneratedValue:
+    """Create a generated value that references an imported symbol."""
+
+    _require_dotted_path(module, "import module")
+    _require_identifier(name, "import name")
+    return ImportedGeneratedValue(module=module, name=name)
+
+
 def astichi_template(
     template: MatcherGeneratedValue,
     *,
@@ -160,6 +192,16 @@ def astichi_template(
 
 def constructor_expr_for(value: GeneratedValue) -> ast.expr:
     """Build an expression that recreates a matcher-generated value."""
+
+    if isinstance(value, ImportedGeneratedValue):
+        return ast.Call(
+            func=ast.Name(id="from_import", ctx=ast.Load()),
+            args=[
+                _literal_to_ast(value.module),
+                _literal_to_ast(value.name),
+            ],
+            keywords=[],
+        )
 
     if isinstance(value, AstichiTemplateValue):
         keywords: list[ast.keyword] = []
@@ -219,7 +261,14 @@ def constructor_expr_for(value: GeneratedValue) -> ast.expr:
 
 
 def is_generated_value(value: object) -> bool:
-    return isinstance(value, (MatcherGeneratedValue, AstichiTemplateValue))
+    return isinstance(
+        value,
+        (
+            MatcherGeneratedValue,
+            AstichiTemplateValue,
+            ImportedGeneratedValue,
+        ),
+    )
 
 
 def generated_value_keep_names(value: GeneratedValue) -> tuple[str, ...]:
@@ -235,11 +284,19 @@ def generated_value_keep_names(value: GeneratedValue) -> tuple[str, ...]:
         if value.edge_keep_names is not None:
             names.update(generated_value_keep_names(value.edge_keep_names))
         return tuple(sorted(names))
+    if isinstance(value, ImportedGeneratedValue):
+        return ("from_import",)
     return ("from_astichi_code",)
 
 
 def generated_value_uses_astichi_template(value: GeneratedValue) -> bool:
     return isinstance(value, AstichiTemplateValue)
+
+
+def generated_value_constructor_names(value: GeneratedValue) -> tuple[str, ...]:
+    """Names that must be imported to recreate a generated value in source."""
+
+    return generated_value_keep_names(value)
 
 
 def _literal_to_source(value: object) -> str:
@@ -288,6 +345,18 @@ def _explicit_keep_names(keep_names: Iterable[str]) -> tuple[str, ...]:
     return tuple(name for name in keep_names if name not in builtins_set)
 
 
+def _require_dotted_path(value: str, label: str) -> None:
+    if not isinstance(value, str) or not value:
+        raise ValueError(f"{label} must be a non-empty dotted identifier path")
+    for part in value.split("."):
+        _require_identifier(part, f"{label} component")
+
+
+def _require_identifier(value: str, label: str) -> None:
+    if not isinstance(value, str) or not value.isidentifier():
+        raise ValueError(f"{label} must be a valid identifier: {value!r}")
+
+
 def _evaluate_edge_value(value: MatcherGeneratedValue | None, record: object) -> Any:
     if value is None:
         return None
@@ -307,12 +376,15 @@ def _require_matcher_generated_value(value: object, label: str) -> None:
 __all__ = [
     "AstichiTemplateValue",
     "GeneratedValue",
+    "ImportedGeneratedValue",
     "MatcherGeneratedValue",
     "PYTHON_BUILTIN_KEEP_NAMES",
     "astichi_template",
     "constructor_expr_for",
     "from_astichi_code",
+    "from_import",
     "from_literal",
+    "generated_value_constructor_names",
     "generated_value_keep_names",
     "generated_value_uses_astichi_template",
     "is_generated_value",

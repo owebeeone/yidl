@@ -20,7 +20,6 @@ from yidl.generation.data_schema import PropertySpec
 from yidl.generation.matcher_values import GeneratedValue
 from yidl.generation.matcher_values import constructor_expr_for
 from yidl.generation.matcher_values import generated_value_keep_names
-from yidl.generation.matcher_values import generated_value_uses_astichi_template
 from yidl.generation.matcher_values import is_generated_value
 
 
@@ -627,9 +626,14 @@ def _literal_piece(value: object) -> BasicComposable:
 
 
 def _generated_value_piece(value: GeneratedValue) -> BasicComposable:
+    extra_import_names = tuple(
+        name
+        for name in generated_value_keep_names(value)
+        if name != "from_astichi_code"
+    )
     prefix = (
-        [_astichi_template_pyimport_statement()]
-        if generated_value_uses_astichi_template(value)
+        [_data_def_sys_pyimport_statement(extra_import_names)]
+        if extra_import_names
         else []
     )
     return _expr_piece(
@@ -663,7 +667,7 @@ def _expr_piece(
     )
 
 
-def _astichi_template_pyimport_statement() -> ast.Expr:
+def _data_def_sys_pyimport_statement(names: tuple[str, ...]) -> ast.Expr:
     return ast.Expr(
         value=ast.Call(
             func=ast.Name(id="astichi_pyimport", ctx=ast.Load()),
@@ -684,7 +688,7 @@ def _astichi_template_pyimport_statement() -> ast.Expr:
                 ast.keyword(
                     arg="names",
                     value=ast.Tuple(
-                        elts=[ast.Name(id="astichi_template", ctx=ast.Load())],
+                        elts=[ast.Name(id=name, ctx=ast.Load()) for name in names],
                         ctx=ast.Load(),
                     ),
                 ),
