@@ -423,15 +423,15 @@ def emit_matcher_runtime_source(
 ) -> str:
     """Emit a source module containing a runtime matcher class."""
 
-    return _materialize_matcher_runtime(
+    return build_matcher_runtime_composable(
         matcher,
         class_name=class_name or f"{matcher.name}Matcher",
         evaluator_names=evaluator_names,
         value_names=value_names,
-    ).emit(provenance=False)
+    ).materialize().emit(provenance=False)
 
 
-def _materialize_matcher_runtime(
+def build_matcher_runtime_composable(
     matcher: MatcherSpec,
     *,
     class_name: str,
@@ -485,7 +485,7 @@ def _materialize_matcher_runtime(
         _default_result_piece(matcher),
     )
     builder.Root.default_result.add.DefaultResult()
-    return builder.build().materialize()
+    return builder.build()
 
 
 def _rule_check_piece(
@@ -747,8 +747,11 @@ def _compile_template(source: str) -> astichi.Composable:
 
 _MATCHER_CLASS = _compile_template(
     """
-from itertools import product
-from yidl.generation.data_def_sys import MatcherResult, NOT_PROVIDED, from_astichi_code
+astichi_pyimport(module=itertools, names=(product,))
+astichi_pyimport(
+    module=yidl.generation.data_def_sys,
+    names=(MatcherResult, NOT_PROVIDED, from_astichi_code),
+)
 
 
 class matcher_class_name__astichi_arg__:
@@ -889,5 +892,6 @@ __all__ = [
     "NOT_PROVIDED",
     "NotProvidedValue",
     "ScopedPropertyRef",
+    "build_matcher_runtime_composable",
     "emit_matcher_runtime_source",
 ]

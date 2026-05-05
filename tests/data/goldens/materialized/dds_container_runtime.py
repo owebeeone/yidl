@@ -1,16 +1,11 @@
-from yidl.generation.data_def_sys import AddIfAbsent, DDSContainerBuilder, NOT_PROVIDED, REQUIRED
-from yidl.generation.data_def_sys import RejectDuplicate, ReplaceExisting
-from yidl.generation.data_def_sys import RuntimeCollection, RuntimeComputedCollection, RuntimeContainerSpec
-from yidl.generation.data_def_sys import RuntimePort, RuntimePortIndex
-from yidl.generation.data_def_sys import RuntimeProperty, RuntimeRecord, RuntimeUnion
+from itertools import product
+from yidl.generation.data_def_sys import AddIfAbsent, DDSContainerBuilder, MatcherResult, NOT_PROVIDED, REQUIRED, RejectDuplicate, ReplaceExisting, RuntimeCollection, RuntimeComputedCollection, RuntimeContainerSpec, RuntimePort, RuntimePortIndex, RuntimeProperty, RuntimeRecord, RuntimeUnion, from_astichi_code
 _NameProperty = RuntimeProperty('Name', str, default=REQUIRED, storage_name='name')
 _InitProperty = RuntimeProperty('Init', bool, default=True, storage_name='init')
 _KindProperty = RuntimeProperty('Kind', str, default=REQUIRED, storage_name='kind')
-
 _PlainFieldSpec = RuntimeRecord('PlainField', (_NameProperty, _InitProperty))
 _ManagedFieldSpec = RuntimeRecord('ManagedField', (_NameProperty, _InitProperty, _KindProperty))
 _ClassInputSpec = RuntimeRecord('ClassInput', (_NameProperty,))
-
 _FieldSpecsUnion = RuntimeUnion('FieldSpecs', (_PlainFieldSpec, _ManagedFieldSpec))
 
 class PlainField:
@@ -21,16 +16,10 @@ class PlainField:
 
     def __init__(self, *, name: str, init: bool=True):
         if not isinstance(name, str):
-            raise TypeError(
-                'Name must be str, got '
-                + type(name).__name__
-            )
+            raise TypeError('Name must be str, got ' + type(name).__name__)
         object.__setattr__(self, 'name', name)
         if not isinstance(init, bool):
-            raise TypeError(
-                'Init must be bool, got '
-                + type(init).__name__
-            )
+            raise TypeError('Init must be bool, got ' + type(init).__name__)
         object.__setattr__(self, 'init', init)
 
     def __setattr__(self, name, value):
@@ -54,22 +43,13 @@ class ManagedField:
 
     def __init__(self, *, name: str, init: bool=True, kind: str):
         if not isinstance(name, str):
-            raise TypeError(
-                'Name must be str, got '
-                + type(name).__name__
-            )
+            raise TypeError('Name must be str, got ' + type(name).__name__)
         object.__setattr__(self, 'name', name)
         if not isinstance(init, bool):
-            raise TypeError(
-                'Init must be bool, got '
-                + type(init).__name__
-            )
+            raise TypeError('Init must be bool, got ' + type(init).__name__)
         object.__setattr__(self, 'init', init)
         if not isinstance(kind, str):
-            raise TypeError(
-                'Kind must be str, got '
-                + type(kind).__name__
-            )
+            raise TypeError('Kind must be str, got ' + type(kind).__name__)
         object.__setattr__(self, 'kind', kind)
 
     def __setattr__(self, name, value):
@@ -92,10 +72,7 @@ class ClassInput:
 
     def __init__(self, *, name: str):
         if not isinstance(name, str):
-            raise TypeError(
-                'Name must be str, got '
-                + type(name).__name__
-            )
+            raise TypeError('Name must be str, got ' + type(name).__name__)
         object.__setattr__(self, 'name', name)
 
     def __setattr__(self, name, value):
@@ -108,17 +85,11 @@ class ClassInput:
         pieces.append('name=' + repr(self.name))
         return 'ClassInput' + '(' + ', '.join(pieces) + ')'
 _ClassInputSpec.bind_record_class(ClassInput)
-
 FieldsCollection = RuntimeCollection('Fields', _FieldSpecsUnion, allows_multiple=True, identity=_NameProperty)
 ClassInputCollection = RuntimeCollection('ClassInput', _ClassInputSpec, allows_multiple=False, identity=_NameProperty)
-
 InitFieldsCollection = RuntimeComputedCollection('InitFields', source=FieldsCollection, when=(_InitProperty.eq(True),))
 ManagedInitFieldsCollection = RuntimeComputedCollection('ManagedInitFields', source=InitFieldsCollection, when=(_KindProperty.eq('managed'),))
-
 _RUNTIME_SPEC = RuntimeContainerSpec(collections=(FieldsCollection, ClassInputCollection), computed_collections=(InitFieldsCollection, ManagedInitFieldsCollection), ports=(), port_index=None)
-
-from itertools import product
-from yidl.generation.data_def_sys import MatcherResult, NOT_PROVIDED, from_astichi_code
 
 class InitGetterMatcher:
 
@@ -158,10 +129,12 @@ class InitGetterMatcher:
                 yield result
 
 class _GeneratedMatcherNamespace:
+
     def __init__(self, container):
         self.InitGetter = _ContainerInitGetterMatcher(container)
 
 class _ContainerInitGetterMatcher:
+
     def __init__(self, container):
         self._container = container
         self._runtime = InitGetterMatcher()
@@ -173,6 +146,7 @@ class _ContainerInitGetterMatcher:
         yield from self._runtime.sequence(self._container.InitFields.sequence())
 
 class _GeneratedContainerBuilder:
+
     def __init__(self):
         self._builder = DDSContainerBuilder(_RUNTIME_SPEC)
 

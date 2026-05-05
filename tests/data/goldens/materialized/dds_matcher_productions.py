@@ -1,15 +1,11 @@
-from yidl.generation.data_def_sys import AddIfAbsent, DDSContainerBuilder, NOT_PROVIDED, REQUIRED
-from yidl.generation.data_def_sys import RejectDuplicate, ReplaceExisting
-from yidl.generation.data_def_sys import RuntimeCollection, RuntimeComputedCollection, RuntimeContainerSpec
-from yidl.generation.data_def_sys import RuntimePort, RuntimePortIndex
-from yidl.generation.data_def_sys import RuntimeProperty, RuntimeRecord, RuntimeUnion
+from itertools import product
+from yidl.generation.data_def_sys import AddIfAbsent, DDSContainerBuilder, MatcherResult, NOT_PROVIDED, REQUIRED, RejectDuplicate, ReplaceExisting, RuntimeCollection, RuntimeComputedCollection, RuntimeContainerSpec, RuntimePort, RuntimePortIndex, RuntimeProperty, RuntimeRecord, RuntimeUnion, from_astichi_code
 _NameProperty = RuntimeProperty('Name', str, default=REQUIRED, storage_name='name')
 _InitProperty = RuntimeProperty('Init', bool, default=True, storage_name='init')
 _DefaultedProperty = RuntimeProperty('Defaulted', bool, default=False, storage_name='defaulted')
 _OrderProperty = RuntimeProperty('Order', int, default=0, storage_name='order')
 _TargetPortProperty = RuntimeProperty('TargetPort', object, default=REQUIRED, storage_name='target_port')
 _TemplateProperty = RuntimeProperty('Template', object, default=REQUIRED, storage_name='template')
-
 _FieldSpec = RuntimeRecord('Field', (_NameProperty, _InitProperty, _DefaultedProperty, _OrderProperty))
 _ParamComponentSpec = RuntimeRecord('ParamComponent', (_NameProperty, _TargetPortProperty, _OrderProperty, _TemplateProperty, _DefaultedProperty))
 
@@ -23,28 +19,16 @@ class Field:
 
     def __init__(self, *, name: str, init: bool=True, defaulted: bool=False, order: int=0):
         if not isinstance(name, str):
-            raise TypeError(
-                'Name must be str, got '
-                + type(name).__name__
-            )
+            raise TypeError('Name must be str, got ' + type(name).__name__)
         object.__setattr__(self, 'name', name)
         if not isinstance(init, bool):
-            raise TypeError(
-                'Init must be bool, got '
-                + type(init).__name__
-            )
+            raise TypeError('Init must be bool, got ' + type(init).__name__)
         object.__setattr__(self, 'init', init)
         if not isinstance(defaulted, bool):
-            raise TypeError(
-                'Defaulted must be bool, got '
-                + type(defaulted).__name__
-            )
+            raise TypeError('Defaulted must be bool, got ' + type(defaulted).__name__)
         object.__setattr__(self, 'defaulted', defaulted)
         if not isinstance(order, int):
-            raise TypeError(
-                'Order must be int, got '
-                + type(order).__name__
-            )
+            raise TypeError('Order must be int, got ' + type(order).__name__)
         object.__setattr__(self, 'order', order)
 
     def __setattr__(self, name, value):
@@ -72,24 +56,15 @@ class ParamComponent:
 
     def __init__(self, *, name: str, target_port: object, order: int=0, template: object, defaulted: bool=False):
         if not isinstance(name, str):
-            raise TypeError(
-                'Name must be str, got '
-                + type(name).__name__
-            )
+            raise TypeError('Name must be str, got ' + type(name).__name__)
         object.__setattr__(self, 'name', name)
         object.__setattr__(self, 'target_port', target_port)
         if not isinstance(order, int):
-            raise TypeError(
-                'Order must be int, got '
-                + type(order).__name__
-            )
+            raise TypeError('Order must be int, got ' + type(order).__name__)
         object.__setattr__(self, 'order', order)
         object.__setattr__(self, 'template', template)
         if not isinstance(defaulted, bool):
-            raise TypeError(
-                'Defaulted must be bool, got '
-                + type(defaulted).__name__
-            )
+            raise TypeError('Defaulted must be bool, got ' + type(defaulted).__name__)
         object.__setattr__(self, 'defaulted', defaulted)
 
     def __setattr__(self, name, value):
@@ -106,18 +81,11 @@ class ParamComponent:
         pieces.append('defaulted=' + repr(self.defaulted))
         return 'ParamComponent' + '(' + ', '.join(pieces) + ')'
 _ParamComponentSpec.bind_record_class(ParamComponent)
-
 FieldsCollection = RuntimeCollection('Fields', _FieldSpec, allows_multiple=True, identity=_NameProperty)
 ParamsCollection = RuntimeCollection('Params', _ParamComponentSpec, allows_multiple=True, identity=_NameProperty)
-
 InitFieldsCollection = RuntimeComputedCollection('InitFields', source=FieldsCollection, when=(_InitProperty.eq(True),))
-
 InitParamsPort = RuntimePort('Init.params', allows_multiple=True)
-
 _RUNTIME_SPEC = RuntimeContainerSpec(collections=(FieldsCollection, ParamsCollection), computed_collections=(InitFieldsCollection,), ports=(InitParamsPort,), port_index=RuntimePortIndex(target=_TargetPortProperty, order=_OrderProperty))
-
-from itertools import product
-from yidl.generation.data_def_sys import MatcherResult, NOT_PROVIDED, from_astichi_code
 
 class InitParamTemplateMatcher:
 
@@ -171,10 +139,12 @@ def build_container(builder):
     return builder.freeze()
 
 class _GeneratedMatcherNamespace:
+
     def __init__(self, container):
         self.InitParamTemplate = _ContainerInitParamTemplateMatcher(container)
 
 class _ContainerInitParamTemplateMatcher:
+
     def __init__(self, container):
         self._container = container
         self._runtime = InitParamTemplateMatcher()
@@ -186,6 +156,7 @@ class _ContainerInitParamTemplateMatcher:
         yield from self._runtime.sequence(self._container.InitFields.sequence())
 
 class _GeneratedContainerBuilder:
+
     def __init__(self):
         self._builder = DDSContainerBuilder(_RUNTIME_SPEC)
 

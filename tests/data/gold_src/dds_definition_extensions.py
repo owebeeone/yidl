@@ -156,6 +156,13 @@ def validate_case(source: str) -> None:
     assert [getter.template for getter in getters] == [PLAIN_GETTER, MANAGED_GETTER]
     assert "class PropertyGetterTemplateMatcher" in source
     assert "def run_field_provides_property_getter(builder):" in source
+    assert source.index("from itertools import product") < source.index("_NameProperty")
+    assert source.index("from yidl.generation.data_def_sys import") < source.index(
+        "_NameProperty"
+    )
+    assert source.index("from_astichi_code") < source.index("_NameProperty")
+    assert source.count("from itertools import product") == 1
+    assert source.count("from yidl.generation.data_def_sys import") == 1
     assert "DataDefinitionSystem()" not in source
     assert "dds.ensure_" not in source
 

@@ -1,14 +1,10 @@
-from yidl.generation.data_def_sys import AddIfAbsent, DDSContainerBuilder, NOT_PROVIDED, REQUIRED
-from yidl.generation.data_def_sys import RejectDuplicate, ReplaceExisting
-from yidl.generation.data_def_sys import RuntimeCollection, RuntimeComputedCollection, RuntimeContainerSpec
-from yidl.generation.data_def_sys import RuntimePort, RuntimePortIndex
-from yidl.generation.data_def_sys import RuntimeProperty, RuntimeRecord, RuntimeUnion
+from itertools import product
+from yidl.generation.data_def_sys import AddIfAbsent, DDSContainerBuilder, MatcherResult, NOT_PROVIDED, REQUIRED, RejectDuplicate, ReplaceExisting, RuntimeCollection, RuntimeComputedCollection, RuntimeContainerSpec, RuntimePort, RuntimePortIndex, RuntimeProperty, RuntimeRecord, RuntimeUnion, from_astichi_code
 _NameProperty = RuntimeProperty('Name', str, default=REQUIRED, storage_name='name')
 _KindProperty = RuntimeProperty('Kind', str, default='plain', storage_name='kind')
 _TargetPortProperty = RuntimeProperty('TargetPort', object, default=REQUIRED, storage_name='target_port')
 _OrderProperty = RuntimeProperty('Order', int, default=0, storage_name='order')
 _TemplateProperty = RuntimeProperty('Template', object, default=REQUIRED, storage_name='template')
-
 _FieldSpec = RuntimeRecord('Field', (_NameProperty, _KindProperty, _OrderProperty))
 _GetterSpec = RuntimeRecord('Getter', (_NameProperty, _TargetPortProperty, _OrderProperty, _TemplateProperty))
 
@@ -21,22 +17,13 @@ class Field:
 
     def __init__(self, *, name: str, kind: str='plain', order: int=0):
         if not isinstance(name, str):
-            raise TypeError(
-                'Name must be str, got '
-                + type(name).__name__
-            )
+            raise TypeError('Name must be str, got ' + type(name).__name__)
         object.__setattr__(self, 'name', name)
         if not isinstance(kind, str):
-            raise TypeError(
-                'Kind must be str, got '
-                + type(kind).__name__
-            )
+            raise TypeError('Kind must be str, got ' + type(kind).__name__)
         object.__setattr__(self, 'kind', kind)
         if not isinstance(order, int):
-            raise TypeError(
-                'Order must be int, got '
-                + type(order).__name__
-            )
+            raise TypeError('Order must be int, got ' + type(order).__name__)
         object.__setattr__(self, 'order', order)
 
     def __setattr__(self, name, value):
@@ -62,17 +49,11 @@ class Getter:
 
     def __init__(self, *, name: str, target_port: object, order: int=0, template: object):
         if not isinstance(name, str):
-            raise TypeError(
-                'Name must be str, got '
-                + type(name).__name__
-            )
+            raise TypeError('Name must be str, got ' + type(name).__name__)
         object.__setattr__(self, 'name', name)
         object.__setattr__(self, 'target_port', target_port)
         if not isinstance(order, int):
-            raise TypeError(
-                'Order must be int, got '
-                + type(order).__name__
-            )
+            raise TypeError('Order must be int, got ' + type(order).__name__)
         object.__setattr__(self, 'order', order)
         object.__setattr__(self, 'template', template)
 
@@ -89,18 +70,11 @@ class Getter:
         pieces.append('template=' + repr(self.template))
         return 'Getter' + '(' + ', '.join(pieces) + ')'
 _GetterSpec.bind_record_class(Getter)
-
 FieldsCollection = RuntimeCollection('Fields', _FieldSpec, allows_multiple=True, identity=_NameProperty)
 GettersCollection = RuntimeCollection('Getters', _GetterSpec, allows_multiple=True, identity=_NameProperty)
-
 GetterFieldsCollection = RuntimeComputedCollection('GetterFields', source=FieldsCollection, when=())
-
 ClassBodyPort = RuntimePort('Class.body', allows_multiple=True)
-
 _RUNTIME_SPEC = RuntimeContainerSpec(collections=(FieldsCollection, GettersCollection), computed_collections=(GetterFieldsCollection,), ports=(ClassBodyPort,), port_index=RuntimePortIndex(target=_TargetPortProperty, order=_OrderProperty))
-
-from itertools import product
-from yidl.generation.data_def_sys import MatcherResult, NOT_PROVIDED, from_astichi_code
 
 class PropertyGetterTemplateMatcher:
 
@@ -154,10 +128,12 @@ def build_container(builder):
     return builder.freeze()
 
 class _GeneratedMatcherNamespace:
+
     def __init__(self, container):
         self.PropertyGetterTemplate = _ContainerPropertyGetterTemplateMatcher(container)
 
 class _ContainerPropertyGetterTemplateMatcher:
+
     def __init__(self, container):
         self._container = container
         self._runtime = PropertyGetterTemplateMatcher()
@@ -169,6 +145,7 @@ class _ContainerPropertyGetterTemplateMatcher:
         yield from self._runtime.sequence(self._container.GetterFields.sequence())
 
 class _GeneratedContainerBuilder:
+
     def __init__(self):
         self._builder = DDSContainerBuilder(_RUNTIME_SPEC)
 

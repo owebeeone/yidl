@@ -1,11 +1,6 @@
-from yidl.generation.data_def_sys import AddIfAbsent, DDSContainerBuilder, NOT_PROVIDED, REQUIRED
-from yidl.generation.data_def_sys import RejectDuplicate, ReplaceExisting
-from yidl.generation.data_def_sys import RuntimeCollection, RuntimeComputedCollection, RuntimeContainerSpec
-from yidl.generation.data_def_sys import RuntimePort, RuntimePortIndex
-from yidl.generation.data_def_sys import RuntimeProperty, RuntimeRecord, RuntimeUnion
+from yidl.generation.data_def_sys import AddIfAbsent, DDSContainerBuilder, NOT_PROVIDED, REQUIRED, RejectDuplicate, ReplaceExisting, RuntimeCollection, RuntimeComputedCollection, RuntimeContainerSpec, RuntimePort, RuntimePortIndex, RuntimeProperty, RuntimeRecord, RuntimeUnion
 _NameProperty = RuntimeProperty('Name', str, default=REQUIRED, storage_name='name')
 _ValueProperty = RuntimeProperty('Value', int, default=REQUIRED, storage_name='value')
-
 _ItemSpec = RuntimeRecord('Item', (_NameProperty, _ValueProperty))
 
 class Item:
@@ -16,16 +11,10 @@ class Item:
 
     def __init__(self, *, name: str, value: int):
         if not isinstance(name, str):
-            raise TypeError(
-                'Name must be str, got '
-                + type(name).__name__
-            )
+            raise TypeError('Name must be str, got ' + type(name).__name__)
         object.__setattr__(self, 'name', name)
         if not isinstance(value, int):
-            raise TypeError(
-                'Value must be int, got '
-                + type(value).__name__
-            )
+            raise TypeError('Value must be int, got ' + type(value).__name__)
         object.__setattr__(self, 'value', value)
 
     def __setattr__(self, name, value):
@@ -39,16 +28,16 @@ class Item:
         pieces.append('value=' + repr(self.value))
         return 'Item' + '(' + ', '.join(pieces) + ')'
 _ItemSpec.bind_record_class(Item)
-
 ItemsCollection = RuntimeCollection('Items', _ItemSpec, allows_multiple=True, identity=_NameProperty)
-
 _RUNTIME_SPEC = RuntimeContainerSpec(collections=(ItemsCollection,), computed_collections=(), ports=(), port_index=None)
 
 class _GeneratedMatcherNamespace:
+
     def __init__(self, container):
         pass
 
 class _GeneratedContainerBuilder:
+
     def __init__(self):
         self._builder = DDSContainerBuilder(_RUNTIME_SPEC)
 

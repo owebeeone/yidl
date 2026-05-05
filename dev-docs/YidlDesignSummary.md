@@ -1363,3 +1363,8 @@ Implementation order:
     `MatcherSpec.ensure_input` when multiple contributors share the same
     semantic surface. Identical definitions reuse; incompatible definitions
     reject.
+56. Generated DDS runtime modules are assembled as one Astichi module.
+    Runtime imports are expressed with `astichi_pyimport(...)` in the root
+    module and inserted matcher runtimes, then final materialization
+    consolidates those imports at module top. Do not splice emitted matcher
+    source strings into the generated container module.

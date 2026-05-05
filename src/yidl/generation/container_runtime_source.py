@@ -3,7 +3,11 @@
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
+import textwrap
 
+import astichi
+
+from yidl.generation.matcher import build_matcher_runtime_composable
 from yidl.generation.data_schema import CollectionSpec
 from yidl.generation.data_schema import ComputedValue
 from yidl.generation.data_schema import ComputedCollectionSpec
@@ -22,7 +26,6 @@ from yidl.generation.data_schema import ProductionSpec
 from yidl.generation.data_schema import UnionSpec
 from yidl.generation.matcher import MatcherSpec
 from yidl.generation.matcher import NOT_PROVIDED
-from yidl.generation.matcher import emit_matcher_runtime_source
 
 
 SourceNameMap = Mapping[object, str] | Sequence[tuple[object, str]]
@@ -36,13 +39,7 @@ def emit_container_runtime_source(
 ) -> str:
     """Emit a Python module containing DDS records, collections, and matchers."""
 
-    lines: list[str] = [
-        "from yidl.generation.data_def_sys import AddIfAbsent, DDSContainerBuilder, NOT_PROVIDED, REQUIRED",
-        "from yidl.generation.data_def_sys import RejectDuplicate, ReplaceExisting",
-        "from yidl.generation.data_def_sys import RuntimeCollection, RuntimeComputedCollection, RuntimeContainerSpec",
-        "from yidl.generation.data_def_sys import RuntimePort, RuntimePortIndex",
-        "from yidl.generation.data_def_sys import RuntimeProperty, RuntimeRecord, RuntimeUnion",
-    ]
+    lines: list[str] = [_PYIMPORT_PREFIX]
     prop_vars = _property_vars(system)
     record_vars: dict[RecordSpec, str] = {}
     union_vars: dict[UnionSpec, str] = {}
@@ -158,15 +155,8 @@ def emit_container_runtime_source(
     lines.append("")
 
     matchers = _system_matchers(system)
-    for matcher in matchers:
-        lines.extend(
-            emit_matcher_runtime_source(
-                matcher,
-                class_name=_matcher_runtime_class_name(matcher),
-                evaluator_names=evaluator_names,
-                value_names=value_names,
-            ).rstrip().splitlines()
-        )
+    if matchers:
+        lines.append("astichi_hole(matcher_definitions)")
         lines.append("")
 
     for production in system.productions:
@@ -185,7 +175,91 @@ def emit_container_runtime_source(
         lines.append("")
 
     lines.extend(_emit_container_builder_lines(matchers))
-    return "\n".join(lines).rstrip() + "\n"
+    return _materialize_container_module(
+        "\n".join(lines).rstrip() + "\n",
+        system=system,
+        matchers=matchers,
+        evaluator_names=evaluator_names,
+        value_names=value_names,
+    )
+
+
+def _materialize_container_module(
+    source: str,
+    *,
+    system: DataDefinitionSystem,
+    matchers: Sequence[MatcherSpec],
+    evaluator_names: SourceNameMap,
+    value_names: SourceNameMap,
+) -> str:
+    root = astichi.compile(
+        source,
+        keep_names=_container_keep_names(
+            system,
+            matchers,
+            evaluator_names,
+            value_names,
+        ),
+    )
+    if not matchers:
+        return root.materialize().emit(provenance=False)
+
+    builder = astichi.build()
+    builder.add.Root(root)
+    for order, matcher in enumerate(matchers):
+        builder.add.Matcher[order](
+            build_matcher_runtime_composable(
+                matcher,
+                class_name=_matcher_runtime_class_name(matcher),
+                evaluator_names=evaluator_names,
+                value_names=value_names,
+            )
+        )
+        builder.Root.matcher_definitions.add.Matcher[order](order=order)
+    return builder.build().materialize().emit(provenance=False)
+
+
+def _container_keep_names(
+    system: DataDefinitionSystem,
+    matchers: Sequence[MatcherSpec],
+    evaluator_names: SourceNameMap,
+    value_names: SourceNameMap,
+) -> tuple[str, ...]:
+    return tuple(
+        dict.fromkeys(
+            (
+                *_RUNTIME_IMPORT_NAMES,
+                *_BUILTIN_KEEP_NAMES,
+                "_RUNTIME_SPEC",
+                "_GeneratedMatcherNamespace",
+                "_GeneratedContainerBuilder",
+                "new_builder",
+                "run_operations",
+                "build_container",
+                *(_property_vars(system).values()),
+                *(_record_var(record) for record in system.records),
+                *(_union_var(union) for union in system.unions),
+                *(_collection_var(collection) for collection in system.collections),
+                *(
+                    _collection_var(collection)
+                    for collection in system.computed_collections
+                ),
+                *(_port_vars(system).values()),
+                *(record.name for record in system.records),
+                *(_matcher_runtime_class_name(matcher) for matcher in matchers),
+                *(
+                    f"_Container{matcher.name}Matcher"
+                    for matcher in matchers
+                ),
+                *(
+                    _production_func_name(production)
+                    for production in system.productions
+                ),
+                *_source_name_roots(evaluator_names),
+                *_source_name_roots(value_names),
+            )
+        )
+    )
 
 
 def _emit_container_builder_lines(matchers: Sequence[MatcherSpec]) -> list[str]:
@@ -601,6 +675,71 @@ def _type_name(value_type: type[object] | tuple[type[object], ...]) -> str:
 
 def _system_matchers(system: DataDefinitionSystem) -> tuple[MatcherSpec, ...]:
     return tuple(getattr(system, "matchers", ()))
+
+
+def _source_name_roots(source_names: SourceNameMap) -> tuple[str, ...]:
+    return tuple(
+        path.split(".", 1)[0]
+        for _, path in _iter_source_names(source_names)
+    )
+
+
+_RUNTIME_IMPORT_NAMES = (
+    "AddIfAbsent",
+    "DDSContainerBuilder",
+    "NOT_PROVIDED",
+    "REQUIRED",
+    "RejectDuplicate",
+    "ReplaceExisting",
+    "RuntimeCollection",
+    "RuntimeComputedCollection",
+    "RuntimeContainerSpec",
+    "RuntimePort",
+    "RuntimePortIndex",
+    "RuntimeProperty",
+    "RuntimeRecord",
+    "RuntimeUnion",
+)
+
+_BUILTIN_KEEP_NAMES = (
+    "AttributeError",
+    "TypeError",
+    "bool",
+    "complex",
+    "float",
+    "getattr",
+    "int",
+    "isinstance",
+    "len",
+    "object",
+    "repr",
+    "str",
+    "type",
+)
+
+_PYIMPORT_PREFIX = textwrap.dedent(
+    """
+    astichi_pyimport(
+        module=yidl.generation.data_def_sys,
+        names=(
+            AddIfAbsent,
+            DDSContainerBuilder,
+            NOT_PROVIDED,
+            REQUIRED,
+            RejectDuplicate,
+            ReplaceExisting,
+            RuntimeCollection,
+            RuntimeComputedCollection,
+            RuntimeContainerSpec,
+            RuntimePort,
+            RuntimePortIndex,
+            RuntimeProperty,
+            RuntimeRecord,
+            RuntimeUnion,
+        ),
+    )
+    """
+).strip()
 
 
 __all__ = ["SourceNameMap", "emit_container_runtime_source"]

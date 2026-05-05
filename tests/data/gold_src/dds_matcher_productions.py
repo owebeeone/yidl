@@ -107,6 +107,13 @@ def validate_case(source: str) -> None:
     assert "source.resource" in source
     assert "source.records[0].name" in source
     assert "source.values[0]" in source
+    assert source.index("from itertools import product") < source.index("_NameProperty")
+    assert source.index("from yidl.generation.data_def_sys import") < source.index(
+        "_NameProperty"
+    )
+    assert source.index("from_astichi_code") < source.index("_NameProperty")
+    assert source.count("from itertools import product") == 1
+    assert source.count("from yidl.generation.data_def_sys import") == 1
     assert "dds.matcher_production" not in source
     assert "dds.production(" not in source
 

@@ -1,12 +1,7 @@
-from yidl.generation.data_def_sys import AddIfAbsent, DDSContainerBuilder, NOT_PROVIDED, REQUIRED
-from yidl.generation.data_def_sys import RejectDuplicate, ReplaceExisting
-from yidl.generation.data_def_sys import RuntimeCollection, RuntimeComputedCollection, RuntimeContainerSpec
-from yidl.generation.data_def_sys import RuntimePort, RuntimePortIndex
-from yidl.generation.data_def_sys import RuntimeProperty, RuntimeRecord, RuntimeUnion
+from yidl.generation.data_def_sys import AddIfAbsent, DDSContainerBuilder, NOT_PROVIDED, REQUIRED, RejectDuplicate, ReplaceExisting, RuntimeCollection, RuntimeComputedCollection, RuntimeContainerSpec, RuntimePort, RuntimePortIndex, RuntimeProperty, RuntimeRecord, RuntimeUnion
 _NameProperty = RuntimeProperty('Name', str, default=REQUIRED, storage_name='name')
 _TargetPortProperty = RuntimeProperty('TargetPort', object, default=REQUIRED, storage_name='target_port')
 _OrderProperty = RuntimeProperty('Order', int, default=0, storage_name='order')
-
 _ComponentSpec = RuntimeRecord('Component', (_NameProperty, _TargetPortProperty, _OrderProperty))
 
 class Component:
@@ -18,17 +13,11 @@ class Component:
 
     def __init__(self, *, name: str, target_port: object, order: int=0):
         if not isinstance(name, str):
-            raise TypeError(
-                'Name must be str, got '
-                + type(name).__name__
-            )
+            raise TypeError('Name must be str, got ' + type(name).__name__)
         object.__setattr__(self, 'name', name)
         object.__setattr__(self, 'target_port', target_port)
         if not isinstance(order, int):
-            raise TypeError(
-                'Order must be int, got '
-                + type(order).__name__
-            )
+            raise TypeError('Order must be int, got ' + type(order).__name__)
         object.__setattr__(self, 'order', order)
 
     def __setattr__(self, name, value):
@@ -43,19 +32,18 @@ class Component:
         pieces.append('order=' + repr(self.order))
         return 'Component' + '(' + ', '.join(pieces) + ')'
 _ComponentSpec.bind_record_class(Component)
-
 ComponentsCollection = RuntimeCollection('Components', _ComponentSpec, allows_multiple=True, identity=_NameProperty)
-
 ClassBodyPort = RuntimePort('Class.body', allows_multiple=True)
 ClassNamePort = RuntimePort('Class.name', allows_multiple=False)
-
 _RUNTIME_SPEC = RuntimeContainerSpec(collections=(ComponentsCollection,), computed_collections=(), ports=(ClassBodyPort, ClassNamePort), port_index=RuntimePortIndex(target=_TargetPortProperty, order=_OrderProperty))
 
 class _GeneratedMatcherNamespace:
+
     def __init__(self, container):
         pass
 
 class _GeneratedContainerBuilder:
+
     def __init__(self):
         self._builder = DDSContainerBuilder(_RUNTIME_SPEC)
 
