@@ -1003,7 +1003,7 @@ class CapsuleConceptBuilder:
             owner_name=self.name,
             name=name,
             properties=_unique_property_handles(properties),
-            sequence=len(self._record_order),
+            sequence=len(self._record_order) + len(self._schema_family_variants),
         )
         self._records[name] = handle
         self._record_order.append(handle)

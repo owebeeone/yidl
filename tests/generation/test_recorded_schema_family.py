@@ -108,6 +108,26 @@ def test_extending_concept_contributes_variant_to_schema_family() -> None:
     ]
 
 
+def test_schema_family_variants_do_not_collide_with_later_records() -> None:
+    builder = capsule_concept("FamilyAndRecords")
+    name = builder.props.Name(str, REQUIRED)
+    kind = builder.props.Kind(str, REQUIRED)
+    fields = builder.schema_family("FieldSpecs")
+    fields.common(name, kind)
+    fields.variant("PlainField")
+    record = builder.records.SideRecord(name)
+    side_records = builder.collections.SideRecords(
+        record,
+        cardinality=builder.many,
+        identity=name,
+    )
+    plan = builder.build()
+
+    dds = plan.build_data_definition()
+
+    assert dds.collections[0].record_shape.name == side_records.record.name
+
+
 def test_schema_family_incompatible_redefinition_rejects() -> None:
     base_builder = capsule_concept("BaseFamily")
     base_builder.props.Name(str, REQUIRED)

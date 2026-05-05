@@ -20,12 +20,20 @@ from yidl.generation.data_def_sys import from_astichi_code
 
 MANAGED_KIND = "managed"
 CONST_KIND = "const"
+OWNED_KIND = "owned"
+BINDING_KIND = "binding"
 
 STATE_CLASS = "state"
 MAIN_FACADE = "main_facade"
 
 PROPERTY_PHASE = "property"
 GET_OPERATION = "get"
+
+COMMIT_VALIDATOR = "commit_validator"
+COMMIT_ORDER_KEY = "commit_order_key"
+BEFORE_COMMIT_HOOK = "before_commit"
+AFTER_COMMIT_HOOK = "after_commit"
+AFTER_ROLLBACK_HOOK = "after_rollback"
 
 
 _MODULE_TEMPLATE = from_astichi_code("astichi_hole(module_body)")
@@ -907,14 +915,10 @@ def _build_lifecycle_staircase_concept() -> CapsuleConceptPlan:
 LifecycleStaircaseConcept: CapsuleConceptPlan = _build_lifecycle_staircase_concept()
 
 
-def _build_callable_facts_concept() -> CapsuleConceptPlan:
-    builder = capsule_concept(
-        "lifecycle-callable-facts",
-        extends=(LifecycleFieldFamilyConcept,),
-    )
-    fields = builder.use(LifecycleFieldFamilyConcept)
-
-    name = fields.props.Name
+def _define_callable_fact_surface(
+    builder: object,
+    name: object,
+) -> tuple[object, object, object, object, object, object, object, object]:
     source_label = builder.props.SourceLabel(str, "")
     callable_object = builder.props.CallableObject(object, REQUIRED)
     callable_role = builder.props.CallableRole(str, REQUIRED)
@@ -975,6 +979,26 @@ def _build_callable_facts_concept() -> CapsuleConceptPlan:
         cardinality=builder.many,
         identity=(callable_name, param_name),
     )
+    return (
+        source_label,
+        callable_object,
+        callable_role,
+        allowed_injections,
+        declarations,
+        specs,
+        params,
+        injections,
+    )
+
+
+def _add_produce_callable_facts_operation(
+    builder: object,
+    *,
+    declarations: object,
+    specs: object,
+    params: object,
+    injections: object,
+) -> None:
 
     builder.operations.ProduceCallableFacts(
         inputs=(declarations,),
@@ -1028,10 +1052,358 @@ def _build_callable_facts_concept() -> CapsuleConceptPlan:
             ),
         ),
     ).in_group("CallableFacts")
+
+
+def _build_callable_facts_concept() -> CapsuleConceptPlan:
+    builder = capsule_concept(
+        "lifecycle-callable-facts",
+        extends=(LifecycleFieldFamilyConcept,),
+    )
+    fields = builder.use(LifecycleFieldFamilyConcept)
+    (
+        _source_label,
+        _callable_object,
+        _callable_role,
+        _allowed_injections,
+        declarations,
+        specs,
+        params,
+        injections,
+    ) = _define_callable_fact_surface(
+        builder,
+        fields.props.Name,
+    )
+    _add_produce_callable_facts_operation(
+        builder,
+        declarations=declarations,
+        specs=specs,
+        params=params,
+        injections=injections,
+    )
     return builder.build()
 
 
 LifecycleCallableFactsConcept: CapsuleConceptPlan = _build_callable_facts_concept()
+
+
+def _build_resource_hooks_concept() -> CapsuleConceptPlan:
+    builder = capsule_concept(
+        "lifecycle-resource-hooks",
+        extends=(LifecycleStaircaseConcept,),
+    )
+    fields = builder.use(LifecycleFieldFamilyConcept)
+    classes = builder.use(LifecycleClassStructureConcept)
+
+    name = fields.props.Name
+    kind = fields.props.Kind
+    tx_group = fields.props.TxGroup
+    order = fields.props.Order
+    target_port = classes.props.TargetPort
+    template = classes.props.Template
+    class_role = classes.props.ClassRole
+    phase = classes.props.Phase
+    published_slot = classes.props.PublishedSlot
+
+    callable_path = builder.props.CallablePath(str, REQUIRED)
+    release_path = builder.props.ReleasePath(str, "")
+    resource_policy = builder.props.ResourcePolicy(str, "")
+
+    builder.extend_schema_family(fields.families.FieldSpecs).variant(
+        "OwnedField",
+        release_path,
+        resource_policy,
+    )
+    builder.extend_schema_family(fields.families.FieldSpecs).variant(
+        "BindingField",
+        release_path,
+        resource_policy,
+    )
+
+    (
+        source_label,
+        callable_object,
+        callable_role,
+        allowed_injections,
+        declarations,
+        specs,
+        params,
+        injections,
+    ) = _define_callable_fact_surface(
+        builder,
+        name,
+    )
+
+    commit_validator = builder.records.CommitValidator(
+        name,
+        source_label,
+        callable_object,
+        callable_role,
+        tx_group,
+        order,
+        allowed_injections,
+        callable_path,
+    )
+    commit_order_key = builder.records.CommitOrderKey(
+        name,
+        source_label,
+        callable_object,
+        callable_role,
+        tx_group,
+        order,
+        allowed_injections,
+        callable_path,
+    )
+    hook_declaration = builder.records.HookDeclaration(
+        name,
+        source_label,
+        callable_object,
+        callable_role,
+        tx_group,
+        phase,
+        order,
+        allowed_injections,
+        callable_path,
+    )
+    hook_statement = builder.records.HookMethodStatement(
+        class_role,
+        name,
+        target_port,
+        order,
+        template,
+        callable_path,
+    )
+    cleanup_statement = builder.records.ResourceCleanupStatement(
+        class_role,
+        name,
+        target_port,
+        order,
+        template,
+        release_path,
+        published_slot,
+    )
+
+    validators = builder.collections.CommitValidators(
+        commit_validator,
+        cardinality=builder.many,
+        identity=tx_group,
+    )
+    order_keys = builder.collections.CommitOrderKeys(
+        commit_order_key,
+        cardinality=builder.many,
+        identity=tx_group,
+    )
+    hooks = builder.collections.HookDeclarations(
+        hook_declaration,
+        cardinality=builder.many,
+        identity=(phase, tx_group, name),
+    )
+    hook_statements = builder.collections.HookMethodStatements(
+        hook_statement,
+        cardinality=builder.many,
+        identity=(class_role, name),
+    )
+    cleanup_statements = builder.collections.ResourceCleanupStatements(
+        cleanup_statement,
+        cardinality=builder.many,
+        identity=(class_role, name),
+    )
+
+    method_body = builder.ports.Method.body
+
+    builder.operations.BuildSpecialCallableDeclarations(
+        inputs=(validators, order_keys, hooks),
+        outputs=(declarations,),
+        resource=from_astichi_code(
+            """
+            astichi_comment("operation: special lifecycle callable declarations")
+
+            for declaration in (
+                *ctx.records(CommitValidatorsCollection),
+                *ctx.records(CommitOrderKeysCollection),
+                *ctx.records(HookDeclarationsCollection),
+            ):
+                ctx.write(
+                    CallableDeclarationsCollection,
+                    CallableDeclaration(
+                        name=declaration.name,
+                        source_label=declaration.source_label,
+                        callable_object=declaration.callable_object,
+                        callable_role=declaration.callable_role,
+                        allowed_injections=declaration.allowed_injections,
+                    ),
+                    policy=RejectDuplicate,
+                )
+            """,
+            keep_names=(
+                "CallableDeclaration",
+                "CallableDeclarationsCollection",
+                "CommitOrderKeysCollection",
+                "CommitValidatorsCollection",
+                "HookDeclarationsCollection",
+                "RejectDuplicate",
+                "ctx",
+            ),
+        ),
+    ).in_group("CallableFacts")
+    _add_produce_callable_facts_operation(
+        builder,
+        declarations=declarations,
+        specs=specs,
+        params=params,
+        injections=injections,
+    )
+
+    builder.operations.BuildHookMethodStatements(
+        inputs=(validators, hooks),
+        outputs=(hook_statements,),
+        resource=from_astichi_code(
+            """
+            astichi_pyimport(
+                module=yidl.generation.data_def_sys,
+                names=(from_astichi_code,),
+            )
+
+            call_template = from_astichi_code(
+                "astichi_ref(external=callable_path)(current=self)",
+                keep_names=("self",),
+            )
+
+            for validator in ctx.records(CommitValidatorsCollection):
+                ctx.write(
+                    HookMethodStatementsCollection,
+                    HookMethodStatement(
+                        class_role="main_facade",
+                        name=f"validate_{validator.tx_group}",
+                        target_port=MethodBodyPort.of(("main_facade", "commit")),
+                        order=-500 + validator.order,
+                        template=call_template,
+                        callable_path=validator.callable_path,
+                    ),
+                    policy=AddIfAbsent,
+                )
+            for hook in ctx.records(HookDeclarationsCollection):
+                if hook.callable_role == "before_commit":
+                    method_name = "commit"
+                    offset = -1000
+                elif hook.callable_role == "after_commit":
+                    method_name = "commit"
+                    offset = 500
+                elif hook.callable_role == "after_rollback":
+                    method_name = "rollback"
+                    offset = 500
+                else:
+                    continue
+                ctx.write(
+                    HookMethodStatementsCollection,
+                    HookMethodStatement(
+                        class_role="main_facade",
+                        name=f"{hook.callable_role}_{hook.name}",
+                        target_port=MethodBodyPort.of(("main_facade", method_name)),
+                        order=offset + hook.order,
+                        template=call_template,
+                        callable_path=hook.callable_path,
+                    ),
+                    policy=AddIfAbsent,
+                )
+            """,
+            keep_names=(
+                "AddIfAbsent",
+                "CommitValidatorsCollection",
+                "HookDeclarationsCollection",
+                "HookMethodStatement",
+                "HookMethodStatementsCollection",
+                "MethodBodyPort",
+                "ctx",
+                "from_astichi_code",
+            ),
+        ),
+    ).in_group("Hooks")
+
+    builder.operations.BuildResourceCleanupMethods(
+        inputs=(fields.collections.Fields,),
+        outputs=(classes.collections.ClassComponents, cleanup_statements),
+        resource=from_astichi_code(
+            """
+            astichi_pyimport(
+                module=yidl.generation.data_def_sys,
+                names=(from_astichi_code,),
+            )
+
+            close_template = from_astichi_code(
+                "def close(self):\\n"
+                "    state = self._state\\n"
+                "    astichi_hole(body)",
+                keep_names=("self",),
+            )
+            cleanup_template = from_astichi_code(
+                "value = astichi_pass(state, outer_bind=True).astichi_ref("
+                "external=published_slot)\\n"
+                "if value is not None:\\n"
+                "    astichi_ref(external=release_path)(value)",
+            )
+            resource_fields = [
+                field
+                for field in ctx.records(FieldsCollection)
+                if field.kind in ("owned", "binding")
+            ]
+            for field in resource_fields:
+                if field.resource_policy not in ("owned_scalar", "binding_scalar"):
+                    raise TypeError(
+                        "unsupported resource policy "
+                        f"{field.resource_policy!r} for field {field.name!r}"
+                    )
+            cleanup_fields = [
+                field
+                for field in resource_fields
+                if field.release_path
+            ]
+            if not cleanup_fields:
+                return
+            ctx.write(
+                ClassComponentsCollection,
+                ClassComponent(
+                    class_role="main_facade",
+                    name="close",
+                    target_port=ClassBodyPort.of("main_facade"),
+                    order=1020,
+                    template=close_template,
+                ),
+                policy=AddIfAbsent,
+            )
+            for field in cleanup_fields:
+                ctx.write(
+                    ResourceCleanupStatementsCollection,
+                    ResourceCleanupStatement(
+                        class_role="main_facade",
+                        name=f"close_{field.name}",
+                        target_port=MethodBodyPort.of(("main_facade", "close")),
+                        order=field.order,
+                        template=cleanup_template,
+                        release_path=field.release_path,
+                        published_slot=f"_{field.name}_value",
+                    ),
+                    policy=AddIfAbsent,
+                )
+            """,
+            keep_names=(
+                "AddIfAbsent",
+                "ClassBodyPort",
+                "ClassComponent",
+                "ClassComponentsCollection",
+                "FieldsCollection",
+                "MethodBodyPort",
+                "ResourceCleanupStatement",
+                "ResourceCleanupStatementsCollection",
+                "ctx",
+                "from_astichi_code",
+            ),
+        ),
+    ).in_group("Hooks")
+    del method_body
+    return builder.build()
+
+
+LifecycleResourceHooksConcept: CapsuleConceptPlan = _build_resource_hooks_concept()
 
 
 def render_lifecycle_module(
@@ -1157,10 +1529,21 @@ def _init_param_bind(record: object) -> dict[str, object]:
 
 def _method_body_bind(record: object) -> dict[str, object]:
     values: dict[str, object] = {}
-    if record.name.startswith("commit_") and record.current_slot:
-        values["current_slot"] = record.current_slot
-    if record.working_slot:
-        values["working_slot"] = record.working_slot
+    current_slot = getattr(record, "current_slot", "")
+    working_slot = getattr(record, "working_slot", "")
+    callable_path = getattr(record, "callable_path", "")
+    release_path = getattr(record, "release_path", "")
+    published_slot = getattr(record, "published_slot", "")
+    if record.name.startswith("commit_") and current_slot:
+        values["current_slot"] = current_slot
+    if working_slot:
+        values["working_slot"] = working_slot
+    if callable_path:
+        values["callable_path"] = callable_path
+    if release_path:
+        values["release_path"] = release_path
+    if published_slot:
+        values["published_slot"] = published_slot
     return values
 
 
@@ -1241,22 +1624,40 @@ _LIFECYCLE_CHILD_PORTS = (
         ),
         owner=lambda record: (record.class_role, record.name),
     ),
+    ChildPortPlan(
+        parent_name="close",
+        port_name="MethodBodyPort",
+        target_hole="body",
+        edge=TemplateEdgePlan(
+            "MethodBody",
+            bind=_method_body_bind,
+        ),
+        owner=lambda record: (record.class_role, record.name),
+    ),
 )
 
 
 __all__ = [
     "CONST_KIND",
+    "AFTER_COMMIT_HOOK",
+    "AFTER_ROLLBACK_HOOK",
+    "BEFORE_COMMIT_HOOK",
+    "BINDING_KIND",
+    "COMMIT_ORDER_KEY",
+    "COMMIT_VALIDATOR",
     "GET_OPERATION",
     "LifecycleClassStructureConcept",
     "LifecycleCallableFactsConcept",
     "LifecycleConcept",
     "LifecycleFieldFamilyConcept",
     "LifecyclePropertyConcept",
+    "LifecycleResourceHooksConcept",
     "LifecycleStaircaseConcept",
     "LifecycleTransactionIndexConcept",
     "LifecycleTransactionMethodsConcept",
     "MAIN_FACADE",
     "MANAGED_KIND",
+    "OWNED_KIND",
     "PROPERTY_PHASE",
     "STATE_CLASS",
     "current_slot_for_result",
