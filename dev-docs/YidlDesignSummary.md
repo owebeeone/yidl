@@ -965,7 +965,11 @@ resolved-data layer, not the whole capsule/codegen engine.
     not a DDS graph API. `LifecycleInitvarClosureConcept` extends the current
     resource-hook concept with an `InitVarField` variant, generated edge
     production from callable injection facts, retained/constructor-only
-    classification, and unused/unknown initvar rejection. No public
+    classification, unused/unknown initvar rejection, and dedicated initvar
+    class contributions. Generic field scaffold/property generation skips
+    initvars; constructor-only initvars become facade `__init__` parameters
+    only, while retained initvars additionally get state slots, state
+    constructor parameters, and facade-to-state call arguments. No public
     `reachable_collection(...)` helper exists yet.
 16. `MatcherSpec` defines Eq-only rule matchers over concrete/computed
     collection views. Match tuples are fixed positional tuples, not dicts.

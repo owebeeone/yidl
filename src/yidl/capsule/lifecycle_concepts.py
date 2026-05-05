@@ -468,6 +468,8 @@ def _build_class_structure_concept() -> CapsuleConceptPlan:
             )
 
             for field in fields:
+                if field.kind == "initvar":
+                    continue
                 if field.annotation_path and field.defaulted:
                     param_template = annotated_defaulted_param_template
                 elif field.annotation_path:
@@ -669,6 +671,16 @@ def _build_property_concept() -> CapsuleConceptPlan:
                 """
             ),
         )
+    )
+    property_template.rule.initvar_no_property(
+        when=(field.prop(kind).eq(INITVAR_KIND),),
+        resource=astichi_template(
+            from_astichi_code(
+                """
+                astichi_comment("property template: initvar has no facade property")
+                """
+            ),
+        ),
     )
     property_template.rule.managed_property(
         when=(field.prop(kind).eq(MANAGED_KIND),),
@@ -1414,6 +1426,7 @@ def _build_initvar_closure_concept() -> CapsuleConceptPlan:
         extends=(LifecycleResourceHooksConcept,),
     )
     fields = builder.use(LifecycleFieldFamilyConcept)
+    classes = builder.use(LifecycleClassStructureConcept)
     hooks = builder.use(LifecycleResourceHooksConcept)
 
     name = fields.props.Name
@@ -1654,6 +1667,178 @@ def _build_initvar_closure_concept() -> CapsuleConceptPlan:
                 "RetainedInitVarsCollection",
                 "ctx",
                 "getattr",
+                "sorted",
+            ),
+        ),
+    ).in_group("Initvars")
+
+    builder.operations.BuildInitvarClassContributions(
+        inputs=(fields.collections.Fields, retained, constructor_only),
+        outputs=(
+            classes.collections.ClassComponents,
+            classes.collections.SlotItems,
+            classes.collections.InitParams,
+            classes.collections.StateCtorArgs,
+        ),
+        resource=from_astichi_code(
+            """
+            astichi_comment("operation: initvar class contributions")
+            astichi_pyimport(
+                module=yidl.generation.data_def_sys,
+                names=(from_astichi_code,),
+            )
+
+            init_param_template = from_astichi_code(
+                "def astichi_params(*, field_name__astichi_arg__):\\n"
+                "    pass",
+            )
+            defaulted_param_template = from_astichi_code(
+                "def astichi_params(\\n"
+                "    *,\\n"
+                "    field_name__astichi_arg__=astichi_bind_external(default_value),\\n"
+                "):\\n"
+                "    pass",
+            )
+            annotated_param_template = from_astichi_code(
+                "def astichi_params(\\n"
+                "    *,\\n"
+                "    field_name__astichi_arg__: astichi_ref(external=annotation_path),\\n"
+                "):\\n"
+                "    pass",
+            )
+            annotated_defaulted_param_template = from_astichi_code(
+                "def astichi_params(\\n"
+                "    *,\\n"
+                "    field_name__astichi_arg__: astichi_ref(external=annotation_path)\\n"
+                "    = astichi_bind_external(default_value),\\n"
+                "):\\n"
+                "    pass",
+            )
+            slot_item_template = from_astichi_code(
+                "astichi_bind_external(slot_name)\\nslot_name",
+            )
+            retained_assign_template = from_astichi_code(
+                "astichi_import(self)\\n"
+                "self.astichi_ref(external=target_path)._ = "
+                "astichi_pass(source_name, outer_bind=True)",
+            )
+            state_ctor_arg_template = from_astichi_code(
+                "astichi_funcargs("
+                "field_name__astichi_arg__=field_name__astichi_arg__)",
+            )
+
+            retained_names = {
+                record.name
+                for record in ctx.records(RetainedInitVarsCollection)
+            }
+            initvars = [
+                field
+                for field in sorted(
+                    ctx.records(FieldsCollection),
+                    key=lambda record: (record.order, ctx.write_order(record)),
+                )
+                if field.kind == "initvar"
+            ]
+
+            state_role = "state"
+            facade_role = "main_facade"
+            for field in initvars:
+                if field.annotation_path and field.defaulted:
+                    param_template = annotated_defaulted_param_template
+                elif field.annotation_path:
+                    param_template = annotated_param_template
+                elif field.defaulted:
+                    param_template = defaulted_param_template
+                else:
+                    param_template = init_param_template
+                ctx.write(
+                    InitParamsCollection,
+                    InitParam(
+                        class_role=facade_role,
+                        name=field.name,
+                        target_port=InitParamsPort.of((facade_role, "__init__")),
+                        order=field.order,
+                        template=param_template,
+                        annotation_path=field.annotation_path,
+                        defaulted=field.defaulted,
+                        default_value=field.default_value,
+                    ),
+                    policy=AddIfAbsent,
+                )
+                if field.name not in retained_names:
+                    continue
+                retained_slot = f"_{field.name}_retained"
+                ctx.write(
+                    SlotItemsCollection,
+                    SlotItem(
+                        class_role=state_role,
+                        name=retained_slot,
+                        target_port=SlotsItemsPort.of((state_role, "__slots__")),
+                        order=field.order,
+                        template=slot_item_template,
+                        slot_name=retained_slot,
+                    ),
+                    policy=AddIfAbsent,
+                )
+                ctx.write(
+                    InitParamsCollection,
+                    InitParam(
+                        class_role=state_role,
+                        name=field.name,
+                        target_port=InitParamsPort.of((state_role, "__init__")),
+                        order=field.order,
+                        template=param_template,
+                        annotation_path=field.annotation_path,
+                        defaulted=field.defaulted,
+                        default_value=field.default_value,
+                    ),
+                    policy=AddIfAbsent,
+                )
+                ctx.write(
+                    StateCtorArgsCollection,
+                    StateCtorArg(
+                        class_role=facade_role,
+                        name=field.name,
+                        target_port=StateCtorArgsPort.of(
+                            (facade_role, "state_ctor")
+                        ),
+                        order=field.order,
+                        template=state_ctor_arg_template,
+                    ),
+                    policy=AddIfAbsent,
+                )
+                ctx.write(
+                    ClassComponentsCollection,
+                    ClassComponent(
+                        class_role=state_role,
+                        name=f"{field.name}_retained",
+                        target_port=InitBodyPort.of((state_role, "__init__")),
+                        order=field.order,
+                        template=retained_assign_template,
+                        source_name=field.name,
+                        target_name=retained_slot,
+                    ),
+                    policy=AddIfAbsent,
+                )
+            """,
+            keep_names=(
+                "AddIfAbsent",
+                "ClassComponent",
+                "ClassComponentsCollection",
+                "FieldsCollection",
+                "InitBodyPort",
+                "InitParam",
+                "InitParamsCollection",
+                "InitParamsPort",
+                "RetainedInitVarsCollection",
+                "SlotItem",
+                "SlotItemsCollection",
+                "SlotsItemsPort",
+                "StateCtorArg",
+                "StateCtorArgsCollection",
+                "StateCtorArgsPort",
+                "ctx",
+                "from_astichi_code",
                 "sorted",
             ),
         ),

@@ -1339,6 +1339,8 @@ class PropertyTemplateMatcher:
             cache_key = values
         if cached is not NOT_PROVIDED:
             return self._finish(None, cached, records, values)
+        if values[0:1] == ('initvar',):
+            return self._finish(cache_key, (astichi_template(from_astichi_code('astichi_comment("property template: initvar has no facade property")')), 'initvar-no-property', 1.0), records, values)
         if values[0:1] == ('managed',):
             return self._finish(cache_key, (astichi_template(from_astichi_code('astichi_comment("property template: managed value")\n\n@property\ndef field_name__astichi_arg__(self):\n    state = self._state\n    if state.astichi_ref(external=working_slot) is not _NO_WORKING_VALUE:\n        return state.astichi_ref(external=working_slot)\n    return state.astichi_ref(external=current_slot)\n\n@field_name__astichi_arg__.setter\ndef field_name__astichi_arg__(self, value):\n    self._state.astichi_ref(external=working_slot)._ = value', keep_names=('_NO_WORKING_VALUE',)), arg_names=from_astichi_code('{"field_name": astichi_pass(record, outer_bind=True).field_name}'), bind=from_astichi_code('{\n    "current_slot": (\n        astichi_pass(record, outer_bind=True).current_slot\n    ),\n    "working_slot": (\n        astichi_pass(record, outer_bind=True).working_slot\n    ),\n}')), 'managed-property', 1.0), records, values)
         return self._finish(cache_key, (astichi_template(from_astichi_code('astichi_comment("property template: const value")\n\n@property\ndef field_name__astichi_arg__(self):\n    return self._state.astichi_ref(external=published_slot)'), arg_names=from_astichi_code('{"field_name": astichi_pass(record, outer_bind=True).field_name}'), bind=from_astichi_code('{\n    "published_slot": (\n        astichi_pass(record, outer_bind=True).published_slot\n    )\n}')), None, 0.0), records, values)
@@ -1413,6 +1415,8 @@ def run_build_lifecycle_scaffold(builder):
     ctx.write(SlotItemsCollection, SlotItem(class_role=facade_role, name='_state', target_port=SlotsItemsPort.of((facade_role, '__slots__')), order=0, template=slot_item_template, slot_name='_state'), policy=AddIfAbsent)
     ctx.write(ClassComponentsCollection, ClassComponent(class_role=facade_role, name='state_ctor', target_port=InitBodyPort.of((facade_role, '__init__')), order=0, template=state_ctor_template, state_class_name=class_input.state_class_name), policy=AddIfAbsent)
     for field in fields:
+        if field.kind == 'initvar':
+            continue
         if field.annotation_path and field.defaulted:
             param_template = annotated_defaulted_param_template
         elif field.annotation_path:
@@ -1560,6 +1564,37 @@ def run_build_constructor_only_init_vars(builder):
             continue
         ctx.write(ConstructorOnlyInitVarsCollection, ConstructorOnlyInitVar(name=field.name, source_label=getattr(field, 'source_label', '')), policy=AddIfAbsent)
 
+def run_build_initvar_class_contributions(builder):
+    ctx = DDSOperationContext(builder, 'BuildInitvarClassContributions', ordered_inputs={})
+    init_param_template = from_astichi_code('def astichi_params(*, field_name__astichi_arg__):\n    pass')
+    defaulted_param_template = from_astichi_code('def astichi_params(\n    *,\n    field_name__astichi_arg__=astichi_bind_external(default_value),\n):\n    pass')
+    annotated_param_template = from_astichi_code('def astichi_params(\n    *,\n    field_name__astichi_arg__: astichi_ref(external=annotation_path),\n):\n    pass')
+    annotated_defaulted_param_template = from_astichi_code('def astichi_params(\n    *,\n    field_name__astichi_arg__: astichi_ref(external=annotation_path)\n    = astichi_bind_external(default_value),\n):\n    pass')
+    slot_item_template = from_astichi_code('astichi_bind_external(slot_name)\nslot_name')
+    retained_assign_template = from_astichi_code('astichi_import(self)\nself.astichi_ref(external=target_path)._ = astichi_pass(source_name, outer_bind=True)')
+    state_ctor_arg_template = from_astichi_code('astichi_funcargs(field_name__astichi_arg__=field_name__astichi_arg__)')
+    retained_names = {record.name for record in ctx.records(RetainedInitVarsCollection)}
+    initvars = [field for field in sorted(ctx.records(FieldsCollection), key=lambda record: (record.order, ctx.write_order(record))) if field.kind == 'initvar']
+    state_role = 'state'
+    facade_role = 'main_facade'
+    for field in initvars:
+        if field.annotation_path and field.defaulted:
+            param_template = annotated_defaulted_param_template
+        elif field.annotation_path:
+            param_template = annotated_param_template
+        elif field.defaulted:
+            param_template = defaulted_param_template
+        else:
+            param_template = init_param_template
+        ctx.write(InitParamsCollection, InitParam(class_role=facade_role, name=field.name, target_port=InitParamsPort.of((facade_role, '__init__')), order=field.order, template=param_template, annotation_path=field.annotation_path, defaulted=field.defaulted, default_value=field.default_value), policy=AddIfAbsent)
+        if field.name not in retained_names:
+            continue
+        retained_slot = f'_{field.name}_retained'
+        ctx.write(SlotItemsCollection, SlotItem(class_role=state_role, name=retained_slot, target_port=SlotsItemsPort.of((state_role, '__slots__')), order=field.order, template=slot_item_template, slot_name=retained_slot), policy=AddIfAbsent)
+        ctx.write(InitParamsCollection, InitParam(class_role=state_role, name=field.name, target_port=InitParamsPort.of((state_role, '__init__')), order=field.order, template=param_template, annotation_path=field.annotation_path, defaulted=field.defaulted, default_value=field.default_value), policy=AddIfAbsent)
+        ctx.write(StateCtorArgsCollection, StateCtorArg(class_role=facade_role, name=field.name, target_port=StateCtorArgsPort.of((facade_role, 'state_ctor')), order=field.order, template=state_ctor_arg_template), policy=AddIfAbsent)
+        ctx.write(ClassComponentsCollection, ClassComponent(class_role=state_role, name=f'{field.name}_retained', target_port=InitBodyPort.of((state_role, '__init__')), order=field.order, template=retained_assign_template, source_name=field.name, target_name=retained_slot), policy=AddIfAbsent)
+
 def run_operations(builder):
     run_build_tx_groups(builder)
     run_build_lifecycle_scaffold(builder)
@@ -1573,6 +1608,7 @@ def run_operations(builder):
     run_build_initvar_edges(builder)
     run_build_retained_init_vars(builder)
     run_build_constructor_only_init_vars(builder)
+    run_build_initvar_class_contributions(builder)
     return builder
 
 def build_container(builder):
