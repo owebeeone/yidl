@@ -19,8 +19,12 @@ from yidl.capsule.definition import CapsuleDefinition
 from yidl.capsule.definition import capsule
 from yidl.capsule.definition import concept
 from yidl.generation.data_def_sys import AddIfAbsent
+from yidl.generation.data_def_sys import CollectionSpec
 from yidl.generation.data_def_sys import DataDefinitionSystem
+from yidl.generation.data_def_sys import PortSpec
+from yidl.generation.data_def_sys import PropertySpec
 from yidl.generation.data_def_sys import REQUIRED
+from yidl.generation.data_def_sys import RecordSpec
 from yidl.generation.data_def_sys import from_astichi_code
 from yidl.generation.data_def_sys import read
 
@@ -43,7 +47,7 @@ SLOTS_TEMPLATE_GLOBALS = {
 }
 
 
-def slot_name_prop(dds: DataDefinitionSystem) -> object:
+def slot_name_prop(dds: DataDefinitionSystem) -> PropertySpec:
     return dds.ensure_property(
         "SlotName",
         str,
@@ -52,7 +56,7 @@ def slot_name_prop(dds: DataDefinitionSystem) -> object:
     )
 
 
-def slot_item_record(dds: DataDefinitionSystem) -> object:
+def slot_item_record(dds: DataDefinitionSystem) -> RecordSpec:
     return dds.ensure_record(
         "SlotItem",
         name_prop(dds),
@@ -63,7 +67,7 @@ def slot_item_record(dds: DataDefinitionSystem) -> object:
     )
 
 
-def slot_items_collection(dds: DataDefinitionSystem) -> object:
+def slot_items_collection(dds: DataDefinitionSystem) -> CollectionSpec:
     return dds.ensure_collection(
         "SlotItems",
         slot_item_record(dds),
@@ -72,7 +76,7 @@ def slot_items_collection(dds: DataDefinitionSystem) -> object:
     )
 
 
-def slots_items_port(dds: DataDefinitionSystem) -> object:
+def slots_items_port(dds: DataDefinitionSystem) -> PortSpec:
     return dds.ensure_port("Slots.items", cardinality=dds.many)
 
 

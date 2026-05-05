@@ -41,6 +41,7 @@ class DataDefinitionSystem:
         "_records",
         "_transforms",
         "_unions",
+        "__weakref__",
         "many",
         "single",
     )
@@ -554,6 +555,16 @@ class RecordSpec:
 
     def require_identity_property(self, prop: PropertySpec) -> None:
         self.require_property(prop)
+
+    def extend_properties(self, *properties: PropertySpec) -> None:
+        resolved = _unique_properties(self.system, (*self.properties, *properties))
+        if resolved == self.properties:
+            return
+        if self._record_class is not None:
+            raise ValueError(
+                f"record {self.name!r} cannot be extended after its class is generated"
+            )
+        self.properties = resolved
 
     def record_class(self) -> type[object]:
         if self._record_class is None:

@@ -2,23 +2,36 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
+from weakref import WeakKeyDictionary
+
+from yidl.generation.data_def_sys import CollectionSpec
+from yidl.generation.data_def_sys import ComputedCollectionSpec
 from yidl.generation.data_def_sys import DataDefinitionSystem
+from yidl.generation.data_def_sys import PortSpec
+from yidl.generation.data_def_sys import PropertySpec
 from yidl.generation.data_def_sys import REQUIRED
+from yidl.generation.data_def_sys import RecordSpec
+
+_FIELD_INPUT_EXTENSIONS: WeakKeyDictionary[
+    DataDefinitionSystem,
+    tuple[PropertySpec, ...],
+] = WeakKeyDictionary()
 
 
-def name_prop(dds: DataDefinitionSystem) -> object:
+def name_prop(dds: DataDefinitionSystem) -> PropertySpec:
     return dds.ensure_property("Name", str, default=REQUIRED, storage_name="name")
 
 
-def init_prop(dds: DataDefinitionSystem) -> object:
+def init_prop(dds: DataDefinitionSystem) -> PropertySpec:
     return dds.ensure_property("Init", bool, default=True, storage_name="init")
 
 
-def kind_prop(dds: DataDefinitionSystem) -> object:
+def kind_prop(dds: DataDefinitionSystem) -> PropertySpec:
     return dds.ensure_property("Kind", str, default="plain", storage_name="kind")
 
 
-def defaulted_prop(dds: DataDefinitionSystem) -> object:
+def defaulted_prop(dds: DataDefinitionSystem) -> PropertySpec:
     return dds.ensure_property(
         "Defaulted",
         bool,
@@ -27,7 +40,7 @@ def defaulted_prop(dds: DataDefinitionSystem) -> object:
     )
 
 
-def default_value_prop(dds: DataDefinitionSystem) -> object:
+def default_value_prop(dds: DataDefinitionSystem) -> PropertySpec:
     return dds.ensure_property(
         "DefaultValue",
         object,
@@ -36,11 +49,11 @@ def default_value_prop(dds: DataDefinitionSystem) -> object:
     )
 
 
-def order_prop(dds: DataDefinitionSystem) -> object:
+def order_prop(dds: DataDefinitionSystem) -> PropertySpec:
     return dds.ensure_property("Order", int, default=0, storage_name="order")
 
 
-def target_port_prop(dds: DataDefinitionSystem) -> object:
+def target_port_prop(dds: DataDefinitionSystem) -> PropertySpec:
     return dds.ensure_property(
         "TargetPort",
         object,
@@ -49,7 +62,7 @@ def target_port_prop(dds: DataDefinitionSystem) -> object:
     )
 
 
-def template_prop(dds: DataDefinitionSystem) -> object:
+def template_prop(dds: DataDefinitionSystem) -> PropertySpec:
     return dds.ensure_property(
         "Template",
         object,
@@ -58,7 +71,7 @@ def template_prop(dds: DataDefinitionSystem) -> object:
     )
 
 
-def source_name_prop(dds: DataDefinitionSystem) -> object:
+def source_name_prop(dds: DataDefinitionSystem) -> PropertySpec:
     return dds.ensure_property(
         "SourceName",
         str,
@@ -67,7 +80,7 @@ def source_name_prop(dds: DataDefinitionSystem) -> object:
     )
 
 
-def target_name_prop(dds: DataDefinitionSystem) -> object:
+def target_name_prop(dds: DataDefinitionSystem) -> PropertySpec:
     return dds.ensure_property(
         "TargetName",
         str,
@@ -76,7 +89,7 @@ def target_name_prop(dds: DataDefinitionSystem) -> object:
     )
 
 
-def runtime_value_prop(dds: DataDefinitionSystem) -> object:
+def runtime_value_prop(dds: DataDefinitionSystem) -> PropertySpec:
     return dds.ensure_property(
         "RuntimeValue",
         object,
@@ -85,7 +98,23 @@ def runtime_value_prop(dds: DataDefinitionSystem) -> object:
     )
 
 
-def class_value_record(dds: DataDefinitionSystem) -> object:
+def extend_field_input_record(
+    dds: DataDefinitionSystem,
+    *properties: PropertySpec,
+) -> None:
+    """Allow capsule concepts to add semantic fields to ``FieldInput``."""
+
+    extensions = _FIELD_INPUT_EXTENSIONS.get(dds, ())
+    additions = _new_field_input_properties(dds, extensions, properties)
+    if not additions:
+        return
+    _FIELD_INPUT_EXTENSIONS[dds] = (*extensions, *additions)
+    existing = _record_named(dds, "FieldInput")
+    if existing is not None:
+        _append_record_properties(existing, additions)
+
+
+def class_value_record(dds: DataDefinitionSystem) -> RecordSpec:
     return dds.ensure_record(
         "ClassValue",
         name_prop(dds),
@@ -95,7 +124,7 @@ def class_value_record(dds: DataDefinitionSystem) -> object:
     )
 
 
-def field_input_record(dds: DataDefinitionSystem) -> object:
+def field_input_record(dds: DataDefinitionSystem) -> RecordSpec:
     return dds.ensure_record(
         "FieldInput",
         name_prop(dds),
@@ -104,10 +133,11 @@ def field_input_record(dds: DataDefinitionSystem) -> object:
         defaulted_prop(dds),
         default_value_prop(dds),
         order_prop(dds),
+        *_field_input_extensions(dds),
     )
 
 
-def component_record(dds: DataDefinitionSystem) -> object:
+def component_record(dds: DataDefinitionSystem) -> RecordSpec:
     return dds.ensure_record(
         "Component",
         name_prop(dds),
@@ -117,7 +147,7 @@ def component_record(dds: DataDefinitionSystem) -> object:
     )
 
 
-def init_param_record(dds: DataDefinitionSystem) -> object:
+def init_param_record(dds: DataDefinitionSystem) -> RecordSpec:
     return dds.ensure_record(
         "InitParam",
         name_prop(dds),
@@ -129,7 +159,7 @@ def init_param_record(dds: DataDefinitionSystem) -> object:
     )
 
 
-def init_assignment_record(dds: DataDefinitionSystem) -> object:
+def init_assignment_record(dds: DataDefinitionSystem) -> RecordSpec:
     return dds.ensure_record(
         "InitAssignment",
         name_prop(dds),
@@ -141,7 +171,7 @@ def init_assignment_record(dds: DataDefinitionSystem) -> object:
     )
 
 
-def class_values_collection(dds: DataDefinitionSystem) -> object:
+def class_values_collection(dds: DataDefinitionSystem) -> CollectionSpec:
     return dds.ensure_collection(
         "ClassValues",
         class_value_record(dds),
@@ -150,7 +180,7 @@ def class_values_collection(dds: DataDefinitionSystem) -> object:
     )
 
 
-def fields_collection(dds: DataDefinitionSystem) -> object:
+def fields_collection(dds: DataDefinitionSystem) -> CollectionSpec:
     return dds.ensure_collection(
         "Fields",
         field_input_record(dds),
@@ -159,7 +189,7 @@ def fields_collection(dds: DataDefinitionSystem) -> object:
     )
 
 
-def components_collection(dds: DataDefinitionSystem) -> object:
+def components_collection(dds: DataDefinitionSystem) -> CollectionSpec:
     return dds.ensure_collection(
         "Components",
         component_record(dds),
@@ -168,7 +198,7 @@ def components_collection(dds: DataDefinitionSystem) -> object:
     )
 
 
-def init_params_collection(dds: DataDefinitionSystem) -> object:
+def init_params_collection(dds: DataDefinitionSystem) -> CollectionSpec:
     return dds.ensure_collection(
         "InitParams",
         init_param_record(dds),
@@ -177,7 +207,7 @@ def init_params_collection(dds: DataDefinitionSystem) -> object:
     )
 
 
-def init_assignments_collection(dds: DataDefinitionSystem) -> object:
+def init_assignments_collection(dds: DataDefinitionSystem) -> CollectionSpec:
     return dds.ensure_collection(
         "InitAssignments",
         init_assignment_record(dds),
@@ -186,7 +216,7 @@ def init_assignments_collection(dds: DataDefinitionSystem) -> object:
     )
 
 
-def init_fields_collection(dds: DataDefinitionSystem) -> object:
+def init_fields_collection(dds: DataDefinitionSystem) -> ComputedCollectionSpec:
     return dds.ensure_computed_collection(
         "InitFields",
         source=fields_collection(dds),
@@ -194,19 +224,19 @@ def init_fields_collection(dds: DataDefinitionSystem) -> object:
     )
 
 
-def class_name_port(dds: DataDefinitionSystem) -> object:
+def class_name_port(dds: DataDefinitionSystem) -> PortSpec:
     return dds.ensure_port("Class.name", cardinality=dds.single)
 
 
-def class_body_port(dds: DataDefinitionSystem) -> object:
+def class_body_port(dds: DataDefinitionSystem) -> PortSpec:
     return dds.ensure_port("Class.body", cardinality=dds.many)
 
 
-def init_params_port(dds: DataDefinitionSystem) -> object:
+def init_params_port(dds: DataDefinitionSystem) -> PortSpec:
     return dds.ensure_port("Init.params", cardinality=dds.many)
 
 
-def init_body_port(dds: DataDefinitionSystem) -> object:
+def init_body_port(dds: DataDefinitionSystem) -> PortSpec:
     return dds.ensure_port("Init.body", cardinality=dds.many)
 
 
@@ -226,6 +256,39 @@ def define_class_field_schema(dds: DataDefinitionSystem) -> None:
     dds.ensure_port_index(target=target_port_prop(dds), order=order_prop(dds))
 
 
+def _field_input_extensions(dds: DataDefinitionSystem) -> tuple[PropertySpec, ...]:
+    return _FIELD_INPUT_EXTENSIONS.get(dds, ())
+
+
+def _new_field_input_properties(
+    dds: DataDefinitionSystem,
+    existing: Sequence[PropertySpec],
+    properties: Sequence[PropertySpec],
+) -> tuple[PropertySpec, ...]:
+    additions = []
+    for prop in properties:
+        if getattr(prop, "system", None) is not dds:
+            raise ValueError("field-input extension properties must belong to this DDS")
+        if prop in existing or prop in additions:
+            continue
+        additions.append(prop)
+    return tuple(additions)
+
+
+def _record_named(dds: DataDefinitionSystem, name: str) -> RecordSpec | None:
+    for record in dds.records:
+        if record.name == name:
+            return record
+    return None
+
+
+def _append_record_properties(
+    record: RecordSpec,
+    properties: Sequence[PropertySpec],
+) -> None:
+    record.extend_properties(*properties)
+
+
 __all__ = [
     "class_body_port",
     "class_name_port",
@@ -236,6 +299,7 @@ __all__ = [
     "default_value_prop",
     "defaulted_prop",
     "define_class_field_schema",
+    "extend_field_input_record",
     "field_input_record",
     "fields_collection",
     "init_assignment_record",
