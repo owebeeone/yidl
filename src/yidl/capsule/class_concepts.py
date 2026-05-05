@@ -14,6 +14,10 @@ def init_prop(dds: DataDefinitionSystem) -> object:
     return dds.ensure_property("Init", bool, default=True, storage_name="init")
 
 
+def kind_prop(dds: DataDefinitionSystem) -> object:
+    return dds.ensure_property("Kind", str, default="plain", storage_name="kind")
+
+
 def defaulted_prop(dds: DataDefinitionSystem) -> object:
     return dds.ensure_property(
         "Defaulted",
@@ -96,6 +100,7 @@ def field_input_record(dds: DataDefinitionSystem) -> object:
         "FieldInput",
         name_prop(dds),
         init_prop(dds),
+        kind_prop(dds),
         defaulted_prop(dds),
         default_value_prop(dds),
         order_prop(dds),
@@ -241,6 +246,7 @@ __all__ = [
     "init_params_collection",
     "init_params_port",
     "init_prop",
+    "kind_prop",
     "name_prop",
     "order_prop",
     "runtime_value_prop",
