@@ -7,6 +7,7 @@ name = "yidl"
 version = "0.1.0"
 description = "YIDL: declarative Ahead-of-Time metacompiler DSL for lifecycle / transducer specs"
 requires-python = ">=3.12"
+dependencies = ["lark>=1.1"]
 authors = [{ name = "YIDL contributors" }]
 keywords = ["dsl", "compiler", "codegen", "lifecycle"]
 classifiers = [

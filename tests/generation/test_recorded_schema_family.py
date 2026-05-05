@@ -77,6 +77,37 @@ def test_extending_concept_references_schema_family_symbols() -> None:
     assert dds.collections[1].record_shape is dds.unions[0]
 
 
+def test_extending_concept_contributes_variant_to_schema_family() -> None:
+    base_builder = capsule_concept("BaseFamily")
+    name = base_builder.props.Name(str, REQUIRED)
+    kind = base_builder.props.Kind(object, REQUIRED)
+    fields = base_builder.schema_family("FieldSpecs")
+    fields.common(name, kind)
+    fields.variant("PlainField")
+    base = base_builder.build()
+
+    child_builder = capsule_concept("ManagedFamily", extends=(base,))
+    base_refs = child_builder.use(base)
+    tx_group = child_builder.props.TxGroup(str, "default")
+    child_builder.extend_schema_family(base_refs.families.FieldSpecs).variant(
+        "ManagedField",
+        tx_group,
+    )
+    child = child_builder.build()
+
+    dds = child.build_data_definition()
+
+    assert [variant.name for variant in dds.unions[0].variants] == [
+        "PlainField",
+        "ManagedField",
+    ]
+    assert [prop.name for prop in dds.unions[0].variants[1].properties] == [
+        "Name",
+        "Kind",
+        "TxGroup",
+    ]
+
+
 def test_schema_family_incompatible_redefinition_rejects() -> None:
     base_builder = capsule_concept("BaseFamily")
     base_builder.props.Name(str, REQUIRED)

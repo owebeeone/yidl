@@ -645,6 +645,20 @@ class CapsuleConceptBuilder:
     def schema_family(self, name: str) -> SchemaFamilyEditor:
         return self._define_schema_family(name)
 
+    def extend_schema_family(self, family: SchemaFamilyHandle) -> SchemaFamilyEditor:
+        self._require_unbuilt()
+        if not isinstance(family, SchemaFamilyHandle):
+            raise TypeError("extend_schema_family(...) requires a SchemaFamilyHandle")
+        if family.owner_id != self._owner_id and not _handle_owner_in_plans(
+            family.owner_id,
+            _extension_closure(self._extensions),
+        ):
+            raise ValueError(
+                f"schema family {family.name!r} is not in the extension closure "
+                f"for {self.name!r}"
+            )
+        return SchemaFamilyEditor(self, family)
+
     def use_matcher(self, matcher: MatcherHandle) -> MatcherEditor:
         self._require_unbuilt()
         if not isinstance(matcher, MatcherHandle):
@@ -963,8 +977,14 @@ class CapsuleConceptBuilder:
     ) -> RecordHandle:
         self._require_unbuilt()
         _require_name(name, "schema family variant name")
-        if family.owner_id != self._owner_id:
-            raise ValueError("schema family variants must target this concept")
+        if family.owner_id != self._owner_id and not _handle_owner_in_plans(
+            family.owner_id,
+            _extension_closure(self._extensions),
+        ):
+            raise ValueError(
+                f"schema family {family.name!r} is not in the extension closure "
+                f"for {self.name!r}"
+            )
         if name in self._records:
             raise ValueError(
                 f"schema family variant {name!r} conflicts with a record in "

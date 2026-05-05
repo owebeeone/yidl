@@ -1,0 +1,154 @@
+start: file
+
+file: module_decl? import_decl* top_level_decl*
+
+module_decl: "module" qname
+
+import_decl: "import" STRING "as" CNAME                 -> import_alias
+           | "from" STRING "import" import_item ("," import_item)* -> import_from
+
+import_item: symbol_kind CNAME ("as" CNAME)?
+
+symbol_kind: "concept" -> symbol_concept
+           | "property" -> symbol_property
+           | "record" -> symbol_record
+           | "union" -> symbol_union
+           | "collection" -> symbol_collection
+           | "port" -> symbol_port
+           | "resource" -> symbol_resource
+           | "matcher" -> symbol_matcher
+           | "operation" -> symbol_operation
+
+top_level_decl: export_decl
+              | concept_decl
+              | property_decl
+              | resource_decl
+
+export_decl: "export" symbol_kind CNAME
+
+concept_decl: "concept" CNAME extends_clause? "{" concept_member* "}"
+
+extends_clause: "extends" qname ("," qname)*
+
+concept_member: use_decl
+              | property_decl
+              | record_decl
+              | union_decl
+              | family_decl
+              | collection_decl
+              | computed_collection_decl
+              | port_decl
+              | resource_decl
+              | matcher_decl
+              | production_decl
+              | operation_decl
+              | diagnostics_decl
+
+use_decl: "use" qname ("as" CNAME)?
+
+property_decl: "property" CNAME ":" type_expr default_clause? storage_clause?
+default_clause: "=" value_expr
+storage_clause: "storage" CNAME
+
+type_expr: qname
+         | "object" -> type_object
+         | "str" -> type_str
+         | "int" -> type_int
+         | "bool" -> type_bool
+         | "float" -> type_float
+         | "literal" "[" literal_list "]" -> type_literal
+
+record_decl: "record" CNAME "{" property_ref* "}"
+property_ref: qname
+
+union_decl: "union" CNAME "{" variant_decl* "}"
+variant_decl: "variant" CNAME "{" property_ref* "}"
+
+family_decl: "family" qname "{" family_member* "}"
+family_member: "common" property_ref ("," property_ref)* -> family_common
+             | variant_decl
+
+collection_decl: "collection" CNAME ":" type_ref identity_clause? cardinality_clause?
+type_ref: qname
+identity_clause: "identity" identity_expr
+identity_expr: property_ref
+             | "(" property_ref ("," property_ref)+ ")"
+cardinality_clause: "single" -> cardinality_single
+                  | "many" -> cardinality_many
+
+computed_collection_decl: "computed" "collection" CNAME ":" type_ref "from" qname "where" condition_expr
+
+port_decl: "port" CNAME STRING cardinality_clause
+
+resource_decl: "resource" CNAME "=" resource_expr
+resource_expr: "literal" value_expr       -> resource_literal
+             | "import" STRING "." CNAME  -> resource_import
+             | "astichi_code" STRING      -> resource_astichi_code
+             | "astichi_template" STRING  -> resource_astichi_template
+
+matcher_decl: "matcher" CNAME "(" matcher_input_list? ")" "{" matcher_default? matcher_rule* "}"
+matcher_input_list: matcher_input ("," matcher_input)*
+matcher_input: CNAME ":" qname
+matcher_default: "default" resource_ref
+matcher_rule: "rule" CNAME "when" condition_expr "->" resource_ref weight_clause?
+resource_ref: qname
+weight_clause: "weight" NUMBER
+
+production_decl: "production" CNAME "from" source_expr "to" qname "{" production_member* "}"
+source_expr: qname order_clause?
+           | qname "." "results" "(" ")" order_clause? -> matcher_results_source
+order_clause: "ordered" "(" property_ref ("," property_ref)* ")"
+production_member: "identity" value_expr
+                 | "policy" qname
+                 | "set" property_ref "=" value_expr
+
+operation_decl: "operation" CNAME operation_io "using" resource_ref operation_options?
+operation_io: "inputs" "(" qname_list? ")" "outputs" "(" qname_list? ")"
+qname_list: qname ("," qname)*
+operation_options: "{" operation_option* "}"
+operation_option: "ordered" "(" property_ref ("," property_ref)* ")"
+                | "diagnostics" qname
+
+diagnostics_decl: "diagnostics" CNAME "{" "collection" CNAME "gate" CNAME "}"
+
+?condition_expr: condition_term
+               | condition_expr "and" condition_term -> condition_and
+condition_term: value_expr "==" value_expr
+
+?value_expr: literal_expr
+           | qname
+           | source_ref
+           | match_ref
+           | lookup_expr
+           | port_address_expr
+           | tuple_expr
+
+source_ref: "source" "." property_ref
+match_ref: "match" "." "resource" "(" ")" -> match_resource
+         | "match" "." "record" "(" STRING ")" "." property_ref -> match_record
+         | "match" "." "value" "(" INT ")" -> match_value
+lookup_expr: "lookup" "(" qname "," "key" "=" value_expr "," "value" "=" property_ref default_arg? ")"
+default_arg: "," "default" "=" value_expr
+port_address_expr: qname "." "of" "(" value_expr ")"
+tuple_expr: "(" value_expr ("," value_expr)+ ")"
+
+literal_expr: STRING
+            | INT
+            | NUMBER
+            | "True" -> true
+            | "False" -> false
+            | "None" -> none
+
+literal_list: literal_expr ("," literal_expr)*
+
+qname: CNAME ("." CNAME)*
+
+COMMENT: /#[^\n]*/
+
+%import common.CNAME
+%import common.ESCAPED_STRING -> STRING
+%import common.INT
+%import common.SIGNED_NUMBER -> NUMBER
+%import common.WS
+%ignore WS
+%ignore COMMENT

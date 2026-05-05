@@ -1,0 +1,525 @@
+"""Lark-backed parser for standalone ``.yidl`` concept modules.
+
+This parser is definition-stage only.  It lowers checked modules into recorded
+capsule concept plans and is intentionally not imported by generated decorator
+or field-spec runtime paths.
+"""
+
+from __future__ import annotations
+
+import ast
+from collections.abc import Mapping
+from dataclasses import dataclass
+from importlib import resources
+import posixpath
+from typing import Any
+
+from lark import Lark
+from lark import Token
+from lark import Tree
+from lark.exceptions import UnexpectedInput
+
+from yidl.capsule.recorded_builder import CapsuleConceptPlan
+from yidl.capsule.recorded_builder import CollectionHandle
+from yidl.capsule.recorded_builder import PropertyHandle
+from yidl.capsule.recorded_builder import RecordHandle
+from yidl.capsule.recorded_builder import SchemaFamilyHandle
+from yidl.capsule.recorded_builder import capsule_concept
+from yidl.generation.data_def_sys import REQUIRED
+
+
+class YidlSyntaxError(ValueError):
+    """Raised when Lark cannot parse a ``.yidl`` source file."""
+
+
+class YidlSymbolError(ValueError):
+    """Raised when parsed YIDL references cannot be resolved."""
+
+
+@dataclass(frozen=True, slots=True)
+class YidlCompiledConcept:
+    """Compiled concept plus exported handles used by later imports."""
+
+    name: str
+    plan: CapsuleConceptPlan
+    properties: Mapping[str, PropertyHandle]
+    families: Mapping[str, SchemaFamilyHandle]
+    records: Mapping[str, RecordHandle]
+    collections: Mapping[str, CollectionHandle]
+
+
+@dataclass(frozen=True, slots=True)
+class YidlCompiledModule:
+    """Compiled YIDL module."""
+
+    path: str
+    module_name: str | None
+    concepts: Mapping[str, YidlCompiledConcept]
+    exports: frozenset[tuple[str, str]]
+
+
+_PARSER: Lark | None = None
+_TYPE_NAMES: dict[str, type[object]] = {
+    "object": object,
+    "str": str,
+    "int": int,
+    "bool": bool,
+    "float": float,
+}
+
+
+def parse_yidl_source(path: str, source: str) -> Tree:
+    """Parse one YIDL source string into a Lark tree."""
+
+    parser = _parser()
+    try:
+        return parser.parse(source)
+    except UnexpectedInput as exc:
+        raise YidlSyntaxError(
+            f"{path}: syntax error at line {exc.line}, column {exc.column}"
+        ) from exc
+
+
+def compile_yidl_files(
+    sources: Mapping[str, str],
+    entry_path: str,
+) -> YidlCompiledModule:
+    """Compile an entry source and its imports into recorded concept plans."""
+
+    compiler = _YidlCompiler(sources)
+    return compiler.compile(entry_path)
+
+
+class _YidlCompiler:
+    def __init__(self, sources: Mapping[str, str]) -> None:
+        self._sources = dict(sources)
+        self._cache: dict[str, YidlCompiledModule] = {}
+        self._active: set[str] = set()
+
+    def compile(self, path: str) -> YidlCompiledModule:
+        resolved_path = posixpath.normpath(path)
+        cached = self._cache.get(resolved_path)
+        if cached is not None:
+            return cached
+        if resolved_path in self._active:
+            raise YidlSymbolError(f"import cycle involving {resolved_path!r}")
+        try:
+            source = self._sources[resolved_path]
+        except KeyError as exc:
+            raise YidlSymbolError(f"missing imported YIDL source {resolved_path!r}") from exc
+
+        self._active.add(resolved_path)
+        tree = _file_tree(parse_yidl_source(resolved_path, source))
+        imports = self._compile_imports(resolved_path, tree)
+        exports = frozenset(self._exports(tree))
+        concepts: dict[str, YidlCompiledConcept] = {}
+        module_name = self._module_name(tree)
+        module = YidlCompiledModule(
+            path=resolved_path,
+            module_name=module_name,
+            concepts=concepts,
+            exports=exports,
+        )
+        for concept_tree in _children(tree, "concept_decl"):
+            compiled = _ConceptCompiler(
+                module=module,
+                imports=imports,
+                prior_concepts=concepts,
+            ).compile(concept_tree)
+            concepts[compiled.name] = compiled
+        self._active.remove(resolved_path)
+        self._cache[resolved_path] = module
+        return module
+
+    def _compile_imports(
+        self,
+        path: str,
+        tree: Tree,
+    ) -> dict[str, YidlCompiledModule]:
+        imports: dict[str, YidlCompiledModule] = {}
+        for import_tree in _children(tree, "import_alias"):
+            imported_path = _resolve_import_path(path, _string_value(import_tree.children[0]))
+            alias = _token_text(import_tree.children[1])
+            imports[alias] = self.compile(imported_path)
+        return imports
+
+    def _exports(self, tree: Tree) -> tuple[tuple[str, str], ...]:
+        exports: list[tuple[str, str]] = []
+        for export_tree in _children(tree, "export_decl"):
+            kind = _symbol_kind(export_tree.children[0])
+            exports.append((kind, _token_text(export_tree.children[1])))
+        return tuple(exports)
+
+    def _module_name(self, tree: Tree) -> str | None:
+        module = _first_child(tree, "module_decl")
+        if module is None:
+            return None
+        return _qname(module.children[0])
+
+
+class _ConceptCompiler:
+    def __init__(
+        self,
+        *,
+        module: YidlCompiledModule,
+        imports: Mapping[str, YidlCompiledModule],
+        prior_concepts: Mapping[str, YidlCompiledConcept],
+    ) -> None:
+        self._module = module
+        self._imports = imports
+        self._prior_concepts = prior_concepts
+        self._local_properties: dict[str, PropertyHandle] = {}
+        self._local_families: dict[str, SchemaFamilyHandle] = {}
+        self._local_records: dict[str, RecordHandle] = {}
+        self._local_collections: dict[str, CollectionHandle] = {}
+        self._extensions: tuple[YidlCompiledConcept, ...] = ()
+
+    def compile(self, tree: Tree) -> YidlCompiledConcept:
+        name = _token_text(tree.children[0])
+        extends_tree = _first_child(tree, "extends_clause")
+        self._extensions = (
+            tuple(self._resolve_concept(_qname(child)) for child in extends_tree.children)
+            if extends_tree is not None
+            else ()
+        )
+        builder = capsule_concept(
+            name,
+            extends=tuple(extension.plan for extension in self._extensions),
+        )
+        for member in _concept_members(tree):
+            self._compile_member(builder, member)
+        plan = builder.build()
+        return YidlCompiledConcept(
+            name=name,
+            plan=plan,
+            properties=dict(self._local_properties),
+            families=dict(self._local_families),
+            records=dict(self._local_records),
+            collections=dict(self._local_collections),
+        )
+
+    def _compile_member(self, builder: Any, member: Tree) -> None:
+        data = member.data
+        if data == "property_decl":
+            prop = self._compile_property(builder, member)
+            self._local_properties[prop.name] = prop
+            return
+        if data == "family_decl":
+            self._compile_family(builder, member)
+            return
+        if data == "collection_decl":
+            collection = self._compile_collection(builder, member)
+            self._local_collections[collection.name] = collection
+            return
+        if data in {
+            "use_decl",
+            "record_decl",
+            "union_decl",
+            "computed_collection_decl",
+            "port_decl",
+            "resource_decl",
+            "matcher_decl",
+            "production_decl",
+            "operation_decl",
+            "diagnostics_decl",
+        }:
+            raise YidlSymbolError(f"{data} lowering is not implemented yet")
+        raise YidlSymbolError(f"unsupported concept member {data!r}")
+
+    def _compile_property(self, builder: Any, tree: Tree) -> PropertyHandle:
+        name = _token_text(tree.children[0])
+        self._reject_imported_property_redefinition(name)
+        value_type = self._type_value(tree.children[1])
+        default = REQUIRED
+        storage_name: str | None = None
+        for child in tree.children[2:]:
+            if not isinstance(child, Tree):
+                continue
+            if child.data == "default_clause":
+                default = self._value(child.children[0])
+            elif child.data == "storage_clause":
+                storage_name = _token_text(child.children[0])
+        return getattr(builder.props, name)(
+            value_type,
+            default,
+            storage_name=storage_name,
+        )
+
+    def _compile_family(self, builder: Any, tree: Tree) -> None:
+        family_name = _qname(tree.children[0])
+        if "." in family_name:
+            family, owner = self._resolve_family(family_name)
+            editor = builder.extend_schema_family(family)
+        else:
+            editor = builder.schema_family(family_name)
+            self._local_families[family_name] = editor.handle
+            owner = None
+        for raw_member in tree.children[1:]:
+            member = (
+                raw_member.children[0]
+                if isinstance(raw_member, Tree) and raw_member.data == "family_member"
+                else raw_member
+            )
+            if member.data == "family_common":
+                editor.common(
+                    *(self._resolve_property(_qname(child)) for child in member.children)
+                )
+                continue
+            if member.data != "variant_decl":
+                continue
+            variant_name = _token_text(member.children[0])
+            variant = editor.variant(
+                variant_name,
+                *(
+                    self._resolve_property_for_family_variant(_qname(child), owner)
+                    for child in member.children[1:]
+                ),
+            )
+            self._local_records[variant.name] = variant
+
+    def _compile_collection(self, builder: Any, tree: Tree) -> CollectionHandle:
+        name = _token_text(tree.children[0])
+        record_shape = self._resolve_record_shape(_qname(tree.children[1].children[0]))
+        identity: PropertyHandle | None = None
+        cardinality = builder.many
+        for child in tree.children[2:]:
+            if child.data == "identity_clause":
+                identity = self._resolve_property(_first_qname(child))
+            elif child.data == "cardinality_single":
+                cardinality = builder.single
+            elif child.data == "cardinality_many":
+                cardinality = builder.many
+        return getattr(builder.collections, name)(
+            record_shape,
+            cardinality=cardinality,
+            identity=identity,
+        )
+
+    def _resolve_concept(self, name: str) -> YidlCompiledConcept:
+        parts = name.split(".")
+        if len(parts) == 1:
+            try:
+                return self._prior_concepts[parts[0]]
+            except KeyError as exc:
+                raise YidlSymbolError(f"undefined concept {name!r}") from exc
+        if len(parts) == 2:
+            module = self._import_module(parts[0])
+            try:
+                return module.concepts[parts[1]]
+            except KeyError as exc:
+                raise YidlSymbolError(f"undefined concept {name!r}") from exc
+        raise YidlSymbolError(f"unsupported concept reference {name!r}")
+
+    def _resolve_family(
+        self,
+        name: str,
+    ) -> tuple[SchemaFamilyHandle, YidlCompiledConcept | None]:
+        parts = name.split(".")
+        if len(parts) == 1:
+            family = self._local_families.get(parts[0])
+            if family is not None:
+                return family, None
+            for extension in self._extensions:
+                family = extension.families.get(parts[0])
+                if family is not None:
+                    return family, extension
+            raise YidlSymbolError(f"undefined schema family {name!r}")
+        if len(parts) == 2:
+            module = self._import_module(parts[0])
+            for concept in module.concepts.values():
+                family = concept.families.get(parts[1])
+                if family is not None:
+                    return family, concept
+            raise YidlSymbolError(f"undefined schema family {name!r}")
+        raise YidlSymbolError(f"unsupported schema family reference {name!r}")
+
+    def _resolve_record_shape(self, name: str) -> RecordHandle | SchemaFamilyHandle:
+        family, _ = self._resolve_family_or_none(name)
+        if family is not None:
+            return family
+        record = self._local_records.get(name)
+        if record is not None:
+            return record
+        for extension in self._extensions:
+            record = extension.records.get(name)
+            if record is not None:
+                return record
+        raise YidlSymbolError(f"undefined record or schema family {name!r}")
+
+    def _resolve_family_or_none(
+        self,
+        name: str,
+    ) -> tuple[SchemaFamilyHandle | None, YidlCompiledConcept | None]:
+        try:
+            return self._resolve_family(name)
+        except YidlSymbolError:
+            return None, None
+
+    def _resolve_property_for_family_variant(
+        self,
+        name: str,
+        owner: YidlCompiledConcept | None,
+    ) -> PropertyHandle:
+        if "." in name:
+            return self._resolve_property(name)
+        local = self._local_properties.get(name)
+        if local is not None:
+            return local
+        if owner is not None:
+            prop = owner.properties.get(name)
+            if prop is not None:
+                return prop
+        return self._resolve_property(name)
+
+    def _resolve_property(self, name: str) -> PropertyHandle:
+        parts = name.split(".")
+        if len(parts) == 1:
+            prop = self._local_properties.get(parts[0])
+            if prop is not None:
+                return prop
+            for extension in self._extensions:
+                prop = extension.properties.get(parts[0])
+                if prop is not None:
+                    return prop
+            raise YidlSymbolError(f"undefined property {name!r}")
+        if len(parts) == 2:
+            module = self._import_module(parts[0])
+            for concept in module.concepts.values():
+                prop = concept.properties.get(parts[1])
+                if prop is not None:
+                    return prop
+            raise YidlSymbolError(f"undefined property {name!r}")
+        raise YidlSymbolError(f"unsupported property reference {name!r}")
+
+    def _reject_imported_property_redefinition(self, name: str) -> None:
+        for extension in self._extensions:
+            if name in extension.properties:
+                raise YidlSymbolError(
+                    f"property {name!r} is imported from extended concept "
+                    f"{extension.name!r}; redefine is not allowed"
+                )
+
+    def _import_module(self, alias: str) -> YidlCompiledModule:
+        try:
+            return self._imports[alias]
+        except KeyError as exc:
+            raise YidlSymbolError(f"unknown import alias {alias!r}") from exc
+
+    def _type_value(self, tree: Tree) -> type[object]:
+        if len(tree.children) == 1 and isinstance(tree.children[0], Tree):
+            name = _qname(tree.children[0])
+        else:
+            name = tree.data.removeprefix("type_")
+        try:
+            return _TYPE_NAMES[name]
+        except KeyError as exc:
+            raise YidlSymbolError(f"unsupported property type {name!r}") from exc
+
+    def _value(self, node: Tree | Token) -> object:
+        if isinstance(node, Token):
+            if node.type == "STRING":
+                return _string_value(node)
+            if node.type == "INT":
+                return int(str(node))
+            if node.type == "NUMBER":
+                text = str(node)
+                return float(text) if "." in text else int(text)
+        if isinstance(node, Tree):
+            if node.data == "literal_expr":
+                return self._value(node.children[0])
+            if node.data == "true":
+                return True
+            if node.data == "false":
+                return False
+            if node.data == "none":
+                return None
+            if node.data == "qname":
+                name = _qname(node)
+                if name == "REQUIRED":
+                    return REQUIRED
+        raise YidlSymbolError("unsupported value expression in this parser slice")
+
+
+def _parser() -> Lark:
+    global _PARSER
+    if _PARSER is None:
+        grammar = resources.files("yidl").joinpath("concept_grammar.lark").read_text()
+        _PARSER = Lark(grammar, parser="lalr", propagate_positions=True)
+    return _PARSER
+
+
+def _file_tree(tree: Tree) -> Tree:
+    if tree.data == "start":
+        return tree.children[0]
+    return tree
+
+
+def _children(tree: Tree, data: str) -> tuple[Tree, ...]:
+    result: list[Tree] = []
+    for child in tree.children:
+        if isinstance(child, Tree) and child.data == data:
+            result.append(child)
+        elif isinstance(child, Tree) and child.data in {"top_level_decl", "concept_member"}:
+            result.extend(_children(child, data))
+    return tuple(result)
+
+
+def _first_child(tree: Tree, data: str) -> Tree | None:
+    for child in tree.children:
+        if isinstance(child, Tree) and child.data == data:
+            return child
+    return None
+
+
+def _concept_members(tree: Tree) -> tuple[Tree, ...]:
+    members: list[Tree] = []
+    for child in tree.children[1:]:
+        if isinstance(child, Tree) and child.data == "concept_member":
+            members.append(child.children[0])
+    return tuple(members)
+
+
+def _qname(tree: Tree) -> str:
+    if tree.data in {"property_ref", "type_ref", "resource_ref"}:
+        return _qname(tree.children[0])
+    return ".".join(_token_text(child) for child in tree.children)
+
+
+def _first_qname(tree: Tree) -> str:
+    for child in tree.children:
+        if isinstance(child, Tree):
+            if child.data in {"qname", "property_ref", "identity_expr"}:
+                return _first_qname(child) if child.data == "identity_expr" else _qname(child)
+    raise YidlSymbolError("expected property reference")
+
+
+def _token_text(value: object) -> str:
+    if not isinstance(value, Token):
+        raise TypeError(f"expected token, got {type(value).__name__}")
+    return str(value)
+
+
+def _string_value(value: object) -> str:
+    if not isinstance(value, Token):
+        raise TypeError(f"expected string token, got {type(value).__name__}")
+    return ast.literal_eval(str(value))
+
+
+def _symbol_kind(tree: Tree) -> str:
+    return tree.data.removeprefix("symbol_")
+
+
+def _resolve_import_path(current_path: str, imported: str) -> str:
+    if imported.startswith("/"):
+        raise YidlSymbolError("absolute YIDL import paths are not allowed")
+    return posixpath.normpath(posixpath.join(posixpath.dirname(current_path), imported))
+
+
+__all__ = [
+    "YidlCompiledConcept",
+    "YidlCompiledModule",
+    "YidlSymbolError",
+    "YidlSyntaxError",
+    "compile_yidl_files",
+    "parse_yidl_source",
+]
