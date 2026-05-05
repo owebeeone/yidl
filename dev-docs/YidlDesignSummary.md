@@ -1399,7 +1399,7 @@ Implementation order:
     operations; there is no separate DDS diagnostics engine.
     The first lifecycle concept assembly (`lifecycle_concepts.py`) uses this
     same recorded layer for field-family, transaction-index, class-structure,
-    property-template, and operation-contribution records.
+    property-template, operation-contribution, and transaction-method records.
 58. The first build-mapper seam is `CapsuleClassBuildPlan` /
     `build_class_source(...)`. It consumes generated runtime port records,
     turns `MatcherGeneratedValue` resources into Astichi composables, and wires
@@ -1408,4 +1408,6 @@ Implementation order:
     Lifecycle module rendering uses the same principle: `render_lifecycle_module`
     consumes contribution records and recursively fills Astichi ports for module
     body, classes, class body, `__slots__`, `__init__`, and nested call-argument
-    holes.
+    holes. The first staircase concept extends the contribution assembly with
+    annotated/defaulted init parameters plus generated `commit()` / `rollback()`
+    methods for managed fields.

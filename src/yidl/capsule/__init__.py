@@ -33,7 +33,9 @@ from .lifecycle_concepts import (
     LifecycleConcept,
     LifecycleFieldFamilyConcept,
     LifecyclePropertyConcept,
+    LifecycleStaircaseConcept,
     LifecycleTransactionIndexConcept,
+    LifecycleTransactionMethodsConcept,
     render_lifecycle_module,
 )
 from .property_concepts import (
@@ -83,7 +85,9 @@ __all__ = [
     "LifecycleConcept",
     "LifecycleFieldFamilyConcept",
     "LifecyclePropertyConcept",
+    "LifecycleStaircaseConcept",
     "LifecycleTransactionIndexConcept",
+    "LifecycleTransactionMethodsConcept",
     "MAIN_FACADE",
     "MANAGED_FIELD",
     "MANAGED_KIND",

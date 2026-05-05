@@ -59,13 +59,22 @@ def _build_field_family_concept() -> CapsuleConceptPlan:
     builder = capsule_concept("lifecycle-field-family")
     name = builder.props.Name(str, REQUIRED)
     kind = builder.props.Kind(str, REQUIRED)
+    annotation_path = builder.props.AnnotationPath(str, "")
     defaulted = builder.props.Defaulted(bool, False)
     default_value = builder.props.DefaultValue(object, None)
     order = builder.props.Order(int, 0)
     tx_group = builder.props.TxGroup(str, "")
 
     fields = builder.schema_family("FieldSpecs")
-    fields.common(name, kind, defaulted, default_value, order, tx_group)
+    fields.common(
+        name,
+        kind,
+        annotation_path,
+        defaulted,
+        default_value,
+        order,
+        tx_group,
+    )
     fields.variant("ManagedField")
     fields.variant("ConstField")
     builder.collections.Fields(
@@ -143,6 +152,9 @@ def _build_class_structure_concept() -> CapsuleConceptPlan:
     )
     fields = builder.use(LifecycleFieldFamilyConcept)
     name = fields.props.Name
+    annotation_path = fields.props.AnnotationPath
+    defaulted = fields.props.Defaulted
+    default_value = fields.props.DefaultValue
     order = fields.props.Order
 
     class_role = builder.props.ClassRole(str, REQUIRED)
@@ -202,6 +214,9 @@ def _build_class_structure_concept() -> CapsuleConceptPlan:
         target_port,
         order,
         template,
+        annotation_path,
+        defaulted,
+        default_value,
     )
     state_ctor_arg = builder.records.StateCtorArg(
         class_role,
@@ -305,6 +320,28 @@ def _build_class_structure_concept() -> CapsuleConceptPlan:
             )
             init_param_template = from_astichi_code(
                 "def astichi_params(*, field_name__astichi_arg__):\\n"
+                "    pass",
+            )
+            defaulted_param_template = from_astichi_code(
+                "def astichi_params(\\n"
+                "    *,\\n"
+                "    field_name__astichi_arg__=astichi_bind_external(default_value),\\n"
+                "):\\n"
+                "    pass",
+            )
+            annotated_param_template = from_astichi_code(
+                "def astichi_params(\\n"
+                "    *,\\n"
+                "    field_name__astichi_arg__: astichi_ref(external=annotation_path),\\n"
+                "):\\n"
+                "    pass",
+            )
+            annotated_defaulted_param_template = from_astichi_code(
+                "def astichi_params(\\n"
+                "    *,\\n"
+                "    field_name__astichi_arg__: astichi_ref(external=annotation_path)\\n"
+                "    = astichi_bind_external(default_value),\\n"
+                "):\\n"
                 "    pass",
             )
             slot_item_template = from_astichi_code(
@@ -421,6 +458,14 @@ def _build_class_structure_concept() -> CapsuleConceptPlan:
             )
 
             for field in fields:
+                if field.annotation_path and field.defaulted:
+                    param_template = annotated_defaulted_param_template
+                elif field.annotation_path:
+                    param_template = annotated_param_template
+                elif field.defaulted:
+                    param_template = defaulted_param_template
+                else:
+                    param_template = init_param_template
                 ctx.write(
                     InitParamsCollection,
                     InitParam(
@@ -428,7 +473,10 @@ def _build_class_structure_concept() -> CapsuleConceptPlan:
                         name=field.name,
                         target_port=InitParamsPort.of((state_role, "__init__")),
                         order=field.order,
-                        template=init_param_template,
+                        template=param_template,
+                        annotation_path=field.annotation_path,
+                        defaulted=field.defaulted,
+                        default_value=field.default_value,
                     ),
                     policy=AddIfAbsent,
                 )
@@ -439,7 +487,10 @@ def _build_class_structure_concept() -> CapsuleConceptPlan:
                         name=field.name,
                         target_port=InitParamsPort.of((facade_role, "__init__")),
                         order=field.order,
-                        template=init_param_template,
+                        template=param_template,
+                        annotation_path=field.annotation_path,
+                        defaulted=field.defaulted,
+                        default_value=field.default_value,
                     ),
                     policy=AddIfAbsent,
                 )
@@ -687,6 +738,175 @@ def _build_lifecycle_concept() -> CapsuleConceptPlan:
 LifecycleConcept: CapsuleConceptPlan = _build_lifecycle_concept()
 
 
+def _build_transaction_methods_concept() -> CapsuleConceptPlan:
+    builder = capsule_concept(
+        "lifecycle-transaction-methods",
+        extends=(LifecycleConcept,),
+    )
+    fields = builder.use(LifecycleFieldFamilyConcept)
+    classes = builder.use(LifecycleClassStructureConcept)
+
+    class_role = classes.props.ClassRole
+    name = fields.props.Name
+    target_port = classes.props.TargetPort
+    order = fields.props.Order
+    template = classes.props.Template
+    current_slot = classes.props.CurrentSlot
+    working_slot = classes.props.WorkingSlot
+    class_body = classes.ports.Class.body
+
+    method_statement = builder.records.MethodStatement(
+        class_role,
+        name,
+        target_port,
+        order,
+        template,
+        current_slot,
+        working_slot,
+    )
+    method_statements = builder.collections.MethodStatements(
+        method_statement,
+        cardinality=builder.many,
+        identity=(class_role, name),
+    )
+    method_body = builder.ports.Method.body(cardinality=builder.many)
+
+    builder.operations.BuildTransactionMethods(
+        inputs=(fields.collections.Fields,),
+        outputs=(classes.collections.ClassComponents, method_statements),
+        resource=from_astichi_code(
+            """
+            astichi_pyimport(
+                module=yidl.generation.data_def_sys,
+                names=(from_astichi_code,),
+            )
+
+            commit_template = from_astichi_code(
+                "def commit(self):\\n"
+                "    state = self._state\\n"
+                "    astichi_hole(body)",
+                keep_names=("self",),
+            )
+            rollback_template = from_astichi_code(
+                "def rollback(self):\\n"
+                "    state = self._state\\n"
+                "    astichi_hole(body)",
+                keep_names=("self",),
+            )
+            commit_statement_template = from_astichi_code(
+                "if astichi_pass(state, outer_bind=True).astichi_ref("
+                "external=working_slot) is not _NO_WORKING_VALUE:\\n"
+                "    astichi_pass(state, outer_bind=True).astichi_ref("
+                "external=current_slot)._ = astichi_pass("
+                "state, outer_bind=True).astichi_ref(external=working_slot)\\n"
+                "    astichi_pass(state, outer_bind=True).astichi_ref("
+                "external=working_slot)._ = _NO_WORKING_VALUE",
+                keep_names=("_NO_WORKING_VALUE",),
+            )
+            rollback_statement_template = from_astichi_code(
+                "astichi_pass(state, outer_bind=True).astichi_ref("
+                "external=working_slot)._ = _NO_WORKING_VALUE",
+                keep_names=("_NO_WORKING_VALUE",),
+            )
+
+            managed_fields = [
+                field
+                for field in sorted(
+                    ctx.records(FieldsCollection),
+                    key=lambda record: (record.order, ctx.write_order(record)),
+                )
+                if field.kind == "managed"
+            ]
+            if not managed_fields:
+                return
+
+            facade_role = "main_facade"
+            ctx.write(
+                ClassComponentsCollection,
+                ClassComponent(
+                    class_role=facade_role,
+                    name="commit",
+                    target_port=ClassBodyPort.of(facade_role),
+                    order=1000,
+                    template=commit_template,
+                ),
+                policy=AddIfAbsent,
+            )
+            ctx.write(
+                ClassComponentsCollection,
+                ClassComponent(
+                    class_role=facade_role,
+                    name="rollback",
+                    target_port=ClassBodyPort.of(facade_role),
+                    order=1010,
+                    template=rollback_template,
+                ),
+                policy=AddIfAbsent,
+            )
+            for field in managed_fields:
+                current_slot = f"_{field.name}_current"
+                working_slot = f"_{field.name}_working"
+                ctx.write(
+                    MethodStatementsCollection,
+                    MethodStatement(
+                        class_role=facade_role,
+                        name=f"commit_{field.name}",
+                        target_port=MethodBodyPort.of((facade_role, "commit")),
+                        order=field.order,
+                        template=commit_statement_template,
+                        current_slot=current_slot,
+                        working_slot=working_slot,
+                    ),
+                    policy=AddIfAbsent,
+                )
+                ctx.write(
+                    MethodStatementsCollection,
+                    MethodStatement(
+                        class_role=facade_role,
+                        name=f"rollback_{field.name}",
+                        target_port=MethodBodyPort.of((facade_role, "rollback")),
+                        order=field.order,
+                        template=rollback_statement_template,
+                        current_slot=current_slot,
+                        working_slot=working_slot,
+                    ),
+                    policy=AddIfAbsent,
+                )
+            """,
+            keep_names=(
+                "AddIfAbsent",
+                "ClassBodyPort",
+                "ClassComponent",
+                "ClassComponentsCollection",
+                "FieldsCollection",
+                "MethodBodyPort",
+                "MethodStatement",
+                "MethodStatementsCollection",
+                "ctx",
+                "from_astichi_code",
+                "sorted",
+            ),
+        ),
+    ).in_group("LifecycleMethods")
+    del method_body
+    return builder.build()
+
+
+LifecycleTransactionMethodsConcept: CapsuleConceptPlan = (
+    _build_transaction_methods_concept()
+)
+
+
+def _build_lifecycle_staircase_concept() -> CapsuleConceptPlan:
+    return capsule_concept(
+        "lifecycle-staircase",
+        extends=(LifecycleTransactionMethodsConcept,),
+    ).build()
+
+
+LifecycleStaircaseConcept: CapsuleConceptPlan = _build_lifecycle_staircase_concept()
+
+
 def render_lifecycle_module(
     container: object,
     namespace: Mapping[str, object],
@@ -799,6 +1019,24 @@ def _init_body_bind(record: object) -> dict[str, object]:
     return {"target_path": record.target_name}
 
 
+def _init_param_bind(record: object) -> dict[str, object]:
+    values: dict[str, object] = {}
+    if record.annotation_path:
+        values["annotation_path"] = record.annotation_path
+    if record.defaulted:
+        values["default_value"] = record.default_value
+    return values
+
+
+def _method_body_bind(record: object) -> dict[str, object]:
+    values: dict[str, object] = {}
+    if record.name.startswith("commit_") and record.current_slot:
+        values["current_slot"] = record.current_slot
+    if record.working_slot:
+        values["working_slot"] = record.working_slot
+    return values
+
+
 def _instance_name(prefix: str, value: object) -> str:
     text = str(value).replace("-", "_").replace(".", "_")
     if not text.isidentifier():
@@ -829,6 +1067,7 @@ _LIFECYCLE_CHILD_PORTS = (
         edge=TemplateEdgePlan(
             "InitParam",
             arg_names=lambda record: {"field_name": record.name},
+            bind=_init_param_bind,
             keep_names=lambda record: (record.name,),
         ),
         owner=lambda record: (record.class_role, record.name),
@@ -855,6 +1094,26 @@ _LIFECYCLE_CHILD_PORTS = (
         ),
         owner=lambda record: (record.class_role, record.name),
     ),
+    ChildPortPlan(
+        parent_name="commit",
+        port_name="MethodBodyPort",
+        target_hole="body",
+        edge=TemplateEdgePlan(
+            "MethodBody",
+            bind=_method_body_bind,
+        ),
+        owner=lambda record: (record.class_role, record.name),
+    ),
+    ChildPortPlan(
+        parent_name="rollback",
+        port_name="MethodBodyPort",
+        target_hole="body",
+        edge=TemplateEdgePlan(
+            "MethodBody",
+            bind=_method_body_bind,
+        ),
+        owner=lambda record: (record.class_role, record.name),
+    ),
 )
 
 
@@ -865,7 +1124,9 @@ __all__ = [
     "LifecycleConcept",
     "LifecycleFieldFamilyConcept",
     "LifecyclePropertyConcept",
+    "LifecycleStaircaseConcept",
     "LifecycleTransactionIndexConcept",
+    "LifecycleTransactionMethodsConcept",
     "MAIN_FACADE",
     "MANAGED_KIND",
     "PROPERTY_PHASE",
