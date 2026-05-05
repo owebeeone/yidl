@@ -22,6 +22,7 @@ MANAGED_KIND = "managed"
 CONST_KIND = "const"
 OWNED_KIND = "owned"
 BINDING_KIND = "binding"
+INITVAR_KIND = "initvar"
 
 STATE_CLASS = "state"
 MAIN_FACADE = "main_facade"
@@ -34,6 +35,7 @@ COMMIT_ORDER_KEY = "commit_order_key"
 BEFORE_COMMIT_HOOK = "before_commit"
 AFTER_COMMIT_HOOK = "after_commit"
 AFTER_ROLLBACK_HOOK = "after_rollback"
+DEFAULT_FACTORY = "default_factory"
 
 
 _MODULE_TEMPLATE = from_astichi_code("astichi_hole(module_body)")
@@ -1406,6 +1408,263 @@ def _build_resource_hooks_concept() -> CapsuleConceptPlan:
 LifecycleResourceHooksConcept: CapsuleConceptPlan = _build_resource_hooks_concept()
 
 
+def _build_initvar_closure_concept() -> CapsuleConceptPlan:
+    builder = capsule_concept(
+        "lifecycle-initvar-closure",
+        extends=(LifecycleResourceHooksConcept,),
+    )
+    fields = builder.use(LifecycleFieldFamilyConcept)
+    hooks = builder.use(LifecycleResourceHooksConcept)
+
+    name = fields.props.Name
+    source_label = hooks.props.SourceLabel
+
+    consumer = builder.props.Consumer(str, REQUIRED)
+    initvar_name = builder.props.InitVarName(
+        str,
+        REQUIRED,
+        storage_name="initvar_name",
+    )
+
+    builder.extend_schema_family(fields.families.FieldSpecs).variant(
+        "InitVarField",
+        source_label,
+    )
+
+    initvar_edge = builder.records.InitvarEdge(
+        consumer,
+        initvar_name,
+        source_label,
+    )
+    late_initvar_consumer = builder.records.LateInitvarConsumer(
+        consumer,
+        source_label,
+    )
+    retained_initvar = builder.records.RetainedInitVar(
+        name,
+        source_label,
+    )
+    constructor_only_initvar = builder.records.ConstructorOnlyInitVar(
+        name,
+        source_label,
+    )
+
+    edges = builder.collections.InitvarEdges(
+        initvar_edge,
+        cardinality=builder.many,
+        identity=(consumer, initvar_name),
+    )
+    late_consumers = builder.collections.LateInitvarConsumers(
+        late_initvar_consumer,
+        cardinality=builder.many,
+        identity=consumer,
+    )
+    retained = builder.collections.RetainedInitVars(
+        retained_initvar,
+        cardinality=builder.many,
+        identity=name,
+    )
+    constructor_only = builder.collections.ConstructorOnlyInitVars(
+        constructor_only_initvar,
+        cardinality=builder.many,
+        identity=name,
+    )
+
+    builder.operations.BuildInitvarEdges(
+        inputs=(
+            fields.collections.Fields,
+            hooks.collections.CallableSpecs,
+            hooks.collections.CallableInjections,
+        ),
+        outputs=(edges, late_consumers),
+        resource=from_astichi_code(
+            """
+            astichi_comment("operation: lifecycle initvar dependency edges")
+
+            initvars_by_name = {
+                field.name: field
+                for field in ctx.records(FieldsCollection)
+                if field.kind == "initvar"
+            }
+            specs_by_name = {
+                spec.name: spec
+                for spec in ctx.records(CallableSpecsCollection)
+            }
+            used_initvars = set()
+            late_roles = {
+                "commit_validator",
+                "commit_order_key",
+                "before_commit",
+                "after_commit",
+                "after_rollback",
+            }
+
+            for injection in ctx.records(CallableInjectionsCollection):
+                if injection.injection_kind != "initvar":
+                    continue
+                spec = specs_by_name.get(injection.callable_name)
+                initvar = initvars_by_name.get(injection.param_name)
+                if initvar is None:
+                    raise TypeError(
+                        "unknown lifecycle initvar "
+                        f"{injection.param_name!r} requested by callable "
+                        f"{injection.callable_name!r}"
+                    )
+                used_initvars.add(injection.param_name)
+                source_label = (
+                    spec.source_label
+                    if spec is not None
+                    else injection.callable_name
+                )
+                ctx.write(
+                    InitvarEdgesCollection,
+                    InitvarEdge(
+                        consumer=injection.callable_name,
+                        initvar_name=injection.param_name,
+                        source_label=source_label,
+                    ),
+                    policy=AddIfAbsent,
+                )
+                if spec is not None and spec.callable_role in late_roles:
+                    ctx.write(
+                        LateInitvarConsumersCollection,
+                        LateInitvarConsumer(
+                            consumer=injection.callable_name,
+                            source_label=source_label,
+                        ),
+                        policy=AddIfAbsent,
+                    )
+
+            unused = [
+                field
+                for field in sorted(
+                    initvars_by_name.values(),
+                    key=lambda record: (record.order, ctx.write_order(record)),
+                )
+                if field.name not in used_initvars
+            ]
+            if unused:
+                names = ", ".join(repr(field.name) for field in unused)
+                raise TypeError(
+                    "unused lifecycle initvar declarations: " + names
+                )
+            """,
+            keep_names=(
+                "AddIfAbsent",
+                "CallableInjectionsCollection",
+                "CallableSpecsCollection",
+                "FieldsCollection",
+                "InitvarEdge",
+                "InitvarEdgesCollection",
+                "LateInitvarConsumer",
+                "LateInitvarConsumersCollection",
+                "TypeError",
+                "ctx",
+                "repr",
+                "set",
+                "sorted",
+            ),
+        ),
+    ).in_group("Initvars")
+
+    builder.operations.BuildRetainedInitVars(
+        inputs=(late_consumers, edges),
+        outputs=(retained,),
+        resource=from_astichi_code(
+            """
+            astichi_comment("operation: retained initvar reachability")
+
+            roots = [
+                record.consumer
+                for record in ctx.records(LateInitvarConsumersCollection)
+            ]
+            edges_by_consumer = {}
+            for edge in ctx.records(InitvarEdgesCollection):
+                edges_by_consumer.setdefault(edge.consumer, []).append(edge)
+
+            seen_consumers = set()
+            seen_initvars = set()
+            queue = list(roots)
+            while queue:
+                consumer = queue.pop(0)
+                if consumer in seen_consumers:
+                    continue
+                seen_consumers.add(consumer)
+                for edge in edges_by_consumer.get(consumer, ()):
+                    initvar_name = edge.initvar_name
+                    if initvar_name in seen_initvars:
+                        continue
+                    seen_initvars.add(initvar_name)
+                    ctx.write(
+                        RetainedInitVarsCollection,
+                        RetainedInitVar(
+                            name=initvar_name,
+                            source_label=edge.source_label,
+                        ),
+                        policy=AddIfAbsent,
+                    )
+                    queue.append(initvar_name)
+            """,
+            keep_names=(
+                "AddIfAbsent",
+                "InitvarEdgesCollection",
+                "LateInitvarConsumersCollection",
+                "RetainedInitVar",
+                "RetainedInitVarsCollection",
+                "ctx",
+                "list",
+                "set",
+            ),
+        ),
+    ).in_group("Initvars")
+
+    builder.operations.BuildConstructorOnlyInitVars(
+        inputs=(fields.collections.Fields, retained),
+        outputs=(constructor_only,),
+        resource=from_astichi_code(
+            """
+            astichi_comment("operation: constructor-only initvar classification")
+
+            retained_names = {
+                record.name
+                for record in ctx.records(RetainedInitVarsCollection)
+            }
+            for field in sorted(
+                ctx.records(FieldsCollection),
+                key=lambda record: (record.order, ctx.write_order(record)),
+            ):
+                if field.kind != "initvar":
+                    continue
+                if field.name in retained_names:
+                    continue
+                ctx.write(
+                    ConstructorOnlyInitVarsCollection,
+                    ConstructorOnlyInitVar(
+                        name=field.name,
+                        source_label=getattr(field, "source_label", ""),
+                    ),
+                    policy=AddIfAbsent,
+                )
+            """,
+            keep_names=(
+                "AddIfAbsent",
+                "ConstructorOnlyInitVar",
+                "ConstructorOnlyInitVarsCollection",
+                "FieldsCollection",
+                "RetainedInitVarsCollection",
+                "ctx",
+                "getattr",
+                "sorted",
+            ),
+        ),
+    ).in_group("Initvars")
+
+    return builder.build()
+
+
+LifecycleInitvarClosureConcept: CapsuleConceptPlan = _build_initvar_closure_concept()
+
+
 def render_lifecycle_module(
     container: object,
     namespace: Mapping[str, object],
@@ -1646,10 +1905,13 @@ __all__ = [
     "COMMIT_ORDER_KEY",
     "COMMIT_VALIDATOR",
     "GET_OPERATION",
+    "DEFAULT_FACTORY",
+    "INITVAR_KIND",
     "LifecycleClassStructureConcept",
     "LifecycleCallableFactsConcept",
     "LifecycleConcept",
     "LifecycleFieldFamilyConcept",
+    "LifecycleInitvarClosureConcept",
     "LifecyclePropertyConcept",
     "LifecycleResourceHooksConcept",
     "LifecycleStaircaseConcept",
