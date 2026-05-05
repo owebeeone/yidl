@@ -18,6 +18,7 @@ from yidl.generation.data_def_sys import emit_container_runtime_source
 from yidl.generation.data_def_sys import emit_matcher_runtime_source
 from yidl.generation.data_def_sys import from_astichi_code
 from yidl.generation.data_def_sys import from_literal
+from yidl.generation.data_def_sys import lookup
 
 __all__ = [
     "AddIfAbsent",
@@ -38,4 +39,5 @@ __all__ = [
     "emit_matcher_runtime_source",
     "from_astichi_code",
     "from_literal",
+    "lookup",
 ]

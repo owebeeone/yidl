@@ -141,6 +141,42 @@ def test_union_collection_identity_must_exist_on_all_variants() -> None:
         dds.collection("Fields", field_specs, cardinality=dds.many, identity=tx_group)
 
 
+def test_collection_accepts_composite_identity_properties() -> None:
+    dds = DataDefinitionSystem()
+    tx_group = dds.property("TxGroup", str, default=REQUIRED, storage_name="tx_group")
+    phase = dds.property("Phase", str, default=REQUIRED, storage_name="phase")
+    tx_index = dds.property("TxIndex", int, default=REQUIRED, storage_name="tx_index")
+    tx_group_record = dds.record("TxGroupRecord", tx_group, phase, tx_index)
+    tx_groups = dds.collection(
+        "TxGroups",
+        tx_group_record,
+        cardinality=dds.many,
+        identity=(tx_group, phase),
+    )
+
+    record = tx_groups.record(tx_group="main", phase="commit", tx_index=0)
+
+    assert tx_groups.identity_of(record) == ("main", "commit")
+    assert tx_groups.identity == (tx_group, phase)
+
+
+def test_union_collection_composite_identity_must_exist_on_all_variants() -> None:
+    dds = DataDefinitionSystem()
+    name = dds.property("Name", str, default=REQUIRED, storage_name="name")
+    phase = dds.property("Phase", str, default=REQUIRED, storage_name="phase")
+    field_specs = dds.union("FieldSpecs")
+    field_specs.variant("PlainField", name)
+    field_specs.variant("ManagedField", name, phase)
+
+    with pytest.raises(ValueError, match="must exist on all variants"):
+        dds.collection(
+            "Fields",
+            field_specs,
+            cardinality=dds.many,
+            identity=(name, phase),
+        )
+
+
 def test_transform_spec_derives_collection_records_without_holding_data() -> None:
     dds = DataDefinitionSystem()
     name = dds.property("Name", str, default=REQUIRED, storage_name="name")

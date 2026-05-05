@@ -14,6 +14,7 @@ from yidl.generation.data_schema import ComputedValue
 from yidl.generation.data_schema import ComputedCollectionSpec
 from yidl.generation.data_schema import DataDefinitionSystem
 from yidl.generation.data_schema import LiteralValue
+from yidl.generation.data_schema import LookupValue
 from yidl.generation.data_schema import MatchRecordProperty
 from yidl.generation.data_schema import MatcherResultSource
 from yidl.generation.data_schema import MatchResource
@@ -25,6 +26,7 @@ from yidl.generation.data_schema import ReadProperty
 from yidl.generation.data_schema import RecordSpec
 from yidl.generation.data_schema import ProductionSpec
 from yidl.generation.data_schema import UnionSpec
+from yidl.generation.data_schema import _NO_LOOKUP_DEFAULT
 from yidl.generation.matcher import MatcherSpec
 from yidl.generation.matcher import NOT_PROVIDED
 from yidl.generation.matcher_values import constructor_expr_for
@@ -100,7 +102,7 @@ def emit_container_runtime_source(
         identity_expr = (
             "None"
             if collection.identity is None
-            else prop_vars[collection.identity]
+            else _identity_expr(collection.identity, prop_vars)
         )
         cardinality_expr = (
             "True"
@@ -375,9 +377,24 @@ def _emit_production_lines(
                 "            continue",
             ]
         )
+    lookup_vars: dict[LookupValue, str] = {}
+    for index, item in enumerate(production.values):
+        if isinstance(item.expression, LookupValue):
+            var_name = f"lookup_{index}"
+            lookup_vars[item.expression] = var_name
+            lines.extend(
+                _emit_lookup_lines(
+                    item.expression,
+                    var_name,
+                    collection_vars=collection_vars,
+                    port_vars=port_vars,
+                    evaluator_names=evaluator_names,
+                    value_names=value_names,
+                )
+            )
     values = ", ".join(
         f"{item.property.storage_name}="
-        f"{_value_expression_expr(item.expression, 'source', port_vars, evaluator_names, value_names)}"
+        f"{_value_expression_expr(item.expression, 'source', port_vars, evaluator_names, value_names, lookup_vars)}"
         for item in production.values
     )
     lines.extend(
@@ -521,7 +538,12 @@ def _value_expression_expr(
     port_vars: Mapping[object, str],
     evaluator_names: SourceNameMap,
     value_names: SourceNameMap,
+    lookup_vars: Mapping[LookupValue, str] | None = None,
 ) -> str:
+    if isinstance(expression, LookupValue):
+        if lookup_vars is None or expression not in lookup_vars:
+            raise ValueError("lookup expression is not bound to a generated local")
+        return f"{lookup_vars[expression]}_value"
     if isinstance(expression, ReadProperty):
         return f"{source_name}.{expression.property.storage_name}"
     if isinstance(expression, LiteralValue):
@@ -547,6 +569,83 @@ def _value_expression_expr(
     raise TypeError(f"unsupported value expression {type(expression).__name__}")
 
 
+def _emit_lookup_lines(
+    expression: LookupValue,
+    var_name: str,
+    *,
+    collection_vars: Mapping[CollectionSpec | ComputedCollectionSpec, str],
+    port_vars: Mapping[object, str],
+    evaluator_names: SourceNameMap,
+    value_names: SourceNameMap,
+) -> list[str]:
+    key_expr = _lookup_key_expr(
+        expression.key,
+        port_vars=port_vars,
+        evaluator_names=evaluator_names,
+        value_names=value_names,
+    )
+    collection_var = collection_vars[expression.collection]
+    lines = [
+        f"        {var_name}_key = {key_expr}",
+        f"        {var_name}_record = builder.by_identity({collection_var}, {var_name}_key)",
+    ]
+    if expression.default is _NO_LOOKUP_DEFAULT:
+        lines.extend(
+            [
+                f"        if {var_name}_record is None:",
+                "            raise ValueError(",
+                f"                'no {expression.collection.name} record for identity '",
+                f"                + repr({var_name}_key)",
+                "            )",
+                f"        {var_name}_value = {var_name}_record.{expression.value.storage_name}",
+            ]
+        )
+        return lines
+    default_expr = _value_expression_expr(
+        expression.default,
+        "source",
+        port_vars,
+        evaluator_names,
+        value_names,
+    )
+    lines.extend(
+        [
+            f"        if {var_name}_record is None:",
+            f"            {var_name}_value = {default_expr}",
+            "        else:",
+            f"            {var_name}_value = {var_name}_record.{expression.value.storage_name}",
+        ]
+    )
+    return lines
+
+
+def _lookup_key_expr(
+    key: object,
+    *,
+    port_vars: Mapping[object, str],
+    evaluator_names: SourceNameMap,
+    value_names: SourceNameMap,
+) -> str:
+    if isinstance(key, tuple):
+        return _tuple_expr(
+            _value_expression_expr(
+                item,
+                "source",
+                port_vars,
+                evaluator_names,
+                value_names,
+            )
+            for item in key
+        )
+    return _value_expression_expr(
+        key,
+        "source",
+        port_vars,
+        evaluator_names,
+        value_names,
+    )
+
+
 def _literal_expr(
     value: object,
     port_vars: Mapping[object, str],
@@ -569,6 +668,15 @@ def _record_shape_expr(
     if isinstance(shape, UnionSpec):
         return union_vars[shape]
     return record_vars[shape]
+
+
+def _identity_expr(
+    identity: PropertySpec | tuple[PropertySpec, ...],
+    prop_vars: Mapping[PropertySpec, str],
+) -> str:
+    if isinstance(identity, tuple):
+        return _tuple_expr(prop_vars[prop] for prop in identity)
+    return prop_vars[identity]
 
 
 def _property_vars(system: DataDefinitionSystem) -> dict[PropertySpec, str]:
@@ -717,13 +825,33 @@ def _system_uses_astichi_templates(system: DataDefinitionSystem) -> bool:
 def _expression_uses_generated_values(expression: object) -> bool:
     if isinstance(expression, LiteralValue):
         return _contains_generated_value(expression.value)
+    if isinstance(expression, LookupValue):
+        return _lookup_key_uses_generated_values(
+            expression.key
+        ) or _expression_uses_generated_values(expression.default)
     return False
 
 
 def _expression_uses_astichi_templates(expression: object) -> bool:
     if isinstance(expression, LiteralValue):
         return _contains_astichi_template_value(expression.value)
+    if isinstance(expression, LookupValue):
+        return _lookup_key_uses_astichi_templates(
+            expression.key
+        ) or _expression_uses_astichi_templates(expression.default)
     return False
+
+
+def _lookup_key_uses_generated_values(key: object) -> bool:
+    if isinstance(key, tuple):
+        return any(_expression_uses_generated_values(item) for item in key)
+    return _expression_uses_generated_values(key)
+
+
+def _lookup_key_uses_astichi_templates(key: object) -> bool:
+    if isinstance(key, tuple):
+        return any(_expression_uses_astichi_templates(item) for item in key)
+    return _expression_uses_astichi_templates(key)
 
 
 def _contains_generated_value(value: object) -> bool:

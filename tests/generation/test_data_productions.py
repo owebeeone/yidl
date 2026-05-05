@@ -6,6 +6,7 @@ from yidl.generation.data_def_sys import AddIfAbsent
 from yidl.generation.data_def_sys import DataDefinitionSystem
 from yidl.generation.data_def_sys import REQUIRED
 from yidl.generation.data_def_sys import call
+from yidl.generation.data_def_sys import lookup
 from yidl.generation.data_def_sys import read
 
 
@@ -108,3 +109,60 @@ def test_production_rejects_unemittable_call_without_source_name() -> None:
     with pytest.raises(ValueError, match="computed value"):
         dds.emit_container_runtime_source()
 
+
+def test_keyed_lookup_rejects_missing_target_record_without_default() -> None:
+    dds = DataDefinitionSystem()
+    name = dds.property("Name", str, default=REQUIRED, storage_name="name")
+    tx_group = dds.property("TxGroup", str, default=REQUIRED, storage_name="tx_group")
+    tx_index = dds.property("TxIndex", int, default=REQUIRED, storage_name="tx_index")
+    source_record = dds.record("Source", name, tx_group)
+    target_record = dds.record("Target", tx_group, tx_index)
+    output_record = dds.record("Output", name, tx_index)
+    sources = dds.collection("Sources", source_record, cardinality=dds.many, identity=name)
+    targets = dds.collection("Targets", target_record, cardinality=dds.many, identity=tx_group)
+    outputs = dds.collection("Outputs", output_record, cardinality=dds.many, identity=name)
+    production = dds.production(
+        "SourceProvidesOutput",
+        source=sources,
+        target=outputs,
+        values={
+            name: read(name),
+            tx_index: lookup(targets, key=read(tx_group), value=tx_index),
+        },
+    )
+    source = sources.record(name="owner", tx_group="missing")
+    builder = dds.container_builder()
+    builder.add(sources, source)
+
+    with pytest.raises(ValueError, match="no Targets record for identity 'missing'"):
+        production.make_record(source, container=builder._snapshot())
+
+
+def test_keyed_lookup_uses_explicit_default_for_missing_target_record() -> None:
+    dds = DataDefinitionSystem()
+    name = dds.property("Name", str, default=REQUIRED, storage_name="name")
+    tx_group = dds.property("TxGroup", str, default=REQUIRED, storage_name="tx_group")
+    tx_index = dds.property("TxIndex", int, default=REQUIRED, storage_name="tx_index")
+    source_record = dds.record("Source", name, tx_group)
+    target_record = dds.record("Target", tx_group, tx_index)
+    output_record = dds.record("Output", name, tx_index)
+    sources = dds.collection("Sources", source_record, cardinality=dds.many, identity=name)
+    targets = dds.collection("Targets", target_record, cardinality=dds.many, identity=tx_group)
+    outputs = dds.collection("Outputs", output_record, cardinality=dds.many, identity=name)
+    production = dds.production(
+        "SourceProvidesOutput",
+        source=sources,
+        target=outputs,
+        values={
+            name: read(name),
+            tx_index: lookup(targets, key=read(tx_group), value=tx_index, default=-1),
+        },
+    )
+
+    record = production.make_record(
+        sources.record(name="owner", tx_group="missing"),
+        container=dds.container_builder()._snapshot(),
+    )
+
+    assert record is not None
+    assert record.tx_index == -1

@@ -232,7 +232,7 @@ class RuntimeCollection:
         record_shape: RuntimeRecord | RuntimeUnion,
         *,
         allows_multiple: bool,
-        identity: RuntimeProperty | None = None,
+        identity: RuntimeProperty | tuple[RuntimeProperty, ...] | None = None,
     ) -> None:
         self.name = name
         self.record_shape = record_shape
@@ -267,6 +267,8 @@ class RuntimeCollection:
         self.record_shape.validate_record(record)
         if self.identity is None:
             return None
+        if isinstance(self.identity, tuple):
+            return tuple(prop.value_from(record) for prop in self.identity)
         return self.identity.value_from(record)
 
     def fact_keys(self, record: object) -> tuple[tuple[RuntimeProperty, object], ...]:
@@ -299,7 +301,7 @@ class RuntimeComputedCollection:
         self._system: RuntimeContainerSpec | None = None
 
     @property
-    def identity(self) -> RuntimeProperty | None:
+    def identity(self) -> RuntimeProperty | tuple[RuntimeProperty, ...] | None:
         return self.source.identity
 
     @property

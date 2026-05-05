@@ -204,21 +204,21 @@ class DataDefinitionSystem:
         record: RecordSpec | UnionSpec,
         *,
         cardinality: CollectionCardinality,
-        identity: PropertySpec | None = None,
+        identity: IdentitySpec | None = None,
     ) -> CollectionSpec:
         _require_name(name, "collection name")
         if name in self._collections or name in self._computed_collections:
             raise ValueError(f"collection {name!r} is already defined")
         if record.system is not self:
             raise ValueError("collection record shape belongs to another data-definition system")
-        if identity is not None:
-            record.require_identity_property(identity)
+        resolved_identity = _normalize_identity(identity)
+        _require_identity_properties(record, resolved_identity)
         spec = CollectionSpec(
             system=self,
             name=name,
             record=record,
             cardinality=cardinality,
-            identity=identity,
+            identity=resolved_identity,
         )
         self._collections[name] = spec
         return spec
@@ -229,19 +229,20 @@ class DataDefinitionSystem:
         record: RecordSpec | UnionSpec,
         *,
         cardinality: CollectionCardinality,
-        identity: PropertySpec | None = None,
+        identity: IdentitySpec | None = None,
     ) -> CollectionSpec:
         existing = self._collections.get(name)
+        resolved_identity = _normalize_identity(identity)
         if existing is None:
             return self.collection(
                 name,
                 record,
                 cardinality=cardinality,
-                identity=identity,
+                identity=resolved_identity,
             )
         if (
             existing.record_shape is not record
-            or existing.identity is not identity
+            or not _identities_equal(existing.identity, resolved_identity)
             or existing.cardinality.allows_multiple()
             != cardinality.allows_multiple()
         ):
@@ -531,6 +532,9 @@ class PropertySpec:
         return self.name
 
 
+IdentitySpec = PropertySpec | tuple[PropertySpec, ...]
+
+
 class RecordSpec:
     """Schema for one generated record class."""
 
@@ -765,7 +769,7 @@ class CollectionSpec:
         name: str,
         record: RecordSpec | UnionSpec,
         cardinality: CollectionCardinality,
-        identity: PropertySpec | None,
+        identity: IdentitySpec | None,
     ) -> None:
         self.system = system
         self.name = name
@@ -794,9 +798,7 @@ class CollectionSpec:
 
     def identity_of(self, record: object) -> object:
         self._record_shape.validate_record(record)
-        if self.identity is None:
-            return None
-        return self.identity.value_from(record)
+        return _identity_value(self.identity, record)
 
     def lookup_key(self, prop: PropertySpec, value: object) -> LookupKey:
         self._record_shape.require_property(prop)
@@ -841,7 +843,7 @@ class ComputedCollectionSpec:
         return self.source.record_shape
 
     @property
-    def identity(self) -> PropertySpec | None:
+    def identity(self) -> IdentitySpec | None:
         return self.source.identity
 
     def identity_of(self, record: object) -> object:
@@ -933,7 +935,8 @@ class ValueExpression:
 
     __slots__ = ()
 
-    def evaluate(self, source: object) -> object:
+    def evaluate(self, source: object, *, container: object | None = None) -> object:
+        del container
         raise NotImplementedError
 
 
@@ -943,8 +946,9 @@ class LiteralValue(ValueExpression):
     def __init__(self, value: object) -> None:
         self.value = value
 
-    def evaluate(self, source: object) -> object:
+    def evaluate(self, source: object, *, container: object | None = None) -> object:
         del source
+        del container
         return self.value
 
 
@@ -954,7 +958,8 @@ class ReadProperty(ValueExpression):
     def __init__(self, property: PropertySpec) -> None:
         self.property = property
 
-    def evaluate(self, source: object) -> object:
+    def evaluate(self, source: object, *, container: object | None = None) -> object:
+        del container
         return self.property.value_from(source)
 
 
@@ -972,7 +977,8 @@ class ComputedValue(ValueExpression):
         self.name = name
         self.func = func
 
-    def evaluate(self, source: object) -> object:
+    def evaluate(self, source: object, *, container: object | None = None) -> object:
+        del container
         return self.func(source)
 
     def __repr__(self) -> str:
@@ -984,7 +990,8 @@ class MatchResource(ValueExpression):
 
     __slots__ = ()
 
-    def evaluate(self, source: object) -> object:
+    def evaluate(self, source: object, *, container: object | None = None) -> object:
+        del container
         return source.resource
 
 
@@ -998,7 +1005,8 @@ class MatchTupleValue(ValueExpression):
             raise ValueError("matcher tuple value index must be non-negative")
         self.index = index
 
-    def evaluate(self, source: object) -> object:
+    def evaluate(self, source: object, *, container: object | None = None) -> object:
+        del container
         return source.values[self.index]
 
 
@@ -1026,10 +1034,50 @@ class MatchRecordProperty(ValueExpression):
             input_index=input_index,
         )
 
-    def evaluate(self, source: object) -> object:
+    def evaluate(self, source: object, *, container: object | None = None) -> object:
+        del container
         if self.input_index is None:
             raise RuntimeError("matcher record expression is not bound to an input")
         return self.property.value_from(source.records[self.input_index])
+
+
+_NO_LOOKUP_DEFAULT = object()
+
+
+class LookupValue(ValueExpression):
+    """Property read through another collection's identity index."""
+
+    __slots__ = ("collection", "default", "key", "value")
+
+    def __init__(
+        self,
+        collection: CollectionSpec | ComputedCollectionSpec,
+        *,
+        key: ValueExpression | tuple[ValueExpression, ...],
+        value: PropertySpec,
+        default: ValueExpression | object = _NO_LOOKUP_DEFAULT,
+    ) -> None:
+        self.collection = collection
+        self.key = key
+        self.value = value
+        self.default = (
+            default
+            if default is _NO_LOOKUP_DEFAULT or isinstance(default, ValueExpression)
+            else LiteralValue(default)
+        )
+
+    def evaluate(self, source: object, *, container: object | None = None) -> object:
+        if container is None:
+            raise RuntimeError("lookup value evaluation requires a container")
+        key = _evaluate_lookup_key(self.key, source, container=container)
+        record = container.by_identity(self.collection, key)
+        if record is None:
+            if self.default is _NO_LOOKUP_DEFAULT:
+                raise ValueError(
+                    f"no {self.collection.name} record for identity {key!r}"
+                )
+            return self.default.evaluate(source, container=container)
+        return self.value.value_from(record)
 
 
 class _MatchRecordAccessor:
@@ -1065,6 +1113,26 @@ def literal(value: object) -> LiteralValue:
 
 def read(prop: PropertySpec) -> ReadProperty:
     return ReadProperty(prop)
+
+
+def lookup(
+    collection: CollectionSpec | ComputedCollectionSpec,
+    *,
+    key: ValueExpression | object | tuple[ValueExpression | object, ...],
+    value: PropertySpec,
+    default: ValueExpression | object = _NO_LOOKUP_DEFAULT,
+) -> LookupValue:
+    resolved_default = (
+        _NO_LOOKUP_DEFAULT
+        if default is _NO_LOOKUP_DEFAULT
+        else _coerce_value_expression(default)
+    )
+    return LookupValue(
+        collection,
+        key=_coerce_lookup_key_expression(key),
+        value=value,
+        default=resolved_default,
+    )
 
 
 def call(name: str, func: Callable[[object], object]) -> ComputedValue:
@@ -1177,12 +1245,12 @@ class ProductionSpec:
         self.source.record_shape.validate_record(source)
         return all(condition.matches(source) for condition in self.conditions)
 
-    def make_record(self, source: object) -> object | None:
+    def make_record(self, source: object, *, container: object | None = None) -> object | None:
         if not self.matches(source):
             return None
         values = {
             item.property.storage_name: item.property.validate(
-                item.expression.evaluate(source)
+                item.expression.evaluate(source, container=container)
             )
             for item in self.values
         }
@@ -1618,10 +1686,93 @@ def _conditions_equal(
     )
 
 
+def _normalize_identity(identity: IdentitySpec | None) -> IdentitySpec | None:
+    if identity is None:
+        return None
+    if isinstance(identity, PropertySpec):
+        return identity
+    properties = tuple(identity)
+    if not properties:
+        raise ValueError("composite identity must include at least one property")
+    for prop in properties:
+        if not isinstance(prop, PropertySpec):
+            raise TypeError(
+                f"identity entries must be PropertySpec, got {type(prop).__name__}"
+            )
+    if len({id(prop) for prop in properties}) != len(properties):
+        raise ValueError("composite identity cannot repeat a property")
+    return properties
+
+
+def _require_identity_properties(
+    record: RecordSpec | UnionSpec,
+    identity: IdentitySpec | None,
+) -> None:
+    if identity is None:
+        return
+    if isinstance(identity, tuple):
+        for prop in identity:
+            record.require_identity_property(prop)
+        return
+    record.require_identity_property(identity)
+
+
+def _identities_equal(left: IdentitySpec | None, right: IdentitySpec | None) -> bool:
+    if isinstance(left, tuple) or isinstance(right, tuple):
+        return left == right
+    return left is right
+
+
+def _identity_value(identity: IdentitySpec | None, record: object) -> object:
+    if identity is None:
+        return None
+    if isinstance(identity, tuple):
+        return tuple(prop.value_from(record) for prop in identity)
+    return identity.value_from(record)
+
+
+def _coerce_lookup_key_expression(
+    key: ValueExpression | object | tuple[ValueExpression | object, ...],
+) -> ValueExpression | tuple[ValueExpression, ...]:
+    if isinstance(key, tuple):
+        return tuple(_coerce_value_expression(item) for item in key)
+    return _coerce_value_expression(key)
+
+
+def _evaluate_lookup_key(
+    key: ValueExpression | tuple[ValueExpression, ...],
+    source: object,
+    *,
+    container: object,
+) -> object:
+    if isinstance(key, tuple):
+        return tuple(item.evaluate(source, container=container) for item in key)
+    return key.evaluate(source, container=container)
+
+
+def _validate_lookup_key_matches_identity(
+    identity: IdentitySpec,
+    key: ValueExpression | tuple[ValueExpression, ...],
+) -> None:
+    if isinstance(identity, tuple):
+        if not isinstance(key, tuple):
+            raise ValueError("composite identity lookup requires a tuple key")
+        if len(key) != len(identity):
+            raise ValueError(
+                f"composite identity lookup requires {len(identity)} key values, "
+                f"got {len(key)}"
+            )
+        return
+    if isinstance(key, tuple):
+        raise ValueError("single-property identity lookup requires a scalar key")
+
+
 def _resolve_production_value_expression(
     source: CollectionSpec | ComputedCollectionSpec | MatcherResultSource,
     expression: ValueExpression,
 ) -> ValueExpression:
+    if isinstance(expression, LookupValue):
+        return _resolve_lookup_value_expression(source, expression)
     if isinstance(source, MatcherResultSource):
         return _resolve_matcher_result_expression(source, expression)
     if isinstance(expression, _MATCH_EXPRESSIONS):
@@ -1629,6 +1780,39 @@ def _resolve_production_value_expression(
     if isinstance(expression, ReadProperty):
         source.record_shape.require_property(expression.property)
     return expression
+
+
+def _resolve_lookup_value_expression(
+    source: CollectionSpec | ComputedCollectionSpec | MatcherResultSource,
+    expression: LookupValue,
+) -> LookupValue:
+    if expression.collection.system is not source.system:
+        raise ValueError("lookup collection must belong to the same data-definition system")
+    if expression.collection.identity is None:
+        raise ValueError(f"lookup collection {expression.collection.name!r} has no identity")
+    expression.collection.record_shape.require_property(expression.value)
+    _validate_lookup_key_matches_identity(expression.collection.identity, expression.key)
+    resolved_key = _resolve_lookup_key_expression(source, expression.key)
+    resolved_default = (
+        _NO_LOOKUP_DEFAULT
+        if expression.default is _NO_LOOKUP_DEFAULT
+        else _resolve_production_value_expression(source, expression.default)
+    )
+    return LookupValue(
+        expression.collection,
+        key=resolved_key,
+        value=expression.value,
+        default=resolved_default,
+    )
+
+
+def _resolve_lookup_key_expression(
+    source: CollectionSpec | ComputedCollectionSpec | MatcherResultSource,
+    key: ValueExpression | tuple[ValueExpression, ...],
+) -> ValueExpression | tuple[ValueExpression, ...]:
+    if isinstance(key, tuple):
+        return tuple(_resolve_lookup_key_expression(source, item) for item in key)
+    return _resolve_production_value_expression(source, key)
 
 
 def _resolve_matcher_result_expression(
@@ -1710,7 +1894,9 @@ __all__ = [
     "ComputedCollectionSpec",
     "ComputedValue",
     "DataDefinitionSystem",
+    "IdentitySpec",
     "LookupKey",
+    "LookupValue",
     "MatchRecordProperty",
     "MatchResource",
     "MatchTupleValue",
@@ -1735,6 +1921,7 @@ __all__ = [
     "dds_property",
     "dds_record_spec",
     "literal",
+    "lookup",
     "match",
     "read",
 ]

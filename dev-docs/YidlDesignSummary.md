@@ -911,9 +911,10 @@ resolved-data layer, not the whole capsule/codegen engine.
    through concrete variants.
 5. `CollectionSpec` defines a concrete stored collection. Cardinality is an
    object behavior (`single` or `many`), not an enum. Collections may declare
-   an identity property. Ordinary insertion uses strict duplicate rejection;
-   explicit `builder.write(..., policy=...)` supports add-if-absent and
-   replacement where the collection has an identity.
+   one identity property or a tuple of identity properties. Ordinary insertion
+   uses strict duplicate rejection; explicit `builder.write(..., policy=...)`
+   supports add-if-absent and replacement where the collection has an
+   identity.
 6. `ComputedCollectionSpec` is a named filtered view over another collection or
    computed collection. It returns existing source records and is not stored as
    its own record set.
@@ -938,8 +939,9 @@ resolved-data layer, not the whole capsule/codegen engine.
 11. `TransformSpec` remains a compatibility/in-memory helper. The emitted
     production runner is `ProductionSpec` / `ProductionGroupSpec`; it reads
     collection, computed-collection, or matcher-result sources, builds target
-    records through source-emittable value expressions, and writes with
-    explicit policy.
+    records through source-emittable value expressions, supports keyed
+    `lookup(...)` reads against collection identities, and writes with explicit
+    policy.
 12. `MatcherSpec` defines Eq-only rule matchers over concrete/computed
     collection views. Match tuples are fixed positional tuples, not dicts.
     Rules run in descending score order; equal-score overlapping rules reject

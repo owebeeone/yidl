@@ -60,6 +60,28 @@ def test_write_reject_duplicate_matches_add_semantics() -> None:
     assert builder.records(items) == (first,)
 
 
+def test_write_rejects_duplicate_composite_identity() -> None:
+    dds = DataDefinitionSystem()
+    kind = dds.property("Kind", str, default=REQUIRED, storage_name="kind")
+    name = dds.property("Name", str, default=REQUIRED, storage_name="name")
+    value = dds.property("Value", int, default=REQUIRED, storage_name="value")
+    item = dds.record("Item", kind, name, value)
+    items = dds.collection(
+        "Items",
+        item,
+        cardinality=dds.many,
+        identity=(kind, name),
+    )
+    first = items.record(kind="field", name="count", value=1)
+    duplicate = items.record(kind="field", name="count", value=2)
+    builder = dds.container_builder()
+
+    builder.write(items, first, policy=RejectDuplicate)
+
+    with pytest.raises(ValueError, match=r"duplicate identity \('field', 'count'\)"):
+        builder.write(items, duplicate, policy=RejectDuplicate)
+
+
 def test_write_policies_on_unkeyed_collection() -> None:
     dds, _, log_items = _items_shape()
     first = log_items.record(name="first", value=1)
@@ -85,4 +107,3 @@ def test_write_after_freeze_rejects() -> None:
 
     with pytest.raises(RuntimeError, match="frozen"):
         builder.write(items, item)
-
