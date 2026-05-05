@@ -103,3 +103,34 @@ def test_container_builder_enforces_cardinality_identity_and_record_shape() -> N
         builder.add(items, items.record(name="label", value=3))
 
     assert tuple(container.Items.sequence()) == (first,)
+
+
+def test_ordered_records_sort_by_properties_and_write_order() -> None:
+    dds = DataDefinitionSystem()
+    name = dds.property("Name", str, default=REQUIRED, storage_name="name")
+    layer = dds.property("Layer", int, default=0, storage_name="layer")
+    order = dds.property("Order", int, default=0, storage_name="order")
+    missing = dds.property("Missing", int, default=0, storage_name="missing")
+    item_spec = dds.record("Item", name, layer, order)
+    items = dds.collection("Items", item_spec, cardinality=dds.many, identity=name)
+    builder = dds.container_builder()
+    first_tie = items.record(name="first-tie", layer=1, order=1)
+    second_tie = items.record(name="second-tie", layer=1, order=1)
+    earlier = items.record(name="earlier", layer=0, order=3)
+    later = items.record(name="later", layer=2, order=0)
+
+    builder.add(items, first_tie)
+    builder.add(items, later)
+    builder.add(items, second_tie)
+    builder.add(items, earlier)
+
+    ordered = items.ordered(layer, order)
+
+    assert [record.name for record in builder.ordered_records(ordered)] == [
+        "earlier",
+        "first-tie",
+        "second-tie",
+        "later",
+    ]
+    with pytest.raises(ValueError, match="has no property 'Missing'"):
+        items.ordered(missing)

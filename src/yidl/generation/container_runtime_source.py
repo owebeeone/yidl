@@ -19,6 +19,7 @@ from yidl.generation.data_schema import MatchRecordProperty
 from yidl.generation.data_schema import MatcherResultSource
 from yidl.generation.data_schema import MatchResource
 from yidl.generation.data_schema import MatchTupleValue
+from yidl.generation.data_schema import OrderedCollectionSource
 from yidl.generation.data_schema import PortAddress
 from yidl.generation.data_schema import PropertySpec
 from yidl.generation.data_schema import REQUIRED
@@ -172,6 +173,7 @@ def emit_container_runtime_source(
             _emit_production_lines(
                 production,
                 collection_vars=collection_vars,
+                prop_vars=prop_vars,
                 port_vars=port_vars,
                 evaluator_names=evaluator_names,
                 value_names=value_names,
@@ -352,6 +354,7 @@ def _emit_production_lines(
     production: ProductionSpec,
     *,
     collection_vars: Mapping[CollectionSpec | ComputedCollectionSpec, str],
+    prop_vars: Mapping[PropertySpec, str],
     port_vars: Mapping[object, str],
     evaluator_names: SourceNameMap,
     value_names: SourceNameMap,
@@ -363,6 +366,13 @@ def _emit_production_lines(
             f"def {_production_func_name(production)}(builder):",
             "    snapshot = builder._snapshot()",
             f"    for source in snapshot.matchers.{production.source.matcher.name}.sequence():",
+        ]
+    elif isinstance(production.source, OrderedCollectionSource):
+        source_var = collection_vars[production.source.source]
+        order_vars = ", ".join(prop_vars[prop] for prop in production.source.order_by)
+        lines = [
+            f"def {_production_func_name(production)}(builder):",
+            f"    for source in builder.ordered_records({source_var}, {order_vars}):",
         ]
     else:
         source_var = collection_vars[production.source]

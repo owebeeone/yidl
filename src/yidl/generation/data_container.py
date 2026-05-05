@@ -8,9 +8,11 @@ from collections.abc import Iterable, Iterator
 from yidl.generation.data_schema import CollectionSpec
 from yidl.generation.data_schema import ComputedCollectionSpec
 from yidl.generation.data_schema import DataDefinitionSystem
+from yidl.generation.data_schema import OrderedCollectionSource
 from yidl.generation.data_schema import PortAddress
 from yidl.generation.data_schema import PortIndexSpec
 from yidl.generation.data_schema import PropertyEquals
+from yidl.generation.data_schema import PropertySpec
 from yidl.generation.matcher import NOT_PROVIDED
 
 
@@ -408,6 +410,8 @@ class RuntimeContainerSpec:
 ConcreteCollectionSpec = CollectionSpec | RuntimeCollection
 ComputedCollectionViewSpec = ComputedCollectionSpec | RuntimeComputedCollection
 CollectionViewSpec = ConcreteCollectionSpec | ComputedCollectionViewSpec
+OrderPropertySpec = PropertySpec | RuntimeProperty
+OrderedSourceSpec = OrderedCollectionSource | CollectionViewSpec
 
 
 class DDSContainerBuilder:
@@ -522,6 +526,18 @@ class DDSContainerBuilder:
 
     def by_identity(self, collection: CollectionViewSpec, value: object) -> object | None:
         return _CollectionView(self._frozen_container(), collection).by_identity(value)
+
+    def ordered_records(
+        self,
+        source: OrderedSourceSpec,
+        *order_by: OrderPropertySpec,
+    ) -> tuple[object, ...]:
+        collection, properties = _resolve_ordered_source(source, order_by)
+        return _ordered_records(
+            self.records(collection),
+            properties,
+            self._write_orders,
+        )
 
     def children_at(self, port_address: PortAddress | RuntimePortAddress) -> tuple[object, ...]:
         return self._frozen_container().children_at(port_address)
@@ -655,6 +671,18 @@ class DDSContainer:
 
     def by_identity(self, collection: CollectionViewSpec, value: object) -> object | None:
         return self.view(collection).by_identity(value)
+
+    def ordered_records(
+        self,
+        source: OrderedSourceSpec,
+        *order_by: OrderPropertySpec,
+    ) -> tuple[object, ...]:
+        collection, properties = _resolve_ordered_source(source, order_by)
+        return _ordered_records(
+            self.records(collection),
+            properties,
+            self._write_orders,
+        )
 
     def children_at(self, port_address: PortAddress | RuntimePortAddress) -> tuple[object, ...]:
         if not _is_port_address(port_address):
@@ -817,6 +845,35 @@ def _is_port_address(value: object) -> bool:
     return isinstance(value, (PortAddress, RuntimePortAddress))
 
 
+def _resolve_ordered_source(
+    source: OrderedSourceSpec,
+    order_by: tuple[OrderPropertySpec, ...],
+) -> tuple[CollectionViewSpec, tuple[OrderPropertySpec, ...]]:
+    if isinstance(source, OrderedCollectionSource):
+        if order_by:
+            raise ValueError("ordered source already declares order properties")
+        return source.source, source.order_by
+    if not order_by:
+        raise ValueError("ordered_records requires at least one order property")
+    return source, order_by
+
+
+def _ordered_records(
+    records: tuple[object, ...],
+    properties: tuple[OrderPropertySpec, ...],
+    write_orders: dict[int, int],
+) -> tuple[object, ...]:
+    return tuple(
+        sorted(
+            records,
+            key=lambda record: (
+                *(prop.value_from(record) for prop in properties),
+                write_orders.get(id(record), 0),
+            ),
+        )
+    )
+
+
 def _system_port_index(
     system: DataDefinitionSystem | RuntimeContainerSpec,
 ) -> PortIndexSpec | RuntimePortIndex | None:
@@ -836,6 +893,7 @@ __all__ = [
     "CollectionViewSpec",
     "DDSContainer",
     "DDSContainerBuilder",
+    "OrderedSourceSpec",
     "RejectDuplicate",
     "ReplaceExisting",
     "RuntimeCollection",

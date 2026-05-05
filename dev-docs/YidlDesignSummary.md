@@ -925,7 +925,8 @@ resolved-data layer, not the whole capsule/codegen engine.
 8. `DDSContainerBuilder` is the mutable decoration-time holder. It accepts
    records for concrete collections, enforces cardinality, identity, and
    port-index constraints, supports explicit write policies, and freezes to
-   a `DDSContainer`.
+   a `DDSContainer`. Ordered source reads use `ordered_records(...)`, sorting
+   by declared properties and then collection write order.
 9. `DDSContainer` is the immutable resolved-data object. It exposes named
    collection views with `sequence()`, `one()`, `by_identity(...)`, and
    `contains(...)`, plus `children_at(port_address)` for ordered port
@@ -940,8 +941,9 @@ resolved-data layer, not the whole capsule/codegen engine.
     production runner is `ProductionSpec` / `ProductionGroupSpec`; it reads
     collection, computed-collection, or matcher-result sources, builds target
     records through source-emittable value expressions, supports keyed
-    `lookup(...)` reads against collection identities, and writes with explicit
-    policy.
+    `lookup(...)` reads against collection identities, supports ordered
+    production sources through `collection.ordered(...)`, and writes with
+    explicit policy.
 12. `MatcherSpec` defines Eq-only rule matchers over concrete/computed
     collection views. Match tuples are fixed positional tuples, not dicts.
     Rules run in descending score order; equal-score overlapping rules reject

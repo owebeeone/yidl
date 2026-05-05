@@ -350,7 +350,7 @@ class DataDefinitionSystem:
         self,
         name: str,
         *,
-        source: CollectionSpec | ComputedCollectionSpec | MatcherResultSource,
+        source: ProductionSourceSpec,
         target: CollectionSpec,
         when: Sequence[PropertyEquals] = (),
         identity: ValueExpression | object | None = None,
@@ -812,6 +812,9 @@ class CollectionSpec:
             for prop in record_spec.properties
         )
 
+    def ordered(self, *properties: PropertySpec) -> OrderedCollectionSource:
+        return OrderedCollectionSource(self, properties)
+
     def __repr__(self) -> str:
         return self.name
 
@@ -861,6 +864,54 @@ class ComputedCollectionSpec:
         self.record_shape.validate_record(record)
         return all(condition.matches(record) for condition in self.conditions)
 
+    def ordered(self, *properties: PropertySpec) -> OrderedCollectionSource:
+        return OrderedCollectionSource(self, properties)
+
+    def __repr__(self) -> str:
+        return self.name
+
+
+class OrderedCollectionSource:
+    """Production source with stable property ordering and write-order ties."""
+
+    __slots__ = ("name", "order_by", "source", "system")
+
+    def __init__(
+        self,
+        source: CollectionSpec | ComputedCollectionSpec,
+        order_by: Sequence[PropertySpec],
+    ) -> None:
+        if not order_by:
+            raise ValueError("ordered source requires at least one order property")
+        for prop in order_by:
+            source.record_shape.require_property(prop)
+        self.source = source
+        self.order_by = tuple(order_by)
+        self.system = source.system
+        names = ", ".join(prop.name for prop in self.order_by)
+        self.name = f"{source.name}.ordered({names})"
+
+    @property
+    def record_spec(self) -> RecordSpec | UnionSpec:
+        return self.source.record_spec
+
+    @property
+    def record_shape(self) -> RecordSpec | UnionSpec:
+        return self.source.record_shape
+
+    @property
+    def identity(self) -> IdentitySpec | None:
+        return self.source.identity
+
+    def identity_of(self, record: object) -> object:
+        return self.source.identity_of(record)
+
+    def lookup_key(self, prop: PropertySpec, value: object) -> LookupKey:
+        return self.source.lookup_key(prop, value)
+
+    def fact_keys(self, record: object) -> tuple[LookupKey, ...]:
+        return self.source.fact_keys(record)
+
     def __repr__(self) -> str:
         return self.name
 
@@ -877,6 +928,14 @@ class MatcherResultSource:
 
     def __repr__(self) -> str:
         return self.name
+
+
+ProductionSourceSpec = (
+    CollectionSpec
+    | ComputedCollectionSpec
+    | OrderedCollectionSource
+    | MatcherResultSource
+)
 
 
 class LookupKey:
@@ -1223,7 +1282,7 @@ class ProductionSpec:
         *,
         system: DataDefinitionSystem,
         name: str,
-        source: CollectionSpec | ComputedCollectionSpec | MatcherResultSource,
+        source: ProductionSourceSpec,
         target: CollectionSpec,
         conditions: tuple[PropertyEquals, ...],
         identity: ValueExpression | None,
@@ -1768,7 +1827,7 @@ def _validate_lookup_key_matches_identity(
 
 
 def _resolve_production_value_expression(
-    source: CollectionSpec | ComputedCollectionSpec | MatcherResultSource,
+    source: ProductionSourceSpec,
     expression: ValueExpression,
 ) -> ValueExpression:
     if isinstance(expression, LookupValue):
@@ -1783,7 +1842,7 @@ def _resolve_production_value_expression(
 
 
 def _resolve_lookup_value_expression(
-    source: CollectionSpec | ComputedCollectionSpec | MatcherResultSource,
+    source: ProductionSourceSpec,
     expression: LookupValue,
 ) -> LookupValue:
     if expression.collection.system is not source.system:
@@ -1807,7 +1866,7 @@ def _resolve_lookup_value_expression(
 
 
 def _resolve_lookup_key_expression(
-    source: CollectionSpec | ComputedCollectionSpec | MatcherResultSource,
+    source: ProductionSourceSpec,
     key: ValueExpression | tuple[ValueExpression, ...],
 ) -> ValueExpression | tuple[ValueExpression, ...]:
     if isinstance(key, tuple):
@@ -1902,11 +1961,13 @@ __all__ = [
     "MatchTupleValue",
     "MatcherResultSource",
     "ManyCollectionCardinality",
+    "OrderedCollectionSource",
     "PortAddress",
     "PortIndexSpec",
     "PortSpec",
     "ProductionGroupSpec",
     "ProductionSpec",
+    "ProductionSourceSpec",
     "ProductionValue",
     "PropertyEquals",
     "PropertySpec",
