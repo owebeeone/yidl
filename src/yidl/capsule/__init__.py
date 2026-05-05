@@ -72,10 +72,12 @@ from .recorded_builder import (
     CapsuleConceptPlan,
     CollectionHandle,
     ComputedCollectionHandle,
+    MatcherHandle,
     PortHandle,
     PropertyHandle,
     RecordHandle,
     capsule_concept,
+    match,
 )
 from .init_only_capsule import (
     InitOnlyCapsule,
@@ -136,6 +138,7 @@ __all__ = [
     "InitOnlyFieldSpec",
     "MANAGED_FIELD",
     "MANAGED_PROPERTY",
+    "MatcherHandle",
     "PLAIN_FIELD",
     "PLAIN_PROPERTY",
     "PortHandle",
@@ -182,6 +185,7 @@ __all__ = [
     "extend_field_input_record",
     "frozen_prop",
     "init_class_build_plan",
+    "match",
     "property_class_body_edge_plan",
     "property_order_for",
     "register_property_template",

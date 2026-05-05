@@ -1,11 +1,16 @@
 from __future__ import annotations
 
+import ast
+
 import pytest
 
 from yidl.capsule.recorded_builder import CapsuleConceptBuilder
 from yidl.capsule.recorded_builder import capsule_concept
+from yidl.capsule.recorded_builder import match
+from yidl.generation.data_def_sys import AddIfAbsent
 from yidl.generation.data_def_sys import DataDefinitionSystem
 from yidl.generation.data_def_sys import REQUIRED
+from yidl.generation.data_def_sys import from_literal
 
 
 def test_recorded_concept_plan_replays_property_definitions() -> None:
@@ -217,3 +222,113 @@ def test_unknown_dependency_reference_rejects() -> None:
 
     with pytest.raises(ValueError, match="not in the dependency closure"):
         child.use(other_plan)
+
+
+def test_recorded_matcher_production_replays_to_generated_runtime() -> None:
+    builder = capsule_concept("property")
+    name = builder.props.Name(str, REQUIRED)
+    kind = builder.props.Kind(str, "plain")
+    template = builder.props.Template(object, REQUIRED)
+    field_input = builder.records.FieldInput(name, kind)
+    fields = builder.collections.Fields(
+        field_input,
+        cardinality=builder.many,
+        identity=name,
+    )
+    component = builder.records.Component(name, template)
+    components = builder.collections.Components(
+        component,
+        cardinality=builder.many,
+        identity=name,
+    )
+
+    property_template = builder.matchers.PropertyTemplate()
+    field = property_template.input.field(fields)
+    property_template.default(from_literal("plain-property"))
+    property_template.rule.managed(
+        when=(field.prop(kind).eq("managed"),),
+        resource=from_literal("managed-property"),
+    )
+    builder.productions.Property(
+        source=property_template.results(),
+        target=components,
+        values={
+            name: match.record("field").prop(name),
+            template: match.resource(),
+        },
+        policy=AddIfAbsent,
+    ).in_group("Properties")
+
+    dds = DataDefinitionSystem()
+    builder.build().apply(dds)
+    source = dds.emit_container_runtime_source()
+    namespace: dict[str, object] = {}
+    exec(compile(source, "<recorded-property-runtime>", "exec"), namespace)
+
+    runtime_builder = namespace["new_builder"]()
+    field_class = namespace["FieldInput"]
+    fields_collection = namespace["FieldsCollection"]
+    runtime_builder.add(
+        fields_collection,
+        field_class(name="count", kind="plain"),
+    )
+    runtime_builder.add(
+        fields_collection,
+        field_class(name="owner", kind="managed"),
+    )
+    container = namespace["build_container"](runtime_builder)
+
+    components_collection = namespace["ComponentsCollection"]
+    rendered = [
+        (
+            record.name,
+            ast.literal_eval(
+                record.template.to_generator()
+                .materialize()
+                .emit(provenance=False)
+                .strip()
+            ),
+        )
+        for record in container.Components.sequence()
+    ]
+    assert components_collection.name == "Components"
+    assert rendered == [
+        ("count", "plain-property"),
+        ("owner", "managed-property"),
+    ]
+
+
+def test_child_concept_adds_rule_to_dependency_owned_matcher() -> None:
+    parent = capsule_concept("property")
+    name = parent.props.Name(str, REQUIRED)
+    kind = parent.props.Kind(str, "plain")
+    field_input = parent.records.FieldInput(name, kind)
+    fields = parent.collections.Fields(
+        field_input,
+        cardinality=parent.many,
+        identity=name,
+    )
+    parent_template = parent.matchers.PropertyTemplate()
+    parent_field = parent_template.input.field(fields)
+    assert parent_field.name == "field"
+    parent_template.default(from_literal("plain-property"))
+    parent_plan = parent.build()
+
+    child = capsule_concept("frozen", requires=(parent_plan,))
+    parent_ref = child.use(parent_plan)
+    frozen = child.props.Frozen(bool)
+    child.extend_record(parent_ref.records.FieldInput, frozen)
+    child_template = child.use_matcher(parent_ref.matchers.PropertyTemplate)
+    child_field = child_template.input.field(parent_ref.collections.Fields)
+    child_template.rule.readonly(
+        when=(child_field.prop(frozen).eq(True),),
+        resource=from_literal("readonly-property"),
+    )
+
+    dds = DataDefinitionSystem()
+    child.build().apply(dds)
+    matcher = dds.matchers[0]
+
+    assert matcher.name == "PropertyTemplate"
+    assert [input_spec.name for input_spec in matcher.inputs] == ["field"]
+    assert matcher.rules[0].name == "readonly"

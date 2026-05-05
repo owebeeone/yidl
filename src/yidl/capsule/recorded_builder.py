@@ -21,11 +21,18 @@ from yidl.generation.data_def_sys import CollectionCardinality
 from yidl.generation.data_def_sys import CollectionSpec
 from yidl.generation.data_def_sys import ComputedCollectionSpec
 from yidl.generation.data_def_sys import DataDefinitionSystem
+from yidl.generation.data_def_sys import MatcherCondition
+from yidl.generation.data_def_sys import MatcherGeneratedValue
+from yidl.generation.data_def_sys import MatcherInputSpec
+from yidl.generation.data_def_sys import MatcherResultSource
+from yidl.generation.data_def_sys import MatcherSpec
 from yidl.generation.data_def_sys import PortSpec
 from yidl.generation.data_def_sys import PropertyEquals
 from yidl.generation.data_def_sys import PropertySpec
 from yidl.generation.data_def_sys import REQUIRED
 from yidl.generation.data_def_sys import RecordSpec
+from yidl.generation.data_def_sys import match as dds_match
+from yidl.generation.data_schema import ValueExpression
 
 
 ValueTypeSpec = type[object] | tuple[type[object], ...]
@@ -36,6 +43,7 @@ NamedHandle = TypeVar(
     "RecordHandle",
     "CollectionHandle",
     "ComputedCollectionHandle",
+    "MatcherHandle",
 )
 
 
@@ -161,6 +169,17 @@ class PortHandle:
     cardinality: RecordedCollectionCardinality
     sequence: int
 
+    def of(self, owner_identity: object) -> RecordedPortAddress:
+        return RecordedPortAddress(self, owner_identity)
+
+
+@dataclass(frozen=True, slots=True)
+class RecordedPortAddress:
+    """Symbolic owner-scoped port address."""
+
+    port: PortHandle
+    owner_identity: object
+
 
 @dataclass(frozen=True, slots=True)
 class PortIndexOperation:
@@ -168,6 +187,144 @@ class PortIndexOperation:
 
     target: PropertyHandle
     order: PropertyHandle
+
+
+@dataclass(frozen=True, slots=True)
+class MatcherHandle:
+    """Symbolic handle for a matcher defined by a concept plan."""
+
+    owner_id: int
+    owner_name: str
+    name: str
+    sequence: int
+
+
+@dataclass(frozen=True, slots=True)
+class MatcherInputHandle:
+    """Symbolic handle for one matcher input."""
+
+    owner_id: int
+    owner_name: str
+    matcher: MatcherHandle
+    name: str
+    source: CollectionHandle | ComputedCollectionHandle
+    sequence: int
+
+    def prop(self, property: PropertyHandle) -> MatcherScopedPropertyHandle:
+        if not isinstance(property, PropertyHandle):
+            raise TypeError("matcher input properties must be PropertyHandle")
+        return MatcherScopedPropertyHandle(self, property)
+
+
+@dataclass(frozen=True, slots=True)
+class MatcherScopedPropertyHandle:
+    """Symbolic matcher-input property reference."""
+
+    input: MatcherInputHandle
+    property: PropertyHandle
+
+    def eq(self, value: object) -> MatcherConditionHandle:
+        _validate_property_value(self.property, value)
+        return MatcherConditionHandle(self, value)
+
+
+@dataclass(frozen=True, slots=True)
+class MatcherConditionHandle:
+    """Symbolic matcher rule condition."""
+
+    ref: MatcherScopedPropertyHandle
+    value: object
+
+
+@dataclass(frozen=True, slots=True)
+class MatcherDefaultOperation:
+    """Recorded matcher default resource."""
+
+    matcher: MatcherHandle
+    resource: MatcherGeneratedValue
+    sequence: int
+
+
+@dataclass(frozen=True, slots=True)
+class MatcherRuleOperation:
+    """Recorded matcher rule."""
+
+    matcher: MatcherHandle
+    name: str
+    conditions: tuple[MatcherConditionHandle, ...]
+    resource: MatcherGeneratedValue
+    weight: float
+    sequence: int
+
+
+@dataclass(frozen=True, slots=True)
+class MatcherResultSourceHandle:
+    """Symbolic source over matcher results."""
+
+    matcher: MatcherHandle
+
+
+@dataclass(frozen=True, slots=True)
+class RecordedMatchResource:
+    """Symbolic value expression for a matcher-selected resource."""
+
+
+@dataclass(frozen=True, slots=True)
+class RecordedMatchTupleValue:
+    """Symbolic value expression for one matcher tuple value."""
+
+    index: int
+
+
+@dataclass(frozen=True, slots=True)
+class RecordedMatchRecordProperty:
+    """Symbolic value expression for a property on a matcher input record."""
+
+    input_name: str
+    property: PropertyHandle
+
+
+RecordedValueExpression = (
+    RecordedMatchResource
+    | RecordedMatchTupleValue
+    | RecordedMatchRecordProperty
+    | RecordedPortAddress
+    | ValueExpression
+    | object
+)
+
+
+@dataclass(frozen=True, slots=True)
+class ProductionValueOperation:
+    """Recorded target property assignment for a production."""
+
+    property: PropertyHandle
+    expression: RecordedValueExpression
+
+
+@dataclass(frozen=True, slots=True)
+class ProductionHandle:
+    """Symbolic handle for a production defined by a concept plan."""
+
+    owner_id: int
+    owner_name: str
+    name: str
+    source: CollectionHandle | ComputedCollectionHandle | MatcherResultSourceHandle
+    target: CollectionHandle
+    conditions: tuple[PropertyEqualsHandle, ...]
+    identity: RecordedValueExpression | None
+    values: tuple[ProductionValueOperation, ...]
+    policy: object
+    sequence: int
+
+
+@dataclass(frozen=True, slots=True)
+class ProductionGroupOperation:
+    """Recorded production-group membership."""
+
+    name: str
+    productions: tuple[ProductionHandle, ...]
+    sequence: int
 
 
 @dataclass(frozen=True, slots=True)
@@ -184,6 +341,12 @@ class CapsuleConceptPlan:
     computed_collection_definitions: tuple[ComputedCollectionHandle, ...]
     port_definitions: tuple[PortHandle, ...]
     port_index_definition: PortIndexOperation | None
+    matcher_definitions: tuple[MatcherHandle, ...]
+    matcher_inputs: tuple[MatcherInputHandle, ...]
+    matcher_defaults: tuple[MatcherDefaultOperation, ...]
+    matcher_rules: tuple[MatcherRuleOperation, ...]
+    production_definitions: tuple[ProductionHandle, ...]
+    production_groups: tuple[ProductionGroupOperation, ...]
 
     @property
     def props(self) -> PlanHandleReferences[PropertyHandle]:
@@ -213,6 +376,10 @@ class CapsuleConceptPlan:
     def ports(self) -> PlanPortReferences:
         return PlanPortReferences(self)
 
+    @property
+    def matchers(self) -> PlanHandleReferences[MatcherHandle]:
+        return PlanHandleReferences(self, "matcher", self.matcher_definitions)
+
     def apply(self, dds: DataDefinitionSystem) -> None:
         context = ReplayContext(dds)
         context.apply_plan(self)
@@ -228,10 +395,18 @@ class CapsuleConceptBuilder:
         "_computed_collection_order",
         "_computed_collections",
         "_dependencies",
+        "_matcher_defaults",
+        "_matcher_inputs",
+        "_matcher_order",
+        "_matcher_rules",
+        "_matchers",
         "_owner_id",
         "_port_index",
         "_port_order",
         "_ports",
+        "_production_groups",
+        "_production_order",
+        "_productions",
         "_properties",
         "_property_order",
         "_record_extensions",
@@ -239,9 +414,11 @@ class CapsuleConceptBuilder:
         "_records",
         "collections",
         "computed",
+        "matchers",
         "many",
         "name",
         "ports",
+        "productions",
         "props",
         "records",
         "single",
@@ -272,6 +449,14 @@ class CapsuleConceptBuilder:
         self._ports: dict[str, PortHandle] = {}
         self._port_order: list[PortHandle] = []
         self._port_index: PortIndexOperation | None = None
+        self._matchers: dict[str, MatcherHandle] = {}
+        self._matcher_order: list[MatcherHandle] = []
+        self._matcher_inputs: list[MatcherInputHandle] = []
+        self._matcher_defaults: list[MatcherDefaultOperation] = []
+        self._matcher_rules: list[MatcherRuleOperation] = []
+        self._productions: dict[str, ProductionHandle] = {}
+        self._production_order: list[ProductionHandle] = []
+        self._production_groups: list[ProductionGroupOperation] = []
         self._built = False
         self.single = RecordedSingleCardinality()
         self.many = RecordedManyCardinality()
@@ -280,6 +465,8 @@ class CapsuleConceptBuilder:
         self.collections = BuilderCollectionDefinitions(self)
         self.computed = BuilderComputedCollectionDefinitions(self)
         self.ports = BuilderPortDefinitions(self)
+        self.matchers = BuilderMatcherDefinitions(self)
+        self.productions = BuilderProductionDefinitions(self)
 
     def build(self) -> CapsuleConceptPlan:
         self._built = True
@@ -296,6 +483,12 @@ class CapsuleConceptBuilder:
             ),
             port_definitions=tuple(self._port_order),
             port_index_definition=self._port_index,
+            matcher_definitions=tuple(self._matcher_order),
+            matcher_inputs=tuple(self._matcher_inputs),
+            matcher_defaults=tuple(self._matcher_defaults),
+            matcher_rules=tuple(self._matcher_rules),
+            production_definitions=tuple(self._production_order),
+            production_groups=tuple(self._production_groups),
         )
 
     def apply(self, dds: DataDefinitionSystem) -> None:
@@ -310,6 +503,20 @@ class CapsuleConceptBuilder:
                 f"{self.name!r}"
             )
         return PlanReferenceNamespace(plan)
+
+    def use_matcher(self, matcher: MatcherHandle) -> MatcherEditor:
+        self._require_unbuilt()
+        if not isinstance(matcher, MatcherHandle):
+            raise TypeError("use_matcher(...) requires a MatcherHandle")
+        if matcher.owner_id != self._owner_id and not _handle_owner_in_plans(
+            matcher.owner_id,
+            _dependency_closure(self._dependencies),
+        ):
+            raise ValueError(
+                f"matcher {matcher.name!r} is not in the dependency closure for "
+                f"{self.name!r}"
+            )
+        return MatcherEditor(self, matcher)
 
     def extend_record(
         self,
@@ -336,6 +543,151 @@ class CapsuleConceptBuilder:
         if self._port_index is not None:
             raise ValueError(f"concept {self.name!r} already defines a port index")
         self._port_index = PortIndexOperation(target=target, order=order)
+
+    def _define_matcher(self, name: str) -> MatcherEditor:
+        self._require_unbuilt()
+        _require_name(name, "matcher name")
+        if name in self._matchers:
+            raise ValueError(
+                f"matcher {name!r} is already defined in concept {self.name!r}"
+            )
+        handle = MatcherHandle(
+            owner_id=self._owner_id,
+            owner_name=self.name,
+            name=name,
+            sequence=len(self._matcher_order),
+        )
+        self._matchers[name] = handle
+        self._matcher_order.append(handle)
+        return MatcherEditor(self, handle)
+
+    def _define_matcher_input(
+        self,
+        matcher: MatcherHandle,
+        name: str,
+        source: CollectionHandle | ComputedCollectionHandle,
+    ) -> MatcherInputHandle:
+        self._require_unbuilt()
+        _require_name(name, "matcher input name")
+        if not isinstance(source, CollectionHandle | ComputedCollectionHandle):
+            raise TypeError("matcher input source must be a collection handle")
+        handle = MatcherInputHandle(
+            owner_id=self._owner_id,
+            owner_name=self.name,
+            matcher=matcher,
+            name=name,
+            source=source,
+            sequence=len(self._matcher_inputs),
+        )
+        self._matcher_inputs.append(handle)
+        return handle
+
+    def _define_matcher_default(
+        self,
+        matcher: MatcherHandle,
+        resource: MatcherGeneratedValue,
+    ) -> None:
+        self._require_unbuilt()
+        if not isinstance(resource, MatcherGeneratedValue):
+            raise TypeError("matcher default resource must be MatcherGeneratedValue")
+        self._matcher_defaults.append(
+            MatcherDefaultOperation(
+                matcher=matcher,
+                resource=resource,
+                sequence=len(self._matcher_defaults),
+            )
+        )
+
+    def _define_matcher_rule(
+        self,
+        matcher: MatcherHandle,
+        name: str,
+        *,
+        conditions: Sequence[MatcherConditionHandle],
+        resource: MatcherGeneratedValue,
+        weight: float,
+    ) -> None:
+        self._require_unbuilt()
+        _require_label(name, "matcher rule name")
+        if not isinstance(resource, MatcherGeneratedValue):
+            raise TypeError("matcher rule resource must be MatcherGeneratedValue")
+        resolved_conditions = tuple(conditions)
+        for condition in resolved_conditions:
+            if not isinstance(condition, MatcherConditionHandle):
+                raise TypeError("matcher rule conditions must be matcher conditions")
+        self._matcher_rules.append(
+            MatcherRuleOperation(
+                matcher=matcher,
+                name=name,
+                conditions=resolved_conditions,
+                resource=resource,
+                weight=weight,
+                sequence=len(self._matcher_rules),
+            )
+        )
+
+    def _define_production(
+        self,
+        name: str,
+        *,
+        source: CollectionHandle | ComputedCollectionHandle | MatcherResultSourceHandle,
+        target: CollectionHandle,
+        conditions: Sequence[PropertyEqualsHandle],
+        identity: RecordedValueExpression | None,
+        values: dict[PropertyHandle, RecordedValueExpression],
+        policy: object,
+    ) -> ProductionEditor:
+        self._require_unbuilt()
+        _require_name(name, "production name")
+        if not isinstance(
+            source,
+            CollectionHandle | ComputedCollectionHandle | MatcherResultSourceHandle,
+        ):
+            raise TypeError("production source must be a collection or matcher result")
+        if not isinstance(target, CollectionHandle):
+            raise TypeError("production target must be a collection handle")
+        if name in self._productions:
+            raise ValueError(
+                f"production {name!r} is already defined in concept {self.name!r}"
+            )
+        resolved_conditions = tuple(conditions)
+        for condition in resolved_conditions:
+            if not isinstance(condition, PropertyEqualsHandle):
+                raise TypeError("production conditions must be property equality handles")
+        resolved_values = tuple(
+            ProductionValueOperation(prop, expression)
+            for prop, expression in values.items()
+        )
+        handle = ProductionHandle(
+            owner_id=self._owner_id,
+            owner_name=self.name,
+            name=name,
+            source=source,
+            target=target,
+            conditions=resolved_conditions,
+            identity=identity,
+            values=resolved_values,
+            policy=policy,
+            sequence=len(self._production_order),
+        )
+        self._productions[name] = handle
+        self._production_order.append(handle)
+        return ProductionEditor(self, handle)
+
+    def _define_production_group(
+        self,
+        name: str,
+        productions: Sequence[ProductionHandle],
+    ) -> None:
+        self._require_unbuilt()
+        _require_name(name, "production group name")
+        self._production_groups.append(
+            ProductionGroupOperation(
+                name=name,
+                productions=tuple(productions),
+                sequence=len(self._production_groups),
+            )
+        )
 
     def _define_property(
         self,
@@ -661,10 +1013,254 @@ class PortPathDefinition:
         )
 
 
+class BuilderMatcherDefinitions:
+    """Attribute surface for recording matcher definitions."""
+
+    __slots__ = ("_builder",)
+
+    def __init__(self, builder: CapsuleConceptBuilder) -> None:
+        self._builder = builder
+
+    def __getattr__(self, name: str) -> MatcherDefinition:
+        _require_name(name, "matcher name")
+        return MatcherDefinition(self._builder, name)
+
+
+class MatcherDefinition:
+    """Callable matcher-definition handle for one matcher name."""
+
+    __slots__ = ("_builder", "_name")
+
+    def __init__(self, builder: CapsuleConceptBuilder, name: str) -> None:
+        self._builder = builder
+        self._name = name
+
+    def __call__(self) -> MatcherEditor:
+        return self._builder._define_matcher(self._name)
+
+
+class MatcherEditor:
+    """Mutable editor for rules and inputs on a recorded matcher handle."""
+
+    __slots__ = ("_builder", "_matcher", "input", "rule")
+
+    def __init__(
+        self,
+        builder: CapsuleConceptBuilder,
+        matcher: MatcherHandle,
+    ) -> None:
+        self._builder = builder
+        self._matcher = matcher
+        self.input = MatcherInputDefinitions(builder, matcher)
+        self.rule = MatcherRuleDefinitions(builder, matcher)
+
+    @property
+    def handle(self) -> MatcherHandle:
+        return self._matcher
+
+    def default(self, resource: MatcherGeneratedValue) -> None:
+        self._builder._define_matcher_default(self._matcher, resource)
+
+    def results(self) -> MatcherResultSourceHandle:
+        return MatcherResultSourceHandle(self._matcher)
+
+
+class MatcherInputDefinitions:
+    """Attribute surface for recording matcher inputs."""
+
+    __slots__ = ("_builder", "_matcher")
+
+    def __init__(
+        self,
+        builder: CapsuleConceptBuilder,
+        matcher: MatcherHandle,
+    ) -> None:
+        self._builder = builder
+        self._matcher = matcher
+
+    def __getattr__(self, name: str) -> MatcherInputDefinition:
+        _require_name(name, "matcher input name")
+        return MatcherInputDefinition(self._builder, self._matcher, name)
+
+
+class MatcherInputDefinition:
+    """Callable matcher-input definition for one input name."""
+
+    __slots__ = ("_builder", "_matcher", "_name")
+
+    def __init__(
+        self,
+        builder: CapsuleConceptBuilder,
+        matcher: MatcherHandle,
+        name: str,
+    ) -> None:
+        self._builder = builder
+        self._matcher = matcher
+        self._name = name
+
+    def __call__(
+        self,
+        source: CollectionHandle | ComputedCollectionHandle,
+    ) -> MatcherInputHandle:
+        return self._builder._define_matcher_input(
+            self._matcher,
+            self._name,
+            source,
+        )
+
+
+class MatcherRuleDefinitions:
+    """Attribute surface for recording named matcher rules."""
+
+    __slots__ = ("_builder", "_matcher")
+
+    def __init__(
+        self,
+        builder: CapsuleConceptBuilder,
+        matcher: MatcherHandle,
+    ) -> None:
+        self._builder = builder
+        self._matcher = matcher
+
+    def __getattr__(self, name: str) -> MatcherRuleDefinition:
+        _require_label(name, "matcher rule name")
+        return MatcherRuleDefinition(self._builder, self._matcher, name)
+
+
+class MatcherRuleDefinition:
+    """Callable matcher-rule definition."""
+
+    __slots__ = ("_builder", "_matcher", "_name")
+
+    def __init__(
+        self,
+        builder: CapsuleConceptBuilder,
+        matcher: MatcherHandle,
+        name: str,
+    ) -> None:
+        self._builder = builder
+        self._matcher = matcher
+        self._name = name
+
+    def __call__(
+        self,
+        *,
+        when: Sequence[MatcherConditionHandle],
+        resource: MatcherGeneratedValue,
+        weight: float = 1.0,
+    ) -> None:
+        self._builder._define_matcher_rule(
+            self._matcher,
+            self._name.replace("_", "-"),
+            conditions=when,
+            resource=resource,
+            weight=weight,
+        )
+
+
+class BuilderProductionDefinitions:
+    """Attribute surface for recording production definitions."""
+
+    __slots__ = ("_builder",)
+
+    def __init__(self, builder: CapsuleConceptBuilder) -> None:
+        self._builder = builder
+
+    def __getattr__(self, name: str) -> ProductionDefinition:
+        _require_name(name, "production name")
+        return ProductionDefinition(self._builder, name)
+
+
+class ProductionDefinition:
+    """Callable production-definition handle for one production name."""
+
+    __slots__ = ("_builder", "_name")
+
+    def __init__(self, builder: CapsuleConceptBuilder, name: str) -> None:
+        self._builder = builder
+        self._name = name
+
+    def __call__(
+        self,
+        *,
+        source: CollectionHandle | ComputedCollectionHandle | MatcherResultSourceHandle,
+        target: CollectionHandle,
+        values: dict[PropertyHandle, RecordedValueExpression],
+        policy: object,
+        when: Sequence[PropertyEqualsHandle] = (),
+        identity: RecordedValueExpression | None = None,
+    ) -> ProductionEditor:
+        return self._builder._define_production(
+            self._name,
+            source=source,
+            target=target,
+            conditions=when,
+            identity=identity,
+            values=values,
+            policy=policy,
+        )
+
+
+class ProductionEditor:
+    """Mutable editor for a recorded production handle."""
+
+    __slots__ = ("_builder", "_production")
+
+    def __init__(
+        self,
+        builder: CapsuleConceptBuilder,
+        production: ProductionHandle,
+    ) -> None:
+        self._builder = builder
+        self._production = production
+
+    @property
+    def handle(self) -> ProductionHandle:
+        return self._production
+
+    def in_group(self, name: str) -> None:
+        self._builder._define_production_group(name, (self._production,))
+
+
+class RecordedMatchRecordAccessor:
+    """Symbolic matcher input record accessor."""
+
+    __slots__ = ("_input_name",)
+
+    def __init__(self, input_name: str) -> None:
+        _require_name(input_name, "matcher input name")
+        self._input_name = input_name
+
+    def prop(self, property: PropertyHandle) -> RecordedMatchRecordProperty:
+        if not isinstance(property, PropertyHandle):
+            raise TypeError("match.record(...).prop(...) requires PropertyHandle")
+        return RecordedMatchRecordProperty(self._input_name, property)
+
+
+class RecordedMatchExpressionFactory:
+    """Factory for symbolic matcher-result production expressions."""
+
+    __slots__ = ()
+
+    def resource(self) -> RecordedMatchResource:
+        return RecordedMatchResource()
+
+    def record(self, input_name: str) -> RecordedMatchRecordAccessor:
+        return RecordedMatchRecordAccessor(input_name)
+
+    def value(self, index: int) -> RecordedMatchTupleValue:
+        if index < 0:
+            raise ValueError("matcher tuple value index must be non-negative")
+        return RecordedMatchTupleValue(index)
+
+
+match = RecordedMatchExpressionFactory()
+
+
 class PlanReferenceNamespace:
     """Read-only namespace of handles exported by a concept plan."""
 
-    __slots__ = ("collections", "computed", "ports", "props", "records")
+    __slots__ = ("collections", "computed", "matchers", "ports", "props", "records")
 
     def __init__(self, plan: CapsuleConceptPlan) -> None:
         self.props = PlanHandleReferences(plan, "property", plan.properties)
@@ -679,6 +1275,7 @@ class PlanReferenceNamespace:
             "computed collection",
             plan.computed_collection_definitions,
         )
+        self.matchers = PlanHandleReferences(plan, "matcher", plan.matcher_definitions)
         self.ports = PlanPortReferences(plan)
 
 
@@ -755,9 +1352,14 @@ class ReplayContext:
         "_collection_specs",
         "_computed_collection_specs",
         "_dds",
+        "_matcher_input_specs",
+        "_matcher_owners",
+        "_matcher_specs",
         "_port_index_owner",
         "_port_owners",
         "_port_specs",
+        "_production_owners",
+        "_production_specs",
         "_property_owners",
         "_property_specs",
         "_record_owners",
@@ -773,6 +1375,8 @@ class ReplayContext:
             str,
             CollectionHandle | ComputedCollectionHandle,
         ] = {}
+        self._matcher_owners: dict[str, MatcherHandle] = {}
+        self._production_owners: dict[str, ProductionHandle] = {}
         self._port_index_owner: PortIndexOperation | None = None
         self._port_owners: dict[str, PortHandle] = {}
         self._property_specs: dict[HandleKey, PropertySpec] = {}
@@ -783,6 +1387,9 @@ class ReplayContext:
             ComputedCollectionSpec,
         ] = {}
         self._port_specs: dict[HandleKey, PortSpec] = {}
+        self._matcher_specs: dict[HandleKey, MatcherSpec] = {}
+        self._matcher_input_specs: dict[HandleKey, MatcherInputSpec] = {}
+        self._production_specs: dict[HandleKey, object] = {}
 
     def apply_plan(self, plan: CapsuleConceptPlan) -> None:
         if plan.owner_id in self._applied_plan_ids:
@@ -803,6 +1410,18 @@ class ReplayContext:
             self._apply_port(port)
         if plan.port_index_definition is not None:
             self._apply_port_index(plan.port_index_definition)
+        for matcher in plan.matcher_definitions:
+            self._apply_matcher(matcher)
+        for input_handle in plan.matcher_inputs:
+            self._apply_matcher_input(input_handle)
+        for default in plan.matcher_defaults:
+            self._apply_matcher_default(default)
+        for rule in plan.matcher_rules:
+            self._apply_matcher_rule(rule)
+        for production in plan.production_definitions:
+            self._apply_production(production)
+        for group in plan.production_groups:
+            self._apply_production_group(group)
         self._applied_plan_ids.add(plan.owner_id)
 
     def _apply_property(self, prop: PropertyHandle) -> None:
@@ -895,6 +1514,82 @@ class ReplayContext:
         )
         self._port_index_owner = operation
 
+    def _apply_matcher(self, matcher: MatcherHandle) -> None:
+        existing = self._matcher_owners.get(matcher.name)
+        if existing is not None:
+            raise ValueError(
+                f"matcher {matcher.name!r} is already owned by concept "
+                f"{existing.owner_name!r}; concept {matcher.owner_name!r} must "
+                "reference it instead of redefining it"
+            )
+        spec = self._dds.ensure_matcher(matcher.name)
+        self._matcher_owners[matcher.name] = matcher
+        self._matcher_specs[_handle_key(matcher)] = spec
+
+    def _apply_matcher_input(self, input_handle: MatcherInputHandle) -> None:
+        matcher = self._resolve_matcher(input_handle.matcher)
+        spec = matcher.ensure_input(
+            input_handle.name,
+            self._resolve_collection_source(input_handle.source),
+        )
+        self._matcher_input_specs[_handle_key(input_handle)] = spec
+
+    def _apply_matcher_default(self, operation: MatcherDefaultOperation) -> None:
+        self._resolve_matcher(operation.matcher).default(operation.resource)
+
+    def _apply_matcher_rule(self, operation: MatcherRuleOperation) -> None:
+        matcher = self._resolve_matcher(operation.matcher)
+        matcher.rule(
+            when=tuple(
+                self._resolve_matcher_condition(condition)
+                for condition in operation.conditions
+            ),
+            resource=operation.resource,
+            weight=operation.weight,
+            name=operation.name,
+        )
+
+    def _apply_production(self, production: ProductionHandle) -> None:
+        existing = self._production_owners.get(production.name)
+        if existing is not None:
+            raise ValueError(
+                f"production {production.name!r} is already owned by concept "
+                f"{existing.owner_name!r}; concept {production.owner_name!r} "
+                "must reference it instead of redefining it"
+            )
+        spec = self._dds.production(
+            production.name,
+            source=self._resolve_production_source(production.source),
+            target=self._resolve_collection(production.target),
+            when=tuple(
+                self._resolve_condition(condition)
+                for condition in production.conditions
+            ),
+            identity=(
+                None
+                if production.identity is None
+                else self._resolve_value_expression(production.identity)
+            ),
+            values={
+                self._resolve_property(value.property): self._resolve_value_expression(
+                    value.expression
+                )
+                for value in production.values
+            },
+            policy=production.policy,
+        )
+        self._production_owners[production.name] = production
+        self._production_specs[_handle_key(production)] = spec
+
+    def _apply_production_group(self, group: ProductionGroupOperation) -> None:
+        self._dds.ensure_production_group(
+            group.name,
+            *(
+                self._production_specs[_handle_key(production)]
+                for production in group.productions
+            ),
+        )
+
     def _resolve_property(self, prop: PropertyHandle) -> PropertySpec:
         try:
             return self._property_specs[_handle_key(prop)]
@@ -911,6 +1606,15 @@ class ReplayContext:
             raise ValueError(
                 f"unresolved record handle {record.name!r} from concept "
                 f"{record.owner_name!r}"
+            ) from exc
+
+    def _resolve_collection(self, collection: CollectionHandle) -> CollectionSpec:
+        try:
+            return self._collection_specs[_handle_key(collection)]
+        except KeyError as exc:
+            raise ValueError(
+                f"unresolved collection handle {collection.name!r} from "
+                f"concept {collection.owner_name!r}"
             ) from exc
 
     def _resolve_collection_source(
@@ -933,11 +1637,73 @@ class ReplayContext:
                 f"concept {collection.owner_name!r}"
             ) from exc
 
+    def _resolve_matcher(self, matcher: MatcherHandle) -> MatcherSpec:
+        try:
+            return self._matcher_specs[_handle_key(matcher)]
+        except KeyError as exc:
+            raise ValueError(
+                f"unresolved matcher handle {matcher.name!r} from concept "
+                f"{matcher.owner_name!r}"
+            ) from exc
+
+    def _resolve_matcher_input(
+        self,
+        input_handle: MatcherInputHandle,
+    ) -> MatcherInputSpec:
+        try:
+            return self._matcher_input_specs[_handle_key(input_handle)]
+        except KeyError as exc:
+            raise ValueError(
+                f"unresolved matcher input {input_handle.name!r} from concept "
+                f"{input_handle.owner_name!r}"
+            ) from exc
+
     def _resolve_condition(
         self,
         condition: PropertyEqualsHandle,
     ) -> PropertyEquals:
         return self._resolve_property(condition.property).eq(condition.value)
+
+    def _resolve_matcher_condition(
+        self,
+        condition: MatcherConditionHandle,
+    ) -> MatcherCondition:
+        return self._resolve_matcher_input(condition.ref.input).prop(
+            self._resolve_property(condition.ref.property)
+        ).eq(condition.value)
+
+    def _resolve_production_source(
+        self,
+        source: CollectionHandle | ComputedCollectionHandle | MatcherResultSourceHandle,
+    ) -> CollectionSpec | ComputedCollectionSpec | MatcherResultSource:
+        if isinstance(source, MatcherResultSourceHandle):
+            return self._resolve_matcher(source.matcher).results()
+        return self._resolve_collection_source(source)
+
+    def _resolve_value_expression(
+        self,
+        expression: RecordedValueExpression,
+    ) -> ValueExpression | object:
+        if isinstance(expression, RecordedMatchResource):
+            return dds_match.resource()
+        if isinstance(expression, RecordedMatchTupleValue):
+            return dds_match.value(expression.index)
+        if isinstance(expression, RecordedMatchRecordProperty):
+            return dds_match.record(expression.input_name).prop(
+                self._resolve_property(expression.property)
+            )
+        if isinstance(expression, RecordedPortAddress):
+            return self._resolve_port(expression.port).of(expression.owner_identity)
+        return expression
+
+    def _resolve_port(self, port: PortHandle) -> PortSpec:
+        try:
+            return self._port_specs[_handle_key(port)]
+        except KeyError as exc:
+            raise ValueError(
+                f"unresolved port handle {port.name!r} from concept "
+                f"{port.owner_name!r}"
+            ) from exc
 
     def _require_collection_name_available(
         self,
@@ -981,6 +1747,13 @@ def _dependency_closure(
     return tuple(ordered)
 
 
+def _handle_owner_in_plans(
+    owner_id: int,
+    plans: Iterable[CapsuleConceptPlan],
+) -> bool:
+    return any(plan.owner_id == owner_id for plan in plans)
+
+
 def _resolve_default(value_type: ValueTypeSpec, default: object) -> object:
     if default is not _DEFAULT_OMITTED:
         return default
@@ -1021,7 +1794,10 @@ def _handle_key(
     | RecordHandle
     | CollectionHandle
     | ComputedCollectionHandle
-    | PortHandle,
+    | PortHandle
+    | MatcherHandle
+    | MatcherInputHandle
+    | ProductionHandle,
 ) -> HandleKey:
     return (handle.owner_id, handle.sequence)
 
@@ -1045,8 +1821,10 @@ __all__ = [
     "CapsuleConceptPlan",
     "CollectionHandle",
     "ComputedCollectionHandle",
+    "MatcherHandle",
     "PortHandle",
     "PropertyHandle",
     "RecordHandle",
     "capsule_concept",
+    "match",
 ]
