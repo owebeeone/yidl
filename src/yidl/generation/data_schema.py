@@ -33,6 +33,7 @@ class DataDefinitionSystem:
     __slots__ = (
         "_collections",
         "_computed_collections",
+        "_operations",
         "_port_index",
         "_ports",
         "_production_groups",
@@ -52,6 +53,7 @@ class DataDefinitionSystem:
         self._unions: dict[str, UnionSpec] = {}
         self._collections: dict[str, CollectionSpec] = {}
         self._computed_collections: dict[str, ComputedCollectionSpec] = {}
+        self._operations: dict[str, OperationSpec] = {}
         self._ports: dict[str, PortSpec] = {}
         self._port_index: PortIndexSpec | None = None
         self._productions: dict[str, ProductionSpec] = {}
@@ -91,6 +93,10 @@ class DataDefinitionSystem:
     @property
     def production_groups(self) -> tuple[ProductionGroupSpec, ...]:
         return tuple(self._production_groups.values())
+
+    @property
+    def operations(self) -> tuple[OperationSpec, ...]:
+        return tuple(self._operations.values())
 
     @property
     def port_index_spec(self) -> PortIndexSpec | None:
@@ -425,30 +431,66 @@ class DataDefinitionSystem:
         self._productions[name] = spec
         return spec
 
+    def operation(
+        self,
+        name: str,
+        *,
+        inputs: Sequence[CollectionSpec | ComputedCollectionSpec],
+        outputs: Sequence[CollectionSpec],
+        resource: object,
+        order_by: Sequence[PropertySpec] = (),
+    ) -> OperationSpec:
+        _require_name(name, "operation name")
+        if name in self._operations or name in self._productions:
+            raise ValueError(f"operation {name!r} is already defined")
+        resolved_inputs = tuple(inputs)
+        resolved_outputs = tuple(outputs)
+        if not resolved_inputs and not resolved_outputs:
+            raise ValueError("operation must declare at least one input or output")
+        for collection in (*resolved_inputs, *resolved_outputs):
+            if collection.system is not self:
+                raise ValueError("operation collections must belong to the same data-definition system")
+        resolved_order_by = tuple(order_by)
+        for prop in resolved_order_by:
+            if prop.system is not self:
+                raise ValueError("operation order properties must belong to this data-definition system")
+            for collection in resolved_inputs:
+                collection.record_shape.require_property(prop)
+        spec = OperationSpec(
+            system=self,
+            name=name,
+            inputs=resolved_inputs,
+            outputs=resolved_outputs,
+            order_by=resolved_order_by,
+            resource=resource,
+        )
+        self._operations[name] = spec
+        return spec
+
     def production_group(
         self,
         name: str,
-        *productions: ProductionSpec,
+        *entries: OperationStepSpec,
     ) -> ProductionGroupSpec:
         _require_name(name, "production group name")
         if name in self._production_groups:
             raise ValueError(f"production group {name!r} is already defined")
-        for production in productions:
-            if production.system is not self:
+        for entry in entries:
+            if entry.system is not self:
                 raise ValueError("production group entries must belong to the same data-definition system")
-        spec = ProductionGroupSpec(system=self, name=name, productions=tuple(productions))
+        spec = ProductionGroupSpec(system=self, name=name, entries=tuple(entries))
         self._production_groups[name] = spec
         return spec
 
     def ensure_production_group(
         self,
         name: str,
-        *productions: ProductionSpec,
+        *entries: OperationStepSpec,
     ) -> ProductionGroupSpec:
         existing = self._production_groups.get(name)
         if existing is None:
-            return self.production_group(name, *productions)
-        if existing.productions != tuple(productions):
+            return self.production_group(name, *entries)
+        if existing.entries != tuple(entries):
             raise ValueError(
                 f"production group {name!r} is already defined differently"
             )
@@ -1319,21 +1361,58 @@ class ProductionSpec:
         return self.name
 
 
-class ProductionGroupSpec:
-    """Ordered set of productions run as one generated operation group."""
+class OperationSpec:
+    """Aggregate generated operation over declared collection inputs/outputs."""
 
-    __slots__ = ("name", "productions", "system")
+    __slots__ = ("inputs", "name", "order_by", "outputs", "resource", "system")
 
     def __init__(
         self,
         *,
         system: DataDefinitionSystem,
         name: str,
-        productions: tuple[ProductionSpec, ...],
+        inputs: tuple[CollectionSpec | ComputedCollectionSpec, ...],
+        outputs: tuple[CollectionSpec, ...],
+        order_by: tuple[PropertySpec, ...],
+        resource: object,
     ) -> None:
         self.system = system
         self.name = name
-        self.productions = productions
+        self.inputs = inputs
+        self.outputs = outputs
+        self.order_by = order_by
+        self.resource = resource
+
+    def __repr__(self) -> str:
+        return self.name
+
+
+OperationStepSpec = ProductionSpec | OperationSpec
+
+
+class ProductionGroupSpec:
+    """Ordered set of productions run as one generated operation group."""
+
+    __slots__ = ("entries", "name", "system")
+
+    def __init__(
+        self,
+        *,
+        system: DataDefinitionSystem,
+        name: str,
+        entries: tuple[OperationStepSpec, ...],
+    ) -> None:
+        self.system = system
+        self.name = name
+        self.entries = entries
+
+    @property
+    def productions(self) -> tuple[ProductionSpec, ...]:
+        return tuple(
+            entry
+            for entry in self.entries
+            if isinstance(entry, ProductionSpec)
+        )
 
 
 class _DdsPropertyDefinition:
@@ -1962,6 +2041,8 @@ __all__ = [
     "MatcherResultSource",
     "ManyCollectionCardinality",
     "OrderedCollectionSource",
+    "OperationSpec",
+    "OperationStepSpec",
     "PortAddress",
     "PortIndexSpec",
     "PortSpec",

@@ -944,31 +944,37 @@ resolved-data layer, not the whole capsule/codegen engine.
     `lookup(...)` reads against collection identities, supports ordered
     production sources through `collection.ordered(...)`, and writes with
     explicit policy.
-12. `MatcherSpec` defines Eq-only rule matchers over concrete/computed
+12. `OperationSpec` defines aggregate generated operations over declared
+    collection inputs and outputs. Generated operation functions receive a
+    `DDSOperationContext`, which exposes ordered `records(...)`, `write(...)`,
+    `by_identity(...)`, `children_at(...)`, and `write_order(...)`. Production
+    groups are execution groups and may contain ordinary productions and
+    aggregate operations.
+13. `MatcherSpec` defines Eq-only rule matchers over concrete/computed
     collection views. Match tuples are fixed positional tuples, not dicts.
     Rules run in descending score order; equal-score overlapping rules reject
     before runtime.
-13. Matcher evaluated fields are explicit callable-derived tuple entries.
+14. Matcher evaluated fields are explicit callable-derived tuple entries.
     In-memory runtime may use any callable; source emission requires an
     explicit generated/importable evaluator name.
-14. `MatcherResult` contains the selected generated value, rule name or
+15. `MatcherResult` contains the selected generated value, rule name or
     `None`, score, concrete input records, and extracted tuple values.
-15. Matcher/generated resources are produced through factory functions.
+16. Matcher/generated resources are produced through factory functions.
     `from_literal(...)` stores source-renderable Python literals,
     `from_astichi_code(...)` and `from_astichi_template(...)` store Astichi
     compile inputs, and `from_import(...)` references imported symbols for
     consumers outside Astichi templates. The backing generated value compiles
     lazily and caches the resulting `astichi.Composable` when a composable is
     requested.
-16. Matcher-result productions use `matcher.results()` as a production source
+17. Matcher-result productions use `matcher.results()` as a production source
     and `match.resource()`, `match.record("input").prop(Property)`, and
     `match.value(index)` as value expressions. Generated operation code reads
     matcher results through a stable builder snapshot.
-17. The remaining DDS production work is builder-phase matcher views, only if
+18. The remaining DDS production work is builder-phase matcher views, only if
     snapshot semantics prove insufficient, and fragment/capsule merge, only if
     real reuse pressure requires it. That design lives in
     `dev-docs/YidlDataProductionDesign.md`.
-18. Definition composition is currently handled with direct DDS extension:
+19. Definition composition is currently handled with direct DDS extension:
     contributors call `ensure_*` helpers to share semantic definitions and are
     sequenced with `DataDefinitionSystem.extend(...)`. This covers the first
     capsule-composition pressure case without adding a parallel fragment graph.

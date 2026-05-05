@@ -20,6 +20,7 @@ from yidl.generation.data_schema import MatcherResultSource
 from yidl.generation.data_schema import MatchResource
 from yidl.generation.data_schema import MatchTupleValue
 from yidl.generation.data_schema import OrderedCollectionSource
+from yidl.generation.data_schema import OperationSpec
 from yidl.generation.data_schema import PortAddress
 from yidl.generation.data_schema import PropertySpec
 from yidl.generation.data_schema import REQUIRED
@@ -48,7 +49,14 @@ def emit_container_runtime_source(
 
     uses_generated_values = _system_uses_generated_values(system)
     uses_astichi_templates = _system_uses_astichi_templates(system)
-    lines: list[str] = [_pyimport_prefix(uses_generated_values, uses_astichi_templates)]
+    uses_operations = bool(system.operations)
+    lines: list[str] = [
+        _pyimport_prefix(
+            uses_generated_values,
+            uses_astichi_templates,
+            uses_operations,
+        )
+    ]
     prop_vars = _property_vars(system)
     record_vars: dict[RecordSpec, str] = {}
     union_vars: dict[UnionSpec, str] = {}
@@ -180,7 +188,17 @@ def emit_container_runtime_source(
             )
         )
         lines.append("")
-    if system.productions:
+    for order, operation in enumerate(system.operations):
+        lines.extend(
+            _emit_aggregate_operation_lines(
+                operation,
+                operation_index=order,
+                collection_vars=collection_vars,
+                prop_vars=prop_vars,
+            )
+        )
+        lines.append("")
+    if system.productions or system.operations:
         lines.extend(_emit_operation_runner_lines(system))
         lines.append("")
 
@@ -211,7 +229,7 @@ def _materialize_container_module(
             value_names,
         ),
     )
-    if not matchers:
+    if not matchers and not system.operations:
         return root.materialize().emit(provenance=False)
 
     builder = astichi.build()
@@ -226,6 +244,15 @@ def _materialize_container_module(
             )
         )
         builder.Root.matcher_definitions.add.Matcher[order](order=order)
+    for order, operation in enumerate(system.operations):
+        if not is_generated_value(operation.resource):
+            raise TypeError(
+                f"operation {operation.name!r} resource must be a generated value"
+            )
+        builder.add.OperationBody[order](operation.resource.to_generator())
+        getattr(builder.Root, _operation_body_hole(order)).add.OperationBody[order](
+            order=order
+        )
     return builder.build().materialize().emit(provenance=False)
 
 
@@ -237,14 +264,20 @@ def _container_keep_names(
 ) -> tuple[str, ...]:
     uses_generated_values = _system_uses_generated_values(system)
     uses_astichi_templates = _system_uses_astichi_templates(system)
+    uses_operations = bool(system.operations)
     return tuple(
         dict.fromkeys(
             (
-                *_runtime_import_names(uses_generated_values, uses_astichi_templates),
+                *_runtime_import_names(
+                    uses_generated_values,
+                    uses_astichi_templates,
+                    uses_operations,
+                ),
                 *_BUILTIN_KEEP_NAMES,
                 "_RUNTIME_SPEC",
                 "_GeneratedMatcherNamespace",
                 "_GeneratedContainerBuilder",
+                "ctx",
                 "new_builder",
                 "run_operations",
                 "build_container",
@@ -266,6 +299,10 @@ def _container_keep_names(
                 *(
                     _production_func_name(production)
                     for production in system.productions
+                ),
+                *(
+                    _operation_func_name(operation)
+                    for operation in system.operations
                 ),
                 *_source_name_roots(evaluator_names),
                 *_source_name_roots(value_names),
@@ -416,20 +453,56 @@ def _emit_production_lines(
     return lines
 
 
+def _emit_aggregate_operation_lines(
+    operation: OperationSpec,
+    *,
+    operation_index: int,
+    collection_vars: Mapping[CollectionSpec | ComputedCollectionSpec, str],
+    prop_vars: Mapping[PropertySpec, str],
+) -> list[str]:
+    return [
+        f"def {_operation_func_name(operation)}(builder):",
+        "    ctx = DDSOperationContext(",
+        "        builder,",
+        f"        {operation.name!r},",
+        f"        ordered_inputs={_operation_ordered_inputs_expr(operation, collection_vars, prop_vars)},",
+        "    )",
+        f"    astichi_hole({_operation_body_hole(operation_index)})",
+    ]
+
+
+def _operation_ordered_inputs_expr(
+    operation: OperationSpec,
+    collection_vars: Mapping[CollectionSpec | ComputedCollectionSpec, str],
+    prop_vars: Mapping[PropertySpec, str],
+) -> str:
+    if not operation.order_by:
+        return "{}"
+    items = [
+        f"{collection_vars[collection]}: "
+        f"{_tuple_expr(prop_vars[prop] for prop in operation.order_by)}"
+        for collection in operation.inputs
+    ]
+    return "{" + ", ".join(items) + "}"
+
+
 def _emit_operation_runner_lines(system: DataDefinitionSystem) -> list[str]:
     production_groups = system.production_groups
     if production_groups:
-        productions = tuple(
-            production
+        steps = tuple(
+            entry
             for group in production_groups
-            for production in group.productions
+            for entry in group.entries
         )
     else:
-        productions = system.productions
+        steps = (*system.productions, *system.operations)
     lines = ["def run_operations(builder):"]
-    for production in productions:
-        lines.append(f"    {_production_func_name(production)}(builder)")
-    if not productions:
+    for step in steps:
+        if isinstance(step, OperationSpec):
+            lines.append(f"    {_operation_func_name(step)}(builder)")
+        else:
+            lines.append(f"    {_production_func_name(step)}(builder)")
+    if not steps:
         lines.append("    pass")
     lines.extend(
         [
@@ -727,6 +800,14 @@ def _production_func_name(production: ProductionSpec) -> str:
     return "run_" + _snake_name(production.name)
 
 
+def _operation_func_name(operation: OperationSpec) -> str:
+    return "run_" + _snake_name(operation.name)
+
+
+def _operation_body_hole(index: int) -> str:
+    return f"operation_body_{index}"
+
+
 def _snake_name(name: str) -> str:
     chars: list[str] = []
     for index, char in enumerate(name):
@@ -951,12 +1032,15 @@ _RUNTIME_IMPORT_NAMES = (
 def _runtime_import_names(
     uses_generated_values: bool,
     uses_astichi_templates: bool,
+    uses_operations: bool,
 ) -> tuple[str, ...]:
     names = [*_RUNTIME_IMPORT_NAMES]
     if uses_generated_values:
         names.append("from_astichi_code")
     if uses_astichi_templates:
         names.append("astichi_template")
+    if uses_operations:
+        names.append("DDSOperationContext")
     return tuple(names)
 
 _BUILTIN_KEEP_NAMES = (
@@ -978,12 +1062,14 @@ _BUILTIN_KEEP_NAMES = (
 def _pyimport_prefix(
     uses_generated_values: bool,
     uses_astichi_templates: bool,
+    uses_operations: bool,
 ) -> str:
     names = "\n".join(
         f"        {name},"
         for name in _runtime_import_names(
             uses_generated_values,
             uses_astichi_templates,
+            uses_operations,
         )
     )
     return textwrap.dedent(

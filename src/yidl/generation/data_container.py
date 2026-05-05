@@ -527,6 +527,9 @@ class DDSContainerBuilder:
     def by_identity(self, collection: CollectionViewSpec, value: object) -> object | None:
         return _CollectionView(self._frozen_container(), collection).by_identity(value)
 
+    def write_order(self, record: object) -> int:
+        return self._write_orders.get(id(record), 0)
+
     def ordered_records(
         self,
         source: OrderedSourceSpec,
@@ -672,6 +675,9 @@ class DDSContainer:
     def by_identity(self, collection: CollectionViewSpec, value: object) -> object | None:
         return self.view(collection).by_identity(value)
 
+    def write_order(self, record: object) -> int:
+        return self._write_orders.get(id(record), 0)
+
     def ordered_records(
         self,
         source: OrderedSourceSpec,
@@ -777,6 +783,73 @@ class _CollectionView:
 
     def __iter__(self) -> Iterator[object]:
         return self.sequence()
+
+
+class DDSOperationContext:
+    """Narrow context passed to generated aggregate operations."""
+
+    __slots__ = ("_builder", "_operation_name", "_ordered_inputs")
+
+    def __init__(
+        self,
+        builder: DDSContainerBuilder,
+        operation_name: str,
+        *,
+        ordered_inputs: dict[CollectionViewSpec, tuple[OrderPropertySpec, ...]] | None = None,
+    ) -> None:
+        self._builder = builder
+        self._operation_name = operation_name
+        self._ordered_inputs = {} if ordered_inputs is None else ordered_inputs
+
+    @property
+    def operation_name(self) -> str:
+        return self._operation_name
+
+    def records(self, collection: CollectionViewSpec) -> tuple[object, ...]:
+        order_by = self._ordered_inputs.get(collection)
+        if order_by is not None:
+            return self._builder.ordered_records(collection, *order_by)
+        return self._builder.records(collection)
+
+    def ordered_records(
+        self,
+        source: OrderedSourceSpec,
+        *order_by: OrderPropertySpec,
+    ) -> tuple[object, ...]:
+        return self._builder.ordered_records(source, *order_by)
+
+    def write(
+        self,
+        collection: ConcreteCollectionSpec,
+        record: object,
+        *,
+        policy: WritePolicy = RejectDuplicate,
+    ) -> DDSOperationContext:
+        try:
+            self._builder.write(collection, record, policy=policy)
+        except ValueError as exc:
+            raise ValueError(
+                f"operation {self._operation_name!r} failed writing "
+                f"collection {collection.name!r}: {exc}"
+            ) from exc
+        return self
+
+    def add(
+        self,
+        collection: ConcreteCollectionSpec,
+        record: object,
+    ) -> DDSOperationContext:
+        self.write(collection, record)
+        return self
+
+    def by_identity(self, collection: CollectionViewSpec, value: object) -> object | None:
+        return self._builder.by_identity(collection, value)
+
+    def children_at(self, port_address: PortAddress | RuntimePortAddress) -> tuple[object, ...]:
+        return self._builder.children_at(port_address)
+
+    def write_order(self, record: object) -> int:
+        return self._builder.write_order(record)
 
 
 class _MatcherViewNamespace:
@@ -893,6 +966,7 @@ __all__ = [
     "CollectionViewSpec",
     "DDSContainer",
     "DDSContainerBuilder",
+    "DDSOperationContext",
     "OrderedSourceSpec",
     "RejectDuplicate",
     "ReplaceExisting",
