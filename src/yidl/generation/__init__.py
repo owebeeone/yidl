@@ -21,16 +21,23 @@ from yidl.generation.data_def_sys import from_astichi_code
 from yidl.generation.data_def_sys import from_import
 from yidl.generation.data_def_sys import from_literal
 from yidl.generation.data_def_sys import lookup
+from yidl.generation.lifecycle_facts import CURRENT_FACADE
+from yidl.generation.lifecycle_facts import INITVAR
+from yidl.generation.lifecycle_facts import TX_GROUP
+from yidl.generation.lifecycle_facts import WORKING_FACADE
+from yidl.generation.lifecycle_facts import analyze_callable
 
 __all__ = [
     "AddIfAbsent",
     "astichi_template",
     "AstichiTemplateValue",
     "ComputedValue",
+    "CURRENT_FACADE",
     "DataDefinitionSystem",
     "DDSContainer",
     "DDSContainerBuilder",
     "GeneratedValue",
+    "INITVAR",
     "ImportedGeneratedValue",
     "MatcherGeneratedValue",
     "MatcherSpec",
@@ -38,6 +45,9 @@ __all__ = [
     "REQUIRED",
     "RejectDuplicate",
     "ReplaceExisting",
+    "TX_GROUP",
+    "WORKING_FACADE",
+    "analyze_callable",
     "emit_container_runtime_source",
     "emit_matcher_runtime_source",
     "from_astichi_code",

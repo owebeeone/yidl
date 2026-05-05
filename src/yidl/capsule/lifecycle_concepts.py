@@ -907,6 +907,133 @@ def _build_lifecycle_staircase_concept() -> CapsuleConceptPlan:
 LifecycleStaircaseConcept: CapsuleConceptPlan = _build_lifecycle_staircase_concept()
 
 
+def _build_callable_facts_concept() -> CapsuleConceptPlan:
+    builder = capsule_concept(
+        "lifecycle-callable-facts",
+        extends=(LifecycleFieldFamilyConcept,),
+    )
+    fields = builder.use(LifecycleFieldFamilyConcept)
+
+    name = fields.props.Name
+    source_label = builder.props.SourceLabel(str, "")
+    callable_object = builder.props.CallableObject(object, REQUIRED)
+    callable_role = builder.props.CallableRole(str, REQUIRED)
+    allowed_injections = builder.props.AllowedInjections(tuple, ())
+    accepts_varargs = builder.props.AcceptsVarArgs(bool, False)
+    accepts_varkwargs = builder.props.AcceptsVarKwargs(bool, False)
+    callable_name = builder.props.CallableName(str, REQUIRED)
+    param_name = builder.props.ParamName(str, REQUIRED)
+    param_kind = builder.props.ParamKind(str, REQUIRED)
+    param_order = builder.props.ParamOrder(int, 0)
+    injection_kind = builder.props.InjectionKind(str, REQUIRED)
+    required = builder.props.Required(bool, True)
+
+    callable_declaration = builder.records.CallableDeclaration(
+        name,
+        source_label,
+        callable_object,
+        callable_role,
+        allowed_injections,
+    )
+    callable_spec = builder.records.CallableSpec(
+        name,
+        source_label,
+        callable_role,
+        accepts_varargs,
+        accepts_varkwargs,
+    )
+    callable_param = builder.records.CallableParam(
+        callable_name,
+        param_name,
+        param_kind,
+        param_order,
+    )
+    callable_injection = builder.records.CallableInjection(
+        callable_name,
+        param_name,
+        injection_kind,
+        required,
+    )
+
+    declarations = builder.collections.CallableDeclarations(
+        callable_declaration,
+        cardinality=builder.many,
+        identity=name,
+    )
+    specs = builder.collections.CallableSpecs(
+        callable_spec,
+        cardinality=builder.many,
+        identity=name,
+    )
+    params = builder.collections.CallableParams(
+        callable_param,
+        cardinality=builder.many,
+        identity=(callable_name, param_name),
+    )
+    injections = builder.collections.CallableInjections(
+        callable_injection,
+        cardinality=builder.many,
+        identity=(callable_name, param_name),
+    )
+
+    builder.operations.ProduceCallableFacts(
+        inputs=(declarations,),
+        outputs=(specs, params, injections),
+        resource=from_astichi_code(
+            """
+            astichi_comment("operation: produce callable facts")
+            astichi_pyimport(
+                module=yidl.generation.lifecycle_facts,
+                names=(analyze_callable,),
+            )
+
+            for declaration in ctx.records(CallableDeclarationsCollection):
+                result = analyze_callable(
+                    name=declaration.name,
+                    source_label=declaration.source_label,
+                    role=declaration.callable_role,
+                    callable_obj=declaration.callable_object,
+                    allowed_injections=declaration.allowed_injections,
+                )
+                ctx.write(
+                    CallableSpecsCollection,
+                    CallableSpec(**result.spec),
+                    policy=ReplaceExisting,
+                )
+                for param in result.params:
+                    ctx.write(
+                        CallableParamsCollection,
+                        CallableParam(**param),
+                        policy=RejectDuplicate,
+                    )
+                for injection in result.injections:
+                    ctx.write(
+                        CallableInjectionsCollection,
+                        CallableInjection(**injection),
+                        policy=RejectDuplicate,
+                    )
+            """,
+            keep_names=(
+                "CallableDeclarationsCollection",
+                "CallableInjection",
+                "CallableInjectionsCollection",
+                "CallableParam",
+                "CallableParamsCollection",
+                "CallableSpec",
+                "CallableSpecsCollection",
+                "RejectDuplicate",
+                "ReplaceExisting",
+                "analyze_callable",
+                "ctx",
+            ),
+        ),
+    ).in_group("CallableFacts")
+    return builder.build()
+
+
+LifecycleCallableFactsConcept: CapsuleConceptPlan = _build_callable_facts_concept()
+
+
 def render_lifecycle_module(
     container: object,
     namespace: Mapping[str, object],
@@ -1121,6 +1248,7 @@ __all__ = [
     "CONST_KIND",
     "GET_OPERATION",
     "LifecycleClassStructureConcept",
+    "LifecycleCallableFactsConcept",
     "LifecycleConcept",
     "LifecycleFieldFamilyConcept",
     "LifecyclePropertyConcept",
