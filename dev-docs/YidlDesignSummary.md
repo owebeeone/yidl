@@ -949,10 +949,13 @@ resolved-data layer, not the whole capsule/codegen engine.
     explicit generated/importable evaluator name.
 14. `MatcherResult` contains the selected generated value, rule name or
     `None`, score, concrete input records, and extracted tuple values.
-15. Matcher resources are `MatcherGeneratedValue` objects. `from_literal(...)`
-    stores source-renderable Python literals; `from_astichi_code(...)` stores
-    Astichi compile inputs. `to_generator()` compiles lazily and caches the
-    resulting `astichi.Composable`.
+15. Matcher/generated resources are produced through factory functions.
+    `from_literal(...)` stores source-renderable Python literals,
+    `from_astichi_code(...)` and `from_astichi_template(...)` store Astichi
+    compile inputs, and `from_import(...)` references imported symbols for
+    consumers outside Astichi templates. The backing generated value compiles
+    lazily and caches the resulting `astichi.Composable` when a composable is
+    requested.
 16. Matcher-result productions use `matcher.results()` as a production source
     and `match.resource()`, `match.record("input").prop(Property)`, and
     `match.value(index)` as value expressions. Generated operation code reads
@@ -997,15 +1000,19 @@ resolved-data layer, not the whole capsule/codegen engine.
 7. Cross-group visibility rules.
 8. Annotation-driven compare behavior (if any).
 
-### 27.3 Parser
+### 27.3 Parsers
 
-1. Lexer is indentation-aware; recognizes `%% … %%` fences that carry raw
-   Python snippets verbatim.
-2. Parser is a pure-Python recursive-descent parser (no textX, no Lark).
-3. Node categories: transducer nodes, behavior nodes, code nodes, marker
-   nodes.
-4. Output is a strictly typed AST suitable for downstream contextual
-   lowering.
+1. The older embedded `_yidl.py` development surface used an
+   indentation-aware recursive-descent parser with `%% … %%` raw Python
+   fences.
+2. The standalone `.yidl` concept/DDS definition surface uses a Lark parser.
+   It is brace-blocked, uses Python-compatible single/double/triple-quoted
+   strings for resources, and lowers parsed modules into recorded
+   concept/DDS builder calls.
+3. Lark is definition-stage only. Generated decorators, generated field-spec
+   functions, and decorator-time runtime paths must not invoke a parser.
+4. Parser output is a strictly typed module AST suitable for symbol resolution
+   and downstream contextual lowering.
 
 ### 27.4 `_yidl.py` bootstrap container (development-only)
 
