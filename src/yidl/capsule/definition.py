@@ -113,7 +113,7 @@ class CapsuleDefinition:
 class CapsuleRuntime:
     """Loaded generated DDS runtime for a capsule definition."""
 
-    definition: CapsuleDefinition
+    definition: object
     source: str
     namespace: Mapping[str, object]
 

@@ -8,6 +8,7 @@ from yidl.capsule.recorded_builder import CapsuleConceptBuilder
 from yidl.capsule.recorded_builder import capsule_concept
 from yidl.capsule.recorded_builder import match
 from yidl.generation.data_def_sys import AddIfAbsent
+from yidl.generation.data_def_sys import call
 from yidl.generation.data_def_sys import DataDefinitionSystem
 from yidl.generation.data_def_sys import REQUIRED
 from yidl.generation.data_def_sys import from_literal
@@ -332,3 +333,67 @@ def test_child_concept_adds_rule_to_dependency_owned_matcher() -> None:
     assert matcher.name == "PropertyTemplate"
     assert [input_spec.name for input_spec in matcher.inputs] == ["field"]
     assert matcher.rules[0].name == "readonly"
+
+
+def test_recorded_concept_runtime_loads_registered_evaluators() -> None:
+    def value_for(source: object) -> int:
+        return len(source.name)
+
+    builder = capsule_concept("values")
+    name = builder.props.Name(str, REQUIRED)
+    value = builder.props.Value(int, REQUIRED)
+    source_record = builder.records.Source(name)
+    sources = builder.collections.Sources(
+        source_record,
+        cardinality=builder.many,
+        identity=name,
+    )
+    target_record = builder.records.Target(name, value)
+    targets = builder.collections.Targets(
+        target_record,
+        cardinality=builder.many,
+        identity=name,
+    )
+    builder.productions.TargetValue(
+        source=sources,
+        target=targets,
+        values={name: name.read(), value: call("value-for", value_for)},
+        policy=AddIfAbsent,
+    ).in_group("Targets")
+    builder.runtime.evaluator(value_for, name="value_for")
+
+    runtime = builder.build().runtime().load()
+    namespace = runtime.namespace
+    runtime_builder = runtime.new_builder()
+    runtime_builder.add(
+        namespace["SourcesCollection"],
+        namespace["Source"](name="count"),
+    )
+    container = runtime.build_container(runtime_builder)
+
+    assert [(record.name, record.value) for record in container.Targets.sequence()] == [
+        ("count", 5)
+    ]
+
+
+def test_recorded_concept_runtime_rejects_conflicting_helper_names() -> None:
+    def left_helper(source: object) -> int:
+        del source
+        return 1
+
+    def right_helper(source: object) -> int:
+        del source
+        return 2
+
+    left = capsule_concept("left")
+    left.runtime.evaluator(left_helper, name="value_for")
+    left_plan = left.build()
+
+    right = capsule_concept("right")
+    right.runtime.evaluator(right_helper, name="value_for")
+    right_plan = right.build()
+
+    child = capsule_concept("child", requires=(left_plan, right_plan))
+
+    with pytest.raises(ValueError, match="runtime helper 'value_for'"):
+        child.build().runtime().load()

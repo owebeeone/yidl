@@ -8,11 +8,14 @@ from __future__ import annotations
 
 from abc import ABC
 from abc import abstractmethod
+from collections.abc import Callable
 from collections.abc import Iterable
+from collections.abc import Mapping
 from collections.abc import Sequence
 from dataclasses import dataclass
 import itertools
 import re
+from types import MappingProxyType
 from typing import Final
 from typing import Generic
 from typing import TypeVar
@@ -33,6 +36,7 @@ from yidl.generation.data_def_sys import REQUIRED
 from yidl.generation.data_def_sys import RecordSpec
 from yidl.generation.data_def_sys import match as dds_match
 from yidl.generation.data_schema import ValueExpression
+from yidl.capsule.definition import CapsuleRuntime
 
 
 ValueTypeSpec = type[object] | tuple[type[object], ...]
@@ -76,6 +80,9 @@ class PropertyHandle:
     def eq(self, value: object) -> PropertyEqualsHandle:
         _validate_property_value(self, value)
         return PropertyEqualsHandle(self, value)
+
+    def read(self) -> RecordedReadProperty:
+        return RecordedReadProperty(self)
 
 
 @dataclass(frozen=True, slots=True)
@@ -284,11 +291,19 @@ class RecordedMatchRecordProperty:
     property: PropertyHandle
 
 
+@dataclass(frozen=True, slots=True)
+class RecordedReadProperty:
+    """Symbolic source-record property read."""
+
+    property: PropertyHandle
+
+
 RecordedValueExpression = (
     RecordedMatchResource
     | RecordedMatchTupleValue
     | RecordedMatchRecordProperty
     | RecordedPortAddress
+    | RecordedReadProperty
     | ValueExpression
     | object
 )
@@ -328,6 +343,14 @@ class ProductionGroupOperation:
 
 
 @dataclass(frozen=True, slots=True)
+class RuntimeHelperOperation:
+    """Runtime helper needed by generated container source."""
+
+    name: str
+    value: Callable[..., object]
+
+
+@dataclass(frozen=True, slots=True)
 class CapsuleConceptPlan:
     """Immutable recorded capsule concept plan."""
 
@@ -347,6 +370,7 @@ class CapsuleConceptPlan:
     matcher_rules: tuple[MatcherRuleOperation, ...]
     production_definitions: tuple[ProductionHandle, ...]
     production_groups: tuple[ProductionGroupOperation, ...]
+    runtime_helpers: tuple[RuntimeHelperOperation, ...]
 
     @property
     def props(self) -> PlanHandleReferences[PropertyHandle]:
@@ -384,6 +408,17 @@ class CapsuleConceptPlan:
         context = ReplayContext(dds)
         context.apply_plan(self)
 
+    def build_data_definition(self) -> DataDefinitionSystem:
+        dds = DataDefinitionSystem()
+        self.apply(dds)
+        return dds
+
+    def emit_runtime_source(self) -> str:
+        return self.runtime().emit_source()
+
+    def runtime(self) -> RecordedConceptRuntimeLoader:
+        return RecordedConceptRuntimeLoader(self)
+
 
 class CapsuleConceptBuilder:
     """Mutable builder that records capsule concept operations."""
@@ -412,6 +447,7 @@ class CapsuleConceptBuilder:
         "_record_extensions",
         "_record_order",
         "_records",
+        "_runtime_helpers",
         "collections",
         "computed",
         "matchers",
@@ -421,6 +457,7 @@ class CapsuleConceptBuilder:
         "productions",
         "props",
         "records",
+        "runtime",
         "single",
     )
 
@@ -457,6 +494,7 @@ class CapsuleConceptBuilder:
         self._productions: dict[str, ProductionHandle] = {}
         self._production_order: list[ProductionHandle] = []
         self._production_groups: list[ProductionGroupOperation] = []
+        self._runtime_helpers: list[RuntimeHelperOperation] = []
         self._built = False
         self.single = RecordedSingleCardinality()
         self.many = RecordedManyCardinality()
@@ -467,6 +505,7 @@ class CapsuleConceptBuilder:
         self.ports = BuilderPortDefinitions(self)
         self.matchers = BuilderMatcherDefinitions(self)
         self.productions = BuilderProductionDefinitions(self)
+        self.runtime = BuilderRuntimeHelpers(self)
 
     def build(self) -> CapsuleConceptPlan:
         self._built = True
@@ -489,6 +528,7 @@ class CapsuleConceptBuilder:
             matcher_rules=tuple(self._matcher_rules),
             production_definitions=tuple(self._production_order),
             production_groups=tuple(self._production_groups),
+            runtime_helpers=tuple(self._runtime_helpers),
         )
 
     def apply(self, dds: DataDefinitionSystem) -> None:
@@ -687,6 +727,20 @@ class CapsuleConceptBuilder:
                 productions=tuple(productions),
                 sequence=len(self._production_groups),
             )
+        )
+
+    def _define_runtime_helper(
+        self,
+        value: Callable[..., object],
+        *,
+        name: str | None,
+    ) -> None:
+        self._require_unbuilt()
+        if not callable(value):
+            raise TypeError("runtime helper must be callable")
+        resolved_name = _runtime_helper_name(value, name)
+        self._runtime_helpers.append(
+            RuntimeHelperOperation(name=resolved_name, value=value)
         )
 
     def _define_property(
@@ -1222,6 +1276,23 @@ class ProductionEditor:
         self._builder._define_production_group(name, (self._production,))
 
 
+class BuilderRuntimeHelpers:
+    """Runtime helper declarations for a concept builder."""
+
+    __slots__ = ("_builder",)
+
+    def __init__(self, builder: CapsuleConceptBuilder) -> None:
+        self._builder = builder
+
+    def evaluator(
+        self,
+        value: Callable[..., object],
+        *,
+        name: str | None = None,
+    ) -> None:
+        self._builder._define_runtime_helper(value, name=name)
+
+
 class RecordedMatchRecordAccessor:
     """Symbolic matcher input record accessor."""
 
@@ -1341,6 +1412,62 @@ class PlanPortPathReferences:
         if port_name in self._by_name:
             return self._by_name[port_name]
         return PlanPortPathReferences(self._plan, self._by_name, parts)
+
+
+class RecordedConceptRuntimeLoader:
+    """Runtime loader for a recorded concept plan."""
+
+    __slots__ = ("_plan",)
+
+    def __init__(self, plan: CapsuleConceptPlan) -> None:
+        self._plan = plan
+
+    def emit_source(self) -> str:
+        return self._plan.build_data_definition().emit_container_runtime_source(
+            evaluator_names=self._evaluator_names(),
+        )
+
+    def load(
+        self,
+        *,
+        runtime_globals: Mapping[str, object] | None = None,
+    ) -> CapsuleRuntime:
+        helpers = self._runtime_helpers()
+        source = self._plan.build_data_definition().emit_container_runtime_source(
+            evaluator_names=tuple((helper.value, helper.name) for helper in helpers),
+        )
+        namespace: dict[str, object] = {
+            helper.name: helper.value
+            for helper in helpers
+        }
+        namespace.update(runtime_globals or {})
+        exec(compile(source, f"<yidl.recorded_capsule.{self._plan.name}>", "exec"), namespace)
+        return CapsuleRuntime(
+            definition=self._plan,
+            source=source,
+            namespace=MappingProxyType(namespace),
+        )
+
+    def _evaluator_names(self) -> tuple[tuple[object, str], ...]:
+        return tuple(
+            (helper.value, helper.name)
+            for helper in self._runtime_helpers()
+        )
+
+    def _runtime_helpers(self) -> tuple[RuntimeHelperOperation, ...]:
+        by_name: dict[str, RuntimeHelperOperation] = {}
+        for plan in _dependency_closure((*self._plan.dependencies, self._plan)):
+            for helper in plan.runtime_helpers:
+                existing = by_name.get(helper.name)
+                if existing is None:
+                    by_name[helper.name] = helper
+                    continue
+                if existing.value is not helper.value:
+                    raise ValueError(
+                        f"runtime helper {helper.name!r} is already registered "
+                        "with a different value"
+                    )
+        return tuple(by_name.values())
 
 
 class ReplayContext:
@@ -1694,6 +1821,8 @@ class ReplayContext:
             )
         if isinstance(expression, RecordedPortAddress):
             return self._resolve_port(expression.port).of(expression.owner_identity)
+        if isinstance(expression, RecordedReadProperty):
+            return self._resolve_property(expression.property).read()
         return expression
 
     def _resolve_port(self, port: PortHandle) -> PortSpec:
@@ -1752,6 +1881,20 @@ def _handle_owner_in_plans(
     plans: Iterable[CapsuleConceptPlan],
 ) -> bool:
     return any(plan.owner_id == owner_id for plan in plans)
+
+
+def _runtime_helper_name(
+    value: Callable[..., object],
+    name: str | None,
+) -> str:
+    if name is not None:
+        _require_name(name, "runtime helper name")
+        return name
+    inferred = getattr(value, "__name__", None)
+    if not isinstance(inferred, str) or not inferred or inferred == "<lambda>":
+        raise ValueError("runtime helper name is required")
+    _require_name(inferred, "runtime helper name")
+    return inferred
 
 
 def _resolve_default(value_type: ValueTypeSpec, default: object) -> object:
