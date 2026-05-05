@@ -1387,13 +1387,16 @@ Implementation order:
     source strings into the generated container module.
 57. The capsule replacement path uses recorded concept plans.
     `CapsuleConceptBuilder` records schema, matcher, production, port, and
-    runtime-helper operations. `CapsuleConceptPlan` is the immutable replay
-    object and composes other concepts with `extends=(...)`. Concept plans replay
-    into the existing DDS/container/matcher implementation and load generated
-    runtimes through `ConceptPlan.runtime().load()`. The older callback-based
-    capsule-definition and fluent prototype modules are no longer authoritative.
+    aggregate-operation runtime-helper operations. `CapsuleConceptPlan` is the
+    immutable replay object and composes other concepts with `extends=(...)`.
+    Concept plans replay into the existing DDS/container/matcher implementation
+    and load generated runtimes through `ConceptPlan.runtime().load()`. The
+    older callback-based capsule-definition and fluent prototype modules are no
+    longer authoritative.
     Recorded schema families use `concept.schema_family(...)` as definition-time
     sugar and lower to ordinary DDS unions and union variant records.
+    Diagnostics are also ordinary concept records plus generated validation/gate
+    operations; there is no separate DDS diagnostics engine.
 58. The first build-mapper seam is `CapsuleClassBuildPlan` /
     `build_class_source(...)`. It consumes generated runtime port records,
     turns `MatcherGeneratedValue` resources into Astichi composables, and wires

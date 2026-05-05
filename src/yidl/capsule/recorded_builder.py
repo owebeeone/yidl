@@ -51,6 +51,7 @@ NamedHandle = TypeVar(
     "CollectionHandle",
     "ComputedCollectionHandle",
     "MatcherHandle",
+    "OperationHandle",
 )
 
 
@@ -366,12 +367,37 @@ class ProductionHandle:
 
 
 @dataclass(frozen=True, slots=True)
+class OperationHandle:
+    """Symbolic handle for an aggregate operation defined by a concept plan."""
+
+    owner_id: int
+    owner_name: str
+    name: str
+    inputs: tuple[CollectionHandle | ComputedCollectionHandle, ...]
+    outputs: tuple[CollectionHandle, ...]
+    order_by: tuple[PropertyHandle, ...]
+    resource: GeneratedValue
+    sequence: int
+
+
+ProductionGroupEntry = ProductionHandle | OperationHandle
+
+
+@dataclass(frozen=True, slots=True)
 class ProductionGroupOperation:
     """Recorded production-group membership."""
 
     name: str
-    productions: tuple[ProductionHandle, ...]
+    entries: tuple[ProductionGroupEntry, ...]
     sequence: int
+
+    @property
+    def productions(self) -> tuple[ProductionHandle, ...]:
+        return tuple(
+            entry
+            for entry in self.entries
+            if isinstance(entry, ProductionHandle)
+        )
 
 
 @dataclass(frozen=True, slots=True)
@@ -431,6 +457,7 @@ class CapsuleConceptPlan:
     matcher_defaults: tuple[MatcherDefaultOperation, ...]
     matcher_rules: tuple[MatcherRuleOperation, ...]
     production_definitions: tuple[ProductionHandle, ...]
+    operation_definitions: tuple[OperationHandle, ...]
     production_groups: tuple[ProductionGroupOperation, ...]
     runtime_helpers: tuple[RuntimeHelperOperation, ...]
 
@@ -512,6 +539,8 @@ class CapsuleConceptBuilder:
         "_matcher_order",
         "_matcher_rules",
         "_matchers",
+        "_operation_order",
+        "_operations",
         "_owner_id",
         "_port_index",
         "_port_order",
@@ -534,6 +563,7 @@ class CapsuleConceptBuilder:
         "matchers",
         "many",
         "name",
+        "operations",
         "ports",
         "productions",
         "props",
@@ -581,6 +611,8 @@ class CapsuleConceptBuilder:
         self._matcher_rules: list[MatcherRuleOperation] = []
         self._productions: dict[str, ProductionHandle] = {}
         self._production_order: list[ProductionHandle] = []
+        self._operations: dict[str, OperationHandle] = {}
+        self._operation_order: list[OperationHandle] = []
         self._production_groups: list[ProductionGroupOperation] = []
         self._runtime_helpers: list[RuntimeHelperOperation] = []
         self._built = False
@@ -593,6 +625,7 @@ class CapsuleConceptBuilder:
         self.ports = BuilderPortDefinitions(self)
         self.matchers = BuilderMatcherDefinitions(self)
         self.productions = BuilderProductionDefinitions(self)
+        self.operations = BuilderOperationDefinitions(self)
         self.runtime = BuilderRuntimeHelpers(self)
 
     def build(self) -> CapsuleConceptPlan:
@@ -625,6 +658,7 @@ class CapsuleConceptBuilder:
             matcher_defaults=tuple(self._matcher_defaults),
             matcher_rules=tuple(self._matcher_rules),
             production_definitions=tuple(self._production_order),
+            operation_definitions=tuple(self._operation_order),
             production_groups=tuple(self._production_groups),
             runtime_helpers=tuple(self._runtime_helpers),
         )
@@ -829,37 +863,80 @@ class CapsuleConceptBuilder:
         self._production_order.append(handle)
         return ProductionEditor(self, handle)
 
+    def _define_operation(
+        self,
+        name: str,
+        *,
+        inputs: Sequence[CollectionHandle | ComputedCollectionHandle],
+        outputs: Sequence[CollectionHandle],
+        resource: GeneratedValue,
+        order_by: Sequence[PropertyHandle] = (),
+    ) -> OperationEditor:
+        self._require_unbuilt()
+        _require_name(name, "operation name")
+        if name in self._operations:
+            raise ValueError(
+                f"operation {name!r} is already defined in concept {self.name!r}"
+            )
+        resolved_inputs = tuple(inputs)
+        resolved_outputs = tuple(outputs)
+        resolved_order_by = tuple(order_by)
+        for collection in resolved_inputs:
+            if not isinstance(collection, CollectionHandle | ComputedCollectionHandle):
+                raise TypeError("operation inputs must be collection handles")
+        for collection in resolved_outputs:
+            if not isinstance(collection, CollectionHandle):
+                raise TypeError("operation outputs must be concrete collection handles")
+        for prop in resolved_order_by:
+            if not isinstance(prop, PropertyHandle):
+                raise TypeError("operation order_by values must be property handles")
+        if not is_generated_value(resource):
+            raise TypeError("operation resource must be a generated value")
+        handle = OperationHandle(
+            owner_id=self._owner_id,
+            owner_name=self.name,
+            name=name,
+            inputs=resolved_inputs,
+            outputs=resolved_outputs,
+            order_by=resolved_order_by,
+            resource=resource,
+            sequence=len(self._operation_order),
+        )
+        self._operations[name] = handle
+        self._operation_order.append(handle)
+        return OperationEditor(self, handle)
+
     def _define_production_group(
         self,
         name: str,
-        productions: Sequence[ProductionHandle],
+        entries: Sequence[ProductionGroupEntry],
     ) -> None:
         self._require_unbuilt()
         _require_name(name, "production group name")
-        resolved_productions = tuple(productions)
-        for production in resolved_productions:
-            if not isinstance(production, ProductionHandle):
-                raise TypeError("production group entries must be production handles")
+        resolved_entries = tuple(entries)
+        for entry in resolved_entries:
+            if not isinstance(entry, ProductionHandle | OperationHandle):
+                raise TypeError("production group entries must be production or operation handles")
         for index, group in enumerate(self._production_groups):
             if group.name != name:
                 continue
             additions = tuple(
-                production
-                for production in resolved_productions
-                if production not in group.productions
+                entry
+                for entry in resolved_entries
+                if entry not in group.entries
             )
             if not additions:
                 return
             self._production_groups[index] = ProductionGroupOperation(
                 name=name,
-                productions=(*group.productions, *additions),
+                entries=(*group.entries, *additions),
                 sequence=group.sequence,
             )
             return
         self._production_groups.append(
             ProductionGroupOperation(
                 name=name,
-                productions=resolved_productions,
+                entries=resolved_entries,
                 sequence=len(self._production_groups),
             )
         )
@@ -1525,6 +1602,66 @@ class ProductionEditor:
         self._builder._define_production_group(name, (self._production,))
 
 
+class BuilderOperationDefinitions:
+    """Attribute surface for recording aggregate operations."""
+
+    __slots__ = ("_builder",)
+
+    def __init__(self, builder: CapsuleConceptBuilder) -> None:
+        self._builder = builder
+
+    def __getattr__(self, name: str) -> OperationDefinition:
+        _require_name(name, "operation name")
+        return OperationDefinition(self._builder, name)
+
+
+class OperationDefinition:
+    """Callable operation-definition handle for one operation name."""
+
+    __slots__ = ("_builder", "_name")
+
+    def __init__(self, builder: CapsuleConceptBuilder, name: str) -> None:
+        self._builder = builder
+        self._name = name
+
+    def __call__(
+        self,
+        *,
+        inputs: Sequence[CollectionHandle | ComputedCollectionHandle],
+        outputs: Sequence[CollectionHandle],
+        resource: GeneratedValue,
+        order_by: Sequence[PropertyHandle] = (),
+    ) -> OperationEditor:
+        return self._builder._define_operation(
+            self._name,
+            inputs=inputs,
+            outputs=outputs,
+            resource=resource,
+            order_by=order_by,
+        )
+
+
+class OperationEditor:
+    """Mutable editor for a recorded aggregate operation handle."""
+
+    __slots__ = ("_builder", "_operation")
+
+    def __init__(
+        self,
+        builder: CapsuleConceptBuilder,
+        operation: OperationHandle,
+    ) -> None:
+        self._builder = builder
+        self._operation = operation
+
+    @property
+    def handle(self) -> OperationHandle:
+        return self._operation
+
+    def in_group(self, name: str) -> None:
+        self._builder._define_production_group(name, (self._operation,))
+
+
 class BuilderRuntimeHelpers:
     """Runtime helper declarations for a concept builder."""
 
@@ -1751,6 +1888,7 @@ class ReplayContext:
         "_matcher_input_specs",
         "_matcher_owners",
         "_matcher_specs",
+        "_operation_specs",
         "_port_index_owner",
         "_port_owners",
         "_port_specs",
@@ -1777,6 +1915,7 @@ class ReplayContext:
         ] = {}
         self._matcher_owners: dict[str, MatcherHandle] = {}
         self._production_owners: dict[str, ProductionHandle] = {}
+        self._operation_specs: dict[HandleKey, object] = {}
         self._port_index_owner: PortIndexOperation | None = None
         self._port_owners: dict[str, PortHandle] = {}
         self._property_specs: dict[HandleKey, PropertySpec] = {}
@@ -1831,6 +1970,8 @@ class ReplayContext:
             self._apply_matcher_rule(rule)
         for production in plan.production_definitions:
             self._apply_production(production)
+        for operation in plan.operation_definitions:
+            self._apply_operation(operation)
         for group in plan.production_groups:
             self._apply_production_group(group)
         self._applied_plan_ids.add(plan.owner_id)
@@ -2034,14 +2175,38 @@ class ReplayContext:
         self._production_owners[production.name] = production
         self._production_specs[_handle_key(production)] = spec
 
+    def _apply_operation(self, operation: OperationHandle) -> None:
+        spec = self._dds.operation(
+            operation.name,
+            inputs=tuple(
+                self._resolve_collection_source(collection)
+                for collection in operation.inputs
+            ),
+            outputs=tuple(
+                self._resolve_collection(collection)
+                for collection in operation.outputs
+            ),
+            order_by=tuple(
+                self._resolve_property(prop)
+                for prop in operation.order_by
+            ),
+            resource=operation.resource,
+        )
+        self._operation_specs[_handle_key(operation)] = spec
+
     def _apply_production_group(self, group: ProductionGroupOperation) -> None:
         self._dds.ensure_production_group(
             group.name,
             *(
-                self._production_specs[_handle_key(production)]
-                for production in group.productions
+                self._resolve_production_group_entry(entry)
+                for entry in group.entries
             ),
         )
+
+    def _resolve_production_group_entry(self, entry: ProductionGroupEntry) -> object:
+        if isinstance(entry, OperationHandle):
+            return self._operation_specs[_handle_key(entry)]
+        return self._production_specs[_handle_key(entry)]
 
     def _resolve_property(self, prop: PropertyHandle) -> PropertySpec:
         try:
@@ -2284,7 +2449,8 @@ def _handle_key(
     | PortHandle
     | MatcherHandle
     | MatcherInputHandle
-    | ProductionHandle,
+    | ProductionHandle
+    | OperationHandle,
 ) -> HandleKey:
     return (handle.owner_id, handle.sequence)
 
@@ -2310,6 +2476,7 @@ __all__ = [
     "CollectionHandle",
     "ComputedCollectionHandle",
     "MatcherHandle",
+    "OperationHandle",
     "PortHandle",
     "PropertyHandle",
     "RecordHandle",
