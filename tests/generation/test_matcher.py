@@ -1,10 +1,15 @@
 from __future__ import annotations
 
+import ast
+
 import pytest
 
+from yidl.generation.data_def_sys import PYTHON_BUILTIN_KEEP_NAMES
 from yidl.generation.data_def_sys import DataDefinitionSystem
 from yidl.generation.data_def_sys import NOT_PROVIDED
 from yidl.generation.data_def_sys import REQUIRED
+from yidl.generation.data_def_sys import constructor_expr_for
+from yidl.generation.data_def_sys import from_astichi_code
 from yidl.generation.data_def_sys import from_literal
 
 
@@ -379,3 +384,24 @@ def test_generated_value_caches_generator() -> None:
     second = value.to_generator()
 
     assert first is second
+
+
+def test_astichi_generated_values_keep_python_builtins_by_default() -> None:
+    value = from_astichi_code(
+        "@property\n"
+        "def answer(self):\n"
+        "    return len(())\n",
+        keep_names=("custom_name",),
+    )
+
+    assert "property" in value.keep_names
+    assert "len" in value.keep_names
+    assert "custom_name" in value.keep_names
+    assert set(PYTHON_BUILTIN_KEEP_NAMES) < set(value.keep_names)
+
+    source = value.to_generator().materialize().emit(provenance=False)
+    assert "@property" in source
+    assert "property__astichi_scoped" not in source
+
+    constructor_source = ast.unparse(constructor_expr_for(value))
+    assert "keep_names=('custom_name',)" in constructor_source

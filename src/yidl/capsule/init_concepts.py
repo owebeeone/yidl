@@ -34,7 +34,7 @@ from yidl.generation.data_def_sys import read
 
 
 INIT_METHOD = from_astichi_code(
-    "def __init__(self__astichi_keep__, params__astichi_param_hole__):\n"
+    "def __init__(self, params__astichi_param_hole__):\n"
     "    astichi_hole(body)\n"
 )
 REQUIRED_PARAM = from_astichi_code(
@@ -182,7 +182,6 @@ def init_class_build_plan() -> CapsuleClassBuildPlan:
                     "InitBody",
                     arg_names=lambda record: {"source_name": record.source_name},
                     bind=lambda record: {"target_path": record.target_name},
-                    keep_names=lambda record: ("self",),
                 ),
             ),
         ),

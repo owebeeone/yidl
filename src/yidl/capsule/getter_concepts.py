@@ -26,13 +26,13 @@ PLAIN_FIELD = "plain"
 MANAGED_FIELD = "managed"
 
 PLAIN_GETTER = from_astichi_code(
-    "@property__astichi_keep__\n"
-    "def field_name__astichi_arg__(self__astichi_keep__):\n"
+    "@property\n"
+    "def field_name__astichi_arg__(self):\n"
     "    return self.astichi_ref(external=storage_path)\n"
 )
 MANAGED_GETTER = from_astichi_code(
-    "@property__astichi_keep__\n"
-    "def field_name__astichi_arg__(self__astichi_keep__):\n"
+    "@property\n"
+    "def field_name__astichi_arg__(self):\n"
     "    return self.astichi_ref(external=working_path)\n"
 )
 

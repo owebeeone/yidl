@@ -3,11 +3,15 @@
 from __future__ import annotations
 
 import ast
+import builtins
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from dataclasses import field
 
 import astichi
+
+
+PYTHON_BUILTIN_KEEP_NAMES = tuple(sorted(dir(builtins)))
 
 
 @dataclass(frozen=True)
@@ -47,7 +51,7 @@ class MatcherGeneratedValue:
 def from_literal(value: object) -> MatcherGeneratedValue:
     """Create a matcher-generated value from a Python literal."""
 
-    return MatcherGeneratedValue(source=_literal_to_source(value))
+    return from_astichi_code(_literal_to_source(value))
 
 
 def from_astichi_code(
@@ -70,7 +74,7 @@ def from_astichi_code(
         line_number=line_number,
         offset=offset,
         arg_names=tuple((arg_names or {}).items()),
-        keep_names=tuple(keep_names or ()),
+        keep_names=_merge_keep_names(keep_names),
         source_kind=source_kind,
     )
 
@@ -93,9 +97,10 @@ def constructor_expr_for(value: MatcherGeneratedValue) -> ast.expr:
         keywords.append(
             ast.keyword(arg="arg_names", value=_literal_to_ast(dict(value.arg_names)))
         )
-    if value.keep_names:
+    explicit_keep_names = _explicit_keep_names(value.keep_names)
+    if explicit_keep_names:
         keywords.append(
-            ast.keyword(arg="keep_names", value=_literal_to_ast(value.keep_names))
+            ast.keyword(arg="keep_names", value=_literal_to_ast(explicit_keep_names))
         )
     if value.source_kind != "authored":
         keywords.append(
@@ -142,8 +147,21 @@ def _literal_to_ast(value: object) -> ast.expr:
     raise TypeError(f"unsupported matcher literal type: {type(value).__name__}")
 
 
+def _merge_keep_names(keep_names: Iterable[str] | None) -> tuple[str, ...]:
+    merged: dict[str, None] = {name: None for name in PYTHON_BUILTIN_KEEP_NAMES}
+    for name in keep_names or ():
+        merged[name] = None
+    return tuple(merged)
+
+
+def _explicit_keep_names(keep_names: Iterable[str]) -> tuple[str, ...]:
+    builtins_set = frozenset(PYTHON_BUILTIN_KEEP_NAMES)
+    return tuple(name for name in keep_names if name not in builtins_set)
+
+
 __all__ = [
     "MatcherGeneratedValue",
+    "PYTHON_BUILTIN_KEEP_NAMES",
     "constructor_expr_for",
     "from_astichi_code",
     "from_literal",

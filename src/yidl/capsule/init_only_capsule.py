@@ -52,7 +52,7 @@ __yidl_class_definition__ = astichi_ref("_y_class_definition")
 """
 
 _INIT_METHOD_SRC = """
-def __init__(self__astichi_keep__, method_params__astichi_param_hole__):
+def __init__(self, method_params__astichi_param_hole__):
     astichi_hole(method_body)
 """
 
