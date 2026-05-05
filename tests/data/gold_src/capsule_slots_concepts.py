@@ -4,36 +4,19 @@ from support.golden_case import run_case
 from yidl.capsule.build_mapper import CapsuleClassBuildPlan
 from yidl.capsule.build_mapper import RuntimePortRef
 from yidl.capsule.build_mapper import build_class_source
-from yidl.capsule.class_concepts import define_class_field_schema
-from yidl.capsule.definition import capsule
-from yidl.capsule.definition import concept
-from yidl.capsule.init_concepts import INIT_TEMPLATE_GLOBALS
-from yidl.capsule.init_concepts import INIT_TEMPLATE_VALUE_NAMES
-from yidl.capsule.init_concepts import define_init_productions
+from yidl.capsule.init_concepts import build_init_capsule_concept
 from yidl.capsule.init_concepts import init_class_build_plan
-from yidl.capsule.slots_concepts import SLOTS_TEMPLATE_GLOBALS
-from yidl.capsule.slots_concepts import SLOTS_TEMPLATE_VALUE_NAMES
-from yidl.capsule.slots_concepts import define_slots_productions
+from yidl.capsule.recorded_builder import capsule_concept
+from yidl.capsule.slots_concepts import build_slots_capsule_concept
 from yidl.capsule.slots_concepts import slots_child_port_plan
 
 
 def _runtime():
-    definition = capsule(
+    definition = capsule_concept(
         "SlotsAndInit",
-        concept("class-field-schema", define_class_field_schema),
-        concept("slots-productions", define_slots_productions),
-        concept("init-productions", define_init_productions),
-    )
-    return definition.load_runtime(
-        value_names=(
-            *SLOTS_TEMPLATE_VALUE_NAMES,
-            *INIT_TEMPLATE_VALUE_NAMES,
-        ),
-        runtime_globals={
-            **SLOTS_TEMPLATE_GLOBALS,
-            **INIT_TEMPLATE_GLOBALS,
-        },
-    )
+        requires=(build_slots_capsule_concept(), build_init_capsule_concept()),
+    ).build()
+    return definition.runtime().load()
 
 
 def render_case() -> str:

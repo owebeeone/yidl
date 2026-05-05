@@ -7,6 +7,7 @@ from yidl.capsule.build_mapper import ChildPortPlan
 from yidl.capsule.build_mapper import RuntimePortRef
 from yidl.capsule.build_mapper import TemplateEdgePlan
 from yidl.capsule.class_concepts import class_body_port
+from yidl.capsule.class_concepts import build_class_field_schema_concept
 from yidl.capsule.class_concepts import class_values_collection
 from yidl.capsule.class_concepts import components_collection
 from yidl.capsule.class_concepts import define_class_field_schema
@@ -18,6 +19,8 @@ from yidl.capsule.class_concepts import template_prop
 from yidl.capsule.definition import CapsuleDefinition
 from yidl.capsule.definition import capsule
 from yidl.capsule.definition import concept
+from yidl.capsule.recorded_builder import CapsuleConceptPlan
+from yidl.capsule.recorded_builder import capsule_concept
 from yidl.generation.data_def_sys import AddIfAbsent
 from yidl.generation.data_def_sys import CollectionSpec
 from yidl.generation.data_def_sys import DataDefinitionSystem
@@ -45,6 +48,7 @@ SLOTS_TEMPLATE_GLOBALS = {
     "SLOTS_CLASSVAR": SLOTS_CLASSVAR,
     "SLOT_ITEM": SLOT_ITEM,
 }
+_SLOTS_CONCEPT: CapsuleConceptPlan | None = None
 
 
 def slot_name_prop(dds: DataDefinitionSystem) -> PropertySpec:
@@ -126,6 +130,68 @@ def define_slots_productions(dds: DataDefinitionSystem) -> None:
     )
 
 
+def build_slots_capsule_concept() -> CapsuleConceptPlan:
+    """Build the recorded ``__slots__`` concept."""
+
+    global _SLOTS_CONCEPT
+    if _SLOTS_CONCEPT is not None:
+        return _SLOTS_CONCEPT
+
+    class_schema = build_class_field_schema_concept()
+    builder = capsule_concept("slots-productions", requires=(class_schema,))
+    Class = builder.use(class_schema)
+    name = Class.props.Name
+    order = Class.props.Order
+    target_port = Class.props.TargetPort
+    template = Class.props.Template
+    class_values = Class.collections.ClassValues
+    fields = Class.collections.Fields
+    components = Class.collections.Components
+    class_body = Class.ports.Class.body
+
+    slot_name = builder.props.SlotName(str, REQUIRED)
+    slot_item = builder.records.SlotItem(
+        name,
+        target_port,
+        order,
+        template,
+        slot_name,
+    )
+    slot_items = builder.collections.SlotItems(
+        slot_item,
+        cardinality=builder.many,
+        identity=name,
+    )
+    slots_items = builder.ports.Slots.items(cardinality=builder.many)
+
+    builder.productions.SlotsClassVar(
+        source=class_values,
+        target=components,
+        values={
+            name: "__slots__",
+            target_port: class_body.of("runtime"),
+            order: -10,
+            template: SLOTS_CLASSVAR,
+        },
+        policy=AddIfAbsent,
+    ).in_group("Slots")
+    builder.productions.SlotItem(
+        source=fields,
+        target=slot_items,
+        values={
+            name: name.read(),
+            target_port: slots_items.of(("runtime", "__slots__")),
+            order: order.read(),
+            template: SLOT_ITEM,
+            slot_name: name.read(),
+        },
+        policy=AddIfAbsent,
+    ).in_group("Slots")
+
+    _SLOTS_CONCEPT = builder.build()
+    return _SLOTS_CONCEPT
+
+
 def build_slots_capsule_definition(
     name: str = "SlotsCapsule",
 ) -> CapsuleDefinition:
@@ -167,6 +233,7 @@ __all__ = [
     "SLOTS_TEMPLATE_GLOBALS",
     "SLOTS_TEMPLATE_VALUE_NAMES",
     "SLOT_ITEM",
+    "build_slots_capsule_concept",
     "build_slots_capsule_definition",
     "define_slots_productions",
     "slot_item_record",

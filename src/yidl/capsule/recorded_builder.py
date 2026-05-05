@@ -721,10 +721,30 @@ class CapsuleConceptBuilder:
     ) -> None:
         self._require_unbuilt()
         _require_name(name, "production group name")
+        resolved_productions = tuple(productions)
+        for production in resolved_productions:
+            if not isinstance(production, ProductionHandle):
+                raise TypeError("production group entries must be production handles")
+        for index, group in enumerate(self._production_groups):
+            if group.name != name:
+                continue
+            additions = tuple(
+                production
+                for production in resolved_productions
+                if production not in group.productions
+            )
+            if not additions:
+                return
+            self._production_groups[index] = ProductionGroupOperation(
+                name=name,
+                productions=(*group.productions, *additions),
+                sequence=group.sequence,
+            )
+            return
         self._production_groups.append(
             ProductionGroupOperation(
                 name=name,
-                productions=tuple(productions),
+                productions=resolved_productions,
                 sequence=len(self._production_groups),
             )
         )

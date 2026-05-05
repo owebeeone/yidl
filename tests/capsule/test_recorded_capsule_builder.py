@@ -299,6 +299,49 @@ def test_recorded_matcher_production_replays_to_generated_runtime() -> None:
     ]
 
 
+def test_recorded_production_group_accumulates_same_name_memberships() -> None:
+    builder = capsule_concept("grouped")
+    name = builder.props.Name(str, REQUIRED)
+    value = builder.props.Value(str, REQUIRED)
+    source_record = builder.records.Source(name)
+    sources = builder.collections.Sources(
+        source_record,
+        cardinality=builder.many,
+        identity=name,
+    )
+    target_record = builder.records.Target(name, value)
+    targets = builder.collections.Targets(
+        target_record,
+        cardinality=builder.many,
+        identity=name,
+    )
+    builder.productions.First(
+        source=sources,
+        target=targets,
+        values={name: name.read(), value: "first"},
+        policy=AddIfAbsent,
+    ).in_group("Targets")
+    builder.productions.Second(
+        source=sources,
+        target=targets,
+        values={name: name.read(), value: "second"},
+        policy=AddIfAbsent,
+    ).in_group("Targets")
+
+    plan = builder.build()
+    assert [
+        (group.name, [production.name for production in group.productions])
+        for group in plan.production_groups
+    ] == [("Targets", ["First", "Second"])]
+
+    dds = DataDefinitionSystem()
+    plan.apply(dds)
+    assert [
+        (group.name, [production.name for production in group.productions])
+        for group in dds.production_groups
+    ] == [("Targets", ["First", "Second"])]
+
+
 def test_child_concept_adds_rule_to_dependency_owned_matcher() -> None:
     parent = capsule_concept("property")
     name = parent.props.Name(str, REQUIRED)

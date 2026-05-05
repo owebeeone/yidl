@@ -2,17 +2,12 @@ from __future__ import annotations
 
 from support.golden_case import run_case
 from yidl.capsule.build_mapper import build_class_source
-from yidl.capsule.init_concepts import INIT_TEMPLATE_GLOBALS
-from yidl.capsule.init_concepts import INIT_TEMPLATE_VALUE_NAMES
-from yidl.capsule.init_concepts import build_init_capsule_definition
+from yidl.capsule.init_concepts import build_init_capsule_concept
 from yidl.capsule.init_concepts import init_class_build_plan
 
 
 def _runtime():
-    return build_init_capsule_definition("InitConcepts").load_runtime(
-        value_names=INIT_TEMPLATE_VALUE_NAMES,
-        runtime_globals=INIT_TEMPLATE_GLOBALS,
-    )
+    return build_init_capsule_concept().runtime().load()
 
 
 def render_case() -> str:

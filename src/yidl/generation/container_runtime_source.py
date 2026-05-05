@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import ast
 from collections.abc import Mapping, Sequence
 import textwrap
 
@@ -26,6 +27,8 @@ from yidl.generation.data_schema import ProductionSpec
 from yidl.generation.data_schema import UnionSpec
 from yidl.generation.matcher import MatcherSpec
 from yidl.generation.matcher import NOT_PROVIDED
+from yidl.generation.matcher_values import MatcherGeneratedValue
+from yidl.generation.matcher_values import constructor_expr_for
 
 
 SourceNameMap = Mapping[object, str] | Sequence[tuple[object, str]]
@@ -39,7 +42,8 @@ def emit_container_runtime_source(
 ) -> str:
     """Emit a Python module containing DDS records, collections, and matchers."""
 
-    lines: list[str] = [_PYIMPORT_PREFIX]
+    uses_generated_values = _system_uses_generated_values(system)
+    lines: list[str] = [_pyimport_prefix(uses_generated_values)]
     prop_vars = _property_vars(system)
     record_vars: dict[RecordSpec, str] = {}
     union_vars: dict[UnionSpec, str] = {}
@@ -225,10 +229,11 @@ def _container_keep_names(
     evaluator_names: SourceNameMap,
     value_names: SourceNameMap,
 ) -> tuple[str, ...]:
+    uses_generated_values = _system_uses_generated_values(system)
     return tuple(
         dict.fromkeys(
             (
-                *_RUNTIME_IMPORT_NAMES,
+                *_runtime_import_names(uses_generated_values),
                 *_BUILTIN_KEEP_NAMES,
                 "_RUNTIME_SPEC",
                 "_GeneratedMatcherNamespace",
@@ -634,6 +639,10 @@ def _value_expr(value: object, source_names: SourceNameMap, label: str) -> str:
         return "REQUIRED"
     if value is NOT_PROVIDED:
         return "NOT_PROVIDED"
+    if isinstance(value, MatcherGeneratedValue):
+        expr = constructor_expr_for(value)
+        ast.fix_missing_locations(expr)
+        return ast.unparse(expr)
     if isinstance(value, type):
         return _type_expr(value)
     if isinstance(value, tuple):
@@ -644,6 +653,54 @@ def _value_expr(value: object, source_names: SourceNameMap, label: str) -> str:
     if value is None or isinstance(value, (bool, int, float, str)):
         return repr(value)
     return _source_path_for(value, source_names, label)
+
+
+def _system_uses_generated_values(system: DataDefinitionSystem) -> bool:
+    for prop in system.properties:
+        if _contains_generated_value(prop.default):
+            return True
+    for collection in system.computed_collections:
+        if any(
+            _contains_generated_value(condition.value)
+            for condition in collection.conditions
+        ):
+            return True
+    for production in system.productions:
+        if any(
+            _contains_generated_value(condition.value)
+            for condition in production.conditions
+        ):
+            return True
+        if production.identity is not None and _expression_uses_generated_values(
+            production.identity
+        ):
+            return True
+        if any(
+            _expression_uses_generated_values(value.expression)
+            for value in production.values
+        ):
+            return True
+    return False
+
+
+def _expression_uses_generated_values(expression: object) -> bool:
+    if isinstance(expression, LiteralValue):
+        return _contains_generated_value(expression.value)
+    return False
+
+
+def _contains_generated_value(value: object) -> bool:
+    if isinstance(value, MatcherGeneratedValue):
+        return True
+    if isinstance(value, tuple | list | set):
+        return any(_contains_generated_value(item) for item in value)
+    if isinstance(value, dict):
+        return any(
+            _contains_generated_value(item)
+            for pair in value.items()
+            for item in pair
+        )
+    return False
 
 
 def _source_path_for(value: object, source_names: SourceNameMap, label: str) -> str:
@@ -701,6 +758,12 @@ _RUNTIME_IMPORT_NAMES = (
     "RuntimeUnion",
 )
 
+
+def _runtime_import_names(uses_generated_values: bool) -> tuple[str, ...]:
+    if uses_generated_values:
+        return (*_RUNTIME_IMPORT_NAMES, "from_astichi_code")
+    return _RUNTIME_IMPORT_NAMES
+
 _BUILTIN_KEEP_NAMES = (
     "AttributeError",
     "TypeError",
@@ -717,29 +780,21 @@ _BUILTIN_KEEP_NAMES = (
     "type",
 )
 
-_PYIMPORT_PREFIX = textwrap.dedent(
-    """
-    astichi_pyimport(
-        module=yidl.generation.data_def_sys,
-        names=(
-            AddIfAbsent,
-            DDSContainerBuilder,
-            NOT_PROVIDED,
-            REQUIRED,
-            RejectDuplicate,
-            ReplaceExisting,
-            RuntimeCollection,
-            RuntimeComputedCollection,
-            RuntimeContainerSpec,
-            RuntimePort,
-            RuntimePortIndex,
-            RuntimeProperty,
-            RuntimeRecord,
-            RuntimeUnion,
-        ),
+def _pyimport_prefix(uses_generated_values: bool) -> str:
+    names = "\n".join(
+        f"        {name},"
+        for name in _runtime_import_names(uses_generated_values)
     )
-    """
-).strip()
+    return textwrap.dedent(
+        f"""
+        astichi_pyimport(
+            module=yidl.generation.data_def_sys,
+            names=(
+        {names}
+            ),
+        )
+        """
+    ).strip()
 
 
 __all__ = ["SourceNameMap", "emit_container_runtime_source"]
