@@ -110,6 +110,15 @@ def render_case() -> str:
         "after_commit_after_default",
         "after_rollback_rollback_default",
     ]
+    assert [
+        (record.name, record.param_name)
+        for record in container.MethodCallArguments.sequence()
+    ] == [
+        ("validate_default", "current"),
+        ("before_commit_before_default", "current"),
+        ("after_commit_after_default", "current"),
+        ("after_rollback_rollback_default", "current"),
+    ]
     assert [record.name for record in container.ResourceCleanupStatements.sequence()] == [
         "close_resource",
     ]

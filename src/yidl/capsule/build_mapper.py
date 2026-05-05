@@ -17,6 +17,7 @@ EdgeArgNames = Callable[[object], Mapping[str, str]]
 EdgeBindValues = Callable[[object], Mapping[str, object]]
 EdgeKeepNames = Callable[[object], Iterable[str]]
 OwnerSelector = Callable[[object], object]
+RecordPredicate = Callable[[object], bool]
 
 
 @dataclass(frozen=True, slots=True)
@@ -91,11 +92,19 @@ class ChildPortPlan:
     target_hole: str
     edge: TemplateEdgePlan
     owner: OwnerSelector | None = None
+    matches: RecordPredicate | None = None
 
     def owner_for(self, parent_record: object) -> object:
         if self.owner is not None:
             return self.owner(parent_record)
         return ("runtime", parent_record.name)
+
+    def matches_parent(self, parent_record: object) -> bool:
+        if self.matches is not None:
+            return self.matches(parent_record)
+        if self.parent_name == "*":
+            return True
+        return parent_record.name == self.parent_name
 
 
 @dataclass(frozen=True, slots=True)
@@ -148,7 +157,7 @@ def build_class_source(
     for index, body_record in enumerate(body_records):
         body_instance = _instance_name(plan.class_body_edge.family_name, index)
         for child_plan in plan.child_ports:
-            if body_record.name != child_plan.parent_name:
+            if not child_plan.matches_parent(body_record):
                 continue
             port = namespace[child_plan.port_name]
             child_records = container.children_at(
@@ -173,6 +182,8 @@ def _insert_template_records(
     records: Sequence[object],
     edge_plan: TemplateEdgePlan,
 ) -> None:
+    if not records:
+        return
     target = builder.instance(target_instance).target(target_hole)
     for index, record in enumerate(records):
         instance_name = _instance_name(edge_plan.family_name, index)

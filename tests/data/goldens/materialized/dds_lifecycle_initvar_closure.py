@@ -60,7 +60,8 @@ _CallableInjectionSpec = RuntimeRecord('CallableInjection', (_CallableNameProper
 _CommitValidatorSpec = RuntimeRecord('CommitValidator', (_NameProperty, _SourceLabelProperty, _CallableObjectProperty, _CallableRoleProperty, _TxGroupProperty, _OrderProperty, _AllowedInjectionsProperty, _CallablePathProperty))
 _CommitOrderKeySpec = RuntimeRecord('CommitOrderKey', (_NameProperty, _SourceLabelProperty, _CallableObjectProperty, _CallableRoleProperty, _TxGroupProperty, _OrderProperty, _AllowedInjectionsProperty, _CallablePathProperty))
 _HookDeclarationSpec = RuntimeRecord('HookDeclaration', (_NameProperty, _SourceLabelProperty, _CallableObjectProperty, _CallableRoleProperty, _TxGroupProperty, _PhaseProperty, _OrderProperty, _AllowedInjectionsProperty, _CallablePathProperty))
-_HookMethodStatementSpec = RuntimeRecord('HookMethodStatement', (_ClassRoleProperty, _NameProperty, _TargetPortProperty, _OrderProperty, _TemplateProperty, _CallablePathProperty))
+_HookMethodStatementSpec = RuntimeRecord('HookMethodStatement', (_ClassRoleProperty, _NameProperty, _TargetPortProperty, _OrderProperty, _TemplateProperty, _CallableNameProperty, _CallablePathProperty))
+_MethodCallArgumentSpec = RuntimeRecord('MethodCallArgument', (_ClassRoleProperty, _NameProperty, _TargetPortProperty, _OrderProperty, _TemplateProperty, _CallableNameProperty, _ParamNameProperty, _InjectionKindProperty, _TargetNameProperty))
 _ResourceCleanupStatementSpec = RuntimeRecord('ResourceCleanupStatement', (_ClassRoleProperty, _NameProperty, _TargetPortProperty, _OrderProperty, _TemplateProperty, _ReleasePathProperty, _PublishedSlotProperty))
 _OwnedFieldSpec = RuntimeRecord('OwnedField', (_NameProperty, _KindProperty, _AnnotationPathProperty, _DefaultedProperty, _DefaultValueProperty, _OrderProperty, _TxGroupProperty, _ReleasePathProperty, _ResourcePolicyProperty))
 _BindingFieldSpec = RuntimeRecord('BindingField', (_NameProperty, _KindProperty, _AnnotationPathProperty, _DefaultedProperty, _DefaultValueProperty, _OrderProperty, _TxGroupProperty, _ReleasePathProperty, _ResourcePolicyProperty))
@@ -920,16 +921,17 @@ class HookDeclaration:
 _HookDeclarationSpec.bind_record_class(HookDeclaration)
 
 class HookMethodStatement:
-    __slots__ = ('class_role', 'name', 'target_port', 'order', 'template', 'callable_path')
+    __slots__ = ('class_role', 'name', 'target_port', 'order', 'template', 'callable_name', 'callable_path')
     __dds_record_spec__ = _HookMethodStatementSpec
     class_role: str
     name: str
     target_port: object
     order: int
     template: object
+    callable_name: str
     callable_path: str
 
-    def __init__(self, *, class_role: str, name: str, target_port: object, order: int=0, template: object, callable_path: str):
+    def __init__(self, *, class_role: str, name: str, target_port: object, order: int=0, template: object, callable_name: str, callable_path: str):
         if not isinstance(class_role, str):
             raise TypeError('ClassRole must be str, got ' + type(class_role).__name__)
         object.__setattr__(self, 'class_role', class_role)
@@ -941,12 +943,15 @@ class HookMethodStatement:
             raise TypeError('Order must be int, got ' + type(order).__name__)
         object.__setattr__(self, 'order', order)
         object.__setattr__(self, 'template', template)
+        if not isinstance(callable_name, str):
+            raise TypeError('CallableName must be str, got ' + type(callable_name).__name__)
+        object.__setattr__(self, 'callable_name', callable_name)
         if not isinstance(callable_path, str):
             raise TypeError('CallablePath must be str, got ' + type(callable_path).__name__)
         object.__setattr__(self, 'callable_path', callable_path)
 
     def __setattr__(self, name, value):
-        if name in ('class_role', 'name', 'target_port', 'order', 'template', 'callable_path'):
+        if name in ('class_role', 'name', 'target_port', 'order', 'template', 'callable_name', 'callable_path'):
             raise AttributeError('HookMethodStatement records are immutable')
         object.__setattr__(self, name, value)
 
@@ -957,9 +962,67 @@ class HookMethodStatement:
         pieces.append('target_port=' + repr(self.target_port))
         pieces.append('order=' + repr(self.order))
         pieces.append('template=' + repr(self.template))
+        pieces.append('callable_name=' + repr(self.callable_name))
         pieces.append('callable_path=' + repr(self.callable_path))
         return 'HookMethodStatement' + '(' + ', '.join(pieces) + ')'
 _HookMethodStatementSpec.bind_record_class(HookMethodStatement)
+
+class MethodCallArgument:
+    __slots__ = ('class_role', 'name', 'target_port', 'order', 'template', 'callable_name', 'param_name', 'injection_kind', 'target_name')
+    __dds_record_spec__ = _MethodCallArgumentSpec
+    class_role: str
+    name: str
+    target_port: object
+    order: int
+    template: object
+    callable_name: str
+    param_name: str
+    injection_kind: str
+    target_name: str
+
+    def __init__(self, *, class_role: str, name: str, target_port: object, order: int=0, template: object, callable_name: str, param_name: str, injection_kind: str, target_name: str=''):
+        if not isinstance(class_role, str):
+            raise TypeError('ClassRole must be str, got ' + type(class_role).__name__)
+        object.__setattr__(self, 'class_role', class_role)
+        if not isinstance(name, str):
+            raise TypeError('Name must be str, got ' + type(name).__name__)
+        object.__setattr__(self, 'name', name)
+        object.__setattr__(self, 'target_port', target_port)
+        if not isinstance(order, int):
+            raise TypeError('Order must be int, got ' + type(order).__name__)
+        object.__setattr__(self, 'order', order)
+        object.__setattr__(self, 'template', template)
+        if not isinstance(callable_name, str):
+            raise TypeError('CallableName must be str, got ' + type(callable_name).__name__)
+        object.__setattr__(self, 'callable_name', callable_name)
+        if not isinstance(param_name, str):
+            raise TypeError('ParamName must be str, got ' + type(param_name).__name__)
+        object.__setattr__(self, 'param_name', param_name)
+        if not isinstance(injection_kind, str):
+            raise TypeError('InjectionKind must be str, got ' + type(injection_kind).__name__)
+        object.__setattr__(self, 'injection_kind', injection_kind)
+        if not isinstance(target_name, str):
+            raise TypeError('TargetName must be str, got ' + type(target_name).__name__)
+        object.__setattr__(self, 'target_name', target_name)
+
+    def __setattr__(self, name, value):
+        if name in ('class_role', 'name', 'target_port', 'order', 'template', 'callable_name', 'param_name', 'injection_kind', 'target_name'):
+            raise AttributeError('MethodCallArgument records are immutable')
+        object.__setattr__(self, name, value)
+
+    def __repr__(self):
+        pieces = []
+        pieces.append('class_role=' + repr(self.class_role))
+        pieces.append('name=' + repr(self.name))
+        pieces.append('target_port=' + repr(self.target_port))
+        pieces.append('order=' + repr(self.order))
+        pieces.append('template=' + repr(self.template))
+        pieces.append('callable_name=' + repr(self.callable_name))
+        pieces.append('param_name=' + repr(self.param_name))
+        pieces.append('injection_kind=' + repr(self.injection_kind))
+        pieces.append('target_name=' + repr(self.target_name))
+        return 'MethodCallArgument' + '(' + ', '.join(pieces) + ')'
+_MethodCallArgumentSpec.bind_record_class(MethodCallArgument)
 
 class ResourceCleanupStatement:
     __slots__ = ('class_role', 'name', 'target_port', 'order', 'template', 'release_path', 'published_slot')
@@ -1307,6 +1370,7 @@ CommitValidatorsCollection = RuntimeCollection('CommitValidators', _CommitValida
 CommitOrderKeysCollection = RuntimeCollection('CommitOrderKeys', _CommitOrderKeySpec, allows_multiple=True, identity=_TxGroupProperty)
 HookDeclarationsCollection = RuntimeCollection('HookDeclarations', _HookDeclarationSpec, allows_multiple=True, identity=(_PhaseProperty, _TxGroupProperty, _NameProperty))
 HookMethodStatementsCollection = RuntimeCollection('HookMethodStatements', _HookMethodStatementSpec, allows_multiple=True, identity=(_ClassRoleProperty, _NameProperty))
+MethodCallArgumentsCollection = RuntimeCollection('MethodCallArguments', _MethodCallArgumentSpec, allows_multiple=True, identity=(_ClassRoleProperty, _NameProperty, _ParamNameProperty))
 ResourceCleanupStatementsCollection = RuntimeCollection('ResourceCleanupStatements', _ResourceCleanupStatementSpec, allows_multiple=True, identity=(_ClassRoleProperty, _NameProperty))
 InitvarEdgesCollection = RuntimeCollection('InitvarEdges', _InitvarEdgeSpec, allows_multiple=True, identity=(_ConsumerProperty, _InitVarNameProperty))
 LateInitvarConsumersCollection = RuntimeCollection('LateInitvarConsumers', _LateInitvarConsumerSpec, allows_multiple=True, identity=_ConsumerProperty)
@@ -1320,7 +1384,8 @@ InitParamsPort = RuntimePort('Init.params', allows_multiple=True)
 InitBodyPort = RuntimePort('Init.body', allows_multiple=True)
 StateCtorArgsPort = RuntimePort('StateCtor.args', allows_multiple=True)
 MethodBodyPort = RuntimePort('Method.body', allows_multiple=True)
-_RUNTIME_SPEC = RuntimeContainerSpec(collections=(FieldsCollection, TxGroupsCollection, ClassInputsCollection, ClassNamesCollection, ClassComponentsCollection, ModuleComponentsCollection, SlotItemsCollection, InitParamsCollection, StateCtorArgsCollection, OperationContributionsCollection, MethodStatementsCollection, CallableDeclarationsCollection, CallableSpecsCollection, CallableParamsCollection, CallableInjectionsCollection, CommitValidatorsCollection, CommitOrderKeysCollection, HookDeclarationsCollection, HookMethodStatementsCollection, ResourceCleanupStatementsCollection, InitvarEdgesCollection, LateInitvarConsumersCollection, RetainedInitVarsCollection, ConstructorOnlyInitVarsCollection), computed_collections=(), ports=(ModuleBodyPort, ClassNamePort, ClassBodyPort, SlotsItemsPort, InitParamsPort, InitBodyPort, StateCtorArgsPort, MethodBodyPort), port_index=RuntimePortIndex(target=_TargetPortProperty, order=_OrderProperty))
+CallArgsPort = RuntimePort('Call.args', allows_multiple=True)
+_RUNTIME_SPEC = RuntimeContainerSpec(collections=(FieldsCollection, TxGroupsCollection, ClassInputsCollection, ClassNamesCollection, ClassComponentsCollection, ModuleComponentsCollection, SlotItemsCollection, InitParamsCollection, StateCtorArgsCollection, OperationContributionsCollection, MethodStatementsCollection, CallableDeclarationsCollection, CallableSpecsCollection, CallableParamsCollection, CallableInjectionsCollection, CommitValidatorsCollection, CommitOrderKeysCollection, HookDeclarationsCollection, HookMethodStatementsCollection, MethodCallArgumentsCollection, ResourceCleanupStatementsCollection, InitvarEdgesCollection, LateInitvarConsumersCollection, RetainedInitVarsCollection, ConstructorOnlyInitVarsCollection), computed_collections=(), ports=(ModuleBodyPort, ClassNamePort, ClassBodyPort, SlotsItemsPort, InitParamsPort, InitBodyPort, StateCtorArgsPort, MethodBodyPort, CallArgsPort), port_index=RuntimePortIndex(target=_TargetPortProperty, order=_OrderProperty))
 
 class PropertyTemplateMatcher:
 
@@ -1477,9 +1542,31 @@ def run_produce_callable_facts(builder):
 
 def run_build_hook_method_statements(builder):
     ctx = DDSOperationContext(builder, 'BuildHookMethodStatements', ordered_inputs={})
-    call_template = from_astichi_code('astichi_ref(external=callable_path)(current=self)', keep_names=('self',))
+    call_with_args_template = from_astichi_code('astichi_ref(external=callable_path)(astichi_hole(call_args))')
+    call_no_args_template = from_astichi_code('astichi_ref(external=callable_path)()')
+    current_arg_template = from_astichi_code('astichi_funcargs(param_name__astichi_arg__=astichi_pass(self, outer_bind=True))')
+    params_by_callable = {}
+    for param in ctx.records(CallableParamsCollection):
+        params_by_callable.setdefault(param.callable_name, {})[param.param_name] = param.param_order
+    injections_by_callable = {}
+    for injection in ctx.records(CallableInjectionsCollection):
+        injections_by_callable.setdefault(injection.callable_name, []).append(injection)
+
+    def template_for(callable_name):
+        if injections_by_callable.get(callable_name):
+            return call_with_args_template
+        return call_no_args_template
+
+    def add_current_arguments(statement_name, callable_name, target_port):
+        for write_order, injection in enumerate(injections_by_callable.get(callable_name, ())):
+            if injection.injection_kind != 'current_facade':
+                continue
+            ctx.write(MethodCallArgumentsCollection, MethodCallArgument(class_role='main_facade', name=statement_name, target_port=target_port, order=params_by_callable.get(callable_name, {}).get(injection.param_name, write_order), template=current_arg_template, callable_name=callable_name, param_name=injection.param_name, injection_kind=injection.injection_kind), policy=AddIfAbsent)
     for validator in ctx.records(CommitValidatorsCollection):
-        ctx.write(HookMethodStatementsCollection, HookMethodStatement(class_role='main_facade', name=f'validate_{validator.tx_group}', target_port=MethodBodyPort.of(('main_facade', 'commit')), order=-500 + validator.order, template=call_template, callable_path=validator.callable_path), policy=AddIfAbsent)
+        statement_name = f'validate_{validator.tx_group}'
+        target_port = MethodBodyPort.of(('main_facade', 'commit'))
+        ctx.write(HookMethodStatementsCollection, HookMethodStatement(class_role='main_facade', name=statement_name, target_port=target_port, order=-500 + validator.order, template=template_for(validator.name), callable_name=validator.name, callable_path=validator.callable_path), policy=AddIfAbsent)
+        add_current_arguments(statement_name, validator.name, CallArgsPort.of(('main_facade', statement_name)))
     for hook in ctx.records(HookDeclarationsCollection):
         if hook.callable_role == 'before_commit':
             method_name = 'commit'
@@ -1492,7 +1579,10 @@ def run_build_hook_method_statements(builder):
             offset = 500
         else:
             continue
-        ctx.write(HookMethodStatementsCollection, HookMethodStatement(class_role='main_facade', name=f'{hook.callable_role}_{hook.name}', target_port=MethodBodyPort.of(('main_facade', method_name)), order=offset + hook.order, template=call_template, callable_path=hook.callable_path), policy=AddIfAbsent)
+        statement_name = f'{hook.callable_role}_{hook.name}'
+        target_port = MethodBodyPort.of(('main_facade', method_name))
+        ctx.write(HookMethodStatementsCollection, HookMethodStatement(class_role='main_facade', name=statement_name, target_port=target_port, order=offset + hook.order, template=template_for(hook.name), callable_name=hook.name, callable_path=hook.callable_path), policy=AddIfAbsent)
+        add_current_arguments(statement_name, hook.name, CallArgsPort.of(('main_facade', statement_name)))
 
 def run_build_resource_cleanup_methods(builder):
     ctx = DDSOperationContext(builder, 'BuildResourceCleanupMethods', ordered_inputs={})
@@ -1595,6 +1685,25 @@ def run_build_initvar_class_contributions(builder):
         ctx.write(StateCtorArgsCollection, StateCtorArg(class_role=facade_role, name=field.name, target_port=StateCtorArgsPort.of((facade_role, 'state_ctor')), order=field.order, template=state_ctor_arg_template), policy=AddIfAbsent)
         ctx.write(ClassComponentsCollection, ClassComponent(class_role=state_role, name=f'{field.name}_retained', target_port=InitBodyPort.of((state_role, '__init__')), order=field.order, template=retained_assign_template, source_name=field.name, target_name=retained_slot), policy=AddIfAbsent)
 
+def run_build_initvar_call_arguments(builder):
+    ctx = DDSOperationContext(builder, 'BuildInitvarCallArguments', ordered_inputs={})
+    initvar_arg_template = from_astichi_code('astichi_funcargs(param_name__astichi_arg__=astichi_pass(state, outer_bind=True).astichi_ref(external=target_path))')
+    retained_slots = {record.name: f'_{record.name}_retained' for record in ctx.records(RetainedInitVarsCollection)}
+    params_by_callable = {}
+    for param in ctx.records(CallableParamsCollection):
+        params_by_callable.setdefault(param.callable_name, {})[param.param_name] = param.param_order
+    statements_by_callable = {}
+    for statement in ctx.records(HookMethodStatementsCollection):
+        statements_by_callable.setdefault(statement.callable_name, []).append(statement)
+    for injection in ctx.records(CallableInjectionsCollection):
+        if injection.injection_kind != 'initvar':
+            continue
+        retained_slot = retained_slots.get(injection.param_name)
+        if retained_slot is None:
+            continue
+        for write_order, statement in enumerate(statements_by_callable.get(injection.callable_name, ())):
+            ctx.write(MethodCallArgumentsCollection, MethodCallArgument(class_role=statement.class_role, name=statement.name, target_port=CallArgsPort.of((statement.class_role, statement.name)), order=params_by_callable.get(injection.callable_name, {}).get(injection.param_name, write_order), template=initvar_arg_template, callable_name=injection.callable_name, param_name=injection.param_name, injection_kind=injection.injection_kind, target_name=retained_slot), policy=AddIfAbsent)
+
 def run_operations(builder):
     run_build_tx_groups(builder)
     run_build_lifecycle_scaffold(builder)
@@ -1609,6 +1718,7 @@ def run_operations(builder):
     run_build_retained_init_vars(builder)
     run_build_constructor_only_init_vars(builder)
     run_build_initvar_class_contributions(builder)
+    run_build_initvar_call_arguments(builder)
     return builder
 
 def build_container(builder):

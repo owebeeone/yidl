@@ -932,7 +932,7 @@ LifecycleStaircaseConcept: CapsuleConceptPlan = _build_lifecycle_staircase_conce
 def _define_callable_fact_surface(
     builder: object,
     name: object,
-) -> tuple[object, object, object, object, object, object, object, object]:
+):
     source_label = builder.props.SourceLabel(str, "")
     callable_object = builder.props.CallableObject(object, REQUIRED)
     callable_role = builder.props.CallableRole(str, REQUIRED)
@@ -1002,6 +1002,9 @@ def _define_callable_fact_surface(
         specs,
         params,
         injections,
+        callable_name,
+        param_name,
+        injection_kind,
     )
 
 
@@ -1083,6 +1086,9 @@ def _build_callable_facts_concept() -> CapsuleConceptPlan:
         specs,
         params,
         injections,
+        _callable_name,
+        _param_name,
+        _injection_kind,
     ) = _define_callable_fact_surface(
         builder,
         fields.props.Name,
@@ -1117,6 +1123,7 @@ def _build_resource_hooks_concept() -> CapsuleConceptPlan:
     class_role = classes.props.ClassRole
     phase = classes.props.Phase
     published_slot = classes.props.PublishedSlot
+    target_name = classes.props.TargetName
 
     callable_path = builder.props.CallablePath(str, REQUIRED)
     release_path = builder.props.ReleasePath(str, "")
@@ -1142,6 +1149,9 @@ def _build_resource_hooks_concept() -> CapsuleConceptPlan:
         specs,
         params,
         injections,
+        callable_name,
+        param_name,
+        injection_kind,
     ) = _define_callable_fact_surface(
         builder,
         name,
@@ -1184,7 +1194,19 @@ def _build_resource_hooks_concept() -> CapsuleConceptPlan:
         target_port,
         order,
         template,
+        callable_name,
         callable_path,
+    )
+    call_argument = builder.records.MethodCallArgument(
+        class_role,
+        name,
+        target_port,
+        order,
+        template,
+        callable_name,
+        param_name,
+        injection_kind,
+        target_name,
     )
     cleanup_statement = builder.records.ResourceCleanupStatement(
         class_role,
@@ -1216,6 +1238,11 @@ def _build_resource_hooks_concept() -> CapsuleConceptPlan:
         cardinality=builder.many,
         identity=(class_role, name),
     )
+    call_arguments = builder.collections.MethodCallArguments(
+        call_argument,
+        cardinality=builder.many,
+        identity=(class_role, name, param_name),
+    )
     cleanup_statements = builder.collections.ResourceCleanupStatements(
         cleanup_statement,
         cardinality=builder.many,
@@ -1223,6 +1250,7 @@ def _build_resource_hooks_concept() -> CapsuleConceptPlan:
     )
 
     method_body = builder.ports.Method.body
+    call_args = builder.ports.Call.args(cardinality=builder.many)
 
     builder.operations.BuildSpecialCallableDeclarations(
         inputs=(validators, order_keys, hooks),
@@ -1268,8 +1296,8 @@ def _build_resource_hooks_concept() -> CapsuleConceptPlan:
     )
 
     builder.operations.BuildHookMethodStatements(
-        inputs=(validators, hooks),
-        outputs=(hook_statements,),
+        inputs=(validators, hooks, params, injections),
+        outputs=(hook_statements, call_arguments),
         resource=from_astichi_code(
             """
             astichi_pyimport(
@@ -1277,23 +1305,77 @@ def _build_resource_hooks_concept() -> CapsuleConceptPlan:
                 names=(from_astichi_code,),
             )
 
-            call_template = from_astichi_code(
-                "astichi_ref(external=callable_path)(current=self)",
-                keep_names=("self",),
+            call_with_args_template = from_astichi_code(
+                "astichi_ref(external=callable_path)(astichi_hole(call_args))",
             )
+            call_no_args_template = from_astichi_code(
+                "astichi_ref(external=callable_path)()",
+            )
+            current_arg_template = from_astichi_code(
+                "astichi_funcargs("
+                "param_name__astichi_arg__=astichi_pass(self, outer_bind=True))",
+            )
+            params_by_callable = {}
+            for param in ctx.records(CallableParamsCollection):
+                params_by_callable.setdefault(param.callable_name, {})[
+                    param.param_name
+                ] = param.param_order
+            injections_by_callable = {}
+            for injection in ctx.records(CallableInjectionsCollection):
+                injections_by_callable.setdefault(
+                    injection.callable_name,
+                    [],
+                ).append(injection)
+
+            def template_for(callable_name):
+                if injections_by_callable.get(callable_name):
+                    return call_with_args_template
+                return call_no_args_template
+
+            def add_current_arguments(statement_name, callable_name, target_port):
+                for write_order, injection in enumerate(
+                    injections_by_callable.get(callable_name, ())
+                ):
+                    if injection.injection_kind != "current_facade":
+                        continue
+                    ctx.write(
+                        MethodCallArgumentsCollection,
+                        MethodCallArgument(
+                            class_role="main_facade",
+                            name=statement_name,
+                            target_port=target_port,
+                            order=params_by_callable.get(
+                                callable_name,
+                                {},
+                            ).get(injection.param_name, write_order),
+                            template=current_arg_template,
+                            callable_name=callable_name,
+                            param_name=injection.param_name,
+                            injection_kind=injection.injection_kind,
+                        ),
+                        policy=AddIfAbsent,
+                    )
 
             for validator in ctx.records(CommitValidatorsCollection):
+                statement_name = f"validate_{validator.tx_group}"
+                target_port = MethodBodyPort.of(("main_facade", "commit"))
                 ctx.write(
                     HookMethodStatementsCollection,
                     HookMethodStatement(
                         class_role="main_facade",
-                        name=f"validate_{validator.tx_group}",
-                        target_port=MethodBodyPort.of(("main_facade", "commit")),
+                        name=statement_name,
+                        target_port=target_port,
                         order=-500 + validator.order,
-                        template=call_template,
+                        template=template_for(validator.name),
+                        callable_name=validator.name,
                         callable_path=validator.callable_path,
                     ),
                     policy=AddIfAbsent,
+                )
+                add_current_arguments(
+                    statement_name,
+                    validator.name,
+                    CallArgsPort.of(("main_facade", statement_name)),
                 )
             for hook in ctx.records(HookDeclarationsCollection):
                 if hook.callable_role == "before_commit":
@@ -1307,23 +1389,36 @@ def _build_resource_hooks_concept() -> CapsuleConceptPlan:
                     offset = 500
                 else:
                     continue
+                statement_name = f"{hook.callable_role}_{hook.name}"
+                target_port = MethodBodyPort.of(("main_facade", method_name))
                 ctx.write(
                     HookMethodStatementsCollection,
                     HookMethodStatement(
                         class_role="main_facade",
-                        name=f"{hook.callable_role}_{hook.name}",
-                        target_port=MethodBodyPort.of(("main_facade", method_name)),
+                        name=statement_name,
+                        target_port=target_port,
                         order=offset + hook.order,
-                        template=call_template,
+                        template=template_for(hook.name),
+                        callable_name=hook.name,
                         callable_path=hook.callable_path,
                     ),
                     policy=AddIfAbsent,
                 )
+                add_current_arguments(
+                    statement_name,
+                    hook.name,
+                    CallArgsPort.of(("main_facade", statement_name)),
+                )
             """,
             keep_names=(
                 "AddIfAbsent",
+                "CallArgsPort",
+                "CallableInjectionsCollection",
+                "CallableParamsCollection",
                 "CommitValidatorsCollection",
                 "HookDeclarationsCollection",
+                "MethodCallArgument",
+                "MethodCallArgumentsCollection",
                 "HookMethodStatement",
                 "HookMethodStatementsCollection",
                 "MethodBodyPort",
@@ -1413,7 +1508,7 @@ def _build_resource_hooks_concept() -> CapsuleConceptPlan:
             ),
         ),
     ).in_group("Hooks")
-    del method_body
+    del method_body, call_args
     return builder.build()
 
 
@@ -1844,6 +1939,88 @@ def _build_initvar_closure_concept() -> CapsuleConceptPlan:
         ),
     ).in_group("Initvars")
 
+    builder.operations.BuildInitvarCallArguments(
+        inputs=(
+            hooks.collections.CallableParams,
+            hooks.collections.CallableInjections,
+            hooks.collections.HookMethodStatements,
+            retained,
+        ),
+        outputs=(hooks.collections.MethodCallArguments,),
+        resource=from_astichi_code(
+            """
+            astichi_comment("operation: retained initvar call arguments")
+            astichi_pyimport(
+                module=yidl.generation.data_def_sys,
+                names=(from_astichi_code,),
+            )
+
+            initvar_arg_template = from_astichi_code(
+                "astichi_funcargs("
+                "param_name__astichi_arg__=astichi_pass("
+                "state, outer_bind=True).astichi_ref(external=target_path))",
+            )
+            retained_slots = {
+                record.name: f"_{record.name}_retained"
+                for record in ctx.records(RetainedInitVarsCollection)
+            }
+            params_by_callable = {}
+            for param in ctx.records(CallableParamsCollection):
+                params_by_callable.setdefault(param.callable_name, {})[
+                    param.param_name
+                ] = param.param_order
+            statements_by_callable = {}
+            for statement in ctx.records(HookMethodStatementsCollection):
+                statements_by_callable.setdefault(
+                    statement.callable_name,
+                    [],
+                ).append(statement)
+
+            for injection in ctx.records(CallableInjectionsCollection):
+                if injection.injection_kind != "initvar":
+                    continue
+                retained_slot = retained_slots.get(injection.param_name)
+                if retained_slot is None:
+                    continue
+                for write_order, statement in enumerate(
+                    statements_by_callable.get(injection.callable_name, ())
+                ):
+                    ctx.write(
+                        MethodCallArgumentsCollection,
+                        MethodCallArgument(
+                            class_role=statement.class_role,
+                            name=statement.name,
+                            target_port=CallArgsPort.of(
+                                (statement.class_role, statement.name)
+                            ),
+                            order=params_by_callable.get(
+                                injection.callable_name,
+                                {},
+                            ).get(injection.param_name, write_order),
+                            template=initvar_arg_template,
+                            callable_name=injection.callable_name,
+                            param_name=injection.param_name,
+                            injection_kind=injection.injection_kind,
+                            target_name=retained_slot,
+                        ),
+                        policy=AddIfAbsent,
+                    )
+            """,
+            keep_names=(
+                "AddIfAbsent",
+                "CallArgsPort",
+                "CallableInjectionsCollection",
+                "CallableParamsCollection",
+                "HookMethodStatementsCollection",
+                "MethodCallArgument",
+                "MethodCallArgumentsCollection",
+                "RetainedInitVarsCollection",
+                "ctx",
+                "from_astichi_code",
+            ),
+        ),
+    ).in_group("Initvars")
+
     return builder.build()
 
 
@@ -1913,6 +2090,8 @@ def _insert_records(
     edge: TemplateEdgePlan,
     child_ports: Sequence[ChildPortPlan],
 ) -> None:
+    if not records:
+        return
     target = builder.instance(target_instance).target(target_hole)
     for index, record in enumerate(records):
         instance_name = f"{target_instance}_{edge.family_name}_{index}"
@@ -1925,7 +2104,7 @@ def _insert_records(
             keep_names=edge.keep_names_for(record),
         )
         for child_port in child_ports:
-            if record.name != child_port.parent_name:
+            if not child_port.matches_parent(record):
                 continue
             port = namespace[child_port.port_name]
             child_records = container.children_at(port.of(child_port.owner_for(record)))
@@ -1989,6 +2168,17 @@ def _method_body_bind(record: object) -> dict[str, object]:
     if published_slot:
         values["published_slot"] = published_slot
     return values
+
+
+def _call_arg_arg_names(record: object) -> dict[str, str]:
+    return {"param_name": record.param_name}
+
+
+def _call_arg_bind(record: object) -> dict[str, object]:
+    target_name = getattr(record, "target_name", "")
+    if not target_name:
+        return {}
+    return {"target_path": target_name}
 
 
 def _instance_name(prefix: str, value: object) -> str:
@@ -2077,6 +2267,18 @@ _LIFECYCLE_CHILD_PORTS = (
             bind=_method_body_bind,
         ),
         owner=lambda record: (record.class_role, record.name),
+    ),
+    ChildPortPlan(
+        parent_name="*",
+        port_name="CallArgsPort",
+        target_hole="call_args",
+        edge=TemplateEdgePlan(
+            "CallArg",
+            arg_names=_call_arg_arg_names,
+            bind=_call_arg_bind,
+        ),
+        owner=lambda record: (record.class_role, record.name),
+        matches=lambda record: bool(getattr(record, "callable_path", "")),
     ),
 )
 

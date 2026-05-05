@@ -971,6 +971,10 @@ resolved-data layer, not the whole capsule/codegen engine.
     only, while retained initvars additionally get state slots, state
     constructor parameters, and facade-to-state call arguments. No public
     `reachable_collection(...)` helper exists yet.
+    Method-body callable invocations use child `MethodCallArgument` records
+    and the `Call.args` port, so callable injection facts control generated
+    keyword arguments instead of hard-coded call templates. Current-facade
+    injection and retained-initvar injection are implemented.
 16. `MatcherSpec` defines Eq-only rule matchers over concrete/computed
     collection views. Match tuples are fixed positional tuples, not dicts.
     Rules run in descending score order; equal-score overlapping rules reject
