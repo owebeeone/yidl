@@ -4,36 +4,14 @@ from support.golden_case import run_case
 from yidl.capsule.build_mapper import CapsuleClassBuildPlan
 from yidl.capsule.build_mapper import RuntimePortRef
 from yidl.capsule.build_mapper import build_class_source
-from yidl.capsule.definition import concept
-from yidl.capsule.frozen_concepts import FROZEN_PROPERTY_TEMPLATE_GLOBALS
-from yidl.capsule.frozen_concepts import FROZEN_PROPERTY_TEMPLATE_VALUE_NAMES
-from yidl.capsule.frozen_concepts import define_frozen_property_overrides
+from yidl.capsule.frozen_concepts import build_frozen_property_concept
 from yidl.capsule.property_concepts import MANAGED_FIELD
 from yidl.capsule.property_concepts import PLAIN_FIELD
-from yidl.capsule.property_concepts import PROPERTY_EVALUATOR_GLOBALS
-from yidl.capsule.property_concepts import PROPERTY_EVALUATOR_NAMES
-from yidl.capsule.property_concepts import PROPERTY_TEMPLATE_GLOBALS
-from yidl.capsule.property_concepts import PROPERTY_TEMPLATE_VALUE_NAMES
-from yidl.capsule.property_concepts import build_property_capsule_definition
 from yidl.capsule.property_concepts import property_class_body_edge_plan
 
 
 def _runtime():
-    definition = build_property_capsule_definition("PropertyConcepts").extend(
-        concept("frozen-property-overrides", define_frozen_property_overrides),
-    )
-    return definition.load_runtime(
-        evaluator_names=PROPERTY_EVALUATOR_NAMES,
-        value_names=(
-            *PROPERTY_TEMPLATE_VALUE_NAMES,
-            *FROZEN_PROPERTY_TEMPLATE_VALUE_NAMES,
-        ),
-        runtime_globals={
-            **PROPERTY_EVALUATOR_GLOBALS,
-            **PROPERTY_TEMPLATE_GLOBALS,
-            **FROZEN_PROPERTY_TEMPLATE_GLOBALS,
-        },
-    )
+    return build_frozen_property_concept().runtime().load()
 
 
 def render_case() -> str:

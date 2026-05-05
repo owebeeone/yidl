@@ -12,11 +12,14 @@ from yidl.generation.data_def_sys import PortSpec
 from yidl.generation.data_def_sys import PropertySpec
 from yidl.generation.data_def_sys import REQUIRED
 from yidl.generation.data_def_sys import RecordSpec
+from yidl.capsule.recorded_builder import CapsuleConceptPlan
+from yidl.capsule.recorded_builder import capsule_concept
 
 _FIELD_INPUT_EXTENSIONS: WeakKeyDictionary[
     DataDefinitionSystem,
     tuple[PropertySpec, ...],
 ] = WeakKeyDictionary()
+_CLASS_FIELD_SCHEMA_CONCEPT: CapsuleConceptPlan | None = None
 
 
 def name_prop(dds: DataDefinitionSystem) -> PropertySpec:
@@ -256,6 +259,94 @@ def define_class_field_schema(dds: DataDefinitionSystem) -> None:
     dds.ensure_port_index(target=target_port_prop(dds), order=order_prop(dds))
 
 
+def build_class_field_schema_concept() -> CapsuleConceptPlan:
+    """Build the recorded common class/field schema concept."""
+
+    global _CLASS_FIELD_SCHEMA_CONCEPT
+    if _CLASS_FIELD_SCHEMA_CONCEPT is not None:
+        return _CLASS_FIELD_SCHEMA_CONCEPT
+
+    builder = capsule_concept("class-field-schema")
+    name = builder.props.Name(str, REQUIRED)
+    init = builder.props.Init(bool, True)
+    kind = builder.props.Kind(str, "plain")
+    defaulted = builder.props.Defaulted(bool)
+    default_value = builder.props.DefaultValue(object, None)
+    order = builder.props.Order(int)
+    target_port = builder.props.TargetPort(object, REQUIRED)
+    template = builder.props.Template(object, REQUIRED)
+    source_name = builder.props.SourceName(str, REQUIRED)
+    target_name = builder.props.TargetName(str, REQUIRED)
+    runtime_value = builder.props.RuntimeValue(object, REQUIRED)
+
+    class_value = builder.records.ClassValue(
+        name,
+        target_port,
+        order,
+        runtime_value,
+    )
+    field_input = builder.records.FieldInput(
+        name,
+        init,
+        kind,
+        defaulted,
+        default_value,
+        order,
+    )
+    component = builder.records.Component(name, target_port, order, template)
+    init_param = builder.records.InitParam(
+        name,
+        target_port,
+        order,
+        template,
+        defaulted,
+        default_value,
+    )
+    init_assignment = builder.records.InitAssignment(
+        name,
+        target_port,
+        order,
+        template,
+        source_name,
+        target_name,
+    )
+
+    builder.collections.ClassValues(
+        class_value,
+        cardinality=builder.many,
+        identity=name,
+    )
+    fields = builder.collections.Fields(
+        field_input,
+        cardinality=builder.many,
+        identity=name,
+    )
+    builder.collections.Components(
+        component,
+        cardinality=builder.many,
+        identity=name,
+    )
+    builder.collections.InitParams(
+        init_param,
+        cardinality=builder.many,
+        identity=name,
+    )
+    builder.collections.InitAssignments(
+        init_assignment,
+        cardinality=builder.many,
+        identity=name,
+    )
+    builder.computed.InitFields(source=fields, when=(init.eq(True),))
+    builder.ports.Class.name(cardinality=builder.single)
+    builder.ports.Class.body(cardinality=builder.many)
+    builder.ports.Init.params(cardinality=builder.many)
+    builder.ports.Init.body(cardinality=builder.many)
+    builder.port_index(target=target_port, order=order)
+
+    _CLASS_FIELD_SCHEMA_CONCEPT = builder.build()
+    return _CLASS_FIELD_SCHEMA_CONCEPT
+
+
 def _field_input_extensions(dds: DataDefinitionSystem) -> tuple[PropertySpec, ...]:
     return _FIELD_INPUT_EXTENSIONS.get(dds, ())
 
@@ -296,6 +387,7 @@ __all__ = [
     "class_values_collection",
     "component_record",
     "components_collection",
+    "build_class_field_schema_concept",
     "default_value_prop",
     "defaulted_prop",
     "define_class_field_schema",

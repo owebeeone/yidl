@@ -6,6 +6,7 @@ from collections.abc import Callable
 
 from yidl.capsule.build_mapper import TemplateEdgePlan
 from yidl.capsule.class_concepts import class_body_port
+from yidl.capsule.class_concepts import build_class_field_schema_concept
 from yidl.capsule.class_concepts import components_collection
 from yidl.capsule.class_concepts import define_class_field_schema
 from yidl.capsule.class_concepts import fields_collection
@@ -17,6 +18,9 @@ from yidl.capsule.class_concepts import template_prop
 from yidl.capsule.definition import CapsuleDefinition
 from yidl.capsule.definition import capsule
 from yidl.capsule.definition import concept
+from yidl.capsule.recorded_builder import CapsuleConceptPlan
+from yidl.capsule.recorded_builder import capsule_concept
+from yidl.capsule.recorded_builder import match as recorded_match
 from yidl.generation.data_def_sys import AddIfAbsent
 from yidl.generation.data_def_sys import DataDefinitionSystem
 from yidl.generation.data_def_sys import call
@@ -78,6 +82,7 @@ def property_order_for(result: object) -> int:
 
 PROPERTY_EVALUATOR_NAMES = ((property_order_for, "property_order_for"),)
 PROPERTY_EVALUATOR_GLOBALS = {"property_order_for": property_order_for}
+_PROPERTY_CONCEPT: CapsuleConceptPlan | None = None
 
 
 def define_property_productions(dds: DataDefinitionSystem) -> None:
@@ -117,6 +122,50 @@ def define_property_productions(dds: DataDefinitionSystem) -> None:
             policy=AddIfAbsent,
         ),
     )
+
+
+def build_property_capsule_concept() -> CapsuleConceptPlan:
+    """Build the recorded property-method concept."""
+
+    global _PROPERTY_CONCEPT
+    if _PROPERTY_CONCEPT is not None:
+        return _PROPERTY_CONCEPT
+
+    class_schema = build_class_field_schema_concept()
+    builder = capsule_concept("property-productions", requires=(class_schema,))
+    Class = builder.use(class_schema)
+    name = Class.props.Name
+    kind = Class.props.Kind
+    target_port = Class.props.TargetPort
+    order = Class.props.Order
+    template = Class.props.Template
+    fields = Class.collections.Fields
+    components = Class.collections.Components
+    class_body = Class.ports.Class.body
+
+    property_template = builder.matchers.PropertyTemplate()
+    field_input = property_template.input.field(fields)
+    property_template.default(PLAIN_PROPERTY)
+    property_template.rule.managed_property(
+        when=(field_input.prop(kind).eq(MANAGED_FIELD),),
+        resource=MANAGED_PROPERTY,
+    )
+
+    builder.productions.Property(
+        source=property_template.results(),
+        target=components,
+        values={
+            name: recorded_match.record("field").prop(name),
+            target_port: class_body.of("runtime"),
+            order: call("property-order", property_order_for),
+            template: recorded_match.resource(),
+        },
+        policy=AddIfAbsent,
+    ).in_group("Properties")
+    builder.runtime.evaluator(property_order_for, name="property_order_for")
+
+    _PROPERTY_CONCEPT = builder.build()
+    return _PROPERTY_CONCEPT
 
 
 def build_property_capsule_definition(
@@ -175,6 +224,7 @@ __all__ = [
     "PROPERTY_EVALUATOR_NAMES",
     "PROPERTY_TEMPLATE_GLOBALS",
     "PROPERTY_TEMPLATE_VALUE_NAMES",
+    "build_property_capsule_concept",
     "build_property_capsule_definition",
     "define_property_productions",
     "property_class_body_edge_plan",

@@ -8,7 +8,11 @@ from .build_mapper import (
     TemplateEdgePlan,
     build_class_source,
 )
-from .class_concepts import define_class_field_schema, extend_field_input_record
+from .class_concepts import (
+    build_class_field_schema_concept,
+    define_class_field_schema,
+    extend_field_input_record,
+)
 from .core import (
     CapsuleBuilder,
     CapsuleFacade,
@@ -37,6 +41,7 @@ from .frozen_concepts import (
     FROZEN_PROPERTY_TEMPLATE_VALUE_NAMES,
     READONLY_MANAGED_PROPERTY,
     READONLY_PROPERTY,
+    build_frozen_property_concept,
     define_frozen_field_schema,
     define_frozen_property_overrides,
     frozen_prop,
@@ -61,6 +66,7 @@ from .property_concepts import (
     PROPERTY_EVALUATOR_NAMES,
     PROPERTY_TEMPLATE_GLOBALS,
     PROPERTY_TEMPLATE_VALUE_NAMES,
+    build_property_capsule_concept,
     build_property_capsule_definition,
     define_property_productions,
     property_class_body_edge_plan,
@@ -163,9 +169,12 @@ __all__ = [
     "build",
     "build_from",
     "build_base_capsule",
+    "build_class_field_schema_concept",
     "build_class_source",
+    "build_frozen_property_concept",
     "build_init_capsule_definition",
     "build_init_only_capsule",
+    "build_property_capsule_concept",
     "build_slots_capsule_definition",
     "build_property_capsule_definition",
     "capsule",
