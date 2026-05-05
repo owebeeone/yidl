@@ -7,7 +7,7 @@ Implement the recorded capsule builder model from
 
 The practical goal is to make capsule definitions replayable data instead of
 functions that mutate a live `DataDefinitionSystem`. A concept should describe
-what it contributes, what it depends on, and what generated runtime values it
+what it contributes, what it extends, and what generated runtime values it
 needs. Applying that concept should lower into the current DDS, matcher,
 production, and runtime-source layers.
 
@@ -48,15 +48,15 @@ The current implementation has the needed lower layers:
 3. `MatcherSpec`, matcher tuple extraction, generated matcher runtime source,
    `MatcherGeneratedValue`, `from_astichi_code(...)`, `from_literal(...)`, and
    `constructor_expr_for(...)`.
-4. DDS-native capsule primitives in `yidl.capsule.definition`, including
-   `CapsuleConcept`, `CapsuleDefinition`, `CapsuleRuntime`, and
-   `load_runtime(...)`.
-5. Concrete concept modules for class, slots, init, property, and frozen
+4. Recorded capsule primitives in `yidl.capsule.recorded_builder`, including
+   `CapsuleConceptBuilder`, `CapsuleConceptPlan`, `CapsuleRuntime`, and
+   `runtime().load()`.
+5. Concrete recorded concept modules for class, slots, init, property, and frozen
    behavior.
 
 The missing layer is not another code generator. The missing layer is a
 recorded authoring surface that can replay into these current APIs, compute
-dependency closure, and discover generated values from matcher-selected
+extension closure, and discover generated values from matcher-selected
 resources without manual side tables.
 
 ## Non-Negotiable Constraints
@@ -74,7 +74,7 @@ resources without manual side tables.
    authoring surface for V1.
 6. A `CapsuleConceptBuilder` records operations and cannot run.
 7. A built `CapsuleConceptPlan` is immutable and is the only object that can be
-   replayed, used as a dependency, or loaded.
+   replayed, used as a extension, or loaded.
 8. Prefer golden tests for successful generated behavior. Use bespoke tests for
    mechanics, failures, and diagnostics.
 9. It is acceptable to break internal tests while removing boilerplate, provided
@@ -116,7 +116,7 @@ Recorded operations should replay to existing targets:
 | matcher default/rule | `MatcherSpec.default(...)` and `MatcherSpec.rule(...)` |
 | `productions.Property(...)` | `DataDefinitionSystem.production(...)` |
 | `.in_group("Properties")` | `DataDefinitionSystem.ensure_production_group(...)` |
-| `runtime().load()` | current runtime source emission plus `CapsuleRuntime` |
+| `runtime().load()` | recorded runtime source emission plus `CapsuleRuntime` |
 
 If a method does not exist but the semantic object already does, add the method
 to the existing layer.
@@ -131,12 +131,12 @@ load, or emit.
 `CapsuleConceptPlan` is immutable and contains:
 
 1. concept identity and name
-2. dependency plans
+2. extension plans
 3. typed recorded operations
 4. runtime helper declarations
 5. stable diagnostics metadata
 
-Only plans can be dependencies.
+Only plans can be extensions.
 
 ### Symbolic Handles
 
@@ -169,12 +169,12 @@ separate ergonomic surface and should be added only where needed.
 ### Definition Ownership And Reference Handles
 
 Only one concept defines a DDS entity. Other concepts reference that entity
-through a dependency handle namespace:
+through a extension handle namespace:
 
 ```python
 PropertyConcept = PropertyBuilder.build()
 
-FrozenBuilder = capsule_concept("frozen", requires=(PropertyConcept,))
+FrozenBuilder = capsule_concept("frozen", extends=(PropertyConcept,))
 Property = FrozenBuilder.use(PropertyConcept)
 
 Name = Property.props.Name
@@ -185,7 +185,7 @@ PropertyTemplate = FrozenBuilder.use_matcher(Property.matchers.PropertyTemplate)
 ```
 
 `builder.use(plan)` returns read-only handles exported by `plan`. It does not
-record new definitions. Replay validates that `plan` is in the dependency
+record new definitions. Replay validates that `plan` is in the extension
 closure and resolves the handle to the original owner operation.
 
 For V1, all handles recorded by a built plan are exported. A later private/public
@@ -195,7 +195,7 @@ Redefinition is not reference. If a dependent concept writes
 `FrozenBuilder.props.Name(str, REQUIRED)`, that is a new property-definition
 operation and should reject during build/replay when another concept already owns
 the semantic `Name` property. The only automatic coalescing is replaying the
-same owner operation through dependency diamonds.
+same owner operation through extension diamonds.
 
 ### Operation Log
 
@@ -219,13 +219,13 @@ Replay orders operations by semantic category, then by declaration order within
 the category. That gives deterministic output without depending on the order a
 concept author happened to mention a downstream object.
 
-### Dependency Closure
+### Extension Closure
 
-Dependency rules:
+Extension rules:
 
-1. Dependencies are plans, not strings.
+1. Extensions are plans, not strings.
 2. Replay computes transitive closure before touching a DDS.
-3. Diamond dependencies coalesce by plan identity.
+3. Diamond extensions coalesce by plan identity.
 4. Replaying the same plan twice is a no-op in the same replay context.
 5. Conflicting declarations reject with a capsule-composition diagnostic.
 
@@ -278,7 +278,7 @@ Rules:
 2. Name inference is allowed only when deterministic.
 3. Duplicate same-name same-object helpers coalesce.
 4. Duplicate same-name different-object helpers reject.
-5. Helpers aggregate through dependency closure.
+5. Helpers aggregate through extension closure.
 
 The runtime loader should pass these helpers through the current runtime source
 emission path rather than inventing a second generated module loader.
@@ -290,7 +290,7 @@ V1 should use the current extension capability but not hide ownership problems.
 Recommended behavior:
 
 1. `extend_record.FieldInput(Frozen)` succeeds when `FieldInput` exists in the
-   concept or dependency closure.
+   concept or extension closure.
 2. Replay rejects extension after the record class has been materialized.
 3. Identical repeated extensions coalesce.
 4. Conflicting property definitions reject through existing DDS validation.
@@ -299,7 +299,7 @@ Recommended behavior:
 
 ## Implementation Slices
 
-### Slice 1: Concept Plans, Properties, Dependencies
+### Slice 1: Concept Plans, Properties, Extensions
 
 Goal: introduce the recorded builder and immutable plan with the smallest replay
 surface.
@@ -311,7 +311,7 @@ builder = capsule_concept("property")
 Name = builder.props.Name(str, REQUIRED)
 plan = builder.build()
 
-child = capsule_concept("child", requires=(plan,))
+child = capsule_concept("child", extends=(plan,))
 Parent = child.use(plan)
 SameName = Parent.props.Name
 plan.apply(dds)
@@ -324,9 +324,9 @@ Implement:
 3. property symbolic handles
 4. recorded property operations
 5. replay context
-6. dependency closure and diamond coalescing
+6. extension closure and diamond coalescing
 7. property conflict diagnostics
-8. read-only dependency reference namespaces through `builder.use(plan)`
+8. read-only extension reference namespaces through `builder.use(plan)`
 
 Reuse/fix:
 
@@ -339,14 +339,14 @@ Tests:
 
 1. Bespoke: builder cannot be replayed directly.
 2. Bespoke: plan is immutable after build.
-3. Bespoke: dependency closure replays parent before child.
-4. Bespoke: diamond dependency replays once.
-5. Bespoke: replaying the same owner property operation through a dependency
+3. Bespoke: extension closure replays parent before child.
+4. Bespoke: diamond extension replays once.
+5. Bespoke: replaying the same owner property operation through a extension
    diamond coalesces.
 6. Bespoke: conflicting property declarations reject.
 7. Bespoke: `builder.use(parent).props.Name` references the parent-owned
    property without recording a new property operation.
-8. Bespoke: redefining a dependency-owned property in a child concept rejects,
+8. Bespoke: redefining a extension-owned property in a child concept rejects,
    even if the spelling and type match.
 
 Goldens:
@@ -376,7 +376,7 @@ Implement:
 2. recorded operations for each object
 3. replay for record extension through `RecordSpec.extend_properties(...)`
 4. dotted port path proxy
-5. dependency reference namespaces for records, collections, computed
+5. extension reference namespaces for records, collections, computed
    collections, and ports
 
 Reuse/fix:
@@ -389,11 +389,11 @@ Reuse/fix:
 
 Tests:
 
-1. Bespoke: record extension resolves through dependency handles.
+1. Bespoke: record extension resolves through extension handles.
 2. Bespoke: unknown extension target rejects.
 3. Bespoke: extending after record-class materialization rejects.
 4. Bespoke: port dotted path lowers to stable semantic port object.
-5. Bespoke: dependency-owned record/collection/port handles can be used in child
+5. Bespoke: extension-owned record/collection/port handles can be used in child
    concepts without redefining the target entity.
 
 Goldens:
@@ -461,7 +461,7 @@ Tests:
 5. Bespoke: production replay preserves target/source validation.
 6. Bespoke: `match.resource()` carries the matched generated value, not a string
    name.
-7. Bespoke: a child concept can add rules to a dependency-owned matcher through
+7. Bespoke: a child concept can add rules to a extension-owned matcher through
    `use_matcher(...)` without redefining the matcher.
 
 Goldens:
@@ -488,17 +488,16 @@ runtime = ConceptPlan.runtime().load()
 Implement:
 
 1. concept runtime loader object
-2. dependency closure aggregation
+2. extension closure aggregation
 3. evaluator/helper aggregation
 4. generated-value aggregation from the replayed concept graph
-5. compatibility bridge to `CapsuleDefinition.load_runtime(...)` or direct
-   delegation to `emit_container_runtime_source(...)`
+5. direct delegation to `emit_container_runtime_source(...)`
 
 Reuse/fix:
 
 1. Reuse or extend `CapsuleRuntime` unless a concrete limitation appears.
-2. Keep `CapsuleDefinition.load_runtime(...)` as the low-level escape hatch if it
-   still reduces code.
+2. Delegate directly to `emit_container_runtime_source(...)`; do not reintroduce
+   the removed callback-based capsule bridge.
 3. Do not make a second generated runtime namespace type unless `CapsuleRuntime`
    cannot serve the plan.
 
@@ -507,8 +506,8 @@ Tests:
 1. Bespoke: helper name inference when reliable.
 2. Bespoke: explicit helper name override.
 3. Bespoke: duplicate helper name with different value rejects.
-4. Bespoke: dependency helper aggregation coalesces duplicate same helper.
-5. Bespoke: generated values discovered from dependency concepts are available
+4. Bespoke: extension helper aggregation coalesces duplicate same helper.
+5. Bespoke: generated values discovered from extension concepts are available
    during runtime source emission.
 
 Goldens:
@@ -566,7 +565,7 @@ Rules:
 1. Attribute syntax and data-driven syntax must record the same operation type.
 2. Data-driven syntax is not a new semantic layer.
 3. Do not implement this speculatively.
-4. The dependency reference namespace comes first; data-driven lookup should not
+4. The extension reference namespace comes first; data-driven lookup should not
    be used to paper over missing owner/reference semantics.
 
 ## Verification Strategy
@@ -604,12 +603,12 @@ Use goldens for successful generated behavior:
 2. slots/init/property class sketch behavior
 3. matched resource propagation into component records
 4. generated runtime source that reconstructs `from_astichi_code(...)` values
-5. dependency-driven concept loading
+5. extension-driven concept loading
 
 Use bespoke tests for:
 
 1. builder immutability
-2. dependency conflicts
+2. extension conflicts
 3. invalid handle resolution
 4. duplicate helper names
 5. generated-value discovery/dedupe mechanics
@@ -663,13 +662,13 @@ Diagnostics should name the concept and recorded operation where possible.
 1. Property/frozen concepts are authored through recorded builders.
 2. Frozen depends on property and loads it automatically.
 3. Dependent concepts reference parent-owned properties, records, collections,
-   ports, and matchers through dependency handle namespaces rather than
+   ports, and matchers through extension handle namespaces rather than
    redefining them.
 4. Matcher resources use inline `from_astichi_code(...)` values, not manual
    value-name/global tables.
 5. `match.resource()` carries selected generated values through productions.
 6. `ConceptPlan.runtime().load()` is the ordinary runtime-loading path.
-7. Low-level DDS and capsule APIs remain available where they reduce code.
+7. Low-level DDS APIs remain available where they reduce code.
 8. Concrete concept modules delete redundant manual aggregation code.
 9. Goldens prove generated behavior remains stable or intentionally improves.
 10. Full focused tests, golden tests, full suite, and version sweep pass.

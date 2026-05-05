@@ -2,12 +2,12 @@ from __future__ import annotations
 
 from support.golden_case import run_case
 from yidl.capsule.build_mapper import build_class_source
-from yidl.capsule.init_concepts import build_init_capsule_concept
+from yidl.capsule.init_concepts import InitConcept
 from yidl.capsule.init_concepts import init_class_build_plan
 
 
 def _runtime():
-    return build_init_capsule_concept().runtime().load()
+    return InitConcept.runtime().load()
 
 
 def _container():

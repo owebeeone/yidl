@@ -4,14 +4,14 @@ from support.golden_case import run_case
 from yidl.capsule.build_mapper import CapsuleClassBuildPlan
 from yidl.capsule.build_mapper import RuntimePortRef
 from yidl.capsule.build_mapper import build_class_source
-from yidl.capsule.frozen_concepts import build_frozen_property_concept
+from yidl.capsule.frozen_concepts import FrozenPropertyConcept
 from yidl.capsule.property_concepts import MANAGED_FIELD
 from yidl.capsule.property_concepts import PLAIN_FIELD
 from yidl.capsule.property_concepts import property_class_body_edge_plan
 
 
 def _runtime():
-    return build_frozen_property_concept().runtime().load()
+    return FrozenPropertyConcept.runtime().load()
 
 
 def render_case() -> str:

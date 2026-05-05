@@ -173,15 +173,19 @@ not change the concept authoring shape.
 ## Example: Frozen Property Without Side Tables
 
 ```python
-FrozenBuilder = capsule_concept("frozen", requires=(PropertyConcept,))
+FrozenBuilder = capsule_concept("frozen", extends=(PropertyConcept,))
 
 Frozen = FrozenBuilder.props.Frozen(bool)
-FrozenBuilder.extend_record.FieldInput(Frozen)
+Property = FrozenBuilder.use(PropertyConcept)
+FrozenBuilder.extend_record(Property.records.FieldInput, Frozen)
 
-PropertyTemplate = FrozenBuilder.use_matcher.PropertyTemplate()
-field = PropertyTemplate.input.field(Fields)
+PropertyTemplate = FrozenBuilder.use_matcher(Property.matchers.PropertyTemplate)
+field = PropertyTemplate.input.field(Property.collections.Fields)
 PropertyTemplate.rule.readonly_plain(
-    when=(field.prop(Frozen).eq(True), field.prop(Kind).eq(PLAIN_FIELD)),
+    when=(
+        field.prop(Frozen).eq(True),
+        field.prop(Property.props.Kind).eq(PLAIN_FIELD),
+    ),
     resource=from_astichi_code(
         "@property\n"
         "def field_name__astichi_arg__(self):\n"
@@ -189,7 +193,10 @@ PropertyTemplate.rule.readonly_plain(
     ),
 )
 PropertyTemplate.rule.readonly_managed(
-    when=(field.prop(Frozen).eq(True), field.prop(Kind).eq(MANAGED_FIELD)),
+    when=(
+        field.prop(Frozen).eq(True),
+        field.prop(Property.props.Kind).eq(MANAGED_FIELD),
+    ),
     resource=from_astichi_code(
         "@property\n"
         "def field_name__astichi_arg__(self):\n"

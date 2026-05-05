@@ -4,17 +4,17 @@ from support.golden_case import run_case
 from yidl.capsule.build_mapper import CapsuleClassBuildPlan
 from yidl.capsule.build_mapper import RuntimePortRef
 from yidl.capsule.build_mapper import build_class_source
-from yidl.capsule.init_concepts import build_init_capsule_concept
+from yidl.capsule.init_concepts import InitConcept
 from yidl.capsule.init_concepts import init_class_build_plan
 from yidl.capsule.recorded_builder import capsule_concept
-from yidl.capsule.slots_concepts import build_slots_capsule_concept
+from yidl.capsule.slots_concepts import SlotsConcept
 from yidl.capsule.slots_concepts import slots_child_port_plan
 
 
 def _runtime():
     definition = capsule_concept(
         "SlotsAndInit",
-        requires=(build_slots_capsule_concept(), build_init_capsule_concept()),
+        extends=(SlotsConcept, InitConcept),
     ).build()
     return definition.runtime().load()
 

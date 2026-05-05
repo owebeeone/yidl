@@ -3,14 +3,23 @@
 from __future__ import annotations
 
 import ast
-from collections.abc import Callable, Iterable, Mapping
+from collections.abc import Callable, Iterable
 from dataclasses import dataclass, field
 from functools import cache
 import textwrap
 from typing import Any
 
-from .base_capsule import BaseCapsule
-from .core import CapsuleSpecInstance, UNSPECIFIED, YidlCapsule, build_from
+
+class UnspecifiedType:
+    """Sentinel for absent field annotations/defaults."""
+
+    __slots__ = ()
+
+    def __repr__(self) -> str:
+        return "UNSPECIFIED"
+
+
+UNSPECIFIED = UnspecifiedType()
 
 INIT_ONLY_METHOD_SHELL = """
 def __init__(self, params__astichi_param_hole__):
@@ -111,6 +120,16 @@ class ResolvedInitField:
     init: bool = True
     default: Any = UNSPECIFIED
 
+    def __post_init__(self) -> None:
+        if not isinstance(self.field_name, str):
+            raise TypeError(
+                f"FieldName must be str, got {type(self.field_name).__name__}"
+            )
+        if not isinstance(self.init, bool):
+            raise TypeError(f"Init must be bool for field {self.field_name!r}")
+        if not self.init and self.default is UNSPECIFIED:
+            raise ValueError(f"missing initial value for field {self.field_name!r}")
+
 
 @dataclass(frozen=True, slots=True)
 class InitOnlyFieldSpec:
@@ -141,42 +160,11 @@ def field_spec(*, init: bool = True, default: Any = UNSPECIFIED) -> InitOnlyFiel
     return InitOnlyFieldSpec(init=init, default=default)
 
 
-def build_init_only_capsule() -> YidlCapsule:
-    builder = build_from(BaseCapsule)
-    builder.property.add.FieldName(str)
-    builder.property.add.FieldAnno(object, default=UNSPECIFIED)
-    builder.spec.add.field_spec.FieldName.FieldAnno.Init.Default
-    builder.method.add.Main.named("__init__").params.body
-    return builder.build()
-
-
-InitOnlyCapsule = build_init_only_capsule()
-
-
-def compile_capsule(
-    capsule: YidlCapsule = InitOnlyCapsule,
-    namespace: Mapping[str, Any] | None = None,
-) -> Callable[[type[Any]], type[Any]]:
-    """Compile a capsule into a class decorator.
-
-    The current discovery slice only supports the concrete ``InitOnlyCapsule``.
-    ``namespace`` is reserved for the broader capsule compiler surface.
-    """
-
-    del namespace
-    if capsule != InitOnlyCapsule:
-        raise NotImplementedError("compile_capsule currently supports InitOnlyCapsule only")
-    return compile_init_only_capsule(capsule=capsule)
-
-
-def compile_init_only_capsule(
-    *,
-    capsule: YidlCapsule = InitOnlyCapsule,
-) -> Callable[[type[Any]], type[Any]]:
+def compile_init_only_capsule() -> Callable[[type[Any]], type[Any]]:
     """Return a decorator that emits an init-only wrapper class."""
 
     def decorate(decorated_class: type[Any]) -> type[Any]:
-        class_definition = class_definition_from_class(decorated_class, capsule=capsule)
+        class_definition = class_definition_from_class(decorated_class)
         _strip_field_spec_markers(decorated_class)
         factory_source = emit_init_only_factory_source(class_definition)
         wrapped_class = _materialize_init_only_wrapper_class(
@@ -197,8 +185,6 @@ def compile_init_only_capsule(
 
 def class_definition_from_class(
     decorated_class: type[Any],
-    *,
-    capsule: YidlCapsule = InitOnlyCapsule,
 ) -> InitOnlyClassDefinition:
     """Scan a decorated class for ``field_spec(...)`` declarations."""
 
@@ -219,17 +205,12 @@ def class_definition_from_class(
         value = decorated_class.__dict__.get(field_name, UNSPECIFIED)
         if not isinstance(value, InitOnlyFieldSpec):
             continue
-        spec_values: dict[str, Any] = {
-            "field_name": field_name,
-            "field_anno": field_anno,
-            "init": value.init,
-        }
-        if value.default is not UNSPECIFIED:
-            spec_values["default"] = value.default
         fields.append(
-            _resolve_field_spec(
-                capsule,
-                CapsuleSpecInstance.from_values("field_spec", **spec_values),
+            _resolve_init_field(
+                field_name=field_name,
+                field_anno=field_anno,
+                init=value.init,
+                default=value.default,
             )
         )
 
@@ -361,14 +342,9 @@ def emit_init_only_factory_source(class_definition: InitOnlyClassDefinition) -> 
 
 def render_init_only_class(
     class_name: str,
-    fields: Iterable[CapsuleSpecInstance],
-    *,
-    capsule: YidlCapsule = InitOnlyCapsule,
+    fields: Iterable[ResolvedInitField],
 ) -> str:
-    resolved_fields = tuple(
-        _resolve_field_spec(capsule, field_spec_instance)
-        for field_spec_instance in fields
-    )
+    resolved_fields = tuple(fields)
     module = ast.Module(
         body=[_build_class_def(class_name, resolved_fields)],
         type_ignores=[],
@@ -419,49 +395,13 @@ def _default_local_name(field_name: str) -> str:
     return f"_y_{field_name}_default"
 
 
-def _resolve_field_spec(
-    capsule: YidlCapsule,
-    field_spec_instance: CapsuleSpecInstance,
+def _resolve_init_field(
+    *,
+    field_name: str,
+    field_anno: Any = UNSPECIFIED,
+    init: bool = True,
+    default: Any = UNSPECIFIED,
 ) -> ResolvedInitField:
-    field_spec = _spec_named(capsule, field_spec_instance.spec_name)
-    defined_properties = {prop.name: prop for prop in capsule.properties}
-    allowed_properties = tuple(
-        defined_properties[property_name]
-        for property_name in field_spec.property_names
-    )
-    allowed_property_names = {prop.property_name for prop in allowed_properties}
-    property_defaults = {
-        prop.property_name: prop.default
-        for prop in allowed_properties
-    }
-    provided_values: dict[str, Any] = {}
-    for value in field_spec_instance.values:
-        if value.property_name not in allowed_property_names:
-            raise ValueError(
-                f"unknown property {value.property_name!r} for spec "
-                f"{field_spec_instance.spec_name!r}"
-            )
-        provided_values[value.property_name] = value.value
-
-    field_name = provided_values.get(
-        "field_name",
-        property_defaults.get("field_name", UNSPECIFIED),
-    )
-    field_anno = provided_values.get(
-        "field_anno",
-        property_defaults.get("field_anno", UNSPECIFIED),
-    )
-    init = provided_values.get(
-        "init",
-        property_defaults.get("init", True),
-    )
-    default = provided_values.get(
-        "default",
-        property_defaults.get("default", UNSPECIFIED),
-    )
-
-    if field_name is UNSPECIFIED:
-        raise ValueError(f"missing FieldName for spec {field_spec_instance.spec_name!r}")
     if not isinstance(field_name, str):
         raise TypeError(f"FieldName must be str, got {type(field_name).__name__}")
     if not isinstance(init, bool):
@@ -556,21 +496,11 @@ def _expression_for_value(value: Any) -> ast.expr:
     return ast.parse(repr(value), mode="eval").body
 
 
-def _spec_named(capsule: YidlCapsule, spec_name: str):
-    for spec in capsule.specs:
-        if spec.name == spec_name:
-            return spec
-    raise ValueError(f"unknown spec {spec_name!r}")
-
-
 __all__ = [
-    "InitOnlyCapsule",
     "InitOnlyClassDefinition",
     "InitOnlyFieldSpec",
     "ResolvedInitField",
-    "build_init_only_capsule",
     "class_definition_from_class",
-    "compile_capsule",
     "compile_init_only_capsule",
     "emit_init_only_factory_source",
     "field_spec",

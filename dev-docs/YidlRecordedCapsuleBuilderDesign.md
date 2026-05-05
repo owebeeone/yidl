@@ -4,7 +4,7 @@
 
 Move capsule authoring from functions that mutate a live `DataDefinitionSystem`
 to replayable concept plans. The goal is to make capsule definitions reusable,
-composable, dependency-aware, and less boilerplate-heavy while still lowering to
+composable, extension-aware, and less boilerplate-heavy while still lowering to
 the existing DDS/container/matcher implementation.
 
 The current underlying DDS remains the execution target. This design changes how
@@ -47,7 +47,7 @@ The function-based API does not scale:
 1. Every feature repeats low-level `ensure_*` calls.
 2. `load_runtime(...)` requires the caller to manually aggregate runtime values,
    evaluators, and globals from every concept.
-3. Dependencies are implicit. A frozen-property override needs the property
+3. Extensions are implicit. A frozen-property override needs the property
    matcher, but the caller currently has to remember to include property first.
 4. Concept declarations are not reusable as data. They are functions that can be
    called, not inspectable plans that can be merged, inherited, or replayed.
@@ -74,13 +74,13 @@ Recorded builders make concepts first-class data.
 PropertyBuilder = capsule_concept("property")
 PropertyConcept = PropertyBuilder.build()
 
-FrozenBuilder = capsule_concept("frozen", requires=(PropertyConcept,))
+FrozenBuilder = capsule_concept("frozen", extends=(PropertyConcept,))
 FrozenConcept = FrozenBuilder.build()
 ```
 
 The builder and built concept are separate public types. The builder records
 operations and cannot be replayed. Only a built concept plan can be applied,
-loaded, or used as a dependency by runtime assembly. Building freezes the plan;
+loaded, or used as an extension by runtime assembly. Building freezes the plan;
 a concept plan is immutable.
 
 ### Referencing Existing Definitions
@@ -91,7 +91,7 @@ reference those definitions; they should not redefine them.
 ```python
 PropertyConcept = PropertyBuilder.build()
 
-FrozenBuilder = capsule_concept("frozen", requires=(PropertyConcept,))
+FrozenBuilder = capsule_concept("frozen", extends=(PropertyConcept,))
 Property = FrozenBuilder.use(PropertyConcept)
 
 Name = Property.props.Name
@@ -104,12 +104,12 @@ PropertyTemplate = FrozenBuilder.use_matcher(Property.matchers.PropertyTemplate)
 `FrozenBuilder.use(PropertyConcept)` returns a read-only namespace of handles
 exported by `PropertyConcept`. It does not replay the concept immediately and it
 does not create new DDS definitions. Replay validates that the referenced plan is
-in the dependency closure.
+in the extension closure.
 
 For V1, every handle recorded by a built plan is exported. A later
 private/public visibility model can narrow that if concept boundaries need it.
 
-The same concept can be reached more than once through a dependency diamond, but
+The same concept can be reached more than once through an extension diamond, but
 that coalesces by concept identity. A different concept that writes
 `props.Name(...)` is defining a new property operation, not referencing the
 property from `PropertyConcept`; that must reject unless a future explicit alias
@@ -145,7 +145,7 @@ Rules:
 1. Record definitions create symbolic record handles.
 2. Record extension operations target an existing record handle.
 3. Extension operations require the target record to exist in this concept or a
-   dependency at replay time.
+   extension at replay time.
 4. Identical repeated extensions coalesce.
 5. Conflicting record definitions reject.
 
@@ -197,7 +197,13 @@ Kind = Property.props.Kind
 field = PropertyTemplate.input.field(Fields)
 PropertyTemplate.rule.readonly_plain(
     when=(field.prop(Frozen).eq(True), field.prop(Kind).eq(PLAIN_FIELD)),
-    resource=READONLY_PROPERTY,
+    resource=from_astichi_code(
+        """
+        @property
+        def field_name__astichi_arg__(self):
+            return self.astichi_ref(external=storage_path)
+        """
+    ),
 )
 ```
 
@@ -251,9 +257,9 @@ the resource model.
 
 ## Replay Model
 
-Replay proceeds in dependency order:
+Replay proceeds in extension order:
 
-1. Resolve dependency closure.
+1. Resolve extension closure.
 2. Topologically order concepts.
 3. Create a fresh `DataDefinitionSystem`.
 4. Replay property definitions.
@@ -267,15 +273,15 @@ Replay proceeds in dependency order:
 Replay must be deterministic. Declaration order is preserved where the existing
 DDS cares about order.
 
-## Dependency And Diamond Rules
+## Extension And Diamond Rules
 
-1. Dependencies are concept objects, not strings.
-2. A concept can depend on another concept directly.
-3. Diamond dependencies coalesce by concept identity.
+1. Extensions are concept objects, not strings.
+2. A concept can extend another concept directly.
+3. Diamond extensions coalesce by concept identity.
 4. Replaying the same concept twice is a no-op after the first replay.
 5. Re-declaring schema objects from a different concept is not a reference and
    must reject unless a future explicit alias/import mechanism is added.
-6. Replaying the same owner operation through a dependency diamond is allowed.
+6. Replaying the same owner operation through an extension diamond is allowed.
 7. Conflicting declarations reject with a capsule-composition diagnostic.
 
 ## Property/Frozen Example
@@ -310,7 +316,7 @@ Frozen extension:
 ```python
 PropertyConcept = PropertyBuilder.build()
 
-FrozenBuilder = capsule_concept("frozen", requires=(PropertyConcept,))
+FrozenBuilder = capsule_concept("frozen", extends=(PropertyConcept,))
 Property = FrozenBuilder.use(PropertyConcept)
 
 FrozenProp = FrozenBuilder.props.Frozen(bool)
@@ -356,7 +362,7 @@ from the concept plan.
 
 1. Builder and plan are separate public types. A `CapsuleConceptBuilder` records
    operations. A `CapsuleConceptPlan` is built from it and is the only object
-   that can be replayed, loaded, or used as a stable dependency.
+   that can be replayed, loaded, or used as a stable extension.
 2. A concept builder does not run. It must be built before use. The built concept
    plan is immutable.
 3. Generated values should be discovered from recorded operations; if emission
@@ -380,7 +386,7 @@ FrozenBuilder.extend_record.FieldInput(Frozen)
 
 That is convenient, but it can accidentally mutate records that were meant to be
 closed implementation details. A typo can also create confusing delayed replay
-errors if the target record only appears in a different dependency branch.
+errors if the target record only appears in a different extension branch.
 
 If extension points are explicit, the owning concept writes something like:
 

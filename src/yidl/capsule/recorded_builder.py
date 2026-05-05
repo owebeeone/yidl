@@ -16,6 +16,7 @@ from dataclasses import dataclass
 import itertools
 import re
 from types import MappingProxyType
+from typing import Any
 from typing import Final
 from typing import Generic
 from typing import TypeVar
@@ -36,7 +37,6 @@ from yidl.generation.data_def_sys import REQUIRED
 from yidl.generation.data_def_sys import RecordSpec
 from yidl.generation.data_def_sys import match as dds_match
 from yidl.generation.data_schema import ValueExpression
-from yidl.capsule.definition import CapsuleRuntime
 
 
 ValueTypeSpec = type[object] | tuple[type[object], ...]
@@ -351,12 +351,39 @@ class RuntimeHelperOperation:
 
 
 @dataclass(frozen=True, slots=True)
+class CapsuleRuntime:
+    """Loaded generated DDS runtime for a capsule concept plan."""
+
+    definition: object
+    source: str
+    namespace: Mapping[str, object]
+
+    def __getitem__(self, name: str) -> object:
+        return self.namespace[name]
+
+    def get(self, name: str, default: Any = None) -> object:
+        return self.namespace.get(name, default)
+
+    def new_builder(self) -> object:
+        builder_factory = self.namespace["new_builder"]
+        if not callable(builder_factory):
+            raise TypeError("generated runtime new_builder is not callable")
+        return builder_factory()
+
+    def build_container(self, builder: object) -> object:
+        build_container = self.namespace["build_container"]
+        if not callable(build_container):
+            raise TypeError("generated runtime build_container is not callable")
+        return build_container(builder)
+
+
+@dataclass(frozen=True, slots=True)
 class CapsuleConceptPlan:
     """Immutable recorded capsule concept plan."""
 
     name: str
     owner_id: int
-    dependencies: tuple[CapsuleConceptPlan, ...]
+    extensions: tuple[CapsuleConceptPlan, ...]
     properties: tuple[PropertyHandle, ...]
     record_definitions: tuple[RecordHandle, ...]
     record_extensions: tuple[RecordExtensionOperation, ...]
@@ -429,7 +456,7 @@ class CapsuleConceptBuilder:
         "_collections",
         "_computed_collection_order",
         "_computed_collections",
-        "_dependencies",
+        "_extensions",
         "_matcher_defaults",
         "_matcher_inputs",
         "_matcher_order",
@@ -465,15 +492,15 @@ class CapsuleConceptBuilder:
         self,
         name: str,
         *,
-        requires: Iterable[CapsuleConceptPlan] = (),
+        extends: Iterable[CapsuleConceptPlan] = (),
     ) -> None:
         _require_label(name, "concept name")
         self.name = name
         self._owner_id = next(_BUILDER_IDS)
-        self._dependencies = tuple(requires)
-        for dependency in self._dependencies:
-            if not isinstance(dependency, CapsuleConceptPlan):
-                raise TypeError("concept dependencies must be CapsuleConceptPlan")
+        self._extensions = tuple(extends)
+        for extension in self._extensions:
+            if not isinstance(extension, CapsuleConceptPlan):
+                raise TypeError("concept extensions must be CapsuleConceptPlan")
         self._properties: dict[str, PropertyHandle] = {}
         self._property_order: list[PropertyHandle] = []
         self._records: dict[str, RecordHandle] = {}
@@ -512,7 +539,7 @@ class CapsuleConceptBuilder:
         return CapsuleConceptPlan(
             name=self.name,
             owner_id=self._owner_id,
-            dependencies=self._dependencies,
+            extensions=self._extensions,
             properties=tuple(self._property_order),
             record_definitions=tuple(self._record_order),
             record_extensions=tuple(self._record_extensions),
@@ -537,9 +564,9 @@ class CapsuleConceptBuilder:
     def use(self, plan: CapsuleConceptPlan) -> PlanReferenceNamespace:
         if not isinstance(plan, CapsuleConceptPlan):
             raise TypeError("builder.use(...) requires a CapsuleConceptPlan")
-        if plan not in _dependency_closure(self._dependencies):
+        if plan not in _extension_closure(self._extensions):
             raise ValueError(
-                f"concept {plan.name!r} is not in the dependency closure for "
+                f"concept {plan.name!r} is not in the extension closure for "
                 f"{self.name!r}"
             )
         return PlanReferenceNamespace(plan)
@@ -550,10 +577,10 @@ class CapsuleConceptBuilder:
             raise TypeError("use_matcher(...) requires a MatcherHandle")
         if matcher.owner_id != self._owner_id and not _handle_owner_in_plans(
             matcher.owner_id,
-            _dependency_closure(self._dependencies),
+            _extension_closure(self._extensions),
         ):
             raise ValueError(
-                f"matcher {matcher.name!r} is not in the dependency closure for "
+                f"matcher {matcher.name!r} is not in the extension closure for "
                 f"{self.name!r}"
             )
         return MatcherEditor(self, matcher)
@@ -1476,7 +1503,7 @@ class RecordedConceptRuntimeLoader:
 
     def _runtime_helpers(self) -> tuple[RuntimeHelperOperation, ...]:
         by_name: dict[str, RuntimeHelperOperation] = {}
-        for plan in _dependency_closure((*self._plan.dependencies, self._plan)):
+        for plan in _extension_closure((*self._plan.extensions, self._plan)):
             for helper in plan.runtime_helpers:
                 existing = by_name.get(helper.name)
                 if existing is None:
@@ -1541,8 +1568,8 @@ class ReplayContext:
     def apply_plan(self, plan: CapsuleConceptPlan) -> None:
         if plan.owner_id in self._applied_plan_ids:
             return
-        for dependency in plan.dependencies:
-            self.apply_plan(dependency)
+        for extension in plan.extensions:
+            self.apply_plan(extension)
         for prop in plan.properties:
             self._apply_property(prop)
         for record in plan.record_definitions:
@@ -1870,14 +1897,14 @@ class ReplayContext:
 def capsule_concept(
     name: str,
     *,
-    requires: Iterable[CapsuleConceptPlan] = (),
+    extends: Iterable[CapsuleConceptPlan] = (),
 ) -> CapsuleConceptBuilder:
     """Create a recorded capsule concept builder."""
 
-    return CapsuleConceptBuilder(name, requires=requires)
+    return CapsuleConceptBuilder(name, extends=extends)
 
 
-def _dependency_closure(
+def _extension_closure(
     plans: Iterable[CapsuleConceptPlan],
 ) -> tuple[CapsuleConceptPlan, ...]:
     seen: set[int] = set()
@@ -1887,8 +1914,8 @@ def _dependency_closure(
         if plan.owner_id in seen:
             return
         seen.add(plan.owner_id)
-        for dependency in plan.dependencies:
-            visit(dependency)
+        for extension in plan.extensions:
+            visit(extension)
         ordered.append(plan)
 
     for plan in plans:
@@ -1982,6 +2009,7 @@ def _to_snake_case(name: str) -> str:
 __all__ = [
     "CapsuleConceptBuilder",
     "CapsuleConceptPlan",
+    "CapsuleRuntime",
     "CollectionHandle",
     "ComputedCollectionHandle",
     "MatcherHandle",

@@ -54,12 +54,12 @@ def test_recorded_concept_plan_is_immutable_after_build() -> None:
     assert [prop.name for prop in dds.properties] == ["Name"]
 
 
-def test_dependency_reference_reuses_parent_property_without_redefinition() -> None:
+def test_extension_reference_reuses_parent_property_without_redefinition() -> None:
     parent = capsule_concept("property")
     parent_name = parent.props.Name(str, REQUIRED)
     parent_plan = parent.build()
 
-    child = capsule_concept("frozen", requires=(parent_plan,))
+    child = capsule_concept("frozen", extends=(parent_plan,))
     parent_ref = child.use(parent_plan)
     referenced_name = parent_ref.props.Name
     frozen = child.props.Frozen(bool)
@@ -73,20 +73,20 @@ def test_dependency_reference_reuses_parent_property_without_redefinition() -> N
     assert frozen.name == "Frozen"
 
 
-def test_dependency_diamond_replays_parent_once() -> None:
+def test_extension_diamond_replays_parent_once() -> None:
     root = capsule_concept("root")
     root.props.Name(str, REQUIRED)
     root_plan = root.build()
 
-    left = capsule_concept("left", requires=(root_plan,))
+    left = capsule_concept("left", extends=(root_plan,))
     left.props.Left(bool)
     left_plan = left.build()
 
-    right = capsule_concept("right", requires=(root_plan,))
+    right = capsule_concept("right", extends=(root_plan,))
     right.props.Right(bool)
     right_plan = right.build()
 
-    child = capsule_concept("child", requires=(left_plan, right_plan))
+    child = capsule_concept("child", extends=(left_plan, right_plan))
     child.props.Child(bool)
     child_plan = child.build()
 
@@ -101,12 +101,12 @@ def test_dependency_diamond_replays_parent_once() -> None:
     ]
 
 
-def test_redefining_dependency_owned_property_rejects() -> None:
+def test_redefining_extension_owned_property_rejects() -> None:
     parent = capsule_concept("property")
     parent.props.Name(str, REQUIRED)
     parent_plan = parent.build()
 
-    child = capsule_concept("frozen", requires=(parent_plan,))
+    child = capsule_concept("frozen", extends=(parent_plan,))
     child.props.Name(str, REQUIRED)
     child_plan = child.build()
 
@@ -123,7 +123,7 @@ def test_conflicting_property_definitions_reject() -> None:
     right.props.Name(int, REQUIRED)
     right_plan = right.build()
 
-    child = capsule_concept("child", requires=(left_plan, right_plan))
+    child = capsule_concept("child", extends=(left_plan, right_plan))
     child_plan = child.build()
 
     with pytest.raises(ValueError, match="property 'Name' is already owned"):
@@ -164,7 +164,7 @@ def test_recorded_concept_plan_replays_records_collections_and_ports() -> None:
     assert dds.port_index_spec.order.name == "Order"
 
 
-def test_dependency_record_extension_uses_parent_record_handle() -> None:
+def test_extension_record_extension_uses_parent_record_handle() -> None:
     parent = capsule_concept("property")
     name = parent.props.Name(str, REQUIRED)
     field_input = parent.records.FieldInput(name)
@@ -175,7 +175,7 @@ def test_dependency_record_extension_uses_parent_record_handle() -> None:
     )
     parent_plan = parent.build()
 
-    child = capsule_concept("frozen", requires=(parent_plan,))
+    child = capsule_concept("frozen", extends=(parent_plan,))
     parent_ref = child.use(parent_plan)
     frozen = child.props.Frozen(bool)
     child.extend_record(parent_ref.records.FieldInput, frozen)
@@ -197,13 +197,13 @@ def test_dependency_record_extension_uses_parent_record_handle() -> None:
     ]
 
 
-def test_child_redefining_dependency_record_rejects() -> None:
+def test_child_redefining_extension_record_rejects() -> None:
     parent = capsule_concept("property")
     name = parent.props.Name(str, REQUIRED)
     parent.records.FieldInput(name)
     parent_plan = parent.build()
 
-    child = capsule_concept("frozen", requires=(parent_plan,))
+    child = capsule_concept("frozen", extends=(parent_plan,))
     parent_ref = child.use(parent_plan)
     frozen = child.props.Frozen(bool)
     assert parent_ref.records.FieldInput.name == "FieldInput"
@@ -213,15 +213,15 @@ def test_child_redefining_dependency_record_rejects() -> None:
         child.build().apply(DataDefinitionSystem())
 
 
-def test_unknown_dependency_reference_rejects() -> None:
+def test_unknown_extension_reference_rejects() -> None:
     parent = capsule_concept("property")
     parent_plan = parent.build()
     other = capsule_concept("other")
     other_plan = other.build()
 
-    child = capsule_concept("frozen", requires=(parent_plan,))
+    child = capsule_concept("frozen", extends=(parent_plan,))
 
-    with pytest.raises(ValueError, match="not in the dependency closure"):
+    with pytest.raises(ValueError, match="not in the extension closure"):
         child.use(other_plan)
 
 
@@ -342,7 +342,7 @@ def test_recorded_production_group_accumulates_same_name_memberships() -> None:
     ] == [("Targets", ["First", "Second"])]
 
 
-def test_child_concept_adds_rule_to_dependency_owned_matcher() -> None:
+def test_child_concept_adds_rule_to_extension_owned_matcher() -> None:
     parent = capsule_concept("property")
     name = parent.props.Name(str, REQUIRED)
     kind = parent.props.Kind(str, "plain")
@@ -358,7 +358,7 @@ def test_child_concept_adds_rule_to_dependency_owned_matcher() -> None:
     parent_template.default(from_literal("plain-property"))
     parent_plan = parent.build()
 
-    child = capsule_concept("frozen", requires=(parent_plan,))
+    child = capsule_concept("frozen", extends=(parent_plan,))
     parent_ref = child.use(parent_plan)
     frozen = child.props.Frozen(bool)
     child.extend_record(parent_ref.records.FieldInput, frozen)
@@ -436,7 +436,7 @@ def test_recorded_concept_runtime_rejects_conflicting_helper_names() -> None:
     right.runtime.evaluator(right_helper, name="value_for")
     right_plan = right.build()
 
-    child = capsule_concept("child", requires=(left_plan, right_plan))
+    child = capsule_concept("child", extends=(left_plan, right_plan))
 
     with pytest.raises(ValueError, match="runtime helper 'value_for'"):
         child.build().runtime().load()

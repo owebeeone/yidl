@@ -7,6 +7,7 @@ import builtins
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from dataclasses import field
+import textwrap
 
 import astichi
 
@@ -66,10 +67,13 @@ def from_astichi_code(
 ) -> MatcherGeneratedValue:
     """Create a matcher-generated value from Astichi source."""
 
-    if not isinstance(astichi_code, str) or not astichi_code:
+    if not isinstance(astichi_code, str):
+        raise ValueError("astichi_code must be a non-empty string")
+    source = textwrap.dedent(astichi_code).strip()
+    if not source:
         raise ValueError("astichi_code must be a non-empty string")
     return MatcherGeneratedValue(
-        source=astichi_code,
+        source=source,
         file_name=file_name,
         line_number=line_number,
         offset=offset,

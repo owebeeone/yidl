@@ -5,66 +5,40 @@ import inspect
 
 import pytest
 
-from yidl.capsule import CapsuleSpecInstance
 from yidl.capsule.init_only_capsule import (
-    InitOnlyCapsule,
-    build_init_only_capsule,
     compile_init_only_capsule,
     field_spec,
+    InitOnlyFieldSpec,
+    ResolvedInitField,
     render_init_only_class,
 )
 
 
-def test_init_only_capsule_extends_base_capsule_with_field_spec_and_init_method() -> None:
-    built = build_init_only_capsule()
+def test_field_spec_records_init_and_default_options() -> None:
+    spec = field_spec(init=False, default="cold")
 
-    assert built == InitOnlyCapsule
-    assert [facade.name for facade in built.facades] == ["Main"]
-    assert [prop.name for prop in built.properties] == [
-        "Init",
-        "Default",
-        "FieldName",
-        "FieldAnno",
-    ]
-    assert [prop.property_name for prop in built.properties] == [
-        "init",
-        "default",
-        "field_name",
-        "field_anno",
-    ]
-    assert [spec.name for spec in built.specs] == ["base_spec", "field_spec"]
-    assert built.specs[1].property_names == (
-        "FieldName",
-        "FieldAnno",
-        "Init",
-        "Default",
-    )
-    assert [(method.facade_name, method.name) for method in built.methods] == [
-        ("Main", "__init__")
-    ]
-    assert [surface.name for surface in built.methods[0].surfaces] == ["params", "body"]
+    assert isinstance(spec, InitOnlyFieldSpec)
+    assert spec.init is False
+    assert spec.default == "cold"
 
 
 def test_render_init_only_class_builds_plain_python_init() -> None:
     source = render_init_only_class(
         "Counter",
         (
-            CapsuleSpecInstance.from_values(
-                "field_spec",
+            ResolvedInitField(
                 field_name="count",
                 field_anno=int,
                 init=True,
                 default=0,
             ),
-            CapsuleSpecInstance.from_values(
-                "field_spec",
+            ResolvedInitField(
                 field_name="label",
                 field_anno=str,
                 init=False,
                 default="cold",
             ),
-            CapsuleSpecInstance.from_values(
-                "field_spec",
+            ResolvedInitField(
                 field_name="required",
                 field_anno=int,
                 init=True,
@@ -86,8 +60,7 @@ def test_render_init_only_class_rejects_hidden_field_without_default() -> None:
         render_init_only_class(
             "Counter",
             (
-                CapsuleSpecInstance.from_values(
-                    "field_spec",
+                ResolvedInitField(
                     field_name="label",
                     field_anno=str,
                     init=False,

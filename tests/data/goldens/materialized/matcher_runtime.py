@@ -22,7 +22,7 @@ class GetterMatcher:
             return self._finish(cache_key, (from_astichi_code("{'getter': 'managed'}"), 'managed-string-no-init', 3.0), records, values)
         if values[0:2] == (False, str):
             return self._finish(cache_key, (from_astichi_code("{'getter': 'plain'}"), 'plain-string-no-init', 2.0), records, values)
-        return self._finish(cache_key, (from_astichi_code('astichi_pyimport(module="yidl.generation.data_def_sys", names=("REQUIRED",))\nREQUIRED\n'), None, 0.0), records, values)
+        return self._finish(cache_key, (from_astichi_code('astichi_pyimport(module="yidl.generation.data_def_sys", names=("REQUIRED",))\nREQUIRED'), None, 0.0), records, values)
 
     def _finish(self, cache_key, selection, records, values):
         if cache_key is not None:
