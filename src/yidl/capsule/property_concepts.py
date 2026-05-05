@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
+from functools import cache
 
 from yidl.capsule.build_mapper import TemplateEdgePlan
 from yidl.capsule.class_concepts import class_body_port
@@ -82,9 +83,6 @@ def property_order_for(result: object) -> int:
 
 PROPERTY_EVALUATOR_NAMES = ((property_order_for, "property_order_for"),)
 PROPERTY_EVALUATOR_GLOBALS = {"property_order_for": property_order_for}
-_PROPERTY_CONCEPT: CapsuleConceptPlan | None = None
-
-
 def define_property_productions(dds: DataDefinitionSystem) -> None:
     """Define matcher-selected property class-body productions."""
 
@@ -124,12 +122,9 @@ def define_property_productions(dds: DataDefinitionSystem) -> None:
     )
 
 
+@cache
 def build_property_capsule_concept() -> CapsuleConceptPlan:
     """Build the recorded property-method concept."""
-
-    global _PROPERTY_CONCEPT
-    if _PROPERTY_CONCEPT is not None:
-        return _PROPERTY_CONCEPT
 
     class_schema = build_class_field_schema_concept()
     builder = capsule_concept("property-productions", requires=(class_schema,))
@@ -164,8 +159,7 @@ def build_property_capsule_concept() -> CapsuleConceptPlan:
     ).in_group("Properties")
     builder.runtime.evaluator(property_order_for, name="property_order_for")
 
-    _PROPERTY_CONCEPT = builder.build()
-    return _PROPERTY_CONCEPT
+    return builder.build()
 
 
 def build_property_capsule_definition(

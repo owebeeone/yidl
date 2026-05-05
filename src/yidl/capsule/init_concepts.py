@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from functools import cache
+
 from yidl.capsule.build_mapper import CapsuleClassBuildPlan
 from yidl.capsule.build_mapper import ChildPortPlan
 from yidl.capsule.build_mapper import RuntimePortRef
@@ -68,9 +70,6 @@ INIT_TEMPLATE_GLOBALS = {
     "INIT_METHOD": INIT_METHOD,
     "ASSIGNMENT": ASSIGNMENT,
 }
-_INIT_CONCEPT: CapsuleConceptPlan | None = None
-
-
 def define_init_productions(dds: DataDefinitionSystem) -> None:
     """Define the first init-method production graph."""
 
@@ -146,12 +145,9 @@ def define_init_productions(dds: DataDefinitionSystem) -> None:
     )
 
 
+@cache
 def build_init_capsule_concept() -> CapsuleConceptPlan:
     """Build the recorded init-method concept."""
-
-    global _INIT_CONCEPT
-    if _INIT_CONCEPT is not None:
-        return _INIT_CONCEPT
 
     class_schema = build_class_field_schema_concept()
     builder = capsule_concept("init-productions", requires=(class_schema,))
@@ -219,8 +215,7 @@ def build_init_capsule_concept() -> CapsuleConceptPlan:
         policy=AddIfAbsent,
     ).in_group("Class")
 
-    _INIT_CONCEPT = builder.build()
-    return _INIT_CONCEPT
+    return builder.build()
 
 
 def build_init_capsule_definition(

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
+from functools import cache
 from weakref import WeakKeyDictionary
 
 from yidl.generation.data_def_sys import CollectionSpec
@@ -19,9 +20,6 @@ _FIELD_INPUT_EXTENSIONS: WeakKeyDictionary[
     DataDefinitionSystem,
     tuple[PropertySpec, ...],
 ] = WeakKeyDictionary()
-_CLASS_FIELD_SCHEMA_CONCEPT: CapsuleConceptPlan | None = None
-
-
 def name_prop(dds: DataDefinitionSystem) -> PropertySpec:
     return dds.ensure_property("Name", str, default=REQUIRED, storage_name="name")
 
@@ -259,12 +257,9 @@ def define_class_field_schema(dds: DataDefinitionSystem) -> None:
     dds.ensure_port_index(target=target_port_prop(dds), order=order_prop(dds))
 
 
+@cache
 def build_class_field_schema_concept() -> CapsuleConceptPlan:
     """Build the recorded common class/field schema concept."""
-
-    global _CLASS_FIELD_SCHEMA_CONCEPT
-    if _CLASS_FIELD_SCHEMA_CONCEPT is not None:
-        return _CLASS_FIELD_SCHEMA_CONCEPT
 
     builder = capsule_concept("class-field-schema")
     name = builder.props.Name(str, REQUIRED)
@@ -343,8 +338,7 @@ def build_class_field_schema_concept() -> CapsuleConceptPlan:
     builder.ports.Init.body(cardinality=builder.many)
     builder.port_index(target=target_port, order=order)
 
-    _CLASS_FIELD_SCHEMA_CONCEPT = builder.build()
-    return _CLASS_FIELD_SCHEMA_CONCEPT
+    return builder.build()
 
 
 def _field_input_extensions(dds: DataDefinitionSystem) -> tuple[PropertySpec, ...]:

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from functools import cache
+
 from yidl.capsule.build_mapper import CapsuleClassBuildPlan
 from yidl.capsule.build_mapper import ChildPortPlan
 from yidl.capsule.build_mapper import RuntimePortRef
@@ -48,9 +50,6 @@ SLOTS_TEMPLATE_GLOBALS = {
     "SLOTS_CLASSVAR": SLOTS_CLASSVAR,
     "SLOT_ITEM": SLOT_ITEM,
 }
-_SLOTS_CONCEPT: CapsuleConceptPlan | None = None
-
-
 def slot_name_prop(dds: DataDefinitionSystem) -> PropertySpec:
     return dds.ensure_property(
         "SlotName",
@@ -130,12 +129,9 @@ def define_slots_productions(dds: DataDefinitionSystem) -> None:
     )
 
 
+@cache
 def build_slots_capsule_concept() -> CapsuleConceptPlan:
     """Build the recorded ``__slots__`` concept."""
-
-    global _SLOTS_CONCEPT
-    if _SLOTS_CONCEPT is not None:
-        return _SLOTS_CONCEPT
 
     class_schema = build_class_field_schema_concept()
     builder = capsule_concept("slots-productions", requires=(class_schema,))
@@ -188,8 +184,7 @@ def build_slots_capsule_concept() -> CapsuleConceptPlan:
         policy=AddIfAbsent,
     ).in_group("Slots")
 
-    _SLOTS_CONCEPT = builder.build()
-    return _SLOTS_CONCEPT
+    return builder.build()
 
 
 def build_slots_capsule_definition(

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from functools import cache
+
 from yidl.capsule.class_concepts import extend_field_input_record
 from yidl.capsule.class_concepts import fields_collection
 from yidl.capsule.class_concepts import kind_prop
@@ -36,9 +38,6 @@ FROZEN_PROPERTY_TEMPLATE_GLOBALS = {
     "READONLY_PROPERTY": READONLY_PROPERTY,
     "READONLY_MANAGED_PROPERTY": READONLY_MANAGED_PROPERTY,
 }
-_FROZEN_PROPERTY_CONCEPT: CapsuleConceptPlan | None = None
-
-
 def frozen_prop(dds: DataDefinitionSystem) -> PropertySpec:
     return dds.ensure_property(
         "Frozen",
@@ -83,12 +82,9 @@ def define_frozen_property_overrides(dds: DataDefinitionSystem) -> None:
     )
 
 
+@cache
 def build_frozen_property_concept() -> CapsuleConceptPlan:
     """Build the recorded frozen-property override concept."""
-
-    global _FROZEN_PROPERTY_CONCEPT
-    if _FROZEN_PROPERTY_CONCEPT is not None:
-        return _FROZEN_PROPERTY_CONCEPT
 
     class_schema = build_class_field_schema_concept()
     property_concept = build_property_capsule_concept()
@@ -120,8 +116,7 @@ def build_frozen_property_concept() -> CapsuleConceptPlan:
         resource=READONLY_MANAGED_PROPERTY,
     )
 
-    _FROZEN_PROPERTY_CONCEPT = builder.build()
-    return _FROZEN_PROPERTY_CONCEPT
+    return builder.build()
 
 
 def _readonly_property_bind(record: object) -> dict[str, object]:
