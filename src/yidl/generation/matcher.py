@@ -17,8 +17,11 @@ from yidl.generation.data_schema import CollectionSpec
 from yidl.generation.data_schema import ComputedCollectionSpec
 from yidl.generation.data_schema import MatcherResultSource
 from yidl.generation.data_schema import PropertySpec
-from yidl.generation.matcher_values import MatcherGeneratedValue
+from yidl.generation.matcher_values import GeneratedValue
 from yidl.generation.matcher_values import constructor_expr_for
+from yidl.generation.matcher_values import generated_value_keep_names
+from yidl.generation.matcher_values import generated_value_uses_astichi_template
+from yidl.generation.matcher_values import is_generated_value
 
 
 class NotProvidedValue:
@@ -107,7 +110,7 @@ class MatcherRuleSpec:
     name: str
     conditions: tuple[MatcherCondition, ...]
     weight: float
-    resource: MatcherGeneratedValue
+    resource: GeneratedValue
 
     @property
     def score(self) -> float:
@@ -119,7 +122,7 @@ class MatcherRuleSpec:
 
 @dataclass(frozen=True)
 class MatcherResult:
-    resource: MatcherGeneratedValue
+    resource: GeneratedValue
     rule: str | None
     score: float
     records: tuple[object, ...]
@@ -167,7 +170,7 @@ class MatcherSpec:
         return tuple(self._rules)
 
     @property
-    def default_resource(self) -> MatcherGeneratedValue | object:
+    def default_resource(self) -> GeneratedValue | object:
         return self._default_resource
 
     @property
@@ -247,7 +250,7 @@ class MatcherSpec:
         self,
         *,
         when: Sequence[MatcherCondition],
-        resource: MatcherGeneratedValue,
+        resource: GeneratedValue,
         weight: float = 1.0,
         name: str | None = None,
     ) -> MatcherRuleSpec:
@@ -271,7 +274,7 @@ class MatcherSpec:
         self._rules.append(spec)
         return spec
 
-    def default(self, resource: MatcherGeneratedValue) -> MatcherGeneratedValue:
+    def default(self, resource: GeneratedValue) -> GeneratedValue:
         _require_generated_value(resource, "matcher default resource")
         self._default_resource = resource
         return resource
@@ -623,10 +626,16 @@ def _literal_piece(value: object) -> BasicComposable:
     return _expr_piece(value_to_ast(value))
 
 
-def _generated_value_piece(value: MatcherGeneratedValue) -> BasicComposable:
+def _generated_value_piece(value: GeneratedValue) -> BasicComposable:
+    prefix = (
+        [_astichi_template_pyimport_statement()]
+        if generated_value_uses_astichi_template(value)
+        else []
+    )
     return _expr_piece(
         constructor_expr_for(value),
-        keep_names=["from_astichi_code"],
+        keep_names=generated_value_keep_names(value),
+        prefix=prefix,
     )
 
 
@@ -643,13 +652,44 @@ def _expr_piece(
     expr: ast.expr,
     *,
     keep_names: Iterable[str] = (),
+    prefix: Iterable[ast.stmt] = (),
 ) -> BasicComposable:
-    tree = ast.Module(body=[ast.Expr(value=expr)], type_ignores=[])
+    tree = ast.Module(body=[*prefix, ast.Expr(value=expr)], type_ignores=[])
     ast.fix_missing_locations(tree)
     return BasicComposable(
         tree=tree,
         origin=CompileOrigin("<yidl.matcher>", 1, 0),
         keep_names=frozenset(keep_names),
+    )
+
+
+def _astichi_template_pyimport_statement() -> ast.Expr:
+    return ast.Expr(
+        value=ast.Call(
+            func=ast.Name(id="astichi_pyimport", ctx=ast.Load()),
+            args=[],
+            keywords=[
+                ast.keyword(
+                    arg="module",
+                    value=ast.Attribute(
+                        value=ast.Attribute(
+                            value=ast.Name(id="yidl", ctx=ast.Load()),
+                            attr="generation",
+                            ctx=ast.Load(),
+                        ),
+                        attr="data_def_sys",
+                        ctx=ast.Load(),
+                    ),
+                ),
+                ast.keyword(
+                    arg="names",
+                    value=ast.Tuple(
+                        elts=[ast.Name(id="astichi_template", ctx=ast.Load())],
+                        ctx=ast.Load(),
+                    ),
+                ),
+            ],
+        )
     )
 
 
@@ -731,8 +771,8 @@ def _require_ref_path(value: str, label: str) -> None:
 
 
 def _require_generated_value(value: object, label: str) -> None:
-    if not isinstance(value, MatcherGeneratedValue):
-        raise TypeError(f"{label} must be a MatcherGeneratedValue")
+    if not is_generated_value(value):
+        raise TypeError(f"{label} must be a generated matcher value")
 
 
 def _type_name(value_type: type[object] | tuple[type[object], ...]) -> str:

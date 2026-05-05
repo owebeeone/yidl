@@ -27,8 +27,9 @@ from yidl.generation.data_schema import ProductionSpec
 from yidl.generation.data_schema import UnionSpec
 from yidl.generation.matcher import MatcherSpec
 from yidl.generation.matcher import NOT_PROVIDED
-from yidl.generation.matcher_values import MatcherGeneratedValue
 from yidl.generation.matcher_values import constructor_expr_for
+from yidl.generation.matcher_values import generated_value_uses_astichi_template
+from yidl.generation.matcher_values import is_generated_value
 
 
 SourceNameMap = Mapping[object, str] | Sequence[tuple[object, str]]
@@ -43,7 +44,8 @@ def emit_container_runtime_source(
     """Emit a Python module containing DDS records, collections, and matchers."""
 
     uses_generated_values = _system_uses_generated_values(system)
-    lines: list[str] = [_pyimport_prefix(uses_generated_values)]
+    uses_astichi_templates = _system_uses_astichi_templates(system)
+    lines: list[str] = [_pyimport_prefix(uses_generated_values, uses_astichi_templates)]
     prop_vars = _property_vars(system)
     record_vars: dict[RecordSpec, str] = {}
     union_vars: dict[UnionSpec, str] = {}
@@ -230,10 +232,11 @@ def _container_keep_names(
     value_names: SourceNameMap,
 ) -> tuple[str, ...]:
     uses_generated_values = _system_uses_generated_values(system)
+    uses_astichi_templates = _system_uses_astichi_templates(system)
     return tuple(
         dict.fromkeys(
             (
-                *_runtime_import_names(uses_generated_values),
+                *_runtime_import_names(uses_generated_values, uses_astichi_templates),
                 *_BUILTIN_KEEP_NAMES,
                 "_RUNTIME_SPEC",
                 "_GeneratedMatcherNamespace",
@@ -639,7 +642,7 @@ def _value_expr(value: object, source_names: SourceNameMap, label: str) -> str:
         return "REQUIRED"
     if value is NOT_PROVIDED:
         return "NOT_PROVIDED"
-    if isinstance(value, MatcherGeneratedValue):
+    if is_generated_value(value):
         expr = constructor_expr_for(value)
         ast.fix_missing_locations(expr)
         return ast.unparse(expr)
@@ -683,20 +686,68 @@ def _system_uses_generated_values(system: DataDefinitionSystem) -> bool:
     return False
 
 
+def _system_uses_astichi_templates(system: DataDefinitionSystem) -> bool:
+    for prop in system.properties:
+        if _contains_astichi_template_value(prop.default):
+            return True
+    for collection in system.computed_collections:
+        if any(
+            _contains_astichi_template_value(condition.value)
+            for condition in collection.conditions
+        ):
+            return True
+    for production in system.productions:
+        if any(
+            _contains_astichi_template_value(condition.value)
+            for condition in production.conditions
+        ):
+            return True
+        if production.identity is not None and _expression_uses_astichi_templates(
+            production.identity
+        ):
+            return True
+        if any(
+            _expression_uses_astichi_templates(value.expression)
+            for value in production.values
+        ):
+            return True
+    return False
+
+
 def _expression_uses_generated_values(expression: object) -> bool:
     if isinstance(expression, LiteralValue):
         return _contains_generated_value(expression.value)
     return False
 
 
+def _expression_uses_astichi_templates(expression: object) -> bool:
+    if isinstance(expression, LiteralValue):
+        return _contains_astichi_template_value(expression.value)
+    return False
+
+
 def _contains_generated_value(value: object) -> bool:
-    if isinstance(value, MatcherGeneratedValue):
+    if is_generated_value(value):
         return True
     if isinstance(value, tuple | list | set):
         return any(_contains_generated_value(item) for item in value)
     if isinstance(value, dict):
         return any(
             _contains_generated_value(item)
+            for pair in value.items()
+            for item in pair
+        )
+    return False
+
+
+def _contains_astichi_template_value(value: object) -> bool:
+    if is_generated_value(value):
+        return generated_value_uses_astichi_template(value)
+    if isinstance(value, tuple | list | set):
+        return any(_contains_astichi_template_value(item) for item in value)
+    if isinstance(value, dict):
+        return any(
+            _contains_astichi_template_value(item)
             for pair in value.items()
             for item in pair
         )
@@ -759,10 +810,16 @@ _RUNTIME_IMPORT_NAMES = (
 )
 
 
-def _runtime_import_names(uses_generated_values: bool) -> tuple[str, ...]:
+def _runtime_import_names(
+    uses_generated_values: bool,
+    uses_astichi_templates: bool,
+) -> tuple[str, ...]:
+    names = [*_RUNTIME_IMPORT_NAMES]
     if uses_generated_values:
-        return (*_RUNTIME_IMPORT_NAMES, "from_astichi_code")
-    return _RUNTIME_IMPORT_NAMES
+        names.append("from_astichi_code")
+    if uses_astichi_templates:
+        names.append("astichi_template")
+    return tuple(names)
 
 _BUILTIN_KEEP_NAMES = (
     "AttributeError",
@@ -780,10 +837,16 @@ _BUILTIN_KEEP_NAMES = (
     "type",
 )
 
-def _pyimport_prefix(uses_generated_values: bool) -> str:
+def _pyimport_prefix(
+    uses_generated_values: bool,
+    uses_astichi_templates: bool,
+) -> str:
     names = "\n".join(
         f"        {name},"
-        for name in _runtime_import_names(uses_generated_values)
+        for name in _runtime_import_names(
+            uses_generated_values,
+            uses_astichi_templates,
+        )
     )
     return textwrap.dedent(
         f"""

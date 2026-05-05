@@ -28,7 +28,6 @@ from .property_concepts import (
     PropertyConcept,
     property_class_body_edge_plan,
     property_order_for,
-    register_property_template,
 )
 from .recorded_builder import (
     CapsuleConceptBuilder,
@@ -85,7 +84,6 @@ __all__ = [
     "match",
     "property_class_body_edge_plan",
     "property_order_for",
-    "register_property_template",
     "render_init_only_class",
     "slots_child_port_plan",
     "slots_class_build_plan",

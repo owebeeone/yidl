@@ -6,18 +6,10 @@ from yidl.capsule.class_concepts import ClassConcept
 from yidl.capsule.property_concepts import MANAGED_FIELD
 from yidl.capsule.property_concepts import PLAIN_FIELD
 from yidl.capsule.property_concepts import PropertyConcept
-from yidl.capsule.property_concepts import register_property_template
 from yidl.capsule.recorded_builder import CapsuleConceptPlan
 from yidl.capsule.recorded_builder import capsule_concept
+from yidl.generation.data_def_sys import astichi_template
 from yidl.generation.data_def_sys import from_astichi_code
-
-
-def _readonly_property_bind(record: object) -> dict[str, object]:
-    return {"storage_path": f"_{record.name}"}
-
-
-def _readonly_managed_property_bind(record: object) -> dict[str, object]:
-    return {"working_path": f"_{record.name}_working"}
 
 
 def _build_frozen_property_concept() -> CapsuleConceptPlan:
@@ -39,7 +31,7 @@ def _build_frozen_property_concept() -> CapsuleConceptPlan:
             field.prop(frozen).eq(True),
             field.prop(kind).eq(PLAIN_FIELD),
         ),
-        resource=register_property_template(
+        resource=astichi_template(
             from_astichi_code(
                 """
                 @property
@@ -47,7 +39,16 @@ def _build_frozen_property_concept() -> CapsuleConceptPlan:
                     return self.astichi_ref(external=storage_path)
                 """
             ),
-            _readonly_property_bind,
+            arg_names=from_astichi_code(
+                """
+                {"field_name": astichi_pass(record, outer_bind=True).name}
+                """
+            ),
+            bind=from_astichi_code(
+                """
+                {"storage_path": f"_{astichi_pass(record, outer_bind=True).name}"}
+                """
+            ),
         ),
     )
     property_template.rule.readonly_managed_property(
@@ -55,7 +56,7 @@ def _build_frozen_property_concept() -> CapsuleConceptPlan:
             field.prop(frozen).eq(True),
             field.prop(kind).eq(MANAGED_FIELD),
         ),
-        resource=register_property_template(
+        resource=astichi_template(
             from_astichi_code(
                 """
                 @property
@@ -63,7 +64,20 @@ def _build_frozen_property_concept() -> CapsuleConceptPlan:
                     return self.astichi_ref(external=working_path)
                 """
             ),
-            _readonly_managed_property_bind,
+            arg_names=from_astichi_code(
+                """
+                {"field_name": astichi_pass(record, outer_bind=True).name}
+                """
+            ),
+            bind=from_astichi_code(
+                """
+                {
+                    "working_path": (
+                        f"_{astichi_pass(record, outer_bind=True).name}_working"
+                    )
+                }
+                """
+            ),
         ),
     )
 

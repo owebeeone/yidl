@@ -8,6 +8,7 @@ from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from dataclasses import field
 import textwrap
+from typing import Any
 
 import astichi
 
@@ -49,6 +50,56 @@ class MatcherGeneratedValue:
         return generator
 
 
+@dataclass(frozen=True)
+class AstichiTemplateValue:
+    """Astichi template plus generated edge-binding expressions."""
+
+    template: MatcherGeneratedValue
+    edge_arg_names: MatcherGeneratedValue | None = None
+    edge_bind: MatcherGeneratedValue | None = None
+    edge_keep_names: MatcherGeneratedValue | None = None
+
+    def to_generator(self) -> astichi.Composable:
+        return self.template.to_generator()
+
+    def arg_names_for(self, record: object) -> Mapping[str, str] | None:
+        value = _evaluate_edge_value(self.edge_arg_names, record)
+        if value is None:
+            return None
+        if not isinstance(value, Mapping):
+            raise TypeError(f"edge arg_names must be mapping, got {type(value).__name__}")
+        result = dict(value)
+        if not all(
+            isinstance(key, str) and isinstance(item, str)
+            for key, item in result.items()
+        ):
+            raise TypeError("edge arg_names keys and values must be str")
+        return result or None
+
+    def bind_for(self, record: object) -> Mapping[str, object] | None:
+        value = _evaluate_edge_value(self.edge_bind, record)
+        if value is None:
+            return None
+        if not isinstance(value, Mapping):
+            raise TypeError(f"edge bind must be mapping, got {type(value).__name__}")
+        result = dict(value)
+        if not all(isinstance(key, str) for key in result):
+            raise TypeError("edge bind keys must be str")
+        return result or None
+
+    def keep_names_for(self, record: object) -> tuple[str, ...] | None:
+        value = _evaluate_edge_value(self.edge_keep_names, record)
+        if value is None:
+            return None
+        result = tuple(value)
+        if not all(isinstance(item, str) for item in result):
+            raise TypeError("edge keep_names values must be str")
+        return result or None
+
+
+GeneratedValue = MatcherGeneratedValue | AstichiTemplateValue
+
+
 def from_literal(value: object) -> MatcherGeneratedValue:
     """Create a matcher-generated value from a Python literal."""
 
@@ -83,8 +134,58 @@ def from_astichi_code(
     )
 
 
-def constructor_expr_for(value: MatcherGeneratedValue) -> ast.expr:
+def astichi_template(
+    template: MatcherGeneratedValue,
+    *,
+    arg_names: MatcherGeneratedValue | None = None,
+    bind: MatcherGeneratedValue | None = None,
+    keep_names: MatcherGeneratedValue | None = None,
+) -> AstichiTemplateValue:
+    """Create an Astichi template resource with source-emittable edge bindings."""
+
+    _require_matcher_generated_value(template, "template")
+    if arg_names is not None:
+        _require_matcher_generated_value(arg_names, "arg_names")
+    if bind is not None:
+        _require_matcher_generated_value(bind, "bind")
+    if keep_names is not None:
+        _require_matcher_generated_value(keep_names, "keep_names")
+    return AstichiTemplateValue(
+        template=template,
+        edge_arg_names=arg_names,
+        edge_bind=bind,
+        edge_keep_names=keep_names,
+    )
+
+
+def constructor_expr_for(value: GeneratedValue) -> ast.expr:
     """Build an expression that recreates a matcher-generated value."""
+
+    if isinstance(value, AstichiTemplateValue):
+        keywords: list[ast.keyword] = []
+        if value.edge_arg_names is not None:
+            keywords.append(
+                ast.keyword(
+                    arg="arg_names",
+                    value=constructor_expr_for(value.edge_arg_names),
+                )
+            )
+        if value.edge_bind is not None:
+            keywords.append(
+                ast.keyword(arg="bind", value=constructor_expr_for(value.edge_bind))
+            )
+        if value.edge_keep_names is not None:
+            keywords.append(
+                ast.keyword(
+                    arg="keep_names",
+                    value=constructor_expr_for(value.edge_keep_names),
+                )
+            )
+        return ast.Call(
+            func=ast.Name(id="astichi_template", ctx=ast.Load()),
+            args=[constructor_expr_for(value.template)],
+            keywords=keywords,
+        )
 
     keywords: list[ast.keyword] = []
     if value.file_name is not None:
@@ -115,6 +216,30 @@ def constructor_expr_for(value: MatcherGeneratedValue) -> ast.expr:
         args=[_literal_to_ast(value.source)],
         keywords=keywords,
     )
+
+
+def is_generated_value(value: object) -> bool:
+    return isinstance(value, (MatcherGeneratedValue, AstichiTemplateValue))
+
+
+def generated_value_keep_names(value: GeneratedValue) -> tuple[str, ...]:
+    if isinstance(value, AstichiTemplateValue):
+        names = {
+            "astichi_template",
+            *generated_value_keep_names(value.template),
+        }
+        if value.edge_arg_names is not None:
+            names.update(generated_value_keep_names(value.edge_arg_names))
+        if value.edge_bind is not None:
+            names.update(generated_value_keep_names(value.edge_bind))
+        if value.edge_keep_names is not None:
+            names.update(generated_value_keep_names(value.edge_keep_names))
+        return tuple(sorted(names))
+    return ("from_astichi_code",)
+
+
+def generated_value_uses_astichi_template(value: GeneratedValue) -> bool:
+    return isinstance(value, AstichiTemplateValue)
 
 
 def _literal_to_source(value: object) -> str:
@@ -163,10 +288,32 @@ def _explicit_keep_names(keep_names: Iterable[str]) -> tuple[str, ...]:
     return tuple(name for name in keep_names if name not in builtins_set)
 
 
+def _evaluate_edge_value(value: MatcherGeneratedValue | None, record: object) -> Any:
+    if value is None:
+        return None
+    source = value.to_generator().materialize().emit(provenance=False).strip()
+    return eval(
+        compile(source, value.file_name or "<yidl.matcher.edge>", "eval"),
+        {},
+        {"record": record},
+    )
+
+
+def _require_matcher_generated_value(value: object, label: str) -> None:
+    if not isinstance(value, MatcherGeneratedValue):
+        raise TypeError(f"{label} must be a MatcherGeneratedValue")
+
+
 __all__ = [
+    "AstichiTemplateValue",
+    "GeneratedValue",
     "MatcherGeneratedValue",
     "PYTHON_BUILTIN_KEEP_NAMES",
+    "astichi_template",
     "constructor_expr_for",
     "from_astichi_code",
     "from_literal",
+    "generated_value_keep_names",
+    "generated_value_uses_astichi_template",
+    "is_generated_value",
 ]

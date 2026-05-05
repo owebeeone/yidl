@@ -9,6 +9,7 @@ from typing import Any
 import astichi
 
 from yidl.generation.data_def_sys import MatcherGeneratedValue
+from yidl.generation.data_def_sys import AstichiTemplateValue
 from yidl.generation.data_def_sys import from_astichi_code
 
 
@@ -41,11 +42,11 @@ class TemplateEdgePlan:
     bind: EdgeBindValues | None = None
     keep_names: EdgeKeepNames | None = None
 
-    def template_for(self, record: object) -> MatcherGeneratedValue:
+    def template_for(self, record: object) -> MatcherGeneratedValue | AstichiTemplateValue:
         value = getattr(record, self.template_attr)
-        if not isinstance(value, MatcherGeneratedValue):
+        if not isinstance(value, (MatcherGeneratedValue, AstichiTemplateValue)):
             raise TypeError(
-                f"{self.template_attr} must be MatcherGeneratedValue, "
+                f"{self.template_attr} must be generated template value, "
                 f"got {type(value).__name__}"
             )
         return value
@@ -55,18 +56,27 @@ class TemplateEdgePlan:
 
     def arg_names_for(self, record: object) -> Mapping[str, str] | None:
         if self.arg_names is None:
+            template = self.template_for(record)
+            if isinstance(template, AstichiTemplateValue):
+                return template.arg_names_for(record)
             return None
         values = dict(self.arg_names(record))
         return values or None
 
     def bind_for(self, record: object) -> Mapping[str, object] | None:
         if self.bind is None:
+            template = self.template_for(record)
+            if isinstance(template, AstichiTemplateValue):
+                return template.bind_for(record)
             return None
         values = dict(self.bind(record))
         return values or None
 
     def keep_names_for(self, record: object) -> tuple[str, ...] | None:
         if self.keep_names is None:
+            template = self.template_for(record)
+            if isinstance(template, AstichiTemplateValue):
+                return template.keep_names_for(record)
             return None
         values = tuple(self.keep_names(record))
         return values or None

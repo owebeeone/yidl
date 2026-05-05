@@ -26,7 +26,8 @@ from yidl.generation.data_def_sys import CollectionSpec
 from yidl.generation.data_def_sys import ComputedCollectionSpec
 from yidl.generation.data_def_sys import DataDefinitionSystem
 from yidl.generation.data_def_sys import MatcherCondition
-from yidl.generation.data_def_sys import MatcherGeneratedValue
+from yidl.generation.data_def_sys import GeneratedValue
+from yidl.generation.data_def_sys import is_generated_value
 from yidl.generation.data_def_sys import MatcherInputSpec
 from yidl.generation.data_def_sys import MatcherResultSource
 from yidl.generation.data_def_sys import MatcherSpec
@@ -248,7 +249,7 @@ class MatcherDefaultOperation:
     """Recorded matcher default resource."""
 
     matcher: MatcherHandle
-    resource: MatcherGeneratedValue
+    resource: GeneratedValue
     sequence: int
 
 
@@ -259,7 +260,7 @@ class MatcherRuleOperation:
     matcher: MatcherHandle
     name: str
     conditions: tuple[MatcherConditionHandle, ...]
-    resource: MatcherGeneratedValue
+    resource: GeneratedValue
     weight: float
     sequence: int
 
@@ -652,11 +653,11 @@ class CapsuleConceptBuilder:
     def _define_matcher_default(
         self,
         matcher: MatcherHandle,
-        resource: MatcherGeneratedValue,
+        resource: GeneratedValue,
     ) -> None:
         self._require_unbuilt()
-        if not isinstance(resource, MatcherGeneratedValue):
-            raise TypeError("matcher default resource must be MatcherGeneratedValue")
+        if not is_generated_value(resource):
+            raise TypeError("matcher default resource must be a generated value")
         self._matcher_defaults.append(
             MatcherDefaultOperation(
                 matcher=matcher,
@@ -671,13 +672,13 @@ class CapsuleConceptBuilder:
         name: str,
         *,
         conditions: Sequence[MatcherConditionHandle],
-        resource: MatcherGeneratedValue,
+        resource: GeneratedValue,
         weight: float,
     ) -> None:
         self._require_unbuilt()
         _require_label(name, "matcher rule name")
-        if not isinstance(resource, MatcherGeneratedValue):
-            raise TypeError("matcher rule resource must be MatcherGeneratedValue")
+        if not is_generated_value(resource):
+            raise TypeError("matcher rule resource must be a generated value")
         resolved_conditions = tuple(conditions)
         for condition in resolved_conditions:
             if not isinstance(condition, MatcherConditionHandle):
@@ -1159,7 +1160,7 @@ class MatcherEditor:
     def handle(self) -> MatcherHandle:
         return self._matcher
 
-    def default(self, resource: MatcherGeneratedValue) -> None:
+    def default(self, resource: GeneratedValue) -> None:
         self._builder._define_matcher_default(self._matcher, resource)
 
     def results(self) -> MatcherResultSourceHandle:
@@ -1247,7 +1248,7 @@ class MatcherRuleDefinition:
         self,
         *,
         when: Sequence[MatcherConditionHandle],
-        resource: MatcherGeneratedValue,
+        resource: GeneratedValue,
         weight: float = 1.0,
     ) -> None:
         self._builder._define_matcher_rule(
