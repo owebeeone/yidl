@@ -183,7 +183,7 @@ class CollectionHandle:
     name: str
     record: RecordHandle | SchemaFamilyHandle
     cardinality: RecordedCollectionCardinality
-    identity: PropertyHandle | None
+    identity: PropertyHandle | tuple[PropertyHandle, ...] | None
     sequence: int
 
 
@@ -1101,7 +1101,7 @@ class CapsuleConceptBuilder:
         record: RecordHandle | SchemaFamilyHandle,
         *,
         cardinality: RecordedCollectionCardinality,
-        identity: PropertyHandle | None,
+        identity: PropertyHandle | Sequence[PropertyHandle] | None,
     ) -> CollectionHandle:
         self._require_unbuilt()
         _require_name(name, "collection name")
@@ -1111,8 +1111,7 @@ class CapsuleConceptBuilder:
             raise TypeError(
                 "collection cardinality must be builder.single or builder.many"
             )
-        if identity is not None and not isinstance(identity, PropertyHandle):
-            raise TypeError("collection identity must be a PropertyHandle")
+        resolved_identity = _normalize_recorded_identity(identity)
         if name in self._collections or name in self._computed_collections:
             raise ValueError(
                 f"collection {name!r} is already defined in concept {self.name!r}"
@@ -1123,7 +1122,7 @@ class CapsuleConceptBuilder:
             name=name,
             record=record,
             cardinality=cardinality,
-            identity=identity,
+            identity=resolved_identity,
             sequence=len(self._collection_order),
         )
         self._collections[name] = handle
@@ -1311,7 +1310,7 @@ class CollectionDefinition:
         record: RecordHandle | SchemaFamilyHandle,
         *,
         cardinality: RecordedCollectionCardinality,
-        identity: PropertyHandle | None = None,
+        identity: PropertyHandle | Sequence[PropertyHandle] | None = None,
     ) -> CollectionHandle:
         return self._builder._define_collection(
             self._name,
@@ -2065,7 +2064,7 @@ class ReplayContext:
             identity=(
                 None
                 if collection.identity is None
-                else self._resolve_property(collection.identity)
+                else self._resolve_identity(collection.identity)
             ),
         )
         self._collection_name_owners[collection.name] = collection
@@ -2216,6 +2215,14 @@ class ReplayContext:
                 f"unresolved property handle {prop.name!r} from concept "
                 f"{prop.owner_name!r}"
             ) from exc
+
+    def _resolve_identity(
+        self,
+        identity: PropertyHandle | tuple[PropertyHandle, ...],
+    ) -> PropertySpec | tuple[PropertySpec, ...]:
+        if isinstance(identity, tuple):
+            return tuple(self._resolve_property(prop) for prop in identity)
+        return self._resolve_property(identity)
 
     def _resolve_record(self, record: RecordHandle) -> RecordSpec:
         try:
@@ -2425,6 +2432,19 @@ def _unique_property_handles(
             raise ValueError(f"duplicate property handle {prop.name!r}")
         by_name[prop.name] = prop
     return tuple(by_name.values())
+
+
+def _normalize_recorded_identity(
+    identity: PropertyHandle | Sequence[PropertyHandle] | None,
+) -> PropertyHandle | tuple[PropertyHandle, ...] | None:
+    if identity is None:
+        return None
+    if isinstance(identity, PropertyHandle):
+        return identity
+    properties = tuple(identity)
+    if not properties:
+        raise ValueError("composite identity must include at least one property")
+    return _unique_property_handles(properties)
 
 
 def _validate_property_value(prop: PropertyHandle, value: object) -> None:
