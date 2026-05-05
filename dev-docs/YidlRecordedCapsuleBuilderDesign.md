@@ -10,6 +10,10 @@ the existing DDS/container/matcher implementation.
 The current underlying DDS remains the execution target. This design changes how
 capsule concepts are authored and composed.
 
+Implementation sequencing lives in
+`dev-docs/YidlRecordedCapsuleBuilderPlan.md`; this document stays focused on the
+stable model.
+
 ## Core Idea
 
 A capsule concept is a recorded operation graph, not a callback:
@@ -79,6 +83,38 @@ operations and cannot be replayed. Only a built concept plan can be applied,
 loaded, or used as a dependency by runtime assembly. Building freezes the plan;
 a concept plan is immutable.
 
+### Referencing Existing Definitions
+
+Definitions are owned by the concept that records them. Dependent concepts should
+reference those definitions; they should not redefine them.
+
+```python
+PropertyConcept = PropertyBuilder.build()
+
+FrozenBuilder = capsule_concept("frozen", requires=(PropertyConcept,))
+Property = FrozenBuilder.use(PropertyConcept)
+
+Name = Property.props.Name
+Kind = Property.props.Kind
+Fields = Property.collections.Fields
+FieldInput = Property.records.FieldInput
+PropertyTemplate = FrozenBuilder.use_matcher(Property.matchers.PropertyTemplate)
+```
+
+`FrozenBuilder.use(PropertyConcept)` returns a read-only namespace of handles
+exported by `PropertyConcept`. It does not replay the concept immediately and it
+does not create new DDS definitions. Replay validates that the referenced plan is
+in the dependency closure.
+
+For V1, every handle recorded by a built plan is exported. A later
+private/public visibility model can narrow that if concept boundaries need it.
+
+The same concept can be reached more than once through a dependency diamond, but
+that coalesces by concept identity. A different concept that writes
+`props.Name(...)` is defining a new property operation, not referencing the
+property from `PropertyConcept`; that must reject unless a future explicit alias
+or import mechanism is added.
+
 ### Properties
 
 ```python
@@ -101,13 +137,13 @@ Rules:
 
 ```python
 FieldInput = PropertyBuilder.records.FieldInput(Name, Kind)
-FrozenBuilder.extend_record.FieldInput(Frozen)
+FrozenBuilder.extend_record(FieldInput, Frozen)
 ```
 
 Rules:
 
 1. Record definitions create symbolic record handles.
-2. Record extension operations target an existing record by symbolic name.
+2. Record extension operations target an existing record handle.
 3. Extension operations require the target record to exist in this concept or a
    dependency at replay time.
 4. Identical repeated extensions coalesce.
@@ -154,7 +190,10 @@ PropertyTemplate.rule.managed(
 A dependent concept can reopen the matcher:
 
 ```python
-PropertyTemplate = FrozenBuilder.use_matcher.PropertyTemplate()
+Property = FrozenBuilder.use(PropertyConcept)
+PropertyTemplate = FrozenBuilder.use_matcher(Property.matchers.PropertyTemplate)
+Fields = Property.collections.Fields
+Kind = Property.props.Kind
 field = PropertyTemplate.input.field(Fields)
 PropertyTemplate.rule.readonly_plain(
     when=(field.prop(Frozen).eq(True), field.prop(Kind).eq(PLAIN_FIELD)),
@@ -234,10 +273,10 @@ DDS cares about order.
 2. A concept can depend on another concept directly.
 3. Diamond dependencies coalesce by concept identity.
 4. Replaying the same concept twice is a no-op after the first replay.
-5. Re-declaring identical schema objects is allowed only when the replayed
-   operation is the same operation from the same concept graph or an explicit
-   coalesced dependency.
-6. Conflicting declarations reject with a capsule-composition diagnostic.
+5. Re-declaring schema objects from a different concept is not a reference and
+   must reject unless a future explicit alias/import mechanism is added.
+6. Replaying the same owner operation through a dependency diamond is allowed.
+7. Conflicting declarations reject with a capsule-composition diagnostic.
 
 ## Property/Frozen Example
 
@@ -272,11 +311,15 @@ Frozen extension:
 PropertyConcept = PropertyBuilder.build()
 
 FrozenBuilder = capsule_concept("frozen", requires=(PropertyConcept,))
+Property = FrozenBuilder.use(PropertyConcept)
 
 FrozenProp = FrozenBuilder.props.Frozen(bool)
-FrozenBuilder.extend_record.FieldInput(FrozenProp)
+FieldInput = Property.records.FieldInput
+Fields = Property.collections.Fields
+Kind = Property.props.Kind
+FrozenBuilder.extend_record(FieldInput, FrozenProp)
 
-PropertyTemplate = FrozenBuilder.use_matcher.PropertyTemplate()
+PropertyTemplate = FrozenBuilder.use_matcher(Property.matchers.PropertyTemplate)
 field = PropertyTemplate.input.field(Fields)
 PropertyTemplate.rule.readonly_plain(
     when=(field.prop(FrozenProp).eq(True), field.prop(Kind).eq(PLAIN_FIELD)),
@@ -298,39 +341,6 @@ runtime = FrozenConcept.runtime().load()
 This should automatically include the property concept, frozen schema extension,
 read-only matcher rules, and all generated values/runtime helpers discovered
 from the concept plan.
-
-## Implementation Slices
-
-### Slice 1: Recorded Properties, Generated Values, And Runtime Helpers
-
-- Add separate `CapsuleConceptBuilder` and immutable `CapsuleConceptPlan` types.
-- Support recorded property definitions.
-- Support generated-value discovery and runtime helper aggregation.
-- Replay properties into a live DDS.
-- Add bespoke tests for dependency closure and duplicate/conflicting property
-  definitions.
-
-### Slice 2: Records, Record Extensions, Collections, Ports
-
-- Add symbolic handles for records, collections, computed collections, and
-  ports.
-- Replay them into the existing DDS.
-- Replace `extend_field_input_record(...)` usage with recorded
-  `extend_record.FieldInput(...)`.
-- Keep success behavior under the existing goldens.
-
-### Slice 3: Matchers And Productions
-
-- Record matcher definitions, matcher inputs, defaults, rules, productions,
-  and groups.
-- Rebuild property/frozen concepts using recorded builders.
-- Golden `capsule_property_concepts.py` should remain the main success test.
-
-### Slice 4: Runtime Loader Object
-
-- Add a loader/builder object above `CapsuleDefinition.load_runtime(...)`.
-- It aggregates dependency closure, discovered generated values, and runtime helpers automatically.
-- Low-level `load_runtime(...)` remains as an escape hatch.
 
 ## Design Constraints
 
