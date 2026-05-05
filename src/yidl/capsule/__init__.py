@@ -67,6 +67,12 @@ from .property_concepts import (
     property_order_for,
     register_property_template,
 )
+from .recorded_builder import (
+    CapsuleConceptBuilder,
+    CapsuleConceptPlan,
+    PropertyHandle,
+    capsule_concept,
+)
 from .init_only_capsule import (
     InitOnlyCapsule,
     InitOnlyClassDefinition,
@@ -100,6 +106,8 @@ __all__ = [
     "CapsuleBuilder",
     "CapsuleClassBuildPlan",
     "CapsuleConcept",
+    "CapsuleConceptBuilder",
+    "CapsuleConceptPlan",
     "CapsuleContributor",
     "CapsuleDefinition",
     "CapsuleFacade",
@@ -128,6 +136,7 @@ __all__ = [
     "PROPERTY_EVALUATOR_NAMES",
     "PROPERTY_TEMPLATE_GLOBALS",
     "PROPERTY_TEMPLATE_VALUE_NAMES",
+    "PropertyHandle",
     "READONLY_MANAGED_PROPERTY",
     "READONLY_PROPERTY",
     "REQUIRED_PARAM",
@@ -149,6 +158,7 @@ __all__ = [
     "build_slots_capsule_definition",
     "build_property_capsule_definition",
     "capsule",
+    "capsule_concept",
     "class_definition_from_class",
     "compile_capsule",
     "compile_init_only_capsule",
