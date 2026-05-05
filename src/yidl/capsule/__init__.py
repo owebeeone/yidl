@@ -1,6 +1,13 @@
 """YIDL capsule package."""
 
 from .base_capsule import BaseCapsule, build_base_capsule
+from .build_mapper import (
+    CapsuleClassBuildPlan,
+    ChildPortPlan,
+    RuntimePortRef,
+    TemplateEdgePlan,
+    build_class_source,
+)
 from .core import (
     CapsuleBuilder,
     CapsuleFacade,
@@ -15,6 +22,14 @@ from .core import (
     YidlCapsule,
     build,
     build_from,
+)
+from .definition import (
+    CapsuleConcept,
+    CapsuleContributor,
+    CapsuleDefinition,
+    CapsuleRuntime,
+    capsule,
+    concept,
 )
 from .init_only_capsule import (
     InitOnlyCapsule,
@@ -32,26 +47,37 @@ from .init_only_capsule import (
 __all__ = [
     "BaseCapsule",
     "CapsuleBuilder",
+    "CapsuleClassBuildPlan",
+    "CapsuleConcept",
+    "CapsuleContributor",
+    "CapsuleDefinition",
     "CapsuleFacade",
     "CapsuleMethod",
     "CapsuleMethodSurface",
     "CapsuleProperty",
+    "CapsuleRuntime",
     "CapsuleSpec",
     "CapsuleSpecInstance",
     "CapsuleSpecValue",
+    "ChildPortPlan",
     "InitOnlyCapsule",
     "InitOnlyClassDefinition",
     "InitOnlyFieldSpec",
+    "RuntimePortRef",
+    "TemplateEdgePlan",
     "UNSPECIFIED",
     "UnspecifiedType",
     "YidlCapsule",
     "build",
     "build_from",
     "build_base_capsule",
+    "build_class_source",
     "build_init_only_capsule",
+    "capsule",
     "class_definition_from_class",
     "compile_capsule",
     "compile_init_only_capsule",
+    "concept",
     "emit_init_only_factory_source",
     "field_spec",
     "render_init_only_class",

@@ -1368,3 +1368,14 @@ Implementation order:
     module and inserted matcher runtimes, then final materialization
     consolidates those imports at module top. Do not splice emitted matcher
     source strings into the generated container module.
+57. The capsule replacement path starts with DDS-native capsule definitions.
+    `CapsuleDefinition` is a named set of concept contributors that extend a
+    `DataDefinitionSystem`, emit/load the generated DDS runtime, and leave
+    final Astichi class/function assembly to a later build-mapper layer. The
+    original fluent capsule builder remains prototype code until this path
+    fully covers decorator generation.
+58. The first build-mapper seam is `CapsuleClassBuildPlan` /
+    `build_class_source(...)`. It consumes generated runtime port records,
+    turns `MatcherGeneratedValue` resources into Astichi composables, and wires
+    configured child ports into configured Astichi holes. This is intentionally
+    a narrow mapper seam, not a hard-coded field/init capsule model.
