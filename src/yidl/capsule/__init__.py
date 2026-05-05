@@ -8,6 +8,7 @@ from .build_mapper import (
     TemplateEdgePlan,
     build_class_source,
 )
+from .class_concepts import define_class_field_schema
 from .core import (
     CapsuleBuilder,
     CapsuleFacade,
@@ -31,6 +32,17 @@ from .definition import (
     capsule,
     concept,
 )
+from .init_concepts import (
+    ASSIGNMENT,
+    DEFAULTED_PARAM,
+    INIT_METHOD,
+    INIT_TEMPLATE_GLOBALS,
+    INIT_TEMPLATE_VALUE_NAMES,
+    REQUIRED_PARAM,
+    build_init_capsule_definition,
+    define_init_productions,
+    init_class_build_plan,
+)
 from .init_only_capsule import (
     InitOnlyCapsule,
     InitOnlyClassDefinition,
@@ -46,6 +58,7 @@ from .init_only_capsule import (
 
 __all__ = [
     "BaseCapsule",
+    "ASSIGNMENT",
     "CapsuleBuilder",
     "CapsuleClassBuildPlan",
     "CapsuleConcept",
@@ -60,9 +73,14 @@ __all__ = [
     "CapsuleSpecInstance",
     "CapsuleSpecValue",
     "ChildPortPlan",
+    "DEFAULTED_PARAM",
+    "INIT_METHOD",
+    "INIT_TEMPLATE_GLOBALS",
+    "INIT_TEMPLATE_VALUE_NAMES",
     "InitOnlyCapsule",
     "InitOnlyClassDefinition",
     "InitOnlyFieldSpec",
+    "REQUIRED_PARAM",
     "RuntimePortRef",
     "TemplateEdgePlan",
     "UNSPECIFIED",
@@ -72,13 +90,17 @@ __all__ = [
     "build_from",
     "build_base_capsule",
     "build_class_source",
+    "build_init_capsule_definition",
     "build_init_only_capsule",
     "capsule",
     "class_definition_from_class",
     "compile_capsule",
     "compile_init_only_capsule",
     "concept",
+    "define_class_field_schema",
+    "define_init_productions",
     "emit_init_only_factory_source",
     "field_spec",
+    "init_class_build_plan",
     "render_init_only_class",
 ]

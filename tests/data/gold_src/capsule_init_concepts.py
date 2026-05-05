@@ -9,13 +9,13 @@ from yidl.capsule.init_concepts import init_class_build_plan
 
 
 def _runtime():
-    return build_init_capsule_definition("BuildMapperInit").load_runtime(
+    return build_init_capsule_definition("InitConcepts").load_runtime(
         value_names=INIT_TEMPLATE_VALUE_NAMES,
         runtime_globals=INIT_TEMPLATE_GLOBALS,
     )
 
 
-def _container():
+def render_case() -> str:
     runtime = _runtime()
     namespace = runtime.namespace
     builder = runtime.new_builder()
@@ -35,15 +35,13 @@ def _container():
         fields,
         field(name="label", init=True, defaulted=True, default_value="cold", order=1),
     )
+    builder.add(fields, field(name="cache", init=False, defaulted=False, order=2))
     builder.add(
         fields,
-        field(name="retries", init=True, defaulted=True, default_value=3, order=2),
+        field(name="retries", init=True, defaulted=True, default_value=3, order=3),
     )
-    return runtime.build_container(builder), namespace
 
-
-def render_case() -> str:
-    container, namespace = _container()
+    container = runtime.build_container(builder)
     return build_class_source(container, namespace, init_class_build_plan())
 
 
@@ -52,19 +50,15 @@ def validate_case(source: str) -> None:
     exec(source, namespace)
     example = namespace["Example"]
 
-    assert tuple(example(count=None).__dict__.items()) == (
-        ("count", None),
+    assert tuple(example(count=7).__dict__.items()) == (
+        ("count", 7),
         ("label", "cold"),
         ("retries", 3),
     )
-    overridden = example(count=5, label="hot", retries=8)
-    assert overridden.count == 5
-    assert overridden.label == "hot"
-    assert overridden.retries == 8
-    assert "class Example:" in source
+    assert "cache" not in source
     assert "def __init__(self, *, count, label='cold', retries=3):" in source
-    assert "self.count = count" in source
+    assert "self.retries = retries" in source
 
 
 if __name__ == "__main__":
-    raise SystemExit(run_case("capsule_build_mapper.py", render_case, validate_case))
+    raise SystemExit(run_case("capsule_init_concepts.py", render_case, validate_case))
