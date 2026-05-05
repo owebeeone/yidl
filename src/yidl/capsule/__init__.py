@@ -39,6 +39,7 @@ from .recorded_builder import (
     PortHandle,
     PropertyHandle,
     RecordHandle,
+    SchemaFamilyHandle,
     capsule_concept,
     match,
 )
@@ -70,6 +71,7 @@ __all__ = [
     "RecordHandle",
     "ResolvedInitField",
     "RuntimePortRef",
+    "SchemaFamilyHandle",
     "SlotsConcept",
     "TemplateEdgePlan",
     "UNSPECIFIED",

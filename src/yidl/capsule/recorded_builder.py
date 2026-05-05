@@ -37,6 +37,7 @@ from yidl.generation.data_def_sys import PropertySpec
 from yidl.generation.data_def_sys import REQUIRED
 from yidl.generation.data_def_sys import RecordSpec
 from yidl.generation.data_def_sys import match as dds_match
+from yidl.generation.data_def_sys import UnionSpec
 from yidl.generation.data_schema import ValueExpression
 
 
@@ -46,6 +47,7 @@ NamedHandle = TypeVar(
     "NamedHandle",
     "PropertyHandle",
     "RecordHandle",
+    "SchemaFamilyHandle",
     "CollectionHandle",
     "ComputedCollectionHandle",
     "MatcherHandle",
@@ -114,6 +116,35 @@ class RecordExtensionOperation:
     sequence: int
 
 
+@dataclass(frozen=True, slots=True)
+class SchemaFamilyHandle:
+    """Symbolic handle for a schema family lowered to a DDS union."""
+
+    owner_id: int
+    owner_name: str
+    name: str
+    sequence: int
+
+
+@dataclass(frozen=True, slots=True)
+class SchemaFamilyCommonOperation:
+    """Recorded common-property declaration for a schema family."""
+
+    family: SchemaFamilyHandle
+    properties: tuple[PropertyHandle, ...]
+    sequence: int
+
+
+@dataclass(frozen=True, slots=True)
+class SchemaFamilyVariantOperation:
+    """Recorded schema-family variant declaration."""
+
+    family: SchemaFamilyHandle
+    record: RecordHandle
+    properties: tuple[PropertyHandle, ...]
+    sequence: int
+
+
 class RecordedCollectionCardinality(ABC):
     """Recorded collection cardinality behavior."""
 
@@ -149,7 +180,7 @@ class CollectionHandle:
     owner_id: int
     owner_name: str
     name: str
-    record: RecordHandle
+    record: RecordHandle | SchemaFamilyHandle
     cardinality: RecordedCollectionCardinality
     identity: PropertyHandle | None
     sequence: int
@@ -388,6 +419,9 @@ class CapsuleConceptPlan:
     properties: tuple[PropertyHandle, ...]
     record_definitions: tuple[RecordHandle, ...]
     record_extensions: tuple[RecordExtensionOperation, ...]
+    schema_family_definitions: tuple[SchemaFamilyHandle, ...]
+    schema_family_common: tuple[SchemaFamilyCommonOperation, ...]
+    schema_family_variants: tuple[SchemaFamilyVariantOperation, ...]
     collection_definitions: tuple[CollectionHandle, ...]
     computed_collection_definitions: tuple[ComputedCollectionHandle, ...]
     port_definitions: tuple[PortHandle, ...]
@@ -406,7 +440,22 @@ class CapsuleConceptPlan:
 
     @property
     def records(self) -> PlanHandleReferences[RecordHandle]:
-        return PlanHandleReferences(self, "record", self.record_definitions)
+        return PlanHandleReferences(
+            self,
+            "record",
+            (
+                *self.record_definitions,
+                *(variant.record for variant in self.schema_family_variants),
+            ),
+        )
+
+    @property
+    def families(self) -> PlanHandleReferences[SchemaFamilyHandle]:
+        return PlanHandleReferences(
+            self,
+            "schema family",
+            self.schema_family_definitions,
+        )
 
     @property
     def collections(self) -> PlanHandleReferences[CollectionHandle]:
@@ -476,6 +525,10 @@ class CapsuleConceptBuilder:
         "_record_order",
         "_records",
         "_runtime_helpers",
+        "_schema_families",
+        "_schema_family_common",
+        "_schema_family_order",
+        "_schema_family_variants",
         "collections",
         "computed",
         "matchers",
@@ -507,6 +560,13 @@ class CapsuleConceptBuilder:
         self._records: dict[str, RecordHandle] = {}
         self._record_order: list[RecordHandle] = []
         self._record_extensions: list[RecordExtensionOperation] = []
+        self._schema_families: dict[str, SchemaFamilyHandle] = {}
+        self._schema_family_order: list[SchemaFamilyHandle] = []
+        self._schema_family_common: dict[
+            SchemaFamilyHandle,
+            tuple[PropertyHandle, ...],
+        ] = {}
+        self._schema_family_variants: list[SchemaFamilyVariantOperation] = []
         self._collections: dict[str, CollectionHandle] = {}
         self._collection_order: list[CollectionHandle] = []
         self._computed_collections: dict[str, ComputedCollectionHandle] = {}
@@ -544,6 +604,16 @@ class CapsuleConceptBuilder:
             properties=tuple(self._property_order),
             record_definitions=tuple(self._record_order),
             record_extensions=tuple(self._record_extensions),
+            schema_family_definitions=tuple(self._schema_family_order),
+            schema_family_common=tuple(
+                SchemaFamilyCommonOperation(
+                    family=family,
+                    properties=self._schema_family_common.get(family, ()),
+                    sequence=family.sequence,
+                )
+                for family in self._schema_family_order
+            ),
+            schema_family_variants=tuple(self._schema_family_variants),
             collection_definitions=tuple(self._collection_order),
             computed_collection_definitions=tuple(
                 self._computed_collection_order
@@ -571,6 +641,9 @@ class CapsuleConceptBuilder:
                 f"{self.name!r}"
             )
         return PlanReferenceNamespace(plan)
+
+    def schema_family(self, name: str) -> SchemaFamilyEditor:
+        return self._define_schema_family(name)
 
     def use_matcher(self, matcher: MatcherHandle) -> MatcherEditor:
         self._require_unbuilt()
@@ -845,18 +918,98 @@ class CapsuleConceptBuilder:
         self._record_order.append(handle)
         return handle
 
+    def _define_schema_family(self, name: str) -> SchemaFamilyEditor:
+        self._require_unbuilt()
+        _require_name(name, "schema family name")
+        if name in self._schema_families:
+            raise ValueError(
+                f"schema family {name!r} is already defined in concept {self.name!r}"
+            )
+        if name in self._records:
+            raise ValueError(
+                f"schema family {name!r} conflicts with a record in concept {self.name!r}"
+            )
+        handle = SchemaFamilyHandle(
+            owner_id=self._owner_id,
+            owner_name=self.name,
+            name=name,
+            sequence=len(self._schema_family_order),
+        )
+        self._schema_families[name] = handle
+        self._schema_family_order.append(handle)
+        self._schema_family_common[handle] = ()
+        return SchemaFamilyEditor(self, handle)
+
+    def _define_schema_family_common(
+        self,
+        family: SchemaFamilyHandle,
+        properties: Sequence[PropertyHandle],
+    ) -> None:
+        self._require_unbuilt()
+        if family.owner_id != self._owner_id:
+            raise ValueError("schema family common properties must target this concept")
+        existing = self._schema_family_common.get(family)
+        if existing is None:
+            raise ValueError(f"unknown schema family {family.name!r}")
+        self._schema_family_common[family] = _unique_property_handles(
+            (*existing, *properties)
+        )
+
+    def _define_schema_family_variant(
+        self,
+        family: SchemaFamilyHandle,
+        name: str,
+        properties: Sequence[PropertyHandle],
+    ) -> RecordHandle:
+        self._require_unbuilt()
+        _require_name(name, "schema family variant name")
+        if family.owner_id != self._owner_id:
+            raise ValueError("schema family variants must target this concept")
+        if name in self._records:
+            raise ValueError(
+                f"schema family variant {name!r} conflicts with a record in "
+                f"concept {self.name!r}"
+            )
+        if any(
+            operation.record.name == name
+            for operation in self._schema_family_variants
+        ):
+            raise ValueError(
+                f"schema family variant {name!r} is already defined in "
+                f"concept {self.name!r}"
+            )
+        specific_properties = _unique_property_handles(properties)
+        record = RecordHandle(
+            owner_id=self._owner_id,
+            owner_name=self.name,
+            name=name,
+            properties=_unique_property_handles(
+                (*self._schema_family_common.get(family, ()), *specific_properties)
+            ),
+            sequence=len(self._record_order) + len(self._schema_family_variants),
+        )
+        self._schema_family_variants.append(
+            SchemaFamilyVariantOperation(
+                family=family,
+                record=record,
+                properties=specific_properties,
+                sequence=len(self._schema_family_variants),
+            )
+        )
+        return record
+
     def _define_collection(
         self,
         name: str,
-        record: RecordHandle,
+        record: RecordHandle | SchemaFamilyHandle,
         *,
         cardinality: RecordedCollectionCardinality,
         identity: PropertyHandle | None,
     ) -> CollectionHandle:
         self._require_unbuilt()
         _require_name(name, "collection name")
-        if not isinstance(record, RecordHandle):
-            raise TypeError("collection record must be a RecordHandle")
+        if not isinstance(record, RecordHandle | SchemaFamilyHandle):
+            raise TypeError("collection record must be a record or schema family handle")
         if not isinstance(cardinality, RecordedCollectionCardinality):
             raise TypeError(
                 "collection cardinality must be builder.single or builder.many"
@@ -1006,6 +1159,34 @@ class RecordDefinition:
         return self._builder._define_record(self._name, properties)
 
 
+class SchemaFamilyEditor:
+    """Mutable editor for one recorded schema family."""
+
+    __slots__ = ("_builder", "_family")
+
+    def __init__(
+        self,
+        builder: CapsuleConceptBuilder,
+        family: SchemaFamilyHandle,
+    ) -> None:
+        self._builder = builder
+        self._family = family
+
+    @property
+    def handle(self) -> SchemaFamilyHandle:
+        return self._family
+
+    def common(self, *properties: PropertyHandle) -> None:
+        self._builder._define_schema_family_common(self._family, properties)
+
+    def variant(self, name: str, *properties: PropertyHandle) -> RecordHandle:
+        return self._builder._define_schema_family_variant(
+            self._family,
+            name,
+            properties,
+        )
+
+
 class BuilderCollectionDefinitions:
     """Attribute surface for recording collection definitions."""
 
@@ -1030,7 +1211,7 @@ class CollectionDefinition:
 
     def __call__(
         self,
-        record: RecordHandle,
+        record: RecordHandle | SchemaFamilyHandle,
         *,
         cardinality: RecordedCollectionCardinality,
         identity: PropertyHandle | None = None,
@@ -1379,11 +1560,31 @@ match = RecordedMatchExpressionFactory()
 class PlanReferenceNamespace:
     """Read-only namespace of handles exported by a concept plan."""
 
-    __slots__ = ("collections", "computed", "matchers", "ports", "props", "records")
+    __slots__ = (
+        "collections",
+        "computed",
+        "families",
+        "matchers",
+        "ports",
+        "props",
+        "records",
+    )
 
     def __init__(self, plan: CapsuleConceptPlan) -> None:
         self.props = PlanHandleReferences(plan, "property", plan.properties)
-        self.records = PlanHandleReferences(plan, "record", plan.record_definitions)
+        self.records = PlanHandleReferences(
+            plan,
+            "record",
+            (
+                *plan.record_definitions,
+                *(variant.record for variant in plan.schema_family_variants),
+            ),
+        )
+        self.families = PlanHandleReferences(
+            plan,
+            "schema family",
+            plan.schema_family_definitions,
+        )
         self.collections = PlanHandleReferences(
             plan,
             "collection",
@@ -1539,6 +1740,9 @@ class ReplayContext:
         "_property_specs",
         "_record_owners",
         "_record_specs",
+        "_schema_family_common",
+        "_schema_family_owners",
+        "_schema_family_specs",
     )
 
     def __init__(self, dds: DataDefinitionSystem) -> None:
@@ -1546,6 +1750,7 @@ class ReplayContext:
         self._applied_plan_ids: set[int] = set()
         self._property_owners: dict[str, PropertyHandle] = {}
         self._record_owners: dict[str, RecordHandle] = {}
+        self._schema_family_owners: dict[str, SchemaFamilyHandle] = {}
         self._collection_name_owners: dict[
             str,
             CollectionHandle | ComputedCollectionHandle,
@@ -1556,6 +1761,11 @@ class ReplayContext:
         self._port_owners: dict[str, PortHandle] = {}
         self._property_specs: dict[HandleKey, PropertySpec] = {}
         self._record_specs: dict[HandleKey, RecordSpec] = {}
+        self._schema_family_specs: dict[HandleKey, UnionSpec] = {}
+        self._schema_family_common: dict[
+            HandleKey,
+            tuple[PropertyHandle, ...],
+        ] = {}
         self._collection_specs: dict[HandleKey, CollectionSpec] = {}
         self._computed_collection_specs: dict[
             HandleKey,
@@ -1575,6 +1785,12 @@ class ReplayContext:
             self._apply_property(prop)
         for record in plan.record_definitions:
             self._apply_record(record)
+        for family in plan.schema_family_definitions:
+            self._apply_schema_family(family)
+        for common in plan.schema_family_common:
+            self._apply_schema_family_common(common)
+        for variant in plan.schema_family_variants:
+            self._apply_schema_family_variant(variant)
         for extension in plan.record_extensions:
             self._apply_record_extension(extension)
         for collection in plan.collection_definitions:
@@ -1631,6 +1847,48 @@ class ReplayContext:
         self._record_owners[record.name] = record
         self._record_specs[_handle_key(record)] = spec
 
+    def _apply_schema_family(self, family: SchemaFamilyHandle) -> None:
+        existing = self._schema_family_owners.get(family.name)
+        if existing is not None:
+            raise ValueError(
+                f"schema family {family.name!r} is already owned by concept "
+                f"{existing.owner_name!r}; concept {family.owner_name!r} must "
+                "reference it instead of redefining it"
+            )
+        spec = self._dds.ensure_union(family.name)
+        self._schema_family_owners[family.name] = family
+        self._schema_family_specs[_handle_key(family)] = spec
+
+    def _apply_schema_family_common(
+        self,
+        operation: SchemaFamilyCommonOperation,
+    ) -> None:
+        self._schema_family_common[_handle_key(operation.family)] = operation.properties
+
+    def _apply_schema_family_variant(
+        self,
+        operation: SchemaFamilyVariantOperation,
+    ) -> None:
+        record = operation.record
+        existing = self._record_owners.get(record.name)
+        if existing is not None:
+            raise ValueError(
+                f"schema family variant {record.name!r} is already owned by "
+                f"concept {existing.owner_name!r}; concept {record.owner_name!r} "
+                "must reference it instead of redefining it"
+            )
+        family = self._resolve_schema_family(operation.family)
+        common = self._schema_family_common.get(_handle_key(operation.family), ())
+        spec = family.ensure_variant(
+            record.name,
+            *(
+                self._resolve_property(prop)
+                for prop in _unique_property_handles((*common, *operation.properties))
+            ),
+        )
+        self._record_owners[record.name] = record
+        self._record_specs[_handle_key(record)] = spec
+
     def _apply_record_extension(self, extension: RecordExtensionOperation) -> None:
         record = self._resolve_record(extension.record)
         record.extend_properties(
@@ -1641,7 +1899,7 @@ class ReplayContext:
         self._require_collection_name_available(collection)
         spec = self._dds.ensure_collection(
             collection.name,
-            self._resolve_record(collection.record),
+            self._resolve_record_shape(collection.record),
             cardinality=collection.cardinality.resolve(self._dds),
             identity=(
                 None
@@ -1782,6 +2040,23 @@ class ReplayContext:
                 f"unresolved record handle {record.name!r} from concept "
                 f"{record.owner_name!r}"
             ) from exc
+
+    def _resolve_schema_family(self, family: SchemaFamilyHandle) -> UnionSpec:
+        try:
+            return self._schema_family_specs[_handle_key(family)]
+        except KeyError as exc:
+            raise ValueError(
+                f"unresolved schema family handle {family.name!r} from concept "
+                f"{family.owner_name!r}"
+            ) from exc
+
+    def _resolve_record_shape(
+        self,
+        record: RecordHandle | SchemaFamilyHandle,
+    ) -> RecordSpec | UnionSpec:
+        if isinstance(record, SchemaFamilyHandle):
+            return self._resolve_schema_family(record)
+        return self._resolve_record(record)
 
     def _resolve_collection(self, collection: CollectionHandle) -> CollectionSpec:
         try:
@@ -1983,6 +2258,7 @@ def _validate_property_value(prop: PropertyHandle, value: object) -> None:
 def _handle_key(
     handle: PropertyHandle
     | RecordHandle
+    | SchemaFamilyHandle
     | CollectionHandle
     | ComputedCollectionHandle
     | PortHandle
@@ -2017,6 +2293,7 @@ __all__ = [
     "PortHandle",
     "PropertyHandle",
     "RecordHandle",
+    "SchemaFamilyHandle",
     "capsule_concept",
     "match",
 ]
