@@ -70,7 +70,11 @@ from .property_concepts import (
 from .recorded_builder import (
     CapsuleConceptBuilder,
     CapsuleConceptPlan,
+    CollectionHandle,
+    ComputedCollectionHandle,
+    PortHandle,
     PropertyHandle,
+    RecordHandle,
     capsule_concept,
 )
 from .init_only_capsule import (
@@ -108,6 +112,8 @@ __all__ = [
     "CapsuleConcept",
     "CapsuleConceptBuilder",
     "CapsuleConceptPlan",
+    "CollectionHandle",
+    "ComputedCollectionHandle",
     "CapsuleContributor",
     "CapsuleDefinition",
     "CapsuleFacade",
@@ -132,6 +138,7 @@ __all__ = [
     "MANAGED_PROPERTY",
     "PLAIN_FIELD",
     "PLAIN_PROPERTY",
+    "PortHandle",
     "PROPERTY_EVALUATOR_GLOBALS",
     "PROPERTY_EVALUATOR_NAMES",
     "PROPERTY_TEMPLATE_GLOBALS",
@@ -139,6 +146,7 @@ __all__ = [
     "PropertyHandle",
     "READONLY_MANAGED_PROPERTY",
     "READONLY_PROPERTY",
+    "RecordHandle",
     "REQUIRED_PARAM",
     "RuntimePortRef",
     "SLOTS_CLASSVAR",

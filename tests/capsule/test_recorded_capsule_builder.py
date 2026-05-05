@@ -122,3 +122,98 @@ def test_conflicting_property_definitions_reject() -> None:
 
     with pytest.raises(ValueError, match="property 'Name' is already owned"):
         child_plan.apply(DataDefinitionSystem())
+
+
+def test_recorded_concept_plan_replays_records_collections_and_ports() -> None:
+    builder = capsule_concept("class")
+    name = builder.props.Name(str, REQUIRED)
+    init = builder.props.Init(bool)
+    target = builder.props.Target(object, REQUIRED)
+    order = builder.props.Order(int)
+    field_input = builder.records.FieldInput(name, init)
+    fields = builder.collections.Fields(
+        field_input,
+        cardinality=builder.many,
+        identity=name,
+    )
+    builder.computed.InitFields(source=fields, when=(init.eq(True),))
+    class_body = builder.ports.Class.body(cardinality=builder.many)
+    builder.port_index(target=target, order=order)
+
+    plan = builder.build()
+    assert plan.ports.Class.body == class_body
+
+    dds = DataDefinitionSystem()
+    plan.apply(dds)
+
+    assert [record.name for record in dds.records] == ["FieldInput"]
+    assert [prop.name for prop in dds.records[0].properties] == ["Name", "Init"]
+    assert [collection.name for collection in dds.collections] == ["Fields"]
+    assert [collection.name for collection in dds.computed_collections] == [
+        "InitFields"
+    ]
+    assert [port.name for port in dds.ports] == ["Class.body"]
+    assert dds.port_index_spec is not None
+    assert dds.port_index_spec.target.name == "Target"
+    assert dds.port_index_spec.order.name == "Order"
+
+
+def test_dependency_record_extension_uses_parent_record_handle() -> None:
+    parent = capsule_concept("property")
+    name = parent.props.Name(str, REQUIRED)
+    field_input = parent.records.FieldInput(name)
+    fields = parent.collections.Fields(
+        field_input,
+        cardinality=parent.many,
+        identity=name,
+    )
+    parent_plan = parent.build()
+
+    child = capsule_concept("frozen", requires=(parent_plan,))
+    parent_ref = child.use(parent_plan)
+    frozen = child.props.Frozen(bool)
+    child.extend_record(parent_ref.records.FieldInput, frozen)
+    child.computed.FrozenFields(
+        source=parent_ref.collections.Fields,
+        when=(frozen.eq(True),),
+    )
+
+    dds = DataDefinitionSystem()
+    child.build().apply(dds)
+
+    assert fields.name == "Fields"
+    assert [prop.name for prop in dds.records[0].properties] == [
+        "Name",
+        "Frozen",
+    ]
+    assert [collection.name for collection in dds.computed_collections] == [
+        "FrozenFields"
+    ]
+
+
+def test_child_redefining_dependency_record_rejects() -> None:
+    parent = capsule_concept("property")
+    name = parent.props.Name(str, REQUIRED)
+    parent.records.FieldInput(name)
+    parent_plan = parent.build()
+
+    child = capsule_concept("frozen", requires=(parent_plan,))
+    parent_ref = child.use(parent_plan)
+    frozen = child.props.Frozen(bool)
+    assert parent_ref.records.FieldInput.name == "FieldInput"
+    child.records.FieldInput(frozen)
+
+    with pytest.raises(ValueError, match="record 'FieldInput' is already owned"):
+        child.build().apply(DataDefinitionSystem())
+
+
+def test_unknown_dependency_reference_rejects() -> None:
+    parent = capsule_concept("property")
+    parent_plan = parent.build()
+    other = capsule_concept("other")
+    other_plan = other.build()
+
+    child = capsule_concept("frozen", requires=(parent_plan,))
+
+    with pytest.raises(ValueError, match="not in the dependency closure"):
+        child.use(other_plan)
