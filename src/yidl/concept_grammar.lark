@@ -116,8 +116,8 @@ resource_ref: qname
 weight_clause: "weight" NUMBER
 
 production_decl: "production" CNAME "from" source_expr "to" qname "{" production_member* "}"
-source_expr: qname order_clause?
-           | qname "." "results" "(" ")" order_clause? -> matcher_results_source
+source_expr: CNAME "." "results" "(" ")" order_clause? -> matcher_results_source
+           | qname order_clause? -> collection_source
 order_clause: "ordered" "(" property_ref ("," property_ref)* ")"
 production_member: "identity" value_expr
                  | "policy" qname

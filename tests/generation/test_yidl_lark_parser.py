@@ -433,6 +433,101 @@ def test_yidl_lark_matcher_rejects_match_resource_target() -> None:
         compile_yidl_files({"matcher.yidl": source}, "matcher.yidl")
 
 
+def test_yidl_lark_matcher_result_production_lowers_resource_flow() -> None:
+    source = """
+    module production_example
+
+    concept ProductionExample {
+        property Name: str
+        property Kind: str
+        property Template: object
+
+        family FieldSpecs {
+            common Name, Kind
+            variant Field {}
+        }
+
+        family ComponentSpecs {
+            variant Component {
+                Name
+                Template
+            }
+        }
+
+        collection Fields: FieldSpecs identity Name many
+        collection Components: Component identity Name many
+
+        resource Plain = code `{"getter": "plain"}`
+        resource Managed = code `{"getter": "managed"}`
+
+        matcher Getter(field: Fields) {
+            default Plain
+            rule managed when field.Kind == "managed" -> Managed
+        }
+
+        production ToComponents from Getter.results() to Components {
+            identity match.record("field").Name
+            policy AddIfAbsent
+            set Name = match.record("field").Name
+            set Template = match.resource()
+        }
+    }
+    """
+
+    compiled = compile_yidl_files({"production.yidl": source}, "production.yidl")
+    dds = compiled.concepts["ProductionExample"].plan.build_data_definition()
+    production = dds.productions[0]
+    values = {item.property.name: item.expression for item in production.values}
+
+    assert production.name == "ToComponents"
+    assert production.source.matcher.name == "Getter"
+    assert production.target.name == "Components"
+    assert production.policy.name == "AddIfAbsent"
+    assert production.identity.__class__.__name__ == "MatchRecordProperty"
+    assert production.identity.input_index == 0
+    assert values["Name"].__class__.__name__ == "MatchRecordProperty"
+    assert values["Name"].input_index == 0
+    assert values["Template"].__class__.__name__ == "MatchResource"
+
+
+def test_yidl_lark_matcher_result_production_reports_bad_input_name() -> None:
+    source = """
+    module production_example
+
+    concept ProductionExample {
+        property Name: str
+        property Kind: str
+        property Template: object
+
+        family FieldSpecs {
+            common Name, Kind
+            variant Field {}
+        }
+        family ComponentSpecs {
+            variant Component {
+                Name
+                Template
+            }
+        }
+        collection Fields: FieldSpecs identity Name many
+        collection Components: Component identity Name many
+        resource Plain = code `{"getter": "plain"}`
+        matcher Getter(field: Fields) {
+            default Plain
+            rule plain when field.Kind == "plain" -> Plain
+        }
+
+        production ToComponents from Getter.results() to Components {
+            set Name = match.record("missing").Name
+            set Template = match.resource()
+        }
+    }
+    """
+
+    with pytest.raises(YidlSymbolError, match="missing"):
+        compile_yidl_files({"production.yidl": source}, "production.yidl")
+
+
 def _children(tree: Tree, data: str) -> tuple[Tree, ...]:
     result: list[Tree] = []
     for child in tree.iter_subtrees():

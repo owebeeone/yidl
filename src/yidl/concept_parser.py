@@ -23,13 +23,19 @@ from yidl.capsule.recorded_builder import CapsuleConceptPlan
 from yidl.capsule.recorded_builder import CollectionHandle
 from yidl.capsule.recorded_builder import MatcherHandle
 from yidl.capsule.recorded_builder import MatcherInputHandle
+from yidl.capsule.recorded_builder import MatcherResultSourceHandle
 from yidl.capsule.recorded_builder import PropertyHandle
+from yidl.capsule.recorded_builder import ProductionHandle
 from yidl.capsule.recorded_builder import RecordHandle
 from yidl.capsule.recorded_builder import SchemaFamilyHandle
 from yidl.capsule.recorded_builder import capsule_concept
+from yidl.capsule.recorded_builder import match as recorded_match
+from yidl.generation.data_def_sys import AddIfAbsent
 from yidl.generation.data_def_sys import GeneratedValue
 from yidl.generation.data_def_sys import MatcherGeneratedValue
 from yidl.generation.data_def_sys import REQUIRED
+from yidl.generation.data_def_sys import RejectDuplicate
+from yidl.generation.data_def_sys import ReplaceExisting
 from yidl.generation.data_def_sys import astichi_template
 from yidl.generation.data_def_sys import from_astichi_code
 from yidl.generation.data_def_sys import from_import
@@ -56,6 +62,7 @@ class YidlCompiledConcept:
     collections: Mapping[str, CollectionHandle]
     resources: Mapping[str, GeneratedValue]
     matchers: Mapping[str, MatcherHandle]
+    productions: Mapping[str, ProductionHandle]
 
 
 @dataclass(frozen=True, slots=True)
@@ -81,6 +88,11 @@ class _ResourceOptions:
     edge_options: tuple[Tree, ...] = ()
 
 
+_POLICIES: Mapping[str, object] = {
+    "AddIfAbsent": AddIfAbsent,
+    "RejectDuplicate": RejectDuplicate,
+    "ReplaceExisting": ReplaceExisting,
+}
 _PARSER: Lark | None = None
 _TYPE_NAMES: dict[str, type[object]] = {
     "object": object,
@@ -197,6 +209,8 @@ class _ConceptCompiler:
         self._local_collections: dict[str, CollectionHandle] = {}
         self._local_resources: dict[str, GeneratedValue] = {}
         self._local_matchers: dict[str, MatcherHandle] = {}
+        self._local_matcher_inputs: dict[str, frozenset[str]] = {}
+        self._local_productions: dict[str, ProductionHandle] = {}
         self._extensions: tuple[YidlCompiledConcept, ...] = ()
 
     def compile(self, tree: Tree) -> YidlCompiledConcept:
@@ -223,6 +237,7 @@ class _ConceptCompiler:
             collections=dict(self._local_collections),
             resources=dict(self._local_resources),
             matchers=dict(self._local_matchers),
+            productions=dict(self._local_productions),
         )
 
     def _compile_member(self, builder: Any, member: Tree) -> None:
@@ -246,13 +261,16 @@ class _ConceptCompiler:
             matcher = self._compile_matcher(builder, member)
             self._local_matchers[matcher.name] = matcher
             return
+        if data == "production_decl":
+            production = self._compile_production(builder, member)
+            self._local_productions[production.name] = production
+            return
         if data in {
             "use_decl",
             "record_decl",
             "union_decl",
             "computed_collection_decl",
             "port_decl",
-            "production_decl",
             "operation_decl",
             "diagnostics_decl",
         }:
@@ -461,6 +479,7 @@ class _ConceptCompiler:
                 input_name = _token_text(input_tree.children[0])
                 source = self._resolve_collection(_qname(input_tree.children[1]))
                 inputs[input_name] = getattr(editor.input, input_name)(source)
+        self._local_matcher_inputs[name] = frozenset(inputs)
 
         for child in tree.children[1:]:
             if not isinstance(child, Tree):
@@ -526,6 +545,94 @@ class _ConceptCompiler:
             raise YidlSymbolError(f"undefined matcher input {input_name!r}")
         property_name = _token_text(node.children[1])
         return input_handle.prop(self._resolve_property(property_name))
+
+    def _compile_production(self, builder: Any, tree: Tree) -> ProductionHandle:
+        name = _token_text(tree.children[0])
+        if name in self._local_productions:
+            raise YidlSymbolError(f"production {name!r} is already defined")
+        source, matcher_inputs = self._production_source(tree.children[1])
+        target = self._resolve_collection(_qname(tree.children[2]))
+        identity: Any | None = None
+        values: dict[PropertyHandle, Any] = {}
+        policy = RejectDuplicate
+
+        for member in tree.children[3:]:
+            if not isinstance(member, Tree) or member.data != "production_member":
+                continue
+            if len(member.children) == 1:
+                child = member.children[0]
+                if isinstance(child, Tree) and child.data == "qname":
+                    policy = self._policy(_qname(child))
+                else:
+                    identity = self._production_value(child, matcher_inputs)
+                continue
+            if len(member.children) == 2:
+                prop = self._resolve_property(_qname(member.children[0]))
+                values[prop] = self._production_value(member.children[1], matcher_inputs)
+                continue
+            raise YidlSymbolError(f"production {name!r} has invalid member")
+
+        return getattr(builder.productions, name)(
+            source=source,
+            target=target,
+            values=values,
+            policy=policy,
+            identity=identity,
+        ).handle
+
+    def _production_source(
+        self,
+        tree: object,
+    ) -> tuple[CollectionHandle | MatcherResultSourceHandle, frozenset[str] | None]:
+        if not isinstance(tree, Tree):
+            raise YidlSymbolError("production source is invalid")
+        if tree.data == "matcher_results_source":
+            matcher_name = _token_text(tree.children[0])
+            matcher = self._resolve_matcher(matcher_name)
+            return (
+                MatcherResultSourceHandle(matcher),
+                self._local_matcher_inputs.get(matcher_name, frozenset()),
+            )
+        if tree.data == "collection_source":
+            return self._resolve_collection(_qname(tree.children[0])), None
+        raise YidlSymbolError(f"unsupported production source {tree.data!r}")
+
+    def _production_value(
+        self,
+        node: object,
+        matcher_inputs: frozenset[str] | None,
+    ) -> Any:
+        if isinstance(node, Token | Tree):
+            if isinstance(node, Tree):
+                if node.data == "literal_expr":
+                    return self._value(node)
+                if node.data == "qname":
+                    return self._value(node)
+                if node.data == "match_resource":
+                    if matcher_inputs is None:
+                        raise YidlSymbolError(
+                            "match.resource() requires a matcher-result production source"
+                        )
+                    return recorded_match.resource()
+                if node.data == "match_record":
+                    if matcher_inputs is None:
+                        raise YidlSymbolError(
+                            "match.record(...) requires a matcher-result production source"
+                        )
+                    input_name = _string_value(node.children[0])
+                    if input_name not in matcher_inputs:
+                        raise YidlSymbolError(f"undefined matcher input {input_name!r}")
+                    return recorded_match.record(input_name).prop(
+                        self._resolve_property(_qname(node.children[1]))
+                    )
+            return self._value(node)
+        raise YidlSymbolError("unsupported production value expression")
+
+    def _policy(self, name: str) -> object:
+        try:
+            return _POLICIES[name]
+        except KeyError as exc:
+            raise YidlSymbolError(f"unsupported production policy {name!r}") from exc
 
     def _resolve_concept(self, name: str) -> YidlCompiledConcept:
         parts = name.split(".")
@@ -597,6 +704,26 @@ class _ConceptCompiler:
                     return collection
             raise YidlSymbolError(f"undefined collection {name!r}")
         raise YidlSymbolError(f"unsupported collection reference {name!r}")
+
+    def _resolve_matcher(self, name: str) -> MatcherHandle:
+        parts = name.split(".")
+        if len(parts) == 1:
+            matcher = self._local_matchers.get(parts[0])
+            if matcher is not None:
+                return matcher
+            for extension in self._extensions:
+                matcher = extension.matchers.get(parts[0])
+                if matcher is not None:
+                    return matcher
+            raise YidlSymbolError(f"undefined matcher {name!r}")
+        if len(parts) == 2:
+            module = self._import_module(parts[0])
+            for concept in module.concepts.values():
+                matcher = concept.matchers.get(parts[1])
+                if matcher is not None:
+                    return matcher
+            raise YidlSymbolError(f"undefined matcher {name!r}")
+        raise YidlSymbolError(f"unsupported matcher reference {name!r}")
 
     def _resolve_family_or_none(
         self,
