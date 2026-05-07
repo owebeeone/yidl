@@ -7,6 +7,7 @@ from yidl.concept_parser import YidlSyntaxError
 from yidl.concept_parser import YidlSymbolError
 from yidl.concept_parser import compile_yidl_files
 from yidl.concept_parser import parse_yidl_source
+from yidl.generation.data_def_sys import MatcherGeneratedValue
 
 
 def test_yidl_syntax_error_reports_line_and_column() -> None:
@@ -174,6 +175,58 @@ def test_yidl_lark_unterminated_snippet_reports_syntax_error() -> None:
     assert "unterminated.yidl" in message
     assert "line" in message
     assert "column" in message
+
+
+def test_yidl_lark_code_resource_lowers_to_generated_value() -> None:
+    source = """
+    module snippets
+
+    concept Snippets {
+        resource Inc = code `lambda s: s + 1`
+
+        resource Getter = code $[
+            def get(self):
+                return self.value
+        ]$ {
+            keep get, self
+        }
+    }
+    """
+
+    compiled = compile_yidl_files({"snippets.yidl": source}, "snippets.yidl")
+    resources = compiled.concepts["Snippets"].resources
+
+    inc = resources["Inc"]
+    getter = resources["Getter"]
+
+    assert isinstance(inc, MatcherGeneratedValue)
+    assert inc.source == "lambda s: s + 1"
+    assert inc.file_name == "snippets.yidl"
+    assert inc.line_number > 0
+    assert inc.offset > 0
+    inc.to_generator()
+
+    assert isinstance(getter, MatcherGeneratedValue)
+    assert getter.source == "def get(self):\n    return self.value"
+    assert getter.file_name == "snippets.yidl"
+    assert getter.line_number > inc.line_number
+    assert getter.offset == 0
+    assert "get" in getter.keep_names
+    assert "self" in getter.keep_names
+    getter.to_generator()
+
+
+def test_yidl_lark_empty_code_resource_reports_resource_name() -> None:
+    source = """
+    module snippets
+
+    concept Snippets {
+        resource Empty = code ``
+    }
+    """
+
+    with pytest.raises(YidlSymbolError, match="Empty"):
+        compile_yidl_files({"snippets.yidl": source}, "snippets.yidl")
 
 
 def _children(tree: Tree, data: str) -> tuple[Tree, ...]:

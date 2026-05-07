@@ -25,7 +25,11 @@ from yidl.capsule.recorded_builder import PropertyHandle
 from yidl.capsule.recorded_builder import RecordHandle
 from yidl.capsule.recorded_builder import SchemaFamilyHandle
 from yidl.capsule.recorded_builder import capsule_concept
+from yidl.generation.data_def_sys import GeneratedValue
 from yidl.generation.data_def_sys import REQUIRED
+from yidl.generation.data_def_sys import from_astichi_code
+from yidl.generation.data_def_sys import from_import
+from yidl.generation.data_def_sys import from_literal
 
 
 class YidlSyntaxError(ValueError):
@@ -46,6 +50,7 @@ class YidlCompiledConcept:
     families: Mapping[str, SchemaFamilyHandle]
     records: Mapping[str, RecordHandle]
     collections: Mapping[str, CollectionHandle]
+    resources: Mapping[str, GeneratedValue]
 
 
 @dataclass(frozen=True, slots=True)
@@ -56,6 +61,19 @@ class YidlCompiledModule:
     module_name: str | None
     concepts: Mapping[str, YidlCompiledConcept]
     exports: frozenset[tuple[str, str]]
+
+
+@dataclass(frozen=True, slots=True)
+class _SnippetSource:
+    source: str
+    line_number: int
+    offset: int
+
+
+@dataclass(frozen=True, slots=True)
+class _ResourceOptions:
+    keep_names: tuple[str, ...] = ()
+    edge_options: tuple[Tree, ...] = ()
 
 
 _PARSER: Lark | None = None
@@ -172,6 +190,7 @@ class _ConceptCompiler:
         self._local_families: dict[str, SchemaFamilyHandle] = {}
         self._local_records: dict[str, RecordHandle] = {}
         self._local_collections: dict[str, CollectionHandle] = {}
+        self._local_resources: dict[str, GeneratedValue] = {}
         self._extensions: tuple[YidlCompiledConcept, ...] = ()
 
     def compile(self, tree: Tree) -> YidlCompiledConcept:
@@ -196,6 +215,7 @@ class _ConceptCompiler:
             families=dict(self._local_families),
             records=dict(self._local_records),
             collections=dict(self._local_collections),
+            resources=dict(self._local_resources),
         )
 
     def _compile_member(self, builder: Any, member: Tree) -> None:
@@ -211,13 +231,16 @@ class _ConceptCompiler:
             collection = self._compile_collection(builder, member)
             self._local_collections[collection.name] = collection
             return
+        if data == "resource_decl":
+            name, resource = self._compile_resource(member)
+            self._local_resources[name] = resource
+            return
         if data in {
             "use_decl",
             "record_decl",
             "union_decl",
             "computed_collection_decl",
             "port_decl",
-            "resource_decl",
             "matcher_decl",
             "production_decl",
             "operation_decl",
@@ -225,6 +248,62 @@ class _ConceptCompiler:
         }:
             raise YidlSymbolError(f"{data} lowering is not implemented yet")
         raise YidlSymbolError(f"unsupported concept member {data!r}")
+
+    def _compile_resource(self, tree: Tree) -> tuple[str, GeneratedValue]:
+        name = _token_text(tree.children[0])
+        if name in self._local_resources:
+            raise YidlSymbolError(f"resource {name!r} is already defined")
+        expr = tree.children[1]
+        if not isinstance(expr, Tree):
+            raise YidlSymbolError(f"resource {name!r} has invalid expression")
+
+        try:
+            if expr.data == "resource_literal":
+                return name, from_literal(self._value(expr.children[0]))
+            if expr.data == "resource_import":
+                module = _string_value(expr.children[0])
+                imported_name = _token_text(expr.children[1])
+                return name, from_import(module, imported_name)
+            if expr.data in {"resource_code", "resource_astichi_code"}:
+                options = self._resource_options(expr, name)
+                if options.edge_options:
+                    raise YidlSymbolError(
+                        f"resource {name!r} code resources do not support edge options"
+                    )
+                snippet = _snippet_source(expr.children[0])
+                return name, from_astichi_code(
+                    snippet.source,
+                    file_name=self._module.path,
+                    line_number=snippet.line_number,
+                    offset=snippet.offset,
+                    keep_names=options.keep_names,
+                )
+        except ValueError as exc:
+            raise YidlSymbolError(f"resource {name!r}: {exc}") from exc
+
+        if expr.data in {"resource_template", "resource_astichi_template"}:
+            raise YidlSymbolError(
+                f"resource {name!r} template lowering is not implemented yet"
+            )
+        raise YidlSymbolError(f"resource {name!r} uses unsupported expression {expr.data!r}")
+
+    def _resource_options(self, tree: Tree, resource_name: str) -> _ResourceOptions:
+        options_tree = _first_child(tree, "resource_options")
+        if options_tree is None:
+            return _ResourceOptions()
+
+        keep_names: list[str] = []
+        edge_options: list[Tree] = []
+        for option in _children(options_tree, "resource_keep"):
+            keep_list = option.children[0]
+            if not isinstance(keep_list, Tree):
+                raise YidlSymbolError(f"resource {resource_name!r} has invalid keep list")
+            keep_names.extend(_token_text(child) for child in keep_list.children)
+        edge_options.extend(_children(options_tree, "resource_edge"))
+        return _ResourceOptions(
+            keep_names=tuple(dict.fromkeys(keep_names)),
+            edge_options=tuple(edge_options),
+        )
 
     def _compile_property(self, builder: Any, tree: Tree) -> PropertyHandle:
         name = _token_text(tree.children[0])
@@ -503,6 +582,55 @@ def _string_value(value: object) -> str:
     if not isinstance(value, Token):
         raise TypeError(f"expected string token, got {type(value).__name__}")
     return ast.literal_eval(str(value))
+
+
+def _snippet_source(tree: object) -> _SnippetSource:
+    if not isinstance(tree, Tree) or len(tree.children) != 1:
+        raise YidlSymbolError("expected snippet source")
+    token = tree.children[0]
+    if not isinstance(token, Token):
+        raise YidlSymbolError("expected snippet token")
+    text = str(token)
+    line_number = token.line or 1
+    column = token.column or 1
+
+    if tree.data == "snippet_string":
+        return _SnippetSource(
+            source=_string_value(token),
+            line_number=line_number,
+            offset=column,
+        )
+    if tree.data == "snippet_backtick_inline":
+        return _SnippetSource(
+            source=text[1:-1],
+            line_number=line_number,
+            offset=column,
+        )
+    if tree.data == "snippet_dollar_paren_inline":
+        return _SnippetSource(
+            source=text[2:-2],
+            line_number=line_number,
+            offset=column + 1,
+        )
+    if tree.data == "snippet_dollar_square_inline":
+        return _SnippetSource(
+            source=text[2:-2],
+            line_number=line_number,
+            offset=column + 1,
+        )
+    if tree.data in {
+        "snippet_backtick_block",
+        "snippet_dollar_paren_block",
+        "snippet_dollar_square_block",
+    }:
+        lines = text.splitlines()
+        body = "\n".join(lines[1:-1])
+        return _SnippetSource(
+            source=body,
+            line_number=line_number + 1,
+            offset=0,
+        )
+    raise YidlSymbolError(f"unsupported snippet form {tree.data!r}")
 
 
 def _symbol_kind(tree: Tree) -> str:
