@@ -343,6 +343,96 @@ def test_yidl_lark_match_resource_rejected_without_match_context() -> None:
         compile_yidl_files({"snippets.yidl": source}, "snippets.yidl")
 
 
+def test_yidl_lark_matcher_lowers_default_rule_and_weight() -> None:
+    source = """
+    module matcher_example
+
+    concept MatcherExample {
+        property Name: str
+        property Kind: str
+
+        family FieldSpecs {
+            common Name, Kind
+            variant Field {}
+        }
+
+        collection Fields: FieldSpecs identity Name many
+
+        resource Plain = code `{"getter": "plain"}`
+        resource Managed = code `{"getter": "managed"}`
+
+        matcher Getter(field: Fields) {
+            default Plain
+            rule managed when field.Kind == "managed" -> Managed weight 10
+        }
+    }
+    """
+
+    compiled = compile_yidl_files({"matcher.yidl": source}, "matcher.yidl")
+    concept = compiled.concepts["MatcherExample"]
+    dds = concept.plan.build_data_definition()
+    matcher = dds.matchers[0]
+    rule = matcher.rules[0]
+    condition = rule.conditions[0]
+
+    assert concept.matchers["Getter"].name == "Getter"
+    assert matcher.name == "Getter"
+    assert matcher.inputs[0].name == "field"
+    assert matcher.inputs[0].source.name == "Fields"
+    assert matcher.default_resource is concept.resources["Plain"]
+    assert rule.name == "managed"
+    assert rule.resource is concept.resources["Managed"]
+    assert rule.weight == 10.0
+    assert condition.ref.input.name == "field"
+    assert condition.ref.property.name == "Kind"
+    assert condition.value == "managed"
+
+
+def test_yidl_lark_matcher_reports_missing_input_property() -> None:
+    source = """
+    module matcher_example
+
+    concept MatcherExample {
+        property Name: str
+        family FieldSpecs {
+            common Name
+            variant Field {}
+        }
+        collection Fields: FieldSpecs identity Name many
+        resource Plain = code `{"getter": "plain"}`
+
+        matcher Getter(field: Fields) {
+            rule broken when field.Missing == "managed" -> Plain
+        }
+    }
+    """
+
+    with pytest.raises(YidlSymbolError, match="Missing"):
+        compile_yidl_files({"matcher.yidl": source}, "matcher.yidl")
+
+
+def test_yidl_lark_matcher_rejects_match_resource_target() -> None:
+    source = """
+    module matcher_example
+
+    concept MatcherExample {
+        property Name: str
+        family FieldSpecs {
+            common Name
+            variant Field {}
+        }
+        collection Fields: FieldSpecs identity Name many
+
+        matcher Getter(field: Fields) {
+            rule broken when field.Name == "count" -> match.resource()
+        }
+    }
+    """
+
+    with pytest.raises(YidlSymbolError, match=r"match\.resource"):
+        compile_yidl_files({"matcher.yidl": source}, "matcher.yidl")
+
+
 def _children(tree: Tree, data: str) -> tuple[Tree, ...]:
     result: list[Tree] = []
     for child in tree.iter_subtrees():

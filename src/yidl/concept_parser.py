@@ -21,6 +21,8 @@ from lark.exceptions import UnexpectedInput
 
 from yidl.capsule.recorded_builder import CapsuleConceptPlan
 from yidl.capsule.recorded_builder import CollectionHandle
+from yidl.capsule.recorded_builder import MatcherHandle
+from yidl.capsule.recorded_builder import MatcherInputHandle
 from yidl.capsule.recorded_builder import PropertyHandle
 from yidl.capsule.recorded_builder import RecordHandle
 from yidl.capsule.recorded_builder import SchemaFamilyHandle
@@ -53,6 +55,7 @@ class YidlCompiledConcept:
     records: Mapping[str, RecordHandle]
     collections: Mapping[str, CollectionHandle]
     resources: Mapping[str, GeneratedValue]
+    matchers: Mapping[str, MatcherHandle]
 
 
 @dataclass(frozen=True, slots=True)
@@ -193,6 +196,7 @@ class _ConceptCompiler:
         self._local_records: dict[str, RecordHandle] = {}
         self._local_collections: dict[str, CollectionHandle] = {}
         self._local_resources: dict[str, GeneratedValue] = {}
+        self._local_matchers: dict[str, MatcherHandle] = {}
         self._extensions: tuple[YidlCompiledConcept, ...] = ()
 
     def compile(self, tree: Tree) -> YidlCompiledConcept:
@@ -218,6 +222,7 @@ class _ConceptCompiler:
             records=dict(self._local_records),
             collections=dict(self._local_collections),
             resources=dict(self._local_resources),
+            matchers=dict(self._local_matchers),
         )
 
     def _compile_member(self, builder: Any, member: Tree) -> None:
@@ -237,13 +242,16 @@ class _ConceptCompiler:
             name, resource = self._compile_resource(member)
             self._local_resources[name] = resource
             return
+        if data == "matcher_decl":
+            matcher = self._compile_matcher(builder, member)
+            self._local_matchers[matcher.name] = matcher
+            return
         if data in {
             "use_decl",
             "record_decl",
             "union_decl",
             "computed_collection_decl",
             "port_decl",
-            "matcher_decl",
             "production_decl",
             "operation_decl",
             "diagnostics_decl",
@@ -438,6 +446,87 @@ class _ConceptCompiler:
             identity=identity,
         )
 
+    def _compile_matcher(self, builder: Any, tree: Tree) -> MatcherHandle:
+        name = _token_text(tree.children[0])
+        if name in self._local_matchers:
+            raise YidlSymbolError(f"matcher {name!r} is already defined")
+        editor = getattr(builder.matchers, name)()
+        inputs: dict[str, MatcherInputHandle] = {}
+
+        input_list = _first_child(tree, "matcher_input_list")
+        if input_list is not None:
+            for input_tree in input_list.children:
+                if not isinstance(input_tree, Tree) or input_tree.data != "matcher_input":
+                    continue
+                input_name = _token_text(input_tree.children[0])
+                source = self._resolve_collection(_qname(input_tree.children[1]))
+                inputs[input_name] = getattr(editor.input, input_name)(source)
+
+        for child in tree.children[1:]:
+            if not isinstance(child, Tree):
+                continue
+            if child.data == "matcher_default":
+                editor.default(
+                    self._lower_resource_expr(
+                        child.children[0],
+                        context=f"matcher {name!r} default",
+                    )
+                )
+                continue
+            if child.data == "matcher_rule":
+                rule_name = _token_text(child.children[0])
+                conditions = self._matcher_conditions(child.children[1], inputs)
+                resource = self._lower_resource_expr(
+                    child.children[2],
+                    context=f"matcher {name!r} rule {rule_name!r}",
+                )
+                weight = 1.0
+                weight_tree = _first_child(child, "weight_clause")
+                if weight_tree is not None:
+                    weight = float(str(weight_tree.children[0]))
+                getattr(editor.rule, rule_name)(
+                    when=conditions,
+                    resource=resource,
+                    weight=weight,
+                )
+        return editor.handle
+
+    def _matcher_conditions(
+        self,
+        tree: Tree,
+        inputs: Mapping[str, MatcherInputHandle],
+    ) -> tuple[Any, ...]:
+        if tree.data == "condition_and":
+            return (
+                *self._matcher_conditions(tree.children[0], inputs),
+                *self._matcher_conditions(tree.children[1], inputs),
+            )
+        if tree.data == "condition_term":
+            left = tree.children[0]
+            right = tree.children[1]
+            left_ref = self._matcher_property_ref(left, inputs)
+            right_ref = self._matcher_property_ref(right, inputs)
+            if left_ref is not None and right_ref is None:
+                return (left_ref.eq(self._value(right)),)
+            if right_ref is not None and left_ref is None:
+                return (right_ref.eq(self._value(left)),)
+            raise YidlSymbolError("matcher conditions must compare one input property")
+        raise YidlSymbolError(f"unsupported matcher condition {tree.data!r}")
+
+    def _matcher_property_ref(
+        self,
+        node: object,
+        inputs: Mapping[str, MatcherInputHandle],
+    ) -> Any | None:
+        if not isinstance(node, Tree) or node.data != "qname" or len(node.children) != 2:
+            return None
+        input_name = _token_text(node.children[0])
+        input_handle = inputs.get(input_name)
+        if input_handle is None:
+            raise YidlSymbolError(f"undefined matcher input {input_name!r}")
+        property_name = _token_text(node.children[1])
+        return input_handle.prop(self._resolve_property(property_name))
+
     def _resolve_concept(self, name: str) -> YidlCompiledConcept:
         parts = name.split(".")
         if len(parts) == 1:
@@ -488,6 +577,26 @@ class _ConceptCompiler:
             if record is not None:
                 return record
         raise YidlSymbolError(f"undefined record or schema family {name!r}")
+
+    def _resolve_collection(self, name: str) -> CollectionHandle:
+        parts = name.split(".")
+        if len(parts) == 1:
+            collection = self._local_collections.get(parts[0])
+            if collection is not None:
+                return collection
+            for extension in self._extensions:
+                collection = extension.collections.get(parts[0])
+                if collection is not None:
+                    return collection
+            raise YidlSymbolError(f"undefined collection {name!r}")
+        if len(parts) == 2:
+            module = self._import_module(parts[0])
+            for concept in module.concepts.values():
+                collection = concept.collections.get(parts[1])
+                if collection is not None:
+                    return collection
+            raise YidlSymbolError(f"undefined collection {name!r}")
+        raise YidlSymbolError(f"unsupported collection reference {name!r}")
 
     def _resolve_family_or_none(
         self,
