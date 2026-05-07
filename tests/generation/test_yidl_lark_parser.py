@@ -279,6 +279,70 @@ def test_yidl_lark_template_edge_reports_missing_resource() -> None:
         compile_yidl_files({"snippets.yidl": source}, "snippets.yidl")
 
 
+def test_yidl_lark_template_edge_resolves_imported_resource() -> None:
+    core = """
+    module core
+    export concept Core
+
+    concept Core {
+        resource Bind = code `{"value": self.value}`
+    }
+    """
+    child = """
+    module child
+    import "core.yidl" as core
+
+    concept Child {
+        resource GetterTemplate = template `pass` {
+            edge bind = core.Bind
+        }
+    }
+    """
+
+    compiled = compile_yidl_files(
+        {"core.yidl": core, "child.yidl": child},
+        "child.yidl",
+    )
+
+    template = compiled.concepts["Child"].resources["GetterTemplate"]
+
+    assert isinstance(template, AstichiTemplateValue)
+    assert isinstance(template.edge_bind, MatcherGeneratedValue)
+    assert template.edge_bind.source == '{"value": self.value}'
+
+
+def test_yidl_lark_resource_expression_reports_wrong_kind() -> None:
+    source = """
+    module snippets
+
+    concept Snippets {
+        property Bind: str
+
+        resource GetterTemplate = template `pass` {
+            edge bind = Bind
+        }
+    }
+    """
+
+    with pytest.raises(YidlSymbolError, match="property"):
+        compile_yidl_files({"snippets.yidl": source}, "snippets.yidl")
+
+
+def test_yidl_lark_match_resource_rejected_without_match_context() -> None:
+    source = """
+    module snippets
+
+    concept Snippets {
+        resource GetterTemplate = template `pass` {
+            edge bind = match.resource()
+        }
+    }
+    """
+
+    with pytest.raises(YidlSymbolError, match=r"match\.resource"):
+        compile_yidl_files({"snippets.yidl": source}, "snippets.yidl")
+
+
 def _children(tree: Tree, data: str) -> tuple[Tree, ...]:
     result: list[Tree] = []
     for child in tree.iter_subtrees():

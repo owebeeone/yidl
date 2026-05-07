@@ -294,6 +294,8 @@ class _ConceptCompiler:
                     template,
                     **self._template_edge_options(options, name),
                 )
+        except YidlSymbolError:
+            raise
         except ValueError as exc:
             raise YidlSymbolError(f"resource {name!r}: {exc}") from exc
 
@@ -333,15 +335,39 @@ class _ConceptCompiler:
                 raise YidlSymbolError(
                     f"resource {resource_name!r} repeats template edge {key!r}"
                 )
-            target_name = _qname(edge_ref)
-            target = self._resolve_resource(target_name)
+            target = self._lower_resource_expr(
+                edge_ref,
+                context=f"resource {resource_name!r} template edge {key!r}",
+            )
             if not isinstance(target, MatcherGeneratedValue):
+                target_name = _resource_expr_name(edge_ref)
                 raise YidlSymbolError(
                     f"resource {resource_name!r} edge {key!r} target "
                     f"{target_name!r} must be a code resource"
                 )
             result[key] = target
         return result
+
+    def _lower_resource_expr(
+        self,
+        tree: Tree,
+        *,
+        context: str,
+        allow_match_resource: bool = False,
+    ) -> GeneratedValue:
+        if tree.data in {"resource_ref", "resource_name_ref"}:
+            return self._resolve_resource(_qname(tree))
+        if tree.data == "resource_match_ref":
+            if allow_match_resource:
+                raise YidlSymbolError(
+                    f"{context} match.resource() resource flow is not lowered yet"
+                )
+            raise YidlSymbolError(
+                f"{context} cannot use match.resource() without a matcher-result context"
+            )
+        raise YidlSymbolError(
+            f"{context} uses unsupported resource expression {tree.data!r}"
+        )
 
     def _compile_property(self, builder: Any, tree: Tree) -> PropertyHandle:
         name = _token_text(tree.children[0])
@@ -518,6 +544,9 @@ class _ConceptCompiler:
                 resource = extension.resources.get(parts[0])
                 if resource is not None:
                     return resource
+            kind = self._known_local_non_resource_kind(parts[0])
+            if kind is not None:
+                raise YidlSymbolError(f"{name!r} is a {kind}, not a resource")
             raise YidlSymbolError(f"undefined resource {name!r}")
         if len(parts) == 2:
             module = self._import_module(parts[0])
@@ -525,8 +554,47 @@ class _ConceptCompiler:
                 resource = concept.resources.get(parts[1])
                 if resource is not None:
                     return resource
+            kind = self._known_imported_non_resource_kind(module, parts[1])
+            if kind is not None:
+                raise YidlSymbolError(f"{name!r} is a {kind}, not a resource")
             raise YidlSymbolError(f"undefined resource {name!r}")
         raise YidlSymbolError(f"unsupported resource reference {name!r}")
+
+    def _known_local_non_resource_kind(self, name: str) -> str | None:
+        if name in self._local_properties:
+            return "property"
+        if name in self._local_families:
+            return "schema family"
+        if name in self._local_records:
+            return "record"
+        if name in self._local_collections:
+            return "collection"
+        for extension in self._extensions:
+            if name in extension.properties:
+                return "property"
+            if name in extension.families:
+                return "schema family"
+            if name in extension.records:
+                return "record"
+            if name in extension.collections:
+                return "collection"
+        return None
+
+    def _known_imported_non_resource_kind(
+        self,
+        module: YidlCompiledModule,
+        name: str,
+    ) -> str | None:
+        for concept in module.concepts.values():
+            if name in concept.properties:
+                return "property"
+            if name in concept.families:
+                return "schema family"
+            if name in concept.records:
+                return "record"
+            if name in concept.collections:
+                return "collection"
+        return None
 
     def _reject_imported_property_redefinition(self, name: str) -> None:
         for extension in self._extensions:
@@ -617,9 +685,17 @@ def _concept_members(tree: Tree) -> tuple[Tree, ...]:
 
 
 def _qname(tree: Tree) -> str:
-    if tree.data in {"property_ref", "type_ref", "resource_ref"}:
+    if tree.data in {"property_ref", "type_ref", "resource_ref", "resource_name_ref"}:
         return _qname(tree.children[0])
     return ".".join(_token_text(child) for child in tree.children)
+
+
+def _resource_expr_name(tree: Tree) -> str:
+    if tree.data == "resource_match_ref":
+        return "match.resource()"
+    if tree.data in {"resource_ref", "resource_name_ref"}:
+        return _qname(tree)
+    return tree.data
 
 
 def _first_qname(tree: Tree) -> str:

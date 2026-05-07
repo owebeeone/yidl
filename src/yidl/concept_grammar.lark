@@ -98,17 +98,20 @@ snippet: STRING -> snippet_string
 
 resource_options: "{" resource_option* "}"
 resource_option: "keep" keep_name_list -> resource_keep
-               | "edge" resource_edge_kind "=" resource_ref -> resource_edge
+               | "edge" resource_edge_kind "=" resource_ref_expr -> resource_edge
 keep_name_list: CNAME ("," CNAME)*
 resource_edge_kind: "arg_names" -> edge_arg_names
                   | "bind" -> edge_bind
                   | "keep_names" -> edge_keep_names
 
+resource_ref_expr: resource_ref -> resource_name_ref
+                 | "match" "." "resource" "(" ")" -> resource_match_ref
+
 matcher_decl: "matcher" CNAME "(" matcher_input_list? ")" "{" matcher_default? matcher_rule* "}"
 matcher_input_list: matcher_input ("," matcher_input)*
 matcher_input: CNAME ":" qname
-matcher_default: "default" resource_ref
-matcher_rule: "rule" CNAME "when" condition_expr "->" resource_ref weight_clause?
+matcher_default: "default" resource_ref_expr
+matcher_rule: "rule" CNAME "when" condition_expr "->" resource_ref_expr weight_clause?
 resource_ref: qname
 weight_clause: "weight" NUMBER
 
@@ -120,7 +123,7 @@ production_member: "identity" value_expr
                  | "policy" qname
                  | "set" property_ref "=" value_expr
 
-operation_decl: "operation" CNAME operation_io "using" resource_ref operation_options?
+operation_decl: "operation" CNAME operation_io "using" resource_ref_expr operation_options?
 operation_io: "inputs" "(" qname_list? ")" "outputs" "(" qname_list? ")"
 qname_list: qname ("," qname)*
 operation_options: "{" operation_option* "}"
