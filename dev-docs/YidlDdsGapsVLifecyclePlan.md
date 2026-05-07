@@ -689,9 +689,12 @@ Do not add these unless a later slice proves they are necessary:
 ## Implementation Slices
 
 The canonical roll-build order lives in
-`dev-docs/lifecyle-plan/14-ImplementationSlicingDetailedPlan.md`. This plan
-does not duplicate the slice list to avoid drift. Gap closure by slice, golden
-targets, and parser work are defined there.
+`dev-docs/lifecyle-plan/14-ImplementationSlicingDetailedPlan.md` for the
+initial consolidated build and continues in
+`dev-docs/lifecyle-plan/15-PostSlice14LifecycleParityDetailedPlan.md` for
+post-slice-14 lifecycle parity. This plan does not duplicate the slice lists to
+avoid drift. Gap closure by slice, golden targets, and parser work are defined
+there.
 
 ## Lifecycle Staircase Data Model
 
@@ -776,7 +779,8 @@ Follow the project testing shape:
 
 Canonical feature goldens are listed in
 `dev-docs/lifecyle-plan/11-ActualFeatureEnumerationDetailedPlan.md`. Slice-level
-goldens are listed in `dev-docs/lifecyle-plan/14-ImplementationSlicingDetailedPlan.md`.
+goldens are listed in `dev-docs/lifecyle-plan/14-ImplementationSlicingDetailedPlan.md`
+and `dev-docs/lifecyle-plan/15-PostSlice14LifecycleParityDetailedPlan.md`.
 
 Lifecycle-flavored goldens such as layered merge, transaction indexing,
 callable facts, initvar closure, and resource hooks remain useful, but they

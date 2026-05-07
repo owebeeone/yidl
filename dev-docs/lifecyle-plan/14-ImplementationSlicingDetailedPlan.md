@@ -291,6 +291,26 @@ Bespoke tests:
 - cleanup phase ordering
 - unsupported resource policy diagnostics
 
+## Post-Slice-14 Lifecycle Parity Continuation
+
+The roll-build has continued beyond the initial consolidated slices. The
+detailed continuation lives in
+`15-PostSlice14LifecycleParityDetailedPlan.md`.
+
+That continuation owns the parity slices for:
+
+- generated decorator and helper surface
+- default and factory initialization
+- full callable injection matrix
+- transaction manager and active transaction semantics
+- commit/rollback pipeline parity
+- advanced managed value semantics
+- static/transient/local-store/derived/classvar field kinds
+- binding and owned resource semantics
+- multi-facade state routing
+- MRO merge and override parity
+- runtime parity harness
+
 ## Deferred Slice: Graph Closure
 
 Do not build graph closure until initvar retention or another concrete feature

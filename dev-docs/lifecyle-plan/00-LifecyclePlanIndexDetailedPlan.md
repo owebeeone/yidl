@@ -89,6 +89,14 @@ History docs are not part of the active design source.
     - Each slice states the DDS/fluent feature, Astichi proof/golden pressure,
       and lifecycle use that should land with it.
 
+15. `15-PostSlice14LifecycleParityDetailedPlan.md`
+    - Roll-build continuation after the current `lcb/slice-14-call-arguments`
+      baseline.
+    - Detailed parity slices for decorator/helper generation, defaults,
+      callable injection, transaction behavior, advanced field kinds, resource
+      cleanup, multi-facade routing, MRO override parity, and runtime parity
+      harness coverage.
+
 ## Minimal New DDS Surface
 
 After critical review, the complete lifecycle plan should add no more core DDS
@@ -132,7 +140,9 @@ These items belong in the fluent/concept layer, not DDS core:
 
 Each feature should be built and tested in an isolated step, then immediately
 used by the lifecycle scratch/staircase driver. The canonical slice order lives
-in `14-ImplementationSlicingDetailedPlan.md`.
+in `14-ImplementationSlicingDetailedPlan.md` for the initial consolidated
+build and continues in `15-PostSlice14LifecycleParityDetailedPlan.md` for
+post-slice-14 lifecycle parity.
 
 Do not wait until every feature is complete before using it. The scratch
 driver should pressure each feature as soon as it lands.
