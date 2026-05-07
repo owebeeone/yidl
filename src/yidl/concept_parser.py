@@ -24,6 +24,7 @@ from yidl.capsule.recorded_builder import CollectionHandle
 from yidl.capsule.recorded_builder import MatcherHandle
 from yidl.capsule.recorded_builder import MatcherInputHandle
 from yidl.capsule.recorded_builder import MatcherResultSourceHandle
+from yidl.capsule.recorded_builder import OperationHandle
 from yidl.capsule.recorded_builder import PropertyHandle
 from yidl.capsule.recorded_builder import ProductionHandle
 from yidl.capsule.recorded_builder import RecordHandle
@@ -63,6 +64,7 @@ class YidlCompiledConcept:
     resources: Mapping[str, GeneratedValue]
     matchers: Mapping[str, MatcherHandle]
     productions: Mapping[str, ProductionHandle]
+    operations: Mapping[str, OperationHandle]
 
 
 @dataclass(frozen=True, slots=True)
@@ -211,6 +213,7 @@ class _ConceptCompiler:
         self._local_matchers: dict[str, MatcherHandle] = {}
         self._local_matcher_inputs: dict[str, frozenset[str]] = {}
         self._local_productions: dict[str, ProductionHandle] = {}
+        self._local_operations: dict[str, OperationHandle] = {}
         self._extensions: tuple[YidlCompiledConcept, ...] = ()
 
     def compile(self, tree: Tree) -> YidlCompiledConcept:
@@ -238,6 +241,7 @@ class _ConceptCompiler:
             resources=dict(self._local_resources),
             matchers=dict(self._local_matchers),
             productions=dict(self._local_productions),
+            operations=dict(self._local_operations),
         )
 
     def _compile_member(self, builder: Any, member: Tree) -> None:
@@ -265,13 +269,16 @@ class _ConceptCompiler:
             production = self._compile_production(builder, member)
             self._local_productions[production.name] = production
             return
+        if data == "operation_decl":
+            operation = self._compile_operation(builder, member)
+            self._local_operations[operation.name] = operation
+            return
         if data in {
             "use_decl",
             "record_decl",
             "union_decl",
             "computed_collection_decl",
             "port_decl",
-            "operation_decl",
             "diagnostics_decl",
         }:
             raise YidlSymbolError(f"{data} lowering is not implemented yet")
@@ -633,6 +640,62 @@ class _ConceptCompiler:
             return _POLICIES[name]
         except KeyError as exc:
             raise YidlSymbolError(f"unsupported production policy {name!r}") from exc
+
+    def _compile_operation(self, builder: Any, tree: Tree) -> OperationHandle:
+        name = _token_text(tree.children[0])
+        if name in self._local_operations:
+            raise YidlSymbolError(f"operation {name!r} is already defined")
+        io_tree = tree.children[1]
+        if not isinstance(io_tree, Tree) or io_tree.data != "operation_io":
+            raise YidlSymbolError(f"operation {name!r} has invalid inputs/outputs")
+        qname_lists = [
+            child
+            for child in io_tree.children
+            if isinstance(child, Tree) and child.data == "qname_list"
+        ]
+        if len(qname_lists) != 2:
+            raise YidlSymbolError(
+                f"operation {name!r} must declare input and output lists"
+            )
+        inputs = tuple(
+            self._resolve_collection(_qname(child))
+            for child in qname_lists[0].children
+            if isinstance(child, Tree)
+        )
+        outputs = tuple(
+            self._resolve_collection(_qname(child))
+            for child in qname_lists[1].children
+            if isinstance(child, Tree)
+        )
+        resource_expr = tree.children[2]
+        if not isinstance(resource_expr, Tree):
+            raise YidlSymbolError(f"operation {name!r} has invalid resource")
+        resource = self._lower_resource_expr(
+            resource_expr,
+            context=f"operation {name!r} resource",
+        )
+        order_by: list[PropertyHandle] = []
+        options = _first_child(tree, "operation_options")
+        if options is not None:
+            for option in options.children:
+                if not isinstance(option, Tree) or option.data != "operation_option":
+                    continue
+                option_value = option.children[0]
+                if isinstance(option_value, Tree) and option_value.data == "property_ref":
+                    order_by.append(self._resolve_property(_qname(option_value)))
+                    continue
+                if isinstance(option_value, Tree) and option_value.data == "qname":
+                    raise YidlSymbolError(
+                        f"operation {name!r} diagnostics option is not implemented yet"
+                    )
+                raise YidlSymbolError(f"operation {name!r} has invalid option")
+
+        return getattr(builder.operations, name)(
+            inputs=inputs,
+            outputs=outputs,
+            resource=resource,
+            order_by=tuple(order_by),
+        ).handle
 
     def _resolve_concept(self, name: str) -> YidlCompiledConcept:
         parts = name.split(".")

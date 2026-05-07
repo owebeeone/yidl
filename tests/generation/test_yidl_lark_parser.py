@@ -528,6 +528,88 @@ def test_yidl_lark_matcher_result_production_reports_bad_input_name() -> None:
         compile_yidl_files({"production.yidl": source}, "production.yidl")
 
 
+def test_yidl_lark_operation_lowers_direct_resource_and_ordering() -> None:
+    source = """
+    module operation_example
+
+    concept OperationExample {
+        property Name: str
+        property Order: int
+
+        family ItemSpecs {
+            variant Item {
+                Name
+                Order
+            }
+        }
+
+        collection Items: Item identity Name many
+        resource BuildItemsBody = code `pass`
+
+        operation BuildItems inputs(Items) outputs(Items) using BuildItemsBody {
+            ordered(Order)
+        }
+    }
+    """
+
+    compiled = compile_yidl_files({"operation.yidl": source}, "operation.yidl")
+    concept = compiled.concepts["OperationExample"]
+    dds = concept.plan.build_data_definition()
+    operation = dds.operations[0]
+
+    assert concept.operations["BuildItems"].name == "BuildItems"
+    assert operation.name == "BuildItems"
+    assert operation.inputs[0].name == "Items"
+    assert operation.outputs[0].name == "Items"
+    assert operation.resource is concept.resources["BuildItemsBody"]
+    assert operation.order_by[0].name == "Order"
+
+
+def test_yidl_lark_operation_rejects_match_resource_body() -> None:
+    source = """
+    module operation_example
+
+    concept OperationExample {
+        property Name: str
+        family ItemSpecs {
+            variant Item {
+                Name
+            }
+        }
+        collection Items: Item identity Name many
+
+        operation BuildItems inputs(Items) outputs(Items) using match.resource()
+    }
+    """
+
+    with pytest.raises(YidlSymbolError, match=r"match\.resource"):
+        compile_yidl_files({"operation.yidl": source}, "operation.yidl")
+
+
+def test_yidl_lark_operation_reports_unsupported_diagnostics_option() -> None:
+    source = """
+    module operation_example
+
+    concept OperationExample {
+        property Name: str
+        family ItemSpecs {
+            variant Item {
+                Name
+            }
+        }
+        collection Items: Item identity Name many
+        resource BuildItemsBody = code `pass`
+
+        operation BuildItems inputs(Items) outputs(Items) using BuildItemsBody {
+            diagnostics BuildDiagnostics
+        }
+    }
+    """
+
+    with pytest.raises(YidlSymbolError, match="diagnostics"):
+        compile_yidl_files({"operation.yidl": source}, "operation.yidl")
+
+
 def _children(tree: Tree, data: str) -> tuple[Tree, ...]:
     result: list[Tree] = []
     for child in tree.iter_subtrees():
