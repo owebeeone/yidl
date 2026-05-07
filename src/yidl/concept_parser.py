@@ -26,7 +26,9 @@ from yidl.capsule.recorded_builder import RecordHandle
 from yidl.capsule.recorded_builder import SchemaFamilyHandle
 from yidl.capsule.recorded_builder import capsule_concept
 from yidl.generation.data_def_sys import GeneratedValue
+from yidl.generation.data_def_sys import MatcherGeneratedValue
 from yidl.generation.data_def_sys import REQUIRED
+from yidl.generation.data_def_sys import astichi_template
 from yidl.generation.data_def_sys import from_astichi_code
 from yidl.generation.data_def_sys import from_import
 from yidl.generation.data_def_sys import from_literal
@@ -278,13 +280,23 @@ class _ConceptCompiler:
                     offset=snippet.offset,
                     keep_names=options.keep_names,
                 )
+            if expr.data in {"resource_template", "resource_astichi_template"}:
+                options = self._resource_options(expr, name)
+                snippet = _snippet_source(expr.children[0])
+                template = from_astichi_code(
+                    snippet.source,
+                    file_name=self._module.path,
+                    line_number=snippet.line_number,
+                    offset=snippet.offset,
+                    keep_names=options.keep_names,
+                )
+                return name, astichi_template(
+                    template,
+                    **self._template_edge_options(options, name),
+                )
         except ValueError as exc:
             raise YidlSymbolError(f"resource {name!r}: {exc}") from exc
 
-        if expr.data in {"resource_template", "resource_astichi_template"}:
-            raise YidlSymbolError(
-                f"resource {name!r} template lowering is not implemented yet"
-            )
         raise YidlSymbolError(f"resource {name!r} uses unsupported expression {expr.data!r}")
 
     def _resource_options(self, tree: Tree, resource_name: str) -> _ResourceOptions:
@@ -304,6 +316,32 @@ class _ConceptCompiler:
             keep_names=tuple(dict.fromkeys(keep_names)),
             edge_options=tuple(edge_options),
         )
+
+    def _template_edge_options(
+        self,
+        options: _ResourceOptions,
+        resource_name: str,
+    ) -> dict[str, MatcherGeneratedValue]:
+        result: dict[str, MatcherGeneratedValue] = {}
+        for edge in options.edge_options:
+            edge_kind = edge.children[0]
+            edge_ref = edge.children[1]
+            if not isinstance(edge_kind, Tree) or not isinstance(edge_ref, Tree):
+                raise YidlSymbolError(f"resource {resource_name!r} has invalid edge")
+            key = edge_kind.data.removeprefix("edge_")
+            if key in result:
+                raise YidlSymbolError(
+                    f"resource {resource_name!r} repeats template edge {key!r}"
+                )
+            target_name = _qname(edge_ref)
+            target = self._resolve_resource(target_name)
+            if not isinstance(target, MatcherGeneratedValue):
+                raise YidlSymbolError(
+                    f"resource {resource_name!r} edge {key!r} target "
+                    f"{target_name!r} must be a code resource"
+                )
+            result[key] = target
+        return result
 
     def _compile_property(self, builder: Any, tree: Tree) -> PropertyHandle:
         name = _token_text(tree.children[0])
@@ -469,6 +507,26 @@ class _ConceptCompiler:
                     return prop
             raise YidlSymbolError(f"undefined property {name!r}")
         raise YidlSymbolError(f"unsupported property reference {name!r}")
+
+    def _resolve_resource(self, name: str) -> GeneratedValue:
+        parts = name.split(".")
+        if len(parts) == 1:
+            resource = self._local_resources.get(parts[0])
+            if resource is not None:
+                return resource
+            for extension in self._extensions:
+                resource = extension.resources.get(parts[0])
+                if resource is not None:
+                    return resource
+            raise YidlSymbolError(f"undefined resource {name!r}")
+        if len(parts) == 2:
+            module = self._import_module(parts[0])
+            for concept in module.concepts.values():
+                resource = concept.resources.get(parts[1])
+                if resource is not None:
+                    return resource
+            raise YidlSymbolError(f"undefined resource {name!r}")
+        raise YidlSymbolError(f"unsupported resource reference {name!r}")
 
     def _reject_imported_property_redefinition(self, name: str) -> None:
         for extension in self._extensions:

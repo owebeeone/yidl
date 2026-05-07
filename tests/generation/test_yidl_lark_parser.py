@@ -7,6 +7,7 @@ from yidl.concept_parser import YidlSyntaxError
 from yidl.concept_parser import YidlSymbolError
 from yidl.concept_parser import compile_yidl_files
 from yidl.concept_parser import parse_yidl_source
+from yidl.generation.data_def_sys import AstichiTemplateValue
 from yidl.generation.data_def_sys import MatcherGeneratedValue
 
 
@@ -226,6 +227,55 @@ def test_yidl_lark_empty_code_resource_reports_resource_name() -> None:
     """
 
     with pytest.raises(YidlSymbolError, match="Empty"):
+        compile_yidl_files({"snippets.yidl": source}, "snippets.yidl")
+
+
+def test_yidl_lark_template_resource_lowers_edges() -> None:
+    source = """
+    module snippets
+
+    concept Snippets {
+        resource ArgNames = code `{"field_name": "name"}`
+        resource Bind = code `{"value": self.value}`
+        resource KeepNames = code `("value",)`
+
+        resource GetterTemplate = template $[
+            def get(self):
+                return value
+        ]$ {
+            keep get
+            edge arg_names = ArgNames
+            edge bind = Bind
+            edge keep_names = KeepNames
+        }
+    }
+    """
+
+    compiled = compile_yidl_files({"snippets.yidl": source}, "snippets.yidl")
+    resources = compiled.concepts["Snippets"].resources
+    template = resources["GetterTemplate"]
+
+    assert isinstance(template, AstichiTemplateValue)
+    assert template.template.source == "def get(self):\n    return value"
+    assert "get" in template.template.keep_names
+    assert template.edge_arg_names is resources["ArgNames"]
+    assert template.edge_bind is resources["Bind"]
+    assert template.edge_keep_names is resources["KeepNames"]
+    template.to_generator()
+
+
+def test_yidl_lark_template_edge_reports_missing_resource() -> None:
+    source = """
+    module snippets
+
+    concept Snippets {
+        resource GetterTemplate = template `pass` {
+            edge bind = Missing
+        }
+    }
+    """
+
+    with pytest.raises(YidlSymbolError, match="Missing"):
         compile_yidl_files({"snippets.yidl": source}, "snippets.yidl")
 
 
