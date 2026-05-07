@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import pytest
+from lark import Tree
 
 from yidl.concept_parser import YidlSyntaxError
 from yidl.concept_parser import YidlSymbolError
@@ -105,3 +106,79 @@ def test_yidl_extended_family_resolves_local_then_owner_properties() -> None:
         "Kind",
         "TxGroup",
     ]
+
+
+def test_yidl_lark_resource_snippet_forms_parse() -> None:
+    source = '''
+    module snippets
+
+    concept Snippets {
+        resource StringSnippet = code "lambda s: s + 1"
+        resource InlineBacktick = code `lambda s: s + 1`
+        resource DollarParenInline = code $(lambda s: s + 1)$
+        resource DollarSquareInline = code $[lambda s: s + 1]$
+
+        resource DollarSquareBlock = code $[
+            # Python comment, not a YIDL comment.
+            def f():
+                return 1
+        ]$ {
+            keep f, value
+        }
+
+        resource DollarParenBlock = code $(
+            def g():
+                return 2
+        )$
+
+        resource FencePlain = code ```
+            def h():
+                return 3
+        ```
+
+        resource FencePython = template ```python
+            def i():
+                return 4
+        ``` {
+            edge keep_names = KeepNamesResource
+            edge arg_names = ArgNamesResource
+            edge bind = BindResource
+        }
+    }
+    '''
+
+    tree = parse_yidl_source("snippets.yidl", source)
+
+    assert len(_children(tree, "resource_code")) == 7
+    assert len(_children(tree, "resource_template")) == 1
+    assert len(_children(tree, "resource_keep")) == 1
+    assert len(_children(tree, "resource_edge")) == 3
+    assert "# Python comment, not a YIDL comment." in str(tree)
+
+
+def test_yidl_lark_unterminated_snippet_reports_syntax_error() -> None:
+    source = """
+    module snippets
+
+    concept Snippets {
+        resource Broken = code $[
+            def f():
+                return 1
+    }
+    """
+
+    with pytest.raises(YidlSyntaxError) as exc_info:
+        parse_yidl_source("unterminated.yidl", source)
+
+    message = str(exc_info.value)
+    assert "unterminated.yidl" in message
+    assert "line" in message
+    assert "column" in message
+
+
+def _children(tree: Tree, data: str) -> tuple[Tree, ...]:
+    result: list[Tree] = []
+    for child in tree.iter_subtrees():
+        if child.data == data:
+            result.append(child)
+    return tuple(result)

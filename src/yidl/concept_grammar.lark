@@ -83,8 +83,26 @@ port_decl: "port" CNAME STRING cardinality_clause
 resource_decl: "resource" CNAME "=" resource_expr
 resource_expr: "literal" value_expr       -> resource_literal
              | "import" STRING "." CNAME  -> resource_import
-             | "astichi_code" STRING      -> resource_astichi_code
-             | "astichi_template" STRING  -> resource_astichi_template
+             | "code" snippet resource_options? -> resource_code
+             | "template" snippet resource_options? -> resource_template
+             | "astichi_code" snippet resource_options? -> resource_astichi_code
+             | "astichi_template" snippet resource_options? -> resource_astichi_template
+
+snippet: STRING -> snippet_string
+       | BACKTICK_INLINE -> snippet_backtick_inline
+       | BACKTICK_BLOCK -> snippet_backtick_block
+       | DOLLAR_PAREN_INLINE -> snippet_dollar_paren_inline
+       | DOLLAR_PAREN_BLOCK -> snippet_dollar_paren_block
+       | DOLLAR_SQUARE_INLINE -> snippet_dollar_square_inline
+       | DOLLAR_SQUARE_BLOCK -> snippet_dollar_square_block
+
+resource_options: "{" resource_option* "}"
+resource_option: "keep" keep_name_list -> resource_keep
+               | "edge" resource_edge_kind "=" resource_ref -> resource_edge
+keep_name_list: CNAME ("," CNAME)*
+resource_edge_kind: "arg_names" -> edge_arg_names
+                  | "bind" -> edge_bind
+                  | "keep_names" -> edge_keep_names
 
 matcher_decl: "matcher" CNAME "(" matcher_input_list? ")" "{" matcher_default? matcher_rule* "}"
 matcher_input_list: matcher_input ("," matcher_input)*
@@ -144,6 +162,12 @@ literal_list: literal_expr ("," literal_expr)*
 qname: CNAME ("." CNAME)*
 
 COMMENT: /#[^\n]*/
+BACKTICK_BLOCK.20: /```(?:[A-Za-z_][A-Za-z0-9_ -]*)?\r?\n(?s:.*?)(?:\r?\n)[ \t]*```/
+BACKTICK_INLINE.20: /`[^\r\n`]*`/
+DOLLAR_PAREN_BLOCK.20: /\$\(\r?\n(?s:.*?)(?:\r?\n)[ \t]*\)\$/
+DOLLAR_PAREN_INLINE.20: /\$\([^\r\n]*?\)\$/
+DOLLAR_SQUARE_BLOCK.20: /\$\[\r?\n(?s:.*?)(?:\r?\n)[ \t]*\]\$/
+DOLLAR_SQUARE_INLINE.20: /\$\[[^\r\n]*?\]\$/
 
 %import common.CNAME
 %import common.ESCAPED_STRING -> STRING
