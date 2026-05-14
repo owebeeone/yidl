@@ -10,8 +10,7 @@ from yidl.generation.assembly_runtime import DataStack
 from yidl.generation.assembly_runtime import evaluate_condition
 from yidl.generation.assembly_runtime import evaluate_external
 from yidl.generation.assembly_runtime import evaluate_order
-from yidl.generation.assembly_runtime import run_assembly
-from yidl.generation.data_def_sys import emit_container_runtime_source
+from yidl.generation.data_def_sys import emit_concept_runtime_source
 
 
 YIDL_SOURCE = """
@@ -134,13 +133,18 @@ def _selected_entries_and_output() -> tuple[list[Mapping[str, object]], str]:
             if binding.kind == "external":
                 values[binding.name] = evaluate_external(binding.value, stack)
         results.append(values)
-    output = run_assembly(concept, "Module", _container(concept)).emit_commented()
+    compiler_source = emit_concept_runtime_source(
+        concept.plan.build_data_definition(),
+        resources=concept.resources,
+        assembly_plan=concept,
+    )
+    namespace: dict[str, object] = {}
+    exec(compiler_source, namespace)
+    output = namespace["build_Module"](_container(namespace)).emit_commented()
     return results, output
 
 
-def _container(concept: object) -> object:
-    namespace: dict[str, object] = {}
-    exec(emit_container_runtime_source(concept.plan.build_data_definition()), namespace)
+def _container(namespace: Mapping[str, object]) -> object:
     builder = namespace["new_builder"]()
     facade = namespace["Facade"]
     field = namespace["Field"]

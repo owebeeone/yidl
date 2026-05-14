@@ -6,6 +6,7 @@ from yidl.generation import data_schema as _data_schema
 from yidl.generation import data_container as _data_container
 from yidl.generation import matcher_values as _matcher_values
 from yidl.generation import container_runtime_source as _container_runtime_source
+from yidl.generation.assembly_source import emit_concept_runtime_source
 from yidl.generation.container_runtime_source import *  # noqa: F403
 from yidl.generation.container_runtime_source import SourceNameMap
 from yidl.generation.container_runtime_source import emit_container_runtime_source
@@ -65,5 +66,6 @@ __all__ = [
     *_matcher.__all__,
     *_matcher_values.__all__,
     "DataDefinitionSystem",
+    "emit_concept_runtime_source",
     "_emit_record_class_source",
 ]
