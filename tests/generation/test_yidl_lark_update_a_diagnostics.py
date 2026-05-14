@@ -4,6 +4,11 @@ import pytest
 
 from yidl.concept_parser import YidlSymbolError
 from yidl.concept_parser import compile_yidl_files
+from yidl.generation.assembly_plan import ValueRef
+from yidl.generation.assembly_runtime import DataStack
+from yidl.generation.assembly_runtime import evaluate_identifier
+from yidl.generation.assembly_runtime import evaluate_index
+from yidl.generation.assembly_runtime import evaluate_order
 
 
 def test_update_a_reports_unknown_contribution_rhs() -> None:
@@ -185,6 +190,21 @@ def test_update_a_reports_unknown_matcher_rule_value_name() -> None:
             }
             """
         )
+
+
+def test_update_a_runtime_rejects_non_int_index() -> None:
+    with pytest.raises(TypeError, match="index"):
+        evaluate_index(ValueRef("name"), DataStack(({"name": "not_int"},)))
+
+
+def test_update_a_runtime_rejects_non_int_order() -> None:
+    with pytest.raises(TypeError, match="order"):
+        evaluate_order(ValueRef("name"), DataStack(({"name": "not_int"},)))
+
+
+def test_update_a_runtime_rejects_invalid_identifier_binding() -> None:
+    with pytest.raises(TypeError, match="identifier"):
+        evaluate_identifier(ValueRef("name"), DataStack(({"name": "not valid"},)))
 
 
 def _compile(body: str) -> object:

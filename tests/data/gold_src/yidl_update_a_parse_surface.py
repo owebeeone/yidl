@@ -14,6 +14,8 @@ from yidl.generation.assembly_plan import TupleValueRef
 from yidl.generation.assembly_plan import ValueRef
 from yidl.generation.assembly_runtime import DataStack
 from yidl.generation.assembly_runtime import evaluate_condition
+from yidl.generation.assembly_runtime import evaluate_index
+from yidl.generation.assembly_runtime import evaluate_order
 from yidl.generation.assembly_runtime import evaluate_value
 
 
@@ -53,7 +55,7 @@ concept UpdateA {
     contribution ChildContribution = ChildTemplate {
         as ChildNode
         index FieldOrder
-        order (FieldOrder,)
+        order FieldOrder
 
         target body {
             build /Root/ChildNode[FieldOrder]
@@ -221,8 +223,9 @@ def _summary() -> Mapping[str, object]:
         },
         "runtime": {
             "child_edge_condition": evaluate_condition(child_edge.condition, stack),
-            "child_index": evaluate_value(child.index, stack),
-            "child_order": evaluate_value(child.order, stack),
+            "child_index": evaluate_index(child.index, stack),
+            "child_order": evaluate_order(child.order, stack),
+            "child_tuple": evaluate_value(TupleValueRef((child.index,)), stack),
         },
     }
 

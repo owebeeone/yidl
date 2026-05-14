@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from dataclasses import dataclass
+import keyword
 from typing import cast
 
 from yidl.generation.assembly_plan import AndConditionSpec
@@ -74,6 +75,55 @@ def evaluate_value(value: AssemblyValueRef, stack: DataStack) -> object:
     if isinstance(value, TupleValueRef):
         return tuple(evaluate_value(item, stack) for item in value.items)
     raise TypeError(f"unsupported assembly value: {type(value).__name__}")
+
+
+def evaluate_index(
+    value: AssemblyValueRef | None,
+    stack: DataStack,
+) -> int | tuple[int, ...] | None:
+    """Evaluate a contribution build index."""
+
+    if value is None:
+        return None
+    result = evaluate_value(value, stack)
+    if isinstance(result, int):
+        return result
+    if isinstance(result, tuple) and all(isinstance(item, int) for item in result):
+        return result
+    raise TypeError("index must evaluate to int, tuple[int, ...], or None")
+
+
+def evaluate_order(value: AssemblyValueRef, stack: DataStack) -> int:
+    """Evaluate a contribution insertion order."""
+
+    result = evaluate_value(value, stack)
+    if not isinstance(result, int):
+        raise TypeError("order must evaluate to int")
+    return result
+
+
+def evaluate_path_index(value: AssemblyValueRef, stack: DataStack) -> int:
+    """Evaluate one path-index element."""
+
+    result = evaluate_value(value, stack)
+    if not isinstance(result, int):
+        raise TypeError("path index must evaluate to int")
+    return result
+
+
+def evaluate_identifier(value: AssemblyValueRef, stack: DataStack) -> str:
+    """Evaluate an identifier binding value."""
+
+    result = evaluate_value(value, stack)
+    if not isinstance(result, str) or not result.isidentifier() or keyword.iskeyword(result):
+        raise TypeError("identifier binding must evaluate to a valid Python identifier")
+    return result
+
+
+def evaluate_external(value: AssemblyValueRef, stack: DataStack) -> object:
+    """Evaluate an external Astichi binding value."""
+
+    return evaluate_value(value, stack)
 
 
 def evaluate_condition(condition: AssemblyConditionSpec, stack: DataStack) -> bool:
