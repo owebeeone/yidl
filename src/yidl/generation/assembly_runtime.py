@@ -235,11 +235,23 @@ def _run_production(
     context_records: Mapping[str, object],
     unroll: bool | str,
 ) -> object:
+    active_context_records: dict[str, object] = {}
+    for input_spec in production.inputs:
+        try:
+            active_context_records[input_spec.name] = context_records[input_spec.name]
+        except KeyError as exc:
+            raise ValueError(
+                f"production {production.name!r} requires input {input_spec.name!r}"
+            ) from exc
+
     scope = AssemblyScope(astichi.build())
     root_resource = concept.resources[production.root.resource_name].to_generator()
     scope.add(production.root.build_name, root_resource)
     root_stack = DataStack(
-        tuple(_record_mapping(concept, record) for record in context_records.values())
+        tuple(
+            _record_mapping(concept, record)
+            for record in active_context_records.values()
+        )
     )
     _apply_bindings(
         scope,
@@ -256,7 +268,7 @@ def _run_production(
             edge,
             container,
             scope,
-            context_records=context_records,
+            context_records=active_context_records,
             unroll=unroll,
         )
     return scope.build(unroll=unroll)

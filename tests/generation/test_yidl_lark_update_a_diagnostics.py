@@ -309,6 +309,75 @@ def test_update_a_runtime_wraps_invalid_path_selector() -> None:
         path_selector_tuple(path, DataStack(), context="test contribution")
 
 
+def test_update_a_reports_production_dependency_cycle() -> None:
+    with pytest.raises(YidlSymbolError, match="cycle"):
+        _compile(
+            """
+            contribution AContribution = AProduction {
+                target body {
+                    build /RootNode
+                }
+            }
+
+            contribution BContribution = BProduction {
+                target body {
+                    build /RootNode
+                }
+            }
+
+            matcher ASelect(field: Fields) -> contribution {
+                default -> AContribution
+            }
+
+            matcher BSelect(field: Fields) -> contribution {
+                default -> BContribution
+            }
+
+            production AProduction -> composable {
+                root RootNode = Root
+                apply b from field: Fields using BSelect
+            }
+
+            production BProduction -> composable {
+                root RootNode = Root
+                apply a from field: Fields using ASelect
+            }
+
+            assembly Module = AProduction
+            """
+        )
+
+
+def test_update_a_child_production_rejects_undeclared_input_value() -> None:
+    with pytest.raises(YidlSymbolError, match="Name"):
+        _compile(
+            """
+            contribution ChildContribution = ChildProduction {
+                target body {
+                    build /RootNode
+                }
+            }
+
+            matcher ChildSelect(field: Fields) -> contribution {
+                default -> ChildContribution
+            }
+
+            production ChildProduction() -> composable {
+                root RootNode = Root {
+                    external missing = Name
+                }
+            }
+
+            production RootProduction -> composable {
+                root RootNode = Root
+                apply child from field: Fields using ChildSelect
+            }
+
+            assembly Module = RootProduction
+            """
+        )
+
+
 def _compile(body: str) -> object:
     source = f"""
     module diagnostics
