@@ -146,7 +146,7 @@ bind_decl: contribution_bind_kind CNAME "=" contribution_value_expr
 contribution_bind_kind: "ident" -> bind_ident
                       | "external" -> bind_external
 ?contribution_value_expr: literal_expr
-                        | CNAME -> contribution_value_name
+                        | qname
                         | contribution_tuple_expr
 contribution_tuple_expr: "(" contribution_value_expr "," (contribution_value_expr ("," contribution_value_expr)*)? ")"
 

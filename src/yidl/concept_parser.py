@@ -31,6 +31,29 @@ from yidl.capsule.recorded_builder import RecordHandle
 from yidl.capsule.recorded_builder import SchemaFamilyHandle
 from yidl.capsule.recorded_builder import capsule_concept
 from yidl.capsule.recorded_builder import match as recorded_match
+from yidl.generation.assembly_plan import AndConditionSpec
+from yidl.generation.assembly_plan import ApplySpec
+from yidl.generation.assembly_plan import AssemblyConditionSpec
+from yidl.generation.assembly_plan import AssemblyEdgeSpec
+from yidl.generation.assembly_plan import AssemblyInputSpec
+from yidl.generation.assembly_plan import AssemblySpec
+from yidl.generation.assembly_plan import AssemblyValueRef
+from yidl.generation.assembly_plan import BindingSpec
+from yidl.generation.assembly_plan import ComposableProductionSpec
+from yidl.generation.assembly_plan import ContributionMatcherSpec
+from yidl.generation.assembly_plan import ContributionRuleSpec
+from yidl.generation.assembly_plan import ContributionSpec
+from yidl.generation.assembly_plan import EdgeApplySpec
+from yidl.generation.assembly_plan import EqConditionSpec
+from yidl.generation.assembly_plan import InlineApplySpec
+from yidl.generation.assembly_plan import LiteralValueRef
+from yidl.generation.assembly_plan import PathSegmentSpec
+from yidl.generation.assembly_plan import PathSpec
+from yidl.generation.assembly_plan import RootSpec
+from yidl.generation.assembly_plan import TargetPathSpec
+from yidl.generation.assembly_plan import TargetSpec
+from yidl.generation.assembly_plan import TupleValueRef
+from yidl.generation.assembly_plan import ValueRef
 from yidl.generation.data_def_sys import AddIfAbsent
 from yidl.generation.data_def_sys import GeneratedValue
 from yidl.generation.data_def_sys import MatcherGeneratedValue
@@ -65,6 +88,11 @@ class YidlCompiledConcept:
     matchers: Mapping[str, MatcherHandle]
     productions: Mapping[str, ProductionHandle]
     operations: Mapping[str, OperationHandle]
+    contributions: Mapping[str, ContributionSpec]
+    contribution_matchers: Mapping[str, ContributionMatcherSpec]
+    composable_productions: Mapping[str, ComposableProductionSpec]
+    assembly_edges: Mapping[str, AssemblyEdgeSpec]
+    assemblies: Mapping[str, AssemblySpec]
 
 
 @dataclass(frozen=True, slots=True)
@@ -214,6 +242,15 @@ class _ConceptCompiler:
         self._local_matcher_inputs: dict[str, frozenset[str]] = {}
         self._local_productions: dict[str, ProductionHandle] = {}
         self._local_operations: dict[str, OperationHandle] = {}
+        self._local_contributions: dict[str, ContributionSpec] = {}
+        self._local_contribution_matchers: dict[str, ContributionMatcherSpec] = {}
+        self._local_composable_productions: dict[str, ComposableProductionSpec] = {}
+        self._local_assembly_edges: dict[str, AssemblyEdgeSpec] = {}
+        self._local_assemblies: dict[str, AssemblySpec] = {}
+        self._declared_contributions: set[str] = set()
+        self._declared_composable_productions: set[str] = set()
+        self._declared_assembly_edges: set[str] = set()
+        self._declared_assemblies: set[str] = set()
         self._extensions: tuple[YidlCompiledConcept, ...] = ()
 
     def compile(self, tree: Tree) -> YidlCompiledConcept:
@@ -228,8 +265,51 @@ class _ConceptCompiler:
             name,
             extends=tuple(extension.plan for extension in self._extensions),
         )
-        for member in _concept_members(tree):
-            self._compile_member(builder, member)
+        members = _concept_members(tree)
+        for member in members:
+            self._compile_base_member(builder, member)
+        self._declare_update_a_members(members)
+        for member in members:
+            if member.data == "matcher_decl" and _matcher_kind(member) == "resource":
+                matcher = self._compile_matcher(builder, member)
+                self._local_matchers[matcher.name] = matcher
+        for member in members:
+            if member.data == "matcher_decl" and _matcher_kind(member) == "contribution":
+                matcher = self._compile_contribution_matcher(member)
+                self._local_contribution_matchers[matcher.name] = matcher
+        for member in members:
+            if member.data == "production_decl":
+                production = self._compile_production(builder, member)
+                self._local_productions[production.name] = production
+        for member in members:
+            if member.data == "composable_production_decl":
+                production = self._compile_composable_production(member)
+                self._local_composable_productions[production.name] = production
+        for member in members:
+            if member.data == "contribution_decl":
+                contribution = self._compile_contribution(member)
+                self._local_contributions[contribution.name] = contribution
+        for member in members:
+            if member.data == "assemble_decl":
+                edge = self._compile_assembly_edge(member)
+                self._local_assembly_edges[edge.name] = edge
+        for member in members:
+            if member.data == "assembly_decl":
+                assembly = self._compile_assembly(member)
+                self._local_assemblies[assembly.name] = assembly
+        for member in members:
+            if member.data == "operation_decl":
+                operation = self._compile_operation(builder, member)
+                self._local_operations[operation.name] = operation
+            elif member.data in {
+                "use_decl",
+                "record_decl",
+                "union_decl",
+                "computed_collection_decl",
+                "port_decl",
+                "diagnostics_decl",
+            }:
+                raise YidlSymbolError(f"{member.data} lowering is not implemented yet")
         plan = builder.build()
         return YidlCompiledConcept(
             name=name,
@@ -242,9 +322,14 @@ class _ConceptCompiler:
             matchers=dict(self._local_matchers),
             productions=dict(self._local_productions),
             operations=dict(self._local_operations),
+            contributions=dict(self._local_contributions),
+            contribution_matchers=dict(self._local_contribution_matchers),
+            composable_productions=dict(self._local_composable_productions),
+            assembly_edges=dict(self._local_assembly_edges),
+            assemblies=dict(self._local_assemblies),
         )
 
-    def _compile_member(self, builder: Any, member: Tree) -> None:
+    def _compile_base_member(self, builder: Any, member: Tree) -> None:
         data = member.data
         if data == "property_decl":
             prop = self._compile_property(builder, member)
@@ -261,17 +346,15 @@ class _ConceptCompiler:
             name, resource = self._compile_resource(member)
             self._local_resources[name] = resource
             return
-        if data == "matcher_decl":
-            matcher = self._compile_matcher(builder, member)
-            self._local_matchers[matcher.name] = matcher
-            return
-        if data == "production_decl":
-            production = self._compile_production(builder, member)
-            self._local_productions[production.name] = production
-            return
-        if data == "operation_decl":
-            operation = self._compile_operation(builder, member)
-            self._local_operations[operation.name] = operation
+        if data in {
+            "matcher_decl",
+            "production_decl",
+            "composable_production_decl",
+            "contribution_decl",
+            "assemble_decl",
+            "assembly_decl",
+            "operation_decl",
+        }:
             return
         if data in {
             "use_decl",
@@ -281,8 +364,33 @@ class _ConceptCompiler:
             "port_decl",
             "diagnostics_decl",
         }:
-            raise YidlSymbolError(f"{data} lowering is not implemented yet")
+            return
         raise YidlSymbolError(f"unsupported concept member {data!r}")
+
+    def _declare_update_a_members(self, members: tuple[Tree, ...]) -> None:
+        for member in members:
+            if member.data == "contribution_decl":
+                name = _token_text(member.children[0])
+                if name in self._declared_contributions:
+                    raise YidlSymbolError(f"contribution {name!r} is already defined")
+                self._declared_contributions.add(name)
+            elif member.data == "composable_production_decl":
+                name = _token_text(member.children[0])
+                if name in self._declared_composable_productions:
+                    raise YidlSymbolError(
+                        f"composable production {name!r} is already defined"
+                    )
+                self._declared_composable_productions.add(name)
+            elif member.data == "assemble_decl":
+                name = _token_text(member.children[0])
+                if name in self._declared_assembly_edges:
+                    raise YidlSymbolError(f"assembly edge {name!r} is already defined")
+                self._declared_assembly_edges.add(name)
+            elif member.data == "assembly_decl":
+                name = _token_text(member.children[0])
+                if name in self._declared_assemblies:
+                    raise YidlSymbolError(f"assembly {name!r} is already defined")
+                self._declared_assemblies.add(name)
 
     def _compile_resource(self, tree: Tree) -> tuple[str, GeneratedValue]:
         name = _token_text(tree.children[0])
@@ -473,7 +581,7 @@ class _ConceptCompiler:
 
     def _compile_matcher(self, builder: Any, tree: Tree) -> MatcherHandle:
         name = _token_text(tree.children[0])
-        if name in self._local_matchers:
+        if name in self._local_matchers or name in self._local_contribution_matchers:
             raise YidlSymbolError(f"matcher {name!r} is already defined")
         editor = getattr(builder.matchers, name)()
         inputs: dict[str, MatcherInputHandle] = {}
@@ -516,6 +624,49 @@ class _ConceptCompiler:
                     weight=weight,
                 )
         return editor.handle
+
+    def _compile_contribution_matcher(self, tree: Tree) -> ContributionMatcherSpec:
+        name = _token_text(tree.children[0])
+        if name in self._local_matchers or name in self._local_contribution_matchers:
+            raise YidlSymbolError(f"matcher {name!r} is already defined")
+
+        inputs = self._assembly_inputs(_first_child(tree, "matcher_input_list"))
+        default_name: str | None = None
+        rules: list[ContributionRuleSpec] = []
+        for child in tree.children[1:]:
+            if not isinstance(child, Tree):
+                continue
+            if child.data == "matcher_default":
+                default_name = self._resolve_contribution_ref(
+                    child.children[0],
+                    context=f"matcher {name!r} default",
+                )
+                continue
+            if child.data == "matcher_rule":
+                rule_name = _token_text(child.children[0])
+                condition = self._assembly_condition(child.children[1])
+                contribution_name = self._resolve_contribution_ref(
+                    child.children[2],
+                    context=f"matcher {name!r} rule {rule_name!r}",
+                )
+                weight = 1.0
+                weight_tree = _first_child(child, "weight_clause")
+                if weight_tree is not None:
+                    weight = float(str(weight_tree.children[0]))
+                rules.append(
+                    ContributionRuleSpec(
+                        name=rule_name,
+                        condition=condition,
+                        contribution_name=contribution_name,
+                        weight=weight,
+                    )
+                )
+        return ContributionMatcherSpec(
+            name=name,
+            inputs=inputs,
+            default_contribution_name=default_name,
+            rules=tuple(rules),
+        )
 
     def _matcher_conditions(
         self,
@@ -634,6 +785,427 @@ class _ConceptCompiler:
                     )
             return self._value(node)
         raise YidlSymbolError("unsupported production value expression")
+
+    def _compile_contribution(self, tree: Tree) -> ContributionSpec:
+        name = _token_text(tree.children[0])
+        if name in self._local_contributions:
+            raise YidlSymbolError(f"contribution {name!r} is already defined")
+
+        source_name, source_kind = self._contribution_source(
+            tree.children[1],
+            context=f"contribution {name!r} source",
+        )
+        build_name = name
+        index: AssemblyValueRef | None = None
+        order: AssemblyValueRef | None = None
+        target: TargetSpec | None = None
+        bindings: list[BindingSpec] = []
+        seen_bindings: set[tuple[str, str]] = set()
+        seen_as = False
+
+        for member in _wrapped_children(tree, "contribution_member"):
+            if member.data == "contribution_as":
+                if seen_as:
+                    raise YidlSymbolError(f"contribution {name!r} repeats as")
+                seen_as = True
+                build_name = _token_text(member.children[0])
+                continue
+            if member.data == "contribution_index":
+                if index is not None:
+                    raise YidlSymbolError(f"contribution {name!r} repeats index")
+                index = self._assembly_value(member.children[0])
+                continue
+            if member.data == "contribution_order":
+                if order is not None:
+                    raise YidlSymbolError(f"contribution {name!r} repeats order")
+                order = self._assembly_value(member.children[0])
+                continue
+            if member.data == "target_decl":
+                if target is not None:
+                    raise YidlSymbolError(f"contribution {name!r} repeats target")
+                target = self._target_spec(member, context=f"contribution {name!r}")
+                continue
+            if member.data == "bind_decl":
+                binding = self._binding_spec(
+                    member,
+                    context=f"contribution {name!r}",
+                )
+                binding_key = (binding.kind, binding.name)
+                if binding_key in seen_bindings:
+                    raise YidlSymbolError(
+                        f"contribution {name!r} repeats {binding.kind} "
+                        f"binding {binding.name!r}"
+                    )
+                seen_bindings.add(binding_key)
+                bindings.append(binding)
+                continue
+            raise YidlSymbolError(
+                f"contribution {name!r} has invalid member {member.data!r}"
+            )
+
+        if target is None:
+            raise YidlSymbolError(f"contribution {name!r} must declare exactly one target")
+
+        return ContributionSpec(
+            name=name,
+            source_name=source_name,
+            source_kind=source_kind,
+            build_name=build_name,
+            index=index,
+            order=order,
+            target=target,
+            bindings=tuple(bindings),
+        )
+
+    def _compile_composable_production(
+        self,
+        tree: Tree,
+    ) -> ComposableProductionSpec:
+        name = _token_text(tree.children[0])
+        if name in self._local_composable_productions or name in self._local_productions:
+            raise YidlSymbolError(f"production {name!r} is already defined")
+
+        inputs_tree = _first_child(tree, "composable_production_inputs")
+        inputs = self._assembly_inputs(
+            _first_child(inputs_tree, "matcher_input_list")
+            if inputs_tree is not None
+            else None
+        )
+        root: RootSpec | None = None
+        applies: list[ApplySpec] = []
+        for member in _wrapped_children(tree, "composable_production_member"):
+            if member.data == "root_decl":
+                if root is not None:
+                    raise YidlSymbolError(f"production {name!r} repeats root")
+                root = self._root_spec(member, context=f"production {name!r}")
+                continue
+            if member.data == "apply_decl":
+                apply_spec = self._apply_spec(name, inputs, member)
+                if isinstance(apply_spec, InlineApplySpec):
+                    if apply_spec.edge.name in self._local_assembly_edges:
+                        raise YidlSymbolError(
+                            f"assembly edge {apply_spec.edge.name!r} is already defined"
+                        )
+                    self._local_assembly_edges[apply_spec.edge.name] = apply_spec.edge
+                applies.append(apply_spec)
+                continue
+            raise YidlSymbolError(
+                f"production {name!r} has invalid member {member.data!r}"
+            )
+
+        if root is None:
+            raise YidlSymbolError(f"production {name!r} must declare a root")
+
+        return ComposableProductionSpec(
+            name=name,
+            inputs=inputs,
+            root=root,
+            applies=tuple(applies),
+        )
+
+    def _compile_assembly_edge(self, tree: Tree) -> AssemblyEdgeSpec:
+        name = _token_text(tree.children[0])
+        if name in self._local_assembly_edges:
+            raise YidlSymbolError(f"assembly edge {name!r} is already defined")
+        context_tree = _first_child(tree, "assemble_context")
+        context_inputs = self._assembly_inputs(
+            _first_child(context_tree, "matcher_input_list")
+            if context_tree is not None
+            else None
+        )
+        return self._edge_spec(
+            name,
+            context_inputs=context_inputs,
+            tail_children=tree.children[1:],
+            context=f"assemble {name!r}",
+        )
+
+    def _compile_assembly(self, tree: Tree) -> AssemblySpec:
+        name = _token_text(tree.children[0])
+        if name in self._local_assemblies:
+            raise YidlSymbolError(f"assembly {name!r} is already defined")
+        production_name = _qname(tree.children[1])
+        production = self._local_composable_productions.get(production_name)
+        if production is None:
+            if production_name in self._local_productions:
+                raise YidlSymbolError(
+                    f"assembly {name!r} target {production_name!r} is a data "
+                    "production, not a composable production"
+                )
+            raise YidlSymbolError(
+                f"assembly {name!r} references undefined composable production "
+                f"{production_name!r}"
+            )
+        if production.inputs:
+            raise YidlSymbolError(
+                f"assembly {name!r} root production {production_name!r} "
+                "must not declare inputs"
+            )
+        return AssemblySpec(name=name, production_name=production_name)
+
+    def _contribution_source(
+        self,
+        node: object,
+        *,
+        context: str,
+    ) -> tuple[str, str]:
+        if not isinstance(node, Tree):
+            raise YidlSymbolError(f"{context} is invalid")
+        if node.data == "resource_match_ref":
+            raise YidlSymbolError(f"{context} cannot use match.resource()")
+        if node.data not in {"resource_ref", "resource_name_ref"}:
+            raise YidlSymbolError(f"{context} has unsupported source {node.data!r}")
+        name = _qname(node)
+        has_resource = self._resource_exists(name)
+        has_production = self._composable_production_exists(name)
+        if has_resource and has_production:
+            raise YidlSymbolError(f"{context} {name!r} is ambiguous")
+        if has_resource:
+            return name, "resource"
+        if has_production:
+            return name, "production"
+        raise YidlSymbolError(f"{context} references undefined source {name!r}")
+
+    def _target_spec(self, tree: Tree, *, context: str) -> TargetSpec:
+        paths: list[TargetPathSpec] = []
+        for child in tree.children[1:]:
+            if not isinstance(child, Tree):
+                continue
+            if child.data == "target_build":
+                paths.append(TargetPathSpec(kind="build", path=self._path_spec(child.children[0])))
+                continue
+            if child.data == "target_owner":
+                paths.append(TargetPathSpec(kind="owner", path=self._path_spec(child.children[0])))
+                continue
+            raise YidlSymbolError(f"{context} has invalid target option {child.data!r}")
+        return TargetSpec(name=_token_text(tree.children[0]), paths=tuple(paths))
+
+    def _path_spec(self, tree: Tree) -> PathSpec:
+        segments: list[PathSegmentSpec] = []
+        for child in tree.children:
+            if not isinstance(child, Tree):
+                continue
+            if child.data == "path_segment":
+                indexes = tuple(
+                    self._assembly_value(index_child)
+                    for index in _children(child, "path_index")
+                    for index_child in index.children
+                )
+                segments.append(
+                    PathSegmentSpec(
+                        kind="name",
+                        name=_token_text(child.children[0]),
+                        indexes=indexes,
+                    )
+                )
+                continue
+            operator_kind = {
+                "path_current": "current",
+                "path_optional": "optional",
+                "path_any": "any",
+                "path_many": "many",
+            }.get(child.data)
+            if operator_kind is None:
+                raise YidlSymbolError(f"invalid path segment {child.data!r}")
+            segments.append(PathSegmentSpec(kind=operator_kind))
+        return PathSpec(segments=tuple(segments))
+
+    def _root_spec(self, tree: Tree, *, context: str) -> RootSpec:
+        resource_expr = tree.children[1]
+        if not isinstance(resource_expr, Tree):
+            raise YidlSymbolError(f"{context} root has invalid resource")
+        self._lower_resource_expr(resource_expr, context=f"{context} root")
+        bindings: list[BindingSpec] = []
+        options = _first_child(tree, "root_options")
+        if options is not None:
+            for bind in _children(options, "bind_decl"):
+                bindings.append(self._binding_spec(bind, context=f"{context} root"))
+        return RootSpec(
+            build_name=_token_text(tree.children[0]),
+            resource_name=_resource_expr_name(resource_expr),
+            bindings=tuple(bindings),
+        )
+
+    def _apply_spec(
+        self,
+        production_name: str,
+        context_inputs: tuple[AssemblyInputSpec, ...],
+        tree: Tree,
+    ) -> ApplySpec:
+        apply_name = _token_text(tree.children[0])
+        tail = _first_child(tree, "apply_tail")
+        if tail is None:
+            return EdgeApplySpec(edge_name=apply_name)
+        edge = self._edge_spec(
+            f"{production_name}.{apply_name}",
+            context_inputs=context_inputs,
+            tail_children=tail.children,
+            context=f"apply {apply_name!r}",
+        )
+        return InlineApplySpec(edge=edge)
+
+    def _edge_spec(
+        self,
+        name: str,
+        *,
+        context_inputs: tuple[AssemblyInputSpec, ...],
+        tail_children: list[object],
+        context: str,
+    ) -> AssemblyEdgeSpec:
+        from_inputs: tuple[AssemblyInputSpec, ...] = ()
+        condition: AssemblyConditionSpec | None = None
+        matcher_name: str | None = None
+        for child in tail_children:
+            if isinstance(child, Tree) and child.data == "assemble_from":
+                from_inputs = self._assembly_inputs(_first_child(child, "matcher_input_list"))
+                continue
+            if isinstance(child, Tree) and child.data == "where_clause":
+                condition = self._assembly_condition(child.children[0])
+                continue
+            if isinstance(child, Token):
+                matcher_name = str(child)
+        if matcher_name is None:
+            raise YidlSymbolError(f"{context} must name a matcher")
+        self._resolve_contribution_matcher_name(matcher_name, context=context)
+        return AssemblyEdgeSpec(
+            name=name,
+            context_inputs=context_inputs,
+            from_inputs=from_inputs,
+            condition=condition,
+            matcher_name=matcher_name,
+        )
+
+    def _binding_spec(self, tree: Tree, *, context: str) -> BindingSpec:
+        kind_tree = tree.children[0]
+        if not isinstance(kind_tree, Tree):
+            raise YidlSymbolError(f"{context} has invalid binding")
+        kind = kind_tree.data.removeprefix("bind_")
+        if kind not in {"ident", "external"}:
+            raise YidlSymbolError(f"{context} has invalid binding kind {kind!r}")
+        return BindingSpec(
+            kind=kind,  # type: ignore[arg-type]
+            name=_token_text(tree.children[1]),
+            value=self._assembly_value(tree.children[2]),
+        )
+
+    def _assembly_inputs(self, input_list: Tree | None) -> tuple[AssemblyInputSpec, ...]:
+        if input_list is None:
+            return ()
+        inputs: list[AssemblyInputSpec] = []
+        for input_tree in input_list.children:
+            if not isinstance(input_tree, Tree) or input_tree.data != "matcher_input":
+                continue
+            collection_name = _qname(input_tree.children[1])
+            inputs.append(
+                AssemblyInputSpec(
+                    name=_token_text(input_tree.children[0]),
+                    collection_name=collection_name,
+                    collection=self._resolve_collection(collection_name),
+                )
+            )
+        return tuple(inputs)
+
+    def _assembly_condition(self, tree: Tree) -> AssemblyConditionSpec:
+        if tree.data == "condition_and":
+            left = self._assembly_condition(tree.children[0])
+            right = self._assembly_condition(tree.children[1])
+            items: list[AssemblyConditionSpec] = []
+            for condition in (left, right):
+                if isinstance(condition, AndConditionSpec):
+                    items.extend(condition.items)
+                else:
+                    items.append(condition)
+            return AndConditionSpec(items=tuple(items))
+        if tree.data == "condition_term":
+            return EqConditionSpec(
+                left=self._assembly_value(tree.children[0]),
+                right=self._assembly_value(tree.children[1]),
+            )
+        raise YidlSymbolError(f"unsupported assembly condition {tree.data!r}")
+
+    def _assembly_value(self, node: object) -> AssemblyValueRef:
+        if isinstance(node, Token) and node.type == "CNAME":
+            return ValueRef(str(node))
+        if not isinstance(node, Tree):
+            raise YidlSymbolError("unsupported assembly value expression")
+        if node.data in {"literal_expr", "true", "false", "none"}:
+            return LiteralValueRef(self._value(node))
+        if node.data == "contribution_value_name":
+            return ValueRef(_token_text(node.children[0]))
+        if node.data == "qname":
+            name = _qname(node)
+            if len(node.children) != 1:
+                raise YidlSymbolError(
+                    f"qualified value reference {name!r} is not supported "
+                    "in assembly values"
+                )
+            return ValueRef(name)
+        if node.data in {"contribution_tuple_expr", "tuple_expr"}:
+            return TupleValueRef(
+                items=tuple(self._assembly_value(child) for child in node.children)
+            )
+        raise YidlSymbolError(
+            f"unsupported assembly value expression {node.data!r}"
+        )
+
+    def _resolve_contribution_ref(self, tree: Tree, *, context: str) -> str:
+        if tree.data == "resource_match_ref":
+            raise YidlSymbolError(f"{context} cannot use match.resource()")
+        if tree.data not in {"resource_ref", "resource_name_ref"}:
+            raise YidlSymbolError(
+                f"{context} has unsupported contribution expression {tree.data!r}"
+            )
+        name = _qname(tree)
+        return self._resolve_contribution_name(name, context=context)
+
+    def _resolve_contribution_name(self, name: str, *, context: str) -> str:
+        if self._contribution_exists(name):
+            return name
+        if self._resource_exists(name):
+            raise YidlSymbolError(f"{context} {name!r} is a resource, not a contribution")
+        raise YidlSymbolError(f"{context} references undefined contribution {name!r}")
+
+    def _resolve_contribution_matcher_name(self, name: str, *, context: str) -> str:
+        if name in self._local_contribution_matchers:
+            return name
+        if name in self._local_matchers:
+            raise YidlSymbolError(f"{context} {name!r} is a resource matcher")
+        raise YidlSymbolError(f"{context} references undefined contribution matcher {name!r}")
+
+    def _resource_exists(self, name: str) -> bool:
+        try:
+            self._resolve_resource(name)
+        except YidlSymbolError:
+            return False
+        return True
+
+    def _contribution_exists(self, name: str) -> bool:
+        parts = name.split(".")
+        if len(parts) == 1:
+            if parts[0] in self._declared_contributions:
+                return True
+            return any(parts[0] in extension.contributions for extension in self._extensions)
+        if len(parts) == 2:
+            module = self._import_module(parts[0])
+            return any(parts[1] in concept.contributions for concept in module.concepts.values())
+        return False
+
+    def _composable_production_exists(self, name: str) -> bool:
+        parts = name.split(".")
+        if len(parts) == 1:
+            if parts[0] in self._declared_composable_productions:
+                return True
+            return any(
+                parts[0] in extension.composable_productions
+                for extension in self._extensions
+            )
+        if len(parts) == 2:
+            module = self._import_module(parts[0])
+            return any(
+                parts[1] in concept.composable_productions
+                for concept in module.concepts.values()
+            )
+        return False
 
     def _policy(self, name: str) -> object:
         try:
@@ -868,6 +1440,10 @@ class _ConceptCompiler:
             return "record"
         if name in self._local_collections:
             return "collection"
+        if name in self._declared_contributions:
+            return "contribution"
+        if name in self._declared_composable_productions:
+            return "composable production"
         for extension in self._extensions:
             if name in extension.properties:
                 return "property"
@@ -877,6 +1453,10 @@ class _ConceptCompiler:
                 return "record"
             if name in extension.collections:
                 return "collection"
+            if name in extension.contributions:
+                return "contribution"
+            if name in extension.composable_productions:
+                return "composable production"
         return None
 
     def _known_imported_non_resource_kind(
@@ -893,6 +1473,10 @@ class _ConceptCompiler:
                 return "record"
             if name in concept.collections:
                 return "collection"
+            if name in concept.contributions:
+                return "contribution"
+            if name in concept.composable_productions:
+                return "composable production"
         return None
 
     def _reject_imported_property_redefinition(self, name: str) -> None:
@@ -981,6 +1565,25 @@ def _concept_members(tree: Tree) -> tuple[Tree, ...]:
         if isinstance(child, Tree) and child.data == "concept_member":
             members.append(child.children[0])
     return tuple(members)
+
+
+def _wrapped_children(tree: Tree, wrapper_data: str) -> tuple[Tree, ...]:
+    members: list[Tree] = []
+    for child in tree.children:
+        if (
+            isinstance(child, Tree)
+            and child.data == wrapper_data
+            and child.children
+            and isinstance(child.children[0], Tree)
+        ):
+            members.append(child.children[0])
+    return tuple(members)
+
+
+def _matcher_kind(tree: Tree) -> str:
+    if _first_child(tree, "matcher_kind_contribution") is not None:
+        return "contribution"
+    return "resource"
 
 
 def _qname(tree: Tree) -> str:
