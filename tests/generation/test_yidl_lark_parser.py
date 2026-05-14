@@ -178,6 +178,166 @@ def test_yidl_lark_unterminated_snippet_reports_syntax_error() -> None:
     assert "column" in message
 
 
+def test_yidl_lark_update_a_assembly_surface_parses() -> None:
+    source = """
+    module update_a
+
+    concept UpdateA {
+        property ClassId: str
+        property FieldOwner: str
+        property FieldOrder: int
+        property FieldName: str
+
+        family FacadeSpecs {
+            variant Facade {
+                ClassId
+            }
+        }
+
+        family FieldSpecs {
+            variant Field {
+                FieldOwner
+                FieldOrder
+                FieldName
+            }
+        }
+
+        collection Facades: FacadeSpecs identity ClassId many
+        collection Fields: FieldSpecs identity FieldName many
+
+        resource RootTemplate = code `astichi_hole(body)`
+        resource ChildTemplate = template `field_name__astichi_arg__`
+
+        contribution ChildContribution = ChildTemplate {
+            as ChildNode
+            index FieldOrder
+            order (FieldOrder,)
+
+            target body {
+                build /Root/ChildNode[FieldOrder]
+                owner /Root/*
+            }
+
+            ident field_name = FieldName
+            external field_name = FieldName
+        }
+
+        matcher ChildSelection(field: Fields, facade: Facades) -> contribution {
+            default -> ChildContribution
+            rule selected when FieldOwner == ClassId -> ChildContribution weight 5
+        }
+
+        assemble ChildEdge(facade: Facades)
+            from field: Fields
+            where FieldOwner == ClassId
+            using ChildSelection
+
+        production RootProduction(facade: Facades) -> composable {
+            root Root = RootTemplate {
+                external module_name = ClassId
+            }
+
+            apply child_items
+                from field: Fields
+                where FieldOwner == ClassId
+                using ChildSelection
+
+            apply ChildEdge
+        }
+
+        assembly Module = RootProduction
+    }
+    """
+
+    tree = parse_yidl_source("update_a.yidl", source)
+
+    assert len(_children(tree, "contribution_decl")) == 1
+    assert len(_children(tree, "target_decl")) == 1
+    assert len(_children(tree, "target_build")) == 1
+    assert len(_children(tree, "target_owner")) == 1
+    assert len(_children(tree, "path_index")) == 1
+    assert len(_children(tree, "matcher_kind_contribution")) == 1
+    assert len(_children(tree, "assemble_decl")) == 1
+    assert len(_children(tree, "composable_production_decl")) == 1
+    assert len(_children(tree, "apply_decl")) == 2
+    assert len(_children(tree, "assembly_decl")) == 1
+
+
+def test_yidl_lark_matcher_default_requires_arrow() -> None:
+    source = """
+    module matcher_example
+
+    concept MatcherExample {
+        resource Plain = code `{"getter": "plain"}`
+
+        matcher Getter() {
+            default Plain
+        }
+    }
+    """
+
+    with pytest.raises(YidlSyntaxError):
+        parse_yidl_source("matcher.yidl", source)
+
+
+def test_yidl_lark_apply_where_requires_using() -> None:
+    source = """
+    module update_a
+
+    concept UpdateA {
+        property FieldOwner: str
+        property ClassId: str
+        resource RootTemplate = code `astichi_hole(body)`
+
+        production RootProduction -> composable {
+            root Root = RootTemplate
+            apply child_items where FieldOwner == ClassId
+        }
+    }
+    """
+
+    with pytest.raises(YidlSyntaxError):
+        parse_yidl_source("apply.yidl", source)
+
+
+def test_yidl_lark_path_segments_reject_decorated_names() -> None:
+    source = """
+    module update_a
+
+    concept UpdateA {
+        resource ChildTemplate = template `pass`
+
+        contribution ChildContribution = ChildTemplate {
+            target body {
+                build /Root.Child
+            }
+        }
+    }
+    """
+
+    with pytest.raises(YidlSyntaxError):
+        parse_yidl_source("path.yidl", source)
+
+
+def test_yidl_lark_path_interpolation_rejected_by_parser() -> None:
+    source = """
+    module update_a
+
+    concept UpdateA {
+        resource ChildTemplate = template `pass`
+
+        contribution ChildContribution = ChildTemplate {
+            target body {
+                build /Root/{ClassId}
+            }
+        }
+    }
+    """
+
+    with pytest.raises(YidlSyntaxError):
+        parse_yidl_source("path.yidl", source)
+
+
 def test_yidl_lark_code_resource_lowers_to_generated_value() -> None:
     source = """
     module snippets
@@ -362,7 +522,7 @@ def test_yidl_lark_matcher_lowers_default_rule_and_weight() -> None:
         resource Managed = code `{"getter": "managed"}`
 
         matcher Getter(field: Fields) {
-            default Plain
+            default -> Plain
             rule managed when field.Kind == "managed" -> Managed weight 10
         }
     }
@@ -461,7 +621,7 @@ def test_yidl_lark_matcher_result_production_lowers_resource_flow() -> None:
         resource Managed = code `{"getter": "managed"}`
 
         matcher Getter(field: Fields) {
-            default Plain
+            default -> Plain
             rule managed when field.Kind == "managed" -> Managed
         }
 
@@ -513,7 +673,7 @@ def test_yidl_lark_matcher_result_production_reports_bad_input_name() -> None:
         collection Components: Component identity Name many
         resource Plain = code `{"getter": "plain"}`
         matcher Getter(field: Fields) {
-            default Plain
+            default -> Plain
             rule plain when field.Kind == "plain" -> Plain
         }
 

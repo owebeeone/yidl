@@ -17,6 +17,8 @@ symbol_kind: "concept" -> symbol_concept
            | "port" -> symbol_port
            | "resource" -> symbol_resource
            | "matcher" -> symbol_matcher
+           | "contribution" -> symbol_contribution
+           | "assembly" -> symbol_assembly
            | "operation" -> symbol_operation
 
 top_level_decl: export_decl
@@ -40,7 +42,11 @@ concept_member: use_decl
               | port_decl
               | resource_decl
               | matcher_decl
+              | contribution_decl
               | production_decl
+              | composable_production_decl
+              | assemble_decl
+              | assembly_decl
               | operation_decl
               | diagnostics_decl
 
@@ -107,13 +113,42 @@ resource_edge_kind: "arg_names" -> edge_arg_names
 resource_ref_expr: resource_ref -> resource_name_ref
                  | "match" "." "resource" "(" ")" -> resource_match_ref
 
-matcher_decl: "matcher" CNAME "(" matcher_input_list? ")" "{" matcher_default? matcher_rule* "}"
+matcher_decl: "matcher" CNAME "(" matcher_input_list? ")" matcher_kind? "{" matcher_default? matcher_rule* "}"
 matcher_input_list: matcher_input ("," matcher_input)*
 matcher_input: CNAME ":" qname
-matcher_default: "default" resource_ref_expr
+matcher_kind: "->" "resource" -> matcher_kind_resource
+            | "->" "contribution" -> matcher_kind_contribution
+matcher_default: "default" "->" resource_ref_expr
 matcher_rule: "rule" CNAME "when" condition_expr "->" resource_ref_expr weight_clause?
 resource_ref: qname
 weight_clause: "weight" NUMBER
+
+contribution_decl: "contribution" CNAME "=" resource_ref_expr "{" contribution_member* "}"
+contribution_member: contribution_as
+                   | contribution_index
+                   | contribution_order
+                   | target_decl
+                   | bind_decl
+contribution_as: "as" CNAME
+contribution_index: "index" contribution_value_expr
+contribution_order: "order" contribution_value_expr
+target_decl: "target" CNAME "{" target_path_option* "}"
+target_path_option: "build" path -> target_build
+                  | "owner" path -> target_owner
+path: ("/" path_segment)+
+path_segment: CNAME path_index*
+            | "." -> path_current
+            | "?" -> path_optional
+            | "*" -> path_any
+            | "+" -> path_many
+path_index: "[" contribution_value_expr ("," contribution_value_expr)* "]"
+bind_decl: contribution_bind_kind CNAME "=" contribution_value_expr
+contribution_bind_kind: "ident" -> bind_ident
+                      | "external" -> bind_external
+?contribution_value_expr: literal_expr
+                        | CNAME -> contribution_value_name
+                        | contribution_tuple_expr
+contribution_tuple_expr: "(" contribution_value_expr "," (contribution_value_expr ("," contribution_value_expr)*)? ")"
 
 production_decl: "production" CNAME "from" source_expr "to" qname "{" production_member* "}"
 source_expr: CNAME "." "results" "(" ")" order_clause? -> matcher_results_source
@@ -122,6 +157,20 @@ order_clause: "ordered" "(" property_ref ("," property_ref)* ")"
 production_member: "identity" value_expr
                  | "policy" qname
                  | "set" property_ref "=" value_expr
+
+composable_production_decl: "production" CNAME composable_production_inputs? "->" "composable" "{" composable_production_member* "}"
+composable_production_inputs: "(" matcher_input_list? ")"
+composable_production_member: root_decl
+                            | apply_decl
+root_decl: "root" CNAME "=" resource_ref_expr root_options?
+root_options: "{" bind_decl* "}"
+apply_decl: "apply" CNAME apply_tail?
+apply_tail: assemble_from? where_clause? "using" CNAME
+assemble_decl: "assemble" CNAME assemble_context? assemble_from? where_clause? "using" CNAME
+assemble_context: "(" matcher_input_list? ")"
+assemble_from: "from" matcher_input_list
+where_clause: "where" condition_expr
+assembly_decl: "assembly" CNAME "=" qname
 
 operation_decl: "operation" CNAME operation_io "using" resource_ref_expr operation_options?
 operation_io: "inputs" "(" qname_list? ")" "outputs" "(" qname_list? ")"

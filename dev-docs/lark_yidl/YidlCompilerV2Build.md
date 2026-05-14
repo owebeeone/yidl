@@ -201,7 +201,7 @@ Lower matcher rules that select resources.
 
 ```yidl
 matcher PropertyTemplate(field: Fields) {
-    default PlainGetter
+    default -> PlainGetter
     rule managed when field.Kind == "managed" -> ManagedGetter
     rule weighted when field.Kind == "owned" -> OwnedGetter weight 10
 }

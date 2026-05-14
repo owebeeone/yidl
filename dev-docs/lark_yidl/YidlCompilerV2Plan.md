@@ -380,7 +380,7 @@ Lower:
 
 ```text
 matcher PropertyTemplate(field: Fields) {
-    default PlainGetter
+    default -> PlainGetter
     rule managed when field.Kind == "managed" -> ManagedGetter weight 10
 }
 ```

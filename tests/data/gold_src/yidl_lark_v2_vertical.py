@@ -73,7 +73,7 @@ concept LarkV2Vertical {
     }
 
     matcher FieldTemplate(field: Fields) {
-        default PlainTemplate
+        default -> PlainTemplate
         rule managed when field.Kind == "managed" -> ManagedTemplate
     }
 
