@@ -378,6 +378,45 @@ def test_update_a_child_production_rejects_undeclared_input_value() -> None:
         )
 
 
+def test_update_a_reports_duplicate_inline_apply_name() -> None:
+    with pytest.raises(YidlSymbolError, match="already defined"):
+        _compile(
+            """
+            contribution ItemContribution = Item {
+                target body {
+                    build /RootNode
+                }
+            }
+
+            matcher Select(field: Fields) -> contribution {
+                default -> ItemContribution
+            }
+
+            production RootProduction -> composable {
+                root RootNode = Root
+                apply dup from field: Fields using Select
+                apply dup from field: Fields using Select
+            }
+
+            assembly Module = RootProduction
+            """
+        )
+
+
+def test_update_a_reports_bare_apply_to_unknown_top_level_edge() -> None:
+    with pytest.raises(YidlSymbolError, match="undefined assembly edge"):
+        _compile(
+            """
+            production RootProduction -> composable {
+                root RootNode = Root
+                apply MissingEdge
+            }
+
+            assembly Module = RootProduction
+            """
+        )
+
+
 def _compile(body: str) -> object:
     source = f"""
     module diagnostics
