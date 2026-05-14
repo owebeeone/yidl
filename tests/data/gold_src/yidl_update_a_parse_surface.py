@@ -12,6 +12,9 @@ from yidl.generation.assembly_plan import InlineApplySpec
 from yidl.generation.assembly_plan import LiteralValueRef
 from yidl.generation.assembly_plan import TupleValueRef
 from yidl.generation.assembly_plan import ValueRef
+from yidl.generation.assembly_runtime import DataStack
+from yidl.generation.assembly_runtime import evaluate_condition
+from yidl.generation.assembly_runtime import evaluate_value
 
 
 YIDL_SOURCE = """
@@ -79,12 +82,10 @@ concept UpdateA {
         using ChildSelection
 
     production RootProduction -> composable {
-        root Root = RootTemplate {
-            external module_name = ClassId
-        }
+        root Root = RootTemplate
 
         apply child_items
-            from field: Fields
+            from facade: Facades, field: Fields
             where FieldOwner == ClassId
             using ChildSelection
 
@@ -129,6 +130,18 @@ def validate_case(source: str) -> None:
 def _summary() -> Mapping[str, object]:
     module = compile_yidl_files({"update_a.yidl": YIDL_SOURCE}, "update_a.yidl")
     concept = module.concepts["UpdateA"]
+    child = concept.contributions["ChildContribution"]
+    child_edge = concept.assembly_edges["ChildEdge"]
+    stack = DataStack(
+        (
+            {
+                "ClassId": "Owner",
+                "FieldName": "count",
+                "FieldOrder": 7,
+                "FieldOwner": "Owner",
+            },
+        )
+    )
     return {
         "assemblies": {
             name: assembly.production_name
@@ -205,6 +218,11 @@ def _summary() -> Mapping[str, object]:
                 },
             }
             for name, production in sorted(concept.composable_productions.items())
+        },
+        "runtime": {
+            "child_edge_condition": evaluate_condition(child_edge.condition, stack),
+            "child_index": evaluate_value(child.index, stack),
+            "child_order": evaluate_value(child.order, stack),
         },
     }
 

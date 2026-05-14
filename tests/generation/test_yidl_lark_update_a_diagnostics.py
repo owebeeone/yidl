@@ -109,6 +109,84 @@ def test_update_a_rejects_qualified_value_refs() -> None:
         )
 
 
+def test_update_a_reports_duplicate_visible_value_names() -> None:
+    with pytest.raises(YidlSymbolError, match="duplicate visible value"):
+        _compile(
+            """
+            contribution ItemContribution = Item {
+                target body {
+                    build /RootNode
+                }
+            }
+
+            matcher Select(field: Fields, other: Fields) -> contribution {
+                default -> ItemContribution
+            }
+            """
+        )
+
+
+def test_update_a_reports_unknown_contribution_value_name() -> None:
+    with pytest.raises(YidlSymbolError, match="Missing"):
+        _compile(
+            """
+            contribution ItemContribution = Item {
+                target body {
+                    build /RootNode
+                }
+                ident field_name = Missing
+            }
+
+            matcher Select(field: Fields) -> contribution {
+                default -> ItemContribution
+            }
+
+            assemble Edge
+                from field: Fields
+                using Select
+            """
+        )
+
+
+def test_update_a_reports_unknown_where_value_name() -> None:
+    with pytest.raises(YidlSymbolError, match="Missing"):
+        _compile(
+            """
+            contribution ItemContribution = Item {
+                target body {
+                    build /RootNode
+                }
+            }
+
+            matcher Select(field: Fields) -> contribution {
+                default -> ItemContribution
+            }
+
+            assemble Edge
+                from field: Fields
+                where Missing == Name
+                using Select
+            """
+        )
+
+
+def test_update_a_reports_unknown_matcher_rule_value_name() -> None:
+    with pytest.raises(YidlSymbolError, match="Missing"):
+        _compile(
+            """
+            contribution ItemContribution = Item {
+                target body {
+                    build /RootNode
+                }
+            }
+
+            matcher Select(field: Fields) -> contribution {
+                rule selected when Missing == Name -> ItemContribution
+            }
+            """
+        )
+
+
 def _compile(body: str) -> object:
     source = f"""
     module diagnostics

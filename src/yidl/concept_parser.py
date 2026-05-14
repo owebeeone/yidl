@@ -311,6 +311,7 @@ class _ConceptCompiler:
             }:
                 raise YidlSymbolError(f"{member.data} lowering is not implemented yet")
         plan = builder.build()
+        self._validate_assembly_value_contexts(plan)
         return YidlCompiledConcept(
             name=name,
             plan=plan,
@@ -1207,6 +1208,173 @@ class _ConceptCompiler:
             )
         return False
 
+    def _validate_assembly_value_contexts(self, plan: CapsuleConceptPlan) -> None:
+        for matcher in self._local_contribution_matchers.values():
+            names = self._value_names_for_inputs(
+                plan,
+                matcher.inputs,
+                context=f"matcher {matcher.name!r}",
+            )
+            for rule in matcher.rules:
+                self._validate_condition_names(
+                    rule.condition,
+                    names,
+                    context=f"matcher {matcher.name!r} rule {rule.name!r}",
+                )
+
+        for production in self._local_composable_productions.values():
+            production_names = self._value_names_for_inputs(
+                plan,
+                production.inputs,
+                context=f"production {production.name!r}",
+            )
+            for binding in production.root.bindings:
+                self._validate_value_names(
+                    binding.value,
+                    production_names,
+                    context=f"production {production.name!r} root",
+                )
+            for apply in production.applies:
+                if isinstance(apply, EdgeApplySpec):
+                    if apply.edge_name not in self._local_assembly_edges:
+                        raise YidlSymbolError(
+                            f"production {production.name!r} apply references "
+                            f"undefined assembly edge {apply.edge_name!r}"
+                        )
+
+        for edge in self._local_assembly_edges.values():
+            names = self._value_names_for_inputs(
+                plan,
+                (*edge.context_inputs, *edge.from_inputs),
+                context=f"assembly edge {edge.name!r}",
+            )
+            if edge.condition is not None:
+                self._validate_condition_names(
+                    edge.condition,
+                    names,
+                    context=f"assembly edge {edge.name!r}",
+                )
+            matcher = self._local_contribution_matchers[edge.matcher_name]
+            for contribution_name in _matcher_contribution_names(matcher):
+                contribution = self._resolve_contribution_spec(contribution_name)
+                self._validate_contribution_names(
+                    contribution,
+                    names,
+                    context=(
+                        f"contribution {contribution.name!r} selected by "
+                        f"assembly edge {edge.name!r}"
+                    ),
+                )
+
+    def _validate_contribution_names(
+        self,
+        contribution: ContributionSpec,
+        names: frozenset[str],
+        *,
+        context: str,
+    ) -> None:
+        if contribution.index is not None:
+            self._validate_value_names(contribution.index, names, context=context)
+        if contribution.order is not None:
+            self._validate_value_names(contribution.order, names, context=context)
+        for target_path in contribution.target.paths:
+            for segment in target_path.path.segments:
+                for index in segment.indexes:
+                    self._validate_value_names(index, names, context=context)
+        for binding in contribution.bindings:
+            self._validate_value_names(binding.value, names, context=context)
+
+    def _validate_condition_names(
+        self,
+        condition: AssemblyConditionSpec,
+        names: frozenset[str],
+        *,
+        context: str,
+    ) -> None:
+        if isinstance(condition, AndConditionSpec):
+            for item in condition.items:
+                self._validate_condition_names(item, names, context=context)
+            return
+        if isinstance(condition, EqConditionSpec):
+            self._validate_value_names(condition.left, names, context=context)
+            self._validate_value_names(condition.right, names, context=context)
+            return
+        raise YidlSymbolError(f"{context} has unsupported condition")
+
+    def _validate_value_names(
+        self,
+        value: AssemblyValueRef,
+        names: frozenset[str],
+        *,
+        context: str,
+    ) -> None:
+        if isinstance(value, ValueRef):
+            if value.name not in names:
+                raise YidlSymbolError(
+                    f"{context} references undefined value {value.name!r}"
+                )
+            return
+        if isinstance(value, LiteralValueRef):
+            return
+        if isinstance(value, TupleValueRef):
+            for item in value.items:
+                self._validate_value_names(item, names, context=context)
+            return
+        raise YidlSymbolError(f"{context} has unsupported value")
+
+    def _value_names_for_inputs(
+        self,
+        plan: CapsuleConceptPlan,
+        inputs: tuple[AssemblyInputSpec, ...],
+        *,
+        context: str,
+    ) -> frozenset[str]:
+        names: dict[str, str] = {}
+        for input_spec in inputs:
+            for prop_name in self._collection_property_names(plan, input_spec.collection):
+                owner = names.get(prop_name)
+                if owner is not None:
+                    raise YidlSymbolError(
+                        f"{context} has duplicate visible value {prop_name!r} "
+                        f"from inputs {owner!r} and {input_spec.name!r}"
+                    )
+                names[prop_name] = input_spec.name
+        return frozenset(names)
+
+    def _collection_property_names(
+        self,
+        plan: CapsuleConceptPlan,
+        collection: object,
+    ) -> tuple[str, ...]:
+        if not isinstance(collection, CollectionHandle):
+            raise YidlSymbolError("assembly inputs must reference collections")
+        record = collection.record
+        if isinstance(record, RecordHandle):
+            return tuple(prop.name for prop in record.properties)
+        if isinstance(record, SchemaFamilyHandle):
+            family_plan = _plan_for_owner(plan, record.owner_id)
+            properties: dict[str, None] = {}
+            for operation in family_plan.schema_family_common:
+                if operation.family == record:
+                    for prop in operation.properties:
+                        properties.setdefault(prop.name, None)
+            for operation in family_plan.schema_family_variants:
+                if operation.family == record:
+                    for prop in operation.record.properties:
+                        properties.setdefault(prop.name, None)
+            return tuple(properties)
+        raise YidlSymbolError("unsupported assembly input record shape")
+
+    def _resolve_contribution_spec(self, name: str) -> ContributionSpec:
+        contribution = self._local_contributions.get(name)
+        if contribution is not None:
+            return contribution
+        for extension in self._extensions:
+            contribution = extension.contributions.get(name)
+            if contribution is not None:
+                return contribution
+        raise YidlSymbolError(f"undefined contribution {name!r}")
+
     def _policy(self, name: str) -> object:
         try:
             return _POLICIES[name]
@@ -1584,6 +1752,27 @@ def _matcher_kind(tree: Tree) -> str:
     if _first_child(tree, "matcher_kind_contribution") is not None:
         return "contribution"
     return "resource"
+
+
+def _matcher_contribution_names(
+    matcher: ContributionMatcherSpec,
+) -> tuple[str, ...]:
+    names: list[str] = []
+    if matcher.default_contribution_name is not None:
+        names.append(matcher.default_contribution_name)
+    names.extend(rule.contribution_name for rule in matcher.rules)
+    return tuple(dict.fromkeys(names))
+
+
+def _plan_for_owner(plan: CapsuleConceptPlan, owner_id: int) -> CapsuleConceptPlan:
+    if plan.owner_id == owner_id:
+        return plan
+    for extension in plan.extensions:
+        try:
+            return _plan_for_owner(extension, owner_id)
+        except YidlSymbolError:
+            continue
+    raise YidlSymbolError(f"undefined concept plan owner {owner_id!r}")
 
 
 def _qname(tree: Tree) -> str:
