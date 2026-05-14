@@ -86,13 +86,19 @@ def write_golden_outputs(project_root: Path) -> None:
 
     golden_dir = data_golden_dir(project_root)
     golden_dir.mkdir(parents=True, exist_ok=True)
-    for stale in golden_dir.glob("*.py"):
-        stale.unlink()
+    for stale in golden_dir.iterdir():
+        if stale.is_dir():
+            shutil.rmtree(stale)
+        else:
+            stale.unlink()
 
     for case_name in discover_golden_cases(project_root):
+        output_name = case_name
+        if case_name == "yidl_lark_v2_vertical.py":
+            output_name = case_name.removesuffix(".py")
         run_golden_case(
             source_dir / case_name,
-            golden_dir / case_name,
+            golden_dir / output_name,
             cwd=project_root,
             check=True,
         )

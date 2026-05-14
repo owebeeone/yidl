@@ -106,7 +106,7 @@ class FieldTemplateMatcher:
         if cached is not NOT_PROVIDED:
             return self._finish(None, cached, records, values)
         if values[0:1] == ('managed',):
-            return self._finish(cache_key, (astichi_template(from_astichi_code('{"getter": field_name}', file_name='lark_v2_vertical.yidl', line_number=35, keep_names=('field_name',)), bind=from_astichi_code('{"field_name": record.name}', file_name='lark_v2_vertical.yidl', line_number=25, offset=34, keep_names=('record',)), keep_names=from_astichi_code('("field_name",)', file_name='lark_v2_vertical.yidl', line_number=28, offset=39)), 'managed', 1.0), records, values)
+            return self._finish(cache_key, (astichi_template(from_astichi_code('astichi_bind_external(field_name)\n{"getter": field_name}', file_name='lark_v2_vertical.yidl', line_number=35, keep_names=('field_name',)), bind=from_astichi_code('{"field_name": record.name}', file_name='lark_v2_vertical.yidl', line_number=25, offset=34, keep_names=('record',)), keep_names=from_astichi_code('("field_name",)', file_name='lark_v2_vertical.yidl', line_number=28, offset=39)), 'managed', 1.0), records, values)
         return self._finish(cache_key, (astichi_template(from_astichi_code('{"getter": "plain"}', file_name='lark_v2_vertical.yidl', line_number=31)), None, 0.0), records, values)
 
     def _finish(self, cache_key, selection, records, values):
