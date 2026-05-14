@@ -4,17 +4,33 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from dataclasses import dataclass
+from itertools import product
 import keyword
 from typing import cast
 
+import astichi
+from astichi.assembler.scope import AssemblyScope
+from astichi.assembler.scope import as_composable
+from astichi.assembler.scope import as_external_value
+from astichi.assembler.scope import as_identifier
+from astichi.assembler.scope import find_candidates
+from astichi.assembler.scope import require_one
 from astichi.pathmatch import parse_path_selector
 
 from yidl.generation.assembly_plan import AndConditionSpec
 from yidl.generation.assembly_plan import AssemblyConditionSpec
+from yidl.generation.assembly_plan import AssemblyEdgeSpec
 from yidl.generation.assembly_plan import AssemblyValueRef
+from yidl.generation.assembly_plan import BindingSpec
+from yidl.generation.assembly_plan import ComposableProductionSpec
+from yidl.generation.assembly_plan import ContributionMatcherSpec
+from yidl.generation.assembly_plan import ContributionSpec
+from yidl.generation.assembly_plan import EdgeApplySpec
 from yidl.generation.assembly_plan import EqConditionSpec
+from yidl.generation.assembly_plan import InlineApplySpec
 from yidl.generation.assembly_plan import LiteralValueRef
 from yidl.generation.assembly_plan import PathSpec
+from yidl.generation.assembly_plan import TargetPathSpec
 from yidl.generation.assembly_plan import TupleValueRef
 from yidl.generation.assembly_plan import ValueRef
 
@@ -189,3 +205,267 @@ def path_selector_tuple(
         return parse_path_selector(rendered)
     except ValueError as exc:
         raise AssemblyPathError(f"{context}: invalid path selector {rendered!r}") from exc
+
+
+def run_assembly(
+    concept: object,
+    entrypoint: str,
+    container: object,
+    *,
+    unroll: bool | str = "auto",
+) -> object:
+    """Execute one compiled YIDL assembly entrypoint in memory."""
+
+    assembly = concept.assemblies[entrypoint]
+    production = concept.composable_productions[assembly.production_name]
+    return _run_production(
+        concept,
+        production,
+        container,
+        context_records={},
+        unroll=unroll,
+    )
+
+
+def _run_production(
+    concept: object,
+    production: ComposableProductionSpec,
+    container: object,
+    *,
+    context_records: Mapping[str, object],
+    unroll: bool | str,
+) -> object:
+    scope = AssemblyScope(astichi.build())
+    root_resource = concept.resources[production.root.resource_name].to_generator()
+    scope.add(production.root.build_name, root_resource)
+    root_stack = DataStack(
+        tuple(_record_mapping(concept, record) for record in context_records.values())
+    )
+    _apply_bindings(
+        scope,
+        production.root.bindings,
+        root_stack,
+        build_match=(production.root.build_name,),
+        context=f"production {production.name!r} root",
+    )
+
+    for apply in production.applies:
+        edge = apply.edge if isinstance(apply, InlineApplySpec) else concept.assembly_edges[apply.edge_name]
+        _run_edge(
+            concept,
+            edge,
+            container,
+            scope,
+            context_records=context_records,
+            unroll=unroll,
+        )
+    return scope.build(unroll=unroll)
+
+
+def _run_edge(
+    concept: object,
+    edge: AssemblyEdgeSpec,
+    container: object,
+    scope: AssemblyScope,
+    *,
+    context_records: Mapping[str, object],
+    unroll: bool | str,
+) -> None:
+    context_values: list[Mapping[str, object]] = []
+    edge_context_records: dict[str, object] = {}
+    for input_spec in edge.context_inputs:
+        try:
+            record = context_records[input_spec.name]
+        except KeyError as exc:
+            raise ValueError(
+                f"assembly edge {edge.name!r} requires context input "
+                f"{input_spec.name!r}"
+            ) from exc
+        context_values.append(_record_mapping(concept, record))
+        edge_context_records[input_spec.name] = record
+
+    from_sequences = [
+        tuple(getattr(container, input_spec.collection_name).sequence())
+        for input_spec in edge.from_inputs
+    ]
+    record_products = product(*from_sequences) if from_sequences else ((),)
+    for records in record_products:
+        from_records = {
+            input_spec.name: record
+            for input_spec, record in zip(edge.from_inputs, records, strict=True)
+        }
+        stack = DataStack(
+            (
+                *context_values,
+                *(
+                    _record_mapping(concept, record)
+                    for record in from_records.values()
+                ),
+            )
+        )
+        if edge.condition is not None and not evaluate_condition(edge.condition, stack):
+            continue
+        matcher = concept.contribution_matchers[edge.matcher_name]
+        contribution = _select_contribution(concept, matcher, stack)
+        if contribution is None:
+            continue
+        _apply_contribution(
+            concept,
+            contribution,
+            container,
+            scope,
+            stack,
+            context_records={**edge_context_records, **from_records},
+            unroll=unroll,
+        )
+
+
+def _select_contribution(
+    concept: object,
+    matcher: ContributionMatcherSpec,
+    stack: DataStack,
+) -> ContributionSpec | None:
+    for rule in sorted(
+        matcher.rules,
+        key=lambda candidate: _condition_score(candidate.condition) * candidate.weight,
+        reverse=True,
+    ):
+        if evaluate_condition(rule.condition, stack):
+            return concept.contributions[rule.contribution_name]
+    if matcher.default_contribution_name is None:
+        return None
+    return concept.contributions[matcher.default_contribution_name]
+
+
+def _apply_contribution(
+    concept: object,
+    contribution: ContributionSpec,
+    container: object,
+    scope: AssemblyScope,
+    stack: DataStack,
+    *,
+    context_records: Mapping[str, object],
+    unroll: bool | str,
+) -> None:
+    if contribution.source_kind == "resource":
+        composable = concept.resources[contribution.source_name].to_generator()
+    else:
+        composable = _run_production(
+            concept,
+            concept.composable_productions[contribution.source_name],
+            container,
+            context_records=context_records,
+            unroll=unroll,
+        )
+
+    build_index = evaluate_index(contribution.index, stack)
+    order = (
+        evaluate_order(contribution.order, stack)
+        if contribution.order is not None
+        else 0
+    )
+    resource = as_composable(
+        composable,
+        build_name=contribution.build_name,
+        build_index=build_index,
+        order=order,
+    )
+    build_selectors = _target_selectors(
+        contribution.target.paths,
+        "build",
+        stack,
+        context=f"contribution {contribution.name!r} build",
+    )
+    owner_selectors = _target_selectors(
+        contribution.target.paths,
+        "owner",
+        stack,
+        context=f"contribution {contribution.name!r} owner",
+    )
+
+    concrete_build_paths: list[tuple[str, ...]] = []
+    for build_match in build_selectors:
+        for owner_match in owner_selectors:
+            candidate = require_one(
+                find_candidates(
+                    scope.inventory,
+                    resource,
+                    name=contribution.target.name,
+                    build_match=build_match,
+                    owner_match=owner_match,
+                )
+            )
+            scope.apply(candidate)
+            if build_match is not None and not _selector_is_dynamic(build_match):
+                concrete_build_paths.append(build_match + (resource.instance_name,))
+
+    for build_path in concrete_build_paths:
+        _apply_bindings(
+            scope,
+            contribution.bindings,
+            stack,
+            build_match=build_path,
+            context=f"contribution {contribution.name!r}",
+        )
+
+
+def _apply_bindings(
+    scope: AssemblyScope,
+    bindings: tuple[BindingSpec, ...],
+    stack: DataStack,
+    *,
+    build_match: tuple[str, ...],
+    context: str,
+) -> None:
+    for binding in bindings:
+        if binding.kind == "ident":
+            resource = as_identifier(evaluate_identifier(binding.value, stack))
+        else:
+            resource = as_external_value(evaluate_external(binding.value, stack))
+        candidate = require_one(
+            find_candidates(
+                scope.inventory,
+                resource,
+                name=binding.name,
+                build_match=build_match,
+            )
+        )
+        try:
+            scope.apply(candidate)
+        except ValueError as exc:
+            raise ValueError(f"{context}: failed to bind {binding.name!r}") from exc
+
+
+def _target_selectors(
+    paths: tuple[TargetPathSpec, ...],
+    kind: str,
+    stack: DataStack,
+    *,
+    context: str,
+) -> tuple[tuple[str, ...] | None, ...]:
+    selectors = tuple(
+        path_selector_tuple(target_path.path, stack, context=context)
+        for target_path in paths
+        if target_path.kind == kind
+    )
+    return selectors or (None,)
+
+
+def _record_mapping(concept: object, record: object) -> Mapping[str, object]:
+    result: dict[str, object] = {}
+    for prop in concept.properties.values():
+        if hasattr(record, prop.storage_name):
+            result[prop.name] = getattr(record, prop.storage_name)
+    return result
+
+
+def _condition_score(condition: AssemblyConditionSpec) -> int:
+    if isinstance(condition, AndConditionSpec):
+        return sum(_condition_score(item) for item in condition.items)
+    if isinstance(condition, EqConditionSpec):
+        return 1
+    return 0
+
+
+def _selector_is_dynamic(selector: tuple[str, ...]) -> bool:
+    return any(part in {".", "?", "*", "+"} for part in selector)

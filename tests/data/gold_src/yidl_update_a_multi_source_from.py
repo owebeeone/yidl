@@ -9,8 +9,9 @@ from yidl.concept_parser import compile_yidl_files
 from yidl.generation.assembly_runtime import DataStack
 from yidl.generation.assembly_runtime import evaluate_condition
 from yidl.generation.assembly_runtime import evaluate_external
-from yidl.generation.assembly_runtime import evaluate_identifier
 from yidl.generation.assembly_runtime import evaluate_order
+from yidl.generation.assembly_runtime import run_assembly
+from yidl.generation.data_def_sys import emit_container_runtime_source
 
 
 YIDL_SOURCE = """
@@ -41,8 +42,15 @@ concept MultiSource {
     collection Facades: FacadeSpecs identity Id many
     collection Fields: FieldSpecs identity FieldName many
 
-    resource RootTemplate = code `astichi_hole(entries)`
-    resource EntryTemplate = template `field_name__astichi_arg__`
+    resource RootTemplate = code $[
+        RESULTS = []
+        astichi_hole(entries)
+    ]$ {
+        keep RESULTS
+    }
+    resource EntryTemplate = template `RESULTS.append(astichi_bind_external(owner))` {
+        keep RESULTS
+    }
 
     contribution EntryContribution = EntryTemplate {
         index Order
@@ -52,7 +60,6 @@ concept MultiSource {
             build /Root
         }
 
-        ident field_name = FieldName
         external owner = Id
     }
 
@@ -87,12 +94,14 @@ FIELDS = (
 
 
 def render_case() -> str:
-    results = _selected_entries()
+    results, output = _selected_entries_and_output()
     return "\n".join(
         [
             "from __future__ import annotations",
             "",
             f"RESULTS = {pformat(results, sort_dicts=True, width=88)}",
+            "",
+            f"OUTPUT = {output!r}",
             "",
         ]
     )
@@ -102,12 +111,14 @@ def validate_case(source: str) -> None:
     namespace: dict[str, object] = {}
     exec(source, namespace)
     assert namespace["RESULTS"] == [
-        {"field_name": "count", "order": 20, "owner": "owner_a"},
-        {"field_name": "total", "order": 10, "owner": "owner_b"},
+        {"order": 20, "owner": "owner_a"},
+        {"order": 10, "owner": "owner_b"},
     ]
+    assert "RESULTS.append('owner_a')" in namespace["OUTPUT"]
+    assert "RESULTS.append('owner_b')" in namespace["OUTPUT"]
 
 
-def _selected_entries() -> list[Mapping[str, object]]:
+def _selected_entries_and_output() -> tuple[list[Mapping[str, object]], str]:
     module = compile_yidl_files({"multi_source.yidl": YIDL_SOURCE}, "multi_source.yidl")
     concept = module.concepts["MultiSource"]
     edge = concept.assembly_edges["Entries"]
@@ -120,12 +131,34 @@ def _selected_entries() -> list[Mapping[str, object]]:
             continue
         values: dict[str, object] = {"order": evaluate_order(contribution.order, stack)}
         for binding in contribution.bindings:
-            if binding.kind == "ident":
-                values[binding.name] = evaluate_identifier(binding.value, stack)
-            else:
+            if binding.kind == "external":
                 values[binding.name] = evaluate_external(binding.value, stack)
         results.append(values)
-    return results
+    output = run_assembly(concept, "Module", _container(concept)).emit_commented()
+    return results, output
+
+
+def _container(concept: object) -> object:
+    namespace: dict[str, object] = {}
+    exec(emit_container_runtime_source(concept.plan.build_data_definition()), namespace)
+    builder = namespace["new_builder"]()
+    facade = namespace["Facade"]
+    field = namespace["Field"]
+    facades = namespace["FacadesCollection"]
+    fields = namespace["FieldsCollection"]
+    for values in FACADES:
+        builder.add(facades, facade(id=values["Id"]))
+    for values in FIELDS:
+        builder.add(
+            fields,
+            field(
+                field_name=values["FieldName"],
+                kind=values["Kind"],
+                order=values["Order"],
+                owner=values["Owner"],
+            ),
+        )
+    return builder.freeze()
 
 
 if __name__ == "__main__":
