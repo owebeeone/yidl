@@ -58,7 +58,7 @@ concept UpdateA {
         order FieldOrder
 
         target body {
-            build /Root/ChildNode[FieldOrder]
+            build /Root
             owner /Root/*
             owner /Root/./?/+
         }

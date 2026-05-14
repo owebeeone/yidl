@@ -4,11 +4,15 @@ import pytest
 
 from yidl.concept_parser import YidlSymbolError
 from yidl.concept_parser import compile_yidl_files
+from yidl.generation.assembly_plan import PathSegmentSpec
+from yidl.generation.assembly_plan import PathSpec
 from yidl.generation.assembly_plan import ValueRef
+from yidl.generation.assembly_runtime import AssemblyPathError
 from yidl.generation.assembly_runtime import DataStack
 from yidl.generation.assembly_runtime import evaluate_identifier
 from yidl.generation.assembly_runtime import evaluate_index
 from yidl.generation.assembly_runtime import evaluate_order
+from yidl.generation.assembly_runtime import path_selector_tuple
 
 
 def test_update_a_reports_unknown_contribution_rhs() -> None:
@@ -205,6 +209,104 @@ def test_update_a_runtime_rejects_non_int_order() -> None:
 def test_update_a_runtime_rejects_invalid_identifier_binding() -> None:
     with pytest.raises(TypeError, match="identifier"):
         evaluate_identifier(ValueRef("name"), DataStack(({"name": "not valid"},)))
+
+
+def test_update_a_reports_unreachable_literal_build_path() -> None:
+    with pytest.raises(YidlSymbolError, match="unreachable path"):
+        _compile(
+            """
+            contribution ItemContribution = Item {
+                target body {
+                    build /Missing
+                }
+            }
+
+            matcher Select(field: Fields) -> contribution {
+                default -> ItemContribution
+            }
+
+            production RootProduction -> composable {
+                root RootNode = Root
+                apply items from field: Fields using Select
+            }
+
+            assembly Module = RootProduction
+            """
+        )
+
+
+def test_update_a_reports_missing_target_demand_name() -> None:
+    with pytest.raises(YidlSymbolError, match="not available"):
+        _compile(
+            """
+            contribution ItemContribution = Item {
+                target missing {
+                    build /RootNode
+                }
+            }
+
+            matcher Select(field: Fields) -> contribution {
+                default -> ItemContribution
+            }
+
+            production RootProduction -> composable {
+                root RootNode = Root
+                apply items from field: Fields using Select
+            }
+
+            assembly Module = RootProduction
+            """
+        )
+
+
+def test_update_a_reports_child_apply_before_parent_apply() -> None:
+    with pytest.raises(YidlSymbolError, match="unreachable path"):
+        _compile(
+            """
+            resource Parent = code `astichi_hole(child)`
+
+            contribution ParentContribution = Parent {
+                as ParentNode
+                target body {
+                    build /RootNode
+                }
+            }
+
+            contribution ChildContribution = Item {
+                target child {
+                    build /RootNode/ParentNode
+                }
+            }
+
+            matcher ParentSelect(field: Fields) -> contribution {
+                default -> ParentContribution
+            }
+
+            matcher ChildSelect(field: Fields) -> contribution {
+                default -> ChildContribution
+            }
+
+            production RootProduction -> composable {
+                root RootNode = Root
+                apply children from field: Fields using ChildSelect
+                apply parents from field: Fields using ParentSelect
+            }
+
+            assembly Module = RootProduction
+            """
+        )
+
+
+def test_update_a_runtime_wraps_invalid_path_selector() -> None:
+    path = PathSpec(
+        (
+            PathSegmentSpec(kind="name", name="Root"),
+            PathSegmentSpec(kind="name", name="Bad.Name"),
+        )
+    )
+
+    with pytest.raises(AssemblyPathError, match="invalid path selector"):
+        path_selector_tuple(path, DataStack(), context="test contribution")
 
 
 def _compile(body: str) -> object:

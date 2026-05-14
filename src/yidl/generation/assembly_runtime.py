@@ -7,20 +7,33 @@ from dataclasses import dataclass
 import keyword
 from typing import cast
 
+from astichi.pathmatch import parse_path_selector
+
 from yidl.generation.assembly_plan import AndConditionSpec
 from yidl.generation.assembly_plan import AssemblyConditionSpec
 from yidl.generation.assembly_plan import AssemblyValueRef
 from yidl.generation.assembly_plan import EqConditionSpec
 from yidl.generation.assembly_plan import LiteralValueRef
+from yidl.generation.assembly_plan import PathSpec
 from yidl.generation.assembly_plan import TupleValueRef
 from yidl.generation.assembly_plan import ValueRef
 
 
 _MISSING = object()
+_PATH_OPERATOR_TEXT = {
+    "current": ".",
+    "optional": "?",
+    "any": "*",
+    "many": "+",
+}
 
 
 class Undefined(NameError):
     """Raised when an assembly value is not visible in the current stack."""
+
+
+class AssemblyPathError(ValueError):
+    """Raised when an assembly path selector cannot be rendered or parsed."""
 
 
 @dataclass(frozen=True, slots=True)
@@ -137,3 +150,42 @@ def evaluate_condition(condition: AssemblyConditionSpec, stack: DataStack) -> bo
     if isinstance(condition, AndConditionSpec):
         return all(evaluate_condition(item, stack) for item in condition.items)
     raise TypeError(f"unsupported assembly condition: {type(condition).__name__}")
+
+
+def render_path_selector(path: PathSpec, stack: DataStack) -> str:
+    """Render a structural YIDL path without its authored leading slash."""
+
+    parts: list[str] = []
+    for segment in path.segments:
+        if segment.kind == "name":
+            if segment.name is None:
+                raise AssemblyPathError("named path segment is missing its name")
+            if not segment.indexes:
+                parts.append(segment.name)
+                continue
+            indexes = tuple(
+                evaluate_path_index(index, stack)
+                for index in segment.indexes
+            )
+            parts.append(f"{segment.name}[{','.join(str(index) for index in indexes)}]")
+            continue
+        operator = _PATH_OPERATOR_TEXT.get(segment.kind)
+        if operator is None:
+            raise AssemblyPathError(f"unsupported path segment kind {segment.kind!r}")
+        parts.append(operator)
+    return "/".join(parts)
+
+
+def path_selector_tuple(
+    path: PathSpec,
+    stack: DataStack,
+    *,
+    context: str,
+) -> tuple[str, ...]:
+    """Render and parse a path selector, wrapping parser errors with context."""
+
+    rendered = render_path_selector(path, stack)
+    try:
+        return parse_path_selector(rendered)
+    except ValueError as exc:
+        raise AssemblyPathError(f"{context}: invalid path selector {rendered!r}") from exc

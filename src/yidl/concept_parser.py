@@ -312,6 +312,7 @@ class _ConceptCompiler:
                 raise YidlSymbolError(f"{member.data} lowering is not implemented yet")
         plan = builder.build()
         self._validate_assembly_value_contexts(plan)
+        self._validate_static_assembly_scopes()
         return YidlCompiledConcept(
             name=name,
             plan=plan,
@@ -1375,6 +1376,122 @@ class _ConceptCompiler:
                 return contribution
         raise YidlSymbolError(f"undefined contribution {name!r}")
 
+    def _validate_static_assembly_scopes(self) -> None:
+        validated: set[str] = set()
+        for production in self._local_composable_productions.values():
+            self._validate_static_scope(production, visiting=set(), validated=validated)
+
+    def _validate_static_scope(
+        self,
+        production: ComposableProductionSpec,
+        *,
+        visiting: set[str],
+        validated: set[str],
+    ) -> None:
+        if production.name in validated:
+            return
+        if production.name in visiting:
+            raise YidlSymbolError(
+                f"composable production cycle involving {production.name!r}"
+            )
+        visiting.add(production.name)
+
+        root_holes = self._resource_hole_names(
+            production.root.resource_name,
+            context=f"production {production.name!r} root",
+        )
+        path_holes: dict[tuple[str, ...], frozenset[str]] = {
+            (production.root.build_name,): root_holes,
+        }
+
+        for apply in production.applies:
+            edge = (
+                apply.edge
+                if isinstance(apply, InlineApplySpec)
+                else self._local_assembly_edges[apply.edge_name]
+            )
+            matcher = self._local_contribution_matchers[edge.matcher_name]
+            for contribution_name in _matcher_contribution_names(matcher):
+                contribution = self._resolve_contribution_spec(contribution_name)
+                if contribution.source_kind == "production":
+                    source = self._local_composable_productions.get(
+                        contribution.source_name
+                    )
+                    if source is not None:
+                        self._validate_static_scope(
+                            source,
+                            visiting=visiting,
+                            validated=validated,
+                        )
+                self._validate_static_contribution(
+                    contribution,
+                    path_holes,
+                    context=(
+                        f"contribution {contribution.name!r} selected by "
+                        f"apply {edge.name!r}"
+                    ),
+                )
+
+        visiting.remove(production.name)
+        validated.add(production.name)
+
+    def _validate_static_contribution(
+        self,
+        contribution: ContributionSpec,
+        path_holes: dict[tuple[str, ...], frozenset[str]],
+        *,
+        context: str,
+    ) -> None:
+        concrete_build_paths: list[tuple[str, ...]] = []
+        for target_path in contribution.target.paths:
+            parts, dynamic = _static_path_parts(target_path.path)
+            if dynamic:
+                if parts and parts not in path_holes:
+                    raise YidlSymbolError(
+                        f"{context} references unreachable path /{'/'.join(parts)}"
+                    )
+                continue
+            if parts not in path_holes:
+                raise YidlSymbolError(
+                    f"{context} references unreachable path /{'/'.join(parts)}"
+                )
+            if target_path.kind == "build":
+                if contribution.target.name not in path_holes[parts]:
+                    raise YidlSymbolError(
+                        f"{context} target {contribution.target.name!r} is not "
+                        f"available at /{'/'.join(parts)}"
+                    )
+                concrete_build_paths.append(parts)
+
+        source_holes = self._contribution_source_hole_names(contribution)
+        for build_path in concrete_build_paths:
+            path_holes[build_path + (contribution.build_name,)] = source_holes
+
+    def _contribution_source_hole_names(
+        self,
+        contribution: ContributionSpec,
+    ) -> frozenset[str]:
+        if contribution.source_kind == "resource":
+            return self._resource_hole_names(
+                contribution.source_name,
+                context=f"contribution {contribution.name!r} source",
+            )
+        production = self._local_composable_productions.get(contribution.source_name)
+        if production is None:
+            return frozenset()
+        return self._resource_hole_names(
+            production.root.resource_name,
+            context=f"production {production.name!r} root",
+        )
+
+    def _resource_hole_names(self, name: str, *, context: str) -> frozenset[str]:
+        resource = self._resolve_resource(name)
+        try:
+            description = resource.to_generator().describe()
+        except Exception as exc:
+            raise YidlSymbolError(f"{context} cannot be described: {exc}") from exc
+        return frozenset(hole.name for hole in description.holes)
+
     def _policy(self, name: str) -> object:
         try:
             return _POLICIES[name]
@@ -1762,6 +1879,18 @@ def _matcher_contribution_names(
         names.append(matcher.default_contribution_name)
     names.extend(rule.contribution_name for rule in matcher.rules)
     return tuple(dict.fromkeys(names))
+
+
+def _static_path_parts(path: PathSpec) -> tuple[tuple[str, ...], bool]:
+    parts: list[str] = []
+    dynamic = False
+    for segment in path.segments:
+        if segment.kind == "name":
+            if not dynamic and segment.name is not None:
+                parts.append(segment.name)
+            continue
+        dynamic = True
+    return tuple(parts), dynamic
 
 
 def _plan_for_owner(plan: CapsuleConceptPlan, owner_id: int) -> CapsuleConceptPlan:
