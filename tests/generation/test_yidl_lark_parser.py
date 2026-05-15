@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
 from lark import Tree
 
@@ -9,6 +11,8 @@ from yidl.concept_parser import compile_yidl_files
 from yidl.concept_parser import parse_yidl_source
 from yidl.generation.data_def_sys import AstichiTemplateValue
 from yidl.generation.data_def_sys import MatcherGeneratedValue
+
+_DATA_YIDL = Path(__file__).resolve().parents[1] / "data" / "yidl"
 
 
 def test_yidl_syntax_error_reports_line_and_column() -> None:
@@ -108,6 +112,63 @@ def test_yidl_extended_family_resolves_local_then_owner_properties() -> None:
         "Kind",
         "TxGroup",
     ]
+
+
+def test_yidl_lark_record_decl_and_default_values_lower() -> None:
+    source = """
+    module records
+
+    concept Records {
+        property Name: str
+        property Bases: object = ()
+        property Tags: object = ("primary",)
+        property Annotation: object = object
+
+        record Field {
+            Name
+            Bases
+            Tags
+            Annotation
+        }
+
+        collection Fields: Field identity Name many
+    }
+    """
+
+    compiled = compile_yidl_files({"records.yidl": source}, "records.yidl")
+    concept = compiled.concepts["Records"]
+    record = concept.records["Field"]
+
+    assert concept.properties["Bases"].default == ()
+    assert concept.properties["Tags"].default == ("primary",)
+    assert concept.properties["Annotation"].default is object
+    assert [prop.name for prop in record.properties] == [
+        "Name",
+        "Bases",
+        "Tags",
+        "Annotation",
+    ]
+    assert concept.collections["Fields"].record is record
+
+    dds = concept.plan.build_data_definition()
+    assert [(prop.name, prop.default) for prop in dds.properties] == [
+        ("Name", concept.properties["Name"].default),
+        ("Bases", ()),
+        ("Tags", ("primary",)),
+        ("Annotation", object),
+    ]
+
+
+def test_yidl_lark_dataclasses_source_fixture_compiles() -> None:
+    entry_path = "tests/data/yidl/dataclasses_example.yidl"
+    source = (_DATA_YIDL / "dataclasses_example.yidl").read_text(encoding="utf-8")
+
+    compiled = compile_yidl_files({entry_path: source}, entry_path)
+    concept = compiled.concepts["DataclassSubstitute"]
+
+    assert sorted(concept.records) == ["DataclassFacade", "DataclassField"]
+    assert sorted(concept.collections) == ["Facades", "Fields"]
+    assert sorted(concept.assemblies) == ["DataclassModule"]
 
 
 def test_yidl_lark_resource_snippet_forms_parse() -> None:

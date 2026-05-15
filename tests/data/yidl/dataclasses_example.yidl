@@ -1,0 +1,1299 @@
+# Proposed YIDL Update-A example.
+#
+# This source fixture exercises contribution matchers, indexed build paths,
+# blended value-stack references, and ordered composable productions for a
+# dataclasses-like compiler.
+
+module tests.dataclasses_example
+
+concept DataclassSubstitute {
+    # -------------------------------------------------------------------------
+    # Decorator/runtime inputs.
+    # -------------------------------------------------------------------------
+
+    property ClassId: str
+    property ClassName: str
+    property ClassOrder: int = 0
+    property ModuleName: str = "__main__"
+    property Bases: object = ()
+    property DecoratorInit: bool = True
+    property DecoratorRepr: bool = True
+    property DecoratorEq: bool = True
+    property DecoratorOrder: bool = False
+    property DecoratorUnsafeHash: bool = False
+    property DecoratorFrozen: bool = False
+    property DecoratorSlots: bool = False
+    property DecoratorWeakrefSlot: bool = False
+    property DecoratorMatchArgs: bool = True
+    property DecoratorKwOnly: bool = False
+    property HasPostInit: bool = False
+    property HasKwOnlyInitFields: bool = False
+    property KwOnlyFenceOrder: int = 0
+    property DataclassParams: object = None
+    property SlotNames: object = ()
+    property MatchArgs: object = ()
+
+    property FieldId: str
+    property FieldOwner: str
+    property FieldName: str
+    property FieldOrder: int
+    property FieldKind: str = "field"          # field | classvar | initvar
+    property Annotation: object = object
+    property HasDefault: bool = False
+    property DefaultValue: object = None
+    property HasDefaultFactory: bool = False
+    property DefaultFactory: object = None
+    property Init: bool = True
+    property Repr: bool = True
+    property Compare: bool = True
+    property Hash: object = None               # None follows Compare
+    property KwOnly: bool = False
+    property Metadata: object = None
+
+    record DataclassFacade {
+        ClassId
+        ClassName
+        ClassOrder
+        ModuleName
+        Bases
+        DecoratorInit
+        DecoratorRepr
+        DecoratorEq
+        DecoratorOrder
+        DecoratorUnsafeHash
+        DecoratorFrozen
+        DecoratorSlots
+        DecoratorWeakrefSlot
+        DecoratorMatchArgs
+        DecoratorKwOnly
+        HasPostInit
+        HasKwOnlyInitFields
+        KwOnlyFenceOrder
+        DataclassParams
+        SlotNames
+        MatchArgs
+    }
+
+    record DataclassField {
+        FieldId
+        FieldOwner
+        FieldName
+        FieldOrder
+        FieldKind
+        Annotation
+        HasDefault
+        DefaultValue
+        HasDefaultFactory
+        DefaultFactory
+        Init
+        Repr
+        Compare
+        Hash
+        KwOnly
+        Metadata
+    }
+
+    collection Facades: DataclassFacade identity ClassId many
+    collection Fields: DataclassField identity FieldId many
+
+    # This example assumes a small front-end normalization pass has already:
+    #
+    # - validated dataclass invariants such as `order=True` requiring `eq=True`
+    # - resolved decorator defaults into each field row
+    # - sorted normal init parameters before keyword-only parameters
+    # - computed aggregate class values such as SlotNames and MatchArgs
+    # - chosen KwOnlyFenceOrder so it cannot collide with any FieldOrder value
+    #
+    # Those aggregate derivations are good candidates for later YIDL collection
+    # reductions, but they are not the focus of the Update-A assembly grammar.
+
+    # -------------------------------------------------------------------------
+    # Module and class shells.
+    # -------------------------------------------------------------------------
+
+    resource ModuleRoot = code $[
+        from __future__ import annotations
+
+        _MISSING = object()
+        _HAS_DEFAULT_FACTORY = object()
+
+
+        class FrozenInstanceError(AttributeError):
+            pass
+
+
+        def _field_info(**kw):
+            return kw
+
+
+        astichi_hole(module_body)
+    ]$
+
+    resource ClassShell = template $[
+        class class_name__astichi_arg__:
+            __module__ = astichi_bind_external(module_name)
+            __dataclass_params__ = astichi_bind_external(dataclass_params)
+            __dataclass_fields__ = {**astichi_hole(field_info_entries)}
+            __annotations__ = {**astichi_hole(annotation_entries)}
+
+            astichi_hole(slots_decl)
+            astichi_hole(field_defaults)
+            astichi_hole(match_args_decl)
+            astichi_hole(init_method)
+            astichi_hole(repr_method)
+            astichi_hole(eq_method)
+            astichi_hole(order_methods)
+            astichi_hole(hash_method)
+            astichi_hole(frozen_methods)
+    ]$
+
+    resource EmptyStatement = template `pass`
+
+    contribution ClassDefinition = ClassProduction {
+        as ClassDef
+        index ClassOrder
+        order ClassOrder
+
+        target module_body {
+            build /Root
+        }
+    }
+
+    matcher ClassDefinitionContribution(facade: Facades) -> contribution {
+        default -> ClassDefinition
+    }
+
+    # -------------------------------------------------------------------------
+    # Class body metadata.
+    # -------------------------------------------------------------------------
+
+    resource SlotsDecl = template $[
+        __slots__ = astichi_bind_external(slot_names)
+    ]$
+
+    resource MatchArgsDecl = template $[
+        __match_args__ = astichi_bind_external(match_args)
+    ]$
+
+    resource AnnotationEntry = template $[
+        {astichi_bind_external(field_name): astichi_bind_external(annotation)}
+    ]$
+
+    resource FieldInfoEntry = template $[
+        {
+            astichi_bind_external(field_name): _field_info(
+                name=astichi_bind_external(field_name),
+                type=astichi_bind_external(annotation),
+                default=astichi_bind_external(default_value),
+                default_factory=astichi_bind_external(default_factory),
+                init=astichi_bind_external(init),
+                repr=astichi_bind_external(repr),
+                compare=astichi_bind_external(compare),
+                hash=astichi_bind_external(hash),
+                kw_only=astichi_bind_external(kw_only),
+                metadata=astichi_bind_external(metadata),
+                kind=astichi_bind_external(kind),
+            )
+        }
+    ]$ {
+        keep _field_info
+    }
+
+    resource DefaultValueAssignment = template $[
+        field_name__astichi_arg__ = astichi_bind_external(default_value)
+    ]$
+
+    contribution SlotsDeclContribution = SlotsDecl {
+        target slots_decl {
+            build /ClassDef
+        }
+
+        external slot_names = SlotNames
+    }
+
+    contribution EmptySlotsDeclContribution = EmptyStatement {
+        target slots_decl {
+            build /ClassDef
+        }
+    }
+
+    contribution MatchArgsContribution = MatchArgsDecl {
+        target match_args_decl {
+            build /ClassDef
+        }
+
+        external match_args = MatchArgs
+    }
+
+    contribution EmptyMatchArgsContribution = EmptyStatement {
+        target match_args_decl {
+            build /ClassDef
+        }
+    }
+
+    contribution AnnotationContribution = AnnotationEntry {
+        as AnnotationEntry
+        index FieldOrder
+        order FieldOrder
+
+        target annotation_entries {
+            build /ClassDef
+        }
+
+        external field_name = FieldName
+        external annotation = Annotation
+    }
+
+    contribution FieldInfoContribution = FieldInfoEntry {
+        as FieldInfoEntry
+        index FieldOrder
+        order FieldOrder
+
+        target field_info_entries {
+            build /ClassDef
+        }
+
+        external field_name = FieldName
+        external annotation = Annotation
+        external default_value = DefaultValue
+        external default_factory = DefaultFactory
+        external init = Init
+        external repr = Repr
+        external compare = Compare
+        external hash = Hash
+        external kw_only = KwOnly
+        external metadata = Metadata
+        external kind = FieldKind
+    }
+
+    contribution DefaultValueContribution = DefaultValueAssignment {
+        as FieldDefault
+        index FieldOrder
+        order FieldOrder
+
+        target field_defaults {
+            build /ClassDef
+        }
+
+        ident field_name = FieldName
+        external default_value = DefaultValue
+    }
+
+    contribution EmptyDefaultValueContribution = EmptyStatement {
+        as EmptyFieldDefault
+        index FieldOrder
+        order FieldOrder
+
+        target field_defaults {
+            build /ClassDef
+        }
+    }
+
+    matcher SlotsContribution(facade: Facades) -> contribution {
+        default -> EmptySlotsDeclContribution
+        rule slots when DecoratorSlots == True -> SlotsDeclContribution
+    }
+
+    matcher MatchArgsContributions(facade: Facades) -> contribution {
+        default -> EmptyMatchArgsContribution
+        rule match_args when DecoratorMatchArgs == True -> MatchArgsContribution
+    }
+
+    matcher AnnotationContributions(field: Fields, facade: Facades) -> contribution {
+        default -> AnnotationContribution
+    }
+
+    matcher FieldInfoContributions(field: Fields, facade: Facades) -> contribution {
+        default -> FieldInfoContribution
+    }
+
+    matcher DefaultValueContributions(field: Fields, facade: Facades) -> contribution {
+        default -> EmptyDefaultValueContribution
+        rule defaulted when HasDefault == True
+                       -> DefaultValueContribution
+    }
+
+    # -------------------------------------------------------------------------
+    # __init__
+    # -------------------------------------------------------------------------
+
+    resource InitMethodTemplate = template $[
+        def __init__(self, params__astichi_param_hole__):
+            astichi_hole(default_factory_guards)
+            astichi_hole(init_assignments)
+            astichi_hole(post_init_call)
+    ]$
+
+    resource RequiredParam = template $[
+        def astichi_params(field_name__astichi_arg__: astichi_bind_external(annotation)):
+            pass
+    ]$
+
+    resource KwOnlyFence = template $[
+        def astichi_params():
+            pass
+    ]$
+
+    resource DefaultParam = template $[
+        def astichi_params(
+            field_name__astichi_arg__: astichi_bind_external(annotation) = astichi_bind_external(default_value)
+        ):
+            pass
+    ]$
+
+    resource DefaultFactoryParam = template $[
+        def astichi_params(
+            field_name__astichi_arg__: astichi_bind_external(annotation) = _HAS_DEFAULT_FACTORY
+        ):
+            pass
+    ]$
+
+    resource PlainInitAssign = template $[
+        setattr(
+            astichi_pass(self, outer_bind=True),
+            astichi_bind_external(field_name_text),
+            astichi_pass(field_name__astichi_arg__, outer_bind=True),
+        )
+    ]$
+
+    resource FrozenInitAssign = template $[
+        object.__setattr__(
+            astichi_pass(self, outer_bind=True),
+            astichi_bind_external(field_name_text),
+            astichi_pass(field_name__astichi_arg__, outer_bind=True),
+        )
+    ]$
+
+    resource DefaultFactoryGuard = template $[
+        if field_name__astichi_arg__ is _HAS_DEFAULT_FACTORY:
+            field_name__astichi_arg__ = astichi_bind_external(default_factory)()
+    ]$
+
+    resource PostInitCall = template $[
+        self.__post_init__(astichi_hole(post_init_args))
+    ]$
+
+    resource PostInitArg = template $[
+        astichi_funcargs(field_name__astichi_arg__)
+    ]$
+
+    contribution InitMethodContribution = InitMethodProduction {
+        as InitMethod
+
+        target init_method {
+            build /ClassDef
+        }
+    }
+
+    contribution RequiredParamContribution = RequiredParam {
+        as InitParam
+        index FieldOrder
+        order FieldOrder
+
+        target params {
+            build /InitMethod
+        }
+
+        ident field_name = FieldName
+        external annotation = Annotation
+    }
+
+    contribution KwOnlyFenceContribution = KwOnlyFence {
+        as InitParam
+        index KwOnlyFenceOrder
+        order KwOnlyFenceOrder
+
+        target params {
+            build /InitMethod
+        }
+    }
+
+    contribution DefaultParamContribution = DefaultParam {
+        as InitParam
+        index FieldOrder
+        order FieldOrder
+
+        target params {
+            build /InitMethod
+        }
+
+        ident field_name = FieldName
+        external annotation = Annotation
+        external default_value = DefaultValue
+    }
+
+    contribution DefaultFactoryParamContribution = DefaultFactoryParam {
+        as InitParam
+        index FieldOrder
+        order FieldOrder
+
+        target params {
+            build /InitMethod
+        }
+
+        ident field_name = FieldName
+        external annotation = Annotation
+    }
+
+    contribution PlainInitAssignContribution = PlainInitAssign {
+        as InitAssign
+        index FieldOrder
+        order FieldOrder
+
+        target init_assignments {
+            build /InitMethod
+        }
+
+        ident field_name = FieldName
+        external field_name_text = FieldName
+    }
+
+    contribution FrozenInitAssignContribution = FrozenInitAssign {
+        as InitAssign
+        index FieldOrder
+        order FieldOrder
+
+        target init_assignments {
+            build /InitMethod
+        }
+
+        external field_name_text = FieldName
+        ident field_name = FieldName
+    }
+
+    contribution DefaultFactoryGuardContribution = DefaultFactoryGuard {
+        as DefaultFactoryGuard
+        index FieldOrder
+        order FieldOrder
+
+        target default_factory_guards {
+            build /InitMethod
+        }
+
+        ident field_name = FieldName
+        external default_factory = DefaultFactory
+    }
+
+    contribution EmptyDefaultFactoryGuardContribution = EmptyStatement {
+        as EmptyDefaultFactoryGuard
+        index FieldOrder
+        order FieldOrder
+
+        target default_factory_guards {
+            build /InitMethod
+        }
+    }
+
+    contribution PostInitCallContribution = PostInitCall {
+        as PostInitCall
+
+        target post_init_call {
+            build /InitMethod
+        }
+    }
+
+    contribution EmptyPostInitContribution = EmptyStatement {
+        target post_init_call {
+            build /InitMethod
+        }
+    }
+
+    contribution PostInitArgContribution = PostInitArg {
+        as PostInitArg
+        index FieldOrder
+        order FieldOrder
+
+        target post_init_args {
+            build /InitMethod/PostInitCall
+        }
+
+        ident field_name = FieldName
+    }
+
+    matcher InitMethodContributions(facade: Facades) -> contribution {
+        rule enabled when DecoratorInit == True -> InitMethodContribution
+    }
+
+    matcher KwOnlyFenceContributions(facade: Facades) -> contribution {
+        rule enabled when DecoratorInit == True
+                     and HasKwOnlyInitFields == True
+                     -> KwOnlyFenceContribution
+    }
+
+    matcher InitParamContribution(field: Fields, facade: Facades) -> contribution {
+        rule required when DecoratorInit == True
+                      and FieldKind == "field"
+                      and Init == True
+                      and HasDefault == False
+                      and HasDefaultFactory == False
+                      -> RequiredParamContribution
+        rule default_value when DecoratorInit == True
+                           and FieldKind == "field"
+                           and Init == True
+                           and HasDefault == True
+                           and HasDefaultFactory == False
+                           -> DefaultParamContribution
+        rule default_factory when DecoratorInit == True
+                             and FieldKind == "field"
+                             and Init == True
+                             and HasDefault == False
+                             and HasDefaultFactory == True
+                             -> DefaultFactoryParamContribution
+        rule initvar_required when DecoratorInit == True
+                              and FieldKind == "initvar"
+                              and Init == True
+                              and HasDefault == False
+                              and HasDefaultFactory == False
+                              -> RequiredParamContribution
+        rule initvar_default when DecoratorInit == True
+                             and FieldKind == "initvar"
+                             and Init == True
+                             and HasDefault == True
+                             and HasDefaultFactory == False
+                             -> DefaultParamContribution
+    }
+
+    matcher DefaultFactoryGuardContributions(field: Fields, facade: Facades) -> contribution {
+        default -> EmptyDefaultFactoryGuardContribution
+        rule default_factory when DecoratorInit == True
+                             and FieldKind == "field"
+                             and Init == True
+                             and HasDefaultFactory == True
+                             -> DefaultFactoryGuardContribution
+    }
+
+    matcher InitAssignContribution(field: Fields, facade: Facades) -> contribution {
+        rule mutable when DecoratorInit == True
+                    and FieldKind == "field"
+                    and Init == True
+                    and DecoratorFrozen == False
+                    -> PlainInitAssignContribution
+        rule frozen when DecoratorInit == True
+                   and FieldKind == "field"
+                   and Init == True
+                   and DecoratorFrozen == True
+                   -> FrozenInitAssignContribution
+    }
+
+    matcher PostInitContribution(facade: Facades) -> contribution {
+        default -> EmptyPostInitContribution
+        rule post_init when DecoratorInit == True
+                       and HasPostInit == True
+                       -> PostInitCallContribution
+    }
+
+    matcher PostInitArgContributions(field: Fields, facade: Facades) -> contribution {
+        rule initvar when DecoratorInit == True
+                     and HasPostInit == True
+                     and FieldKind == "initvar"
+                     -> PostInitArgContribution
+    }
+
+    # -------------------------------------------------------------------------
+    # __repr__, __eq__, ordering, and __hash__.
+    # -------------------------------------------------------------------------
+
+    resource ReprMethodTemplate = template $[
+        def __repr__(self):
+            return astichi_bind_external(class_name) + "(" + ", ".join((*astichi_hole(repr_parts),)) + ")"
+    ]$
+
+    resource ReprPart = template $[
+        astichi_bind_external(field_name_text) + "=" + repr(getattr(self, astichi_bind_external(field_name_text)))
+    ]$
+
+    resource EqMethodTemplate = template $[
+        def __eq__(self, other):
+            if other.__class__ is self.__class__:
+                return (*astichi_hole(self_compare_values),) == (*astichi_hole(other_compare_values),)
+            return NotImplemented
+    ]$
+
+    resource SelfCompareValue = template $[
+        getattr(self, astichi_bind_external(field_name_text))
+    ]$
+
+    resource OtherCompareValue = template $[
+        getattr(other, astichi_bind_external(field_name_text))
+    ]$
+
+    resource LtMethodTemplate = template $[
+        def __lt__(self, other):
+            if other.__class__ is self.__class__:
+                return (*astichi_hole(self_order_values),) < (*astichi_hole(other_order_values),)
+            return NotImplemented
+    ]$
+
+    resource LeMethodTemplate = template $[
+        def __le__(self, other):
+            if other.__class__ is self.__class__:
+                return (*astichi_hole(self_order_values),) <= (*astichi_hole(other_order_values),)
+            return NotImplemented
+    ]$
+
+    resource GtMethodTemplate = template $[
+        def __gt__(self, other):
+            if other.__class__ is self.__class__:
+                return (*astichi_hole(self_order_values),) > (*astichi_hole(other_order_values),)
+            return NotImplemented
+    ]$
+
+    resource GeMethodTemplate = template $[
+        def __ge__(self, other):
+            if other.__class__ is self.__class__:
+                return (*astichi_hole(self_order_values),) >= (*astichi_hole(other_order_values),)
+            return NotImplemented
+    ]$
+
+    resource HashMethodTemplate = template $[
+        def __hash__(self):
+            return hash((*astichi_hole(hash_values),))
+    ]$
+
+    resource HashNone = template $[
+        __hash__ = None
+    ]$
+
+    contribution ReprMethodContribution = ReprMethodProduction {
+        as ReprMethod
+
+        target repr_method {
+            build /ClassDef
+        }
+
+    }
+
+    contribution EmptyReprMethodContribution = EmptyStatement {
+        target repr_method {
+            build /ClassDef
+        }
+    }
+
+    contribution ReprPartContribution = ReprPart {
+        as ReprPart
+        index FieldOrder
+        order FieldOrder
+
+        target repr_parts {
+            build /ReprMethod
+        }
+
+        external field_name_text = FieldName
+    }
+
+    contribution EqMethodContribution = EqMethodProduction {
+        as EqMethod
+
+        target eq_method {
+            build /ClassDef
+        }
+    }
+
+    contribution EmptyEqMethodContribution = EmptyStatement {
+        target eq_method {
+            build /ClassDef
+        }
+    }
+
+    contribution SelfCompareContribution = SelfCompareValue {
+        as SelfCompareValue
+        index FieldOrder
+        order FieldOrder
+
+        target self_compare_values {
+            build /EqMethod
+        }
+
+        external field_name_text = FieldName
+    }
+
+    contribution OtherCompareContribution = OtherCompareValue {
+        as OtherCompareValue
+        index FieldOrder
+        order FieldOrder
+
+        target other_compare_values {
+            build /EqMethod
+        }
+
+        external field_name_text = FieldName
+    }
+
+    contribution LtMethodContribution = LtMethodProduction {
+        as LtMethod
+
+        target order_methods {
+            build /ClassDef
+        }
+    }
+
+    contribution EmptyLtMethodContribution = EmptyStatement {
+        target order_methods {
+            build /ClassDef
+        }
+    }
+
+    contribution LeMethodContribution = LeMethodProduction {
+        as LeMethod
+
+        target order_methods {
+            build /ClassDef
+        }
+    }
+
+    contribution EmptyLeMethodContribution = EmptyStatement {
+        target order_methods {
+            build /ClassDef
+        }
+    }
+
+    contribution GtMethodContribution = GtMethodProduction {
+        as GtMethod
+
+        target order_methods {
+            build /ClassDef
+        }
+    }
+
+    contribution EmptyGtMethodContribution = EmptyStatement {
+        target order_methods {
+            build /ClassDef
+        }
+    }
+
+    contribution GeMethodContribution = GeMethodProduction {
+        as GeMethod
+
+        target order_methods {
+            build /ClassDef
+        }
+    }
+
+    contribution EmptyGeMethodContribution = EmptyStatement {
+        target order_methods {
+            build /ClassDef
+        }
+    }
+
+    contribution SelfLtOrderContribution = SelfCompareValue {
+        as SelfOrderValue
+        index FieldOrder
+        order FieldOrder
+
+        target self_order_values {
+            build /LtMethod
+        }
+
+        external field_name_text = FieldName
+    }
+
+    contribution OtherLtOrderContribution = OtherCompareValue {
+        as OtherOrderValue
+        index FieldOrder
+        order FieldOrder
+
+        target other_order_values {
+            build /LtMethod
+        }
+
+        external field_name_text = FieldName
+    }
+
+    contribution SelfLeOrderContribution = SelfCompareValue {
+        as SelfOrderValue
+        index FieldOrder
+        order FieldOrder
+
+        target self_order_values {
+            build /LeMethod
+        }
+
+        external field_name_text = FieldName
+    }
+
+    contribution OtherLeOrderContribution = OtherCompareValue {
+        as OtherOrderValue
+        index FieldOrder
+        order FieldOrder
+
+        target other_order_values {
+            build /LeMethod
+        }
+
+        external field_name_text = FieldName
+    }
+
+    contribution SelfGtOrderContribution = SelfCompareValue {
+        as SelfOrderValue
+        index FieldOrder
+        order FieldOrder
+
+        target self_order_values {
+            build /GtMethod
+        }
+
+        external field_name_text = FieldName
+    }
+
+    contribution OtherGtOrderContribution = OtherCompareValue {
+        as OtherOrderValue
+        index FieldOrder
+        order FieldOrder
+
+        target other_order_values {
+            build /GtMethod
+        }
+
+        external field_name_text = FieldName
+    }
+
+    contribution SelfGeOrderContribution = SelfCompareValue {
+        as SelfOrderValue
+        index FieldOrder
+        order FieldOrder
+
+        target self_order_values {
+            build /GeMethod
+        }
+
+        external field_name_text = FieldName
+    }
+
+    contribution OtherGeOrderContribution = OtherCompareValue {
+        as OtherOrderValue
+        index FieldOrder
+        order FieldOrder
+
+        target other_order_values {
+            build /GeMethod
+        }
+
+        external field_name_text = FieldName
+    }
+
+    contribution HashMethodContribution = HashMethodProduction {
+        as HashMethod
+
+        target hash_method {
+            build /ClassDef
+        }
+    }
+
+    contribution EmptyHashMethodContribution = EmptyStatement {
+        as HashMethod
+
+        target hash_method {
+            build /ClassDef
+        }
+    }
+
+    contribution HashNoneContribution = HashNone {
+        # Same builder instance name as HashMethodContribution because both are
+        # alternatives for the class-level hash_method hole.
+        as HashMethod
+
+        target hash_method {
+            build /ClassDef
+        }
+    }
+
+    contribution HashValueContribution = SelfCompareValue {
+        as HashValue
+        index FieldOrder
+        order FieldOrder
+
+        target hash_values {
+            build /HashMethod
+        }
+
+        external field_name_text = FieldName
+    }
+
+    matcher ReprMethodContributions(facade: Facades) -> contribution {
+        default -> EmptyReprMethodContribution
+        rule enabled when DecoratorRepr == True -> ReprMethodContribution
+    }
+
+    matcher ReprPartContributions(field: Fields, facade: Facades) -> contribution {
+        rule repr_field when DecoratorRepr == True
+                         and FieldKind == "field"
+                         and Repr == True
+                         -> ReprPartContribution
+    }
+
+    matcher EqMethodContributions(facade: Facades) -> contribution {
+        default -> EmptyEqMethodContribution
+        rule enabled when DecoratorEq == True -> EqMethodContribution
+    }
+
+    matcher SelfCompareValueContributions(field: Fields, facade: Facades) -> contribution {
+        rule self_value when DecoratorEq == True
+                         and FieldKind == "field"
+                         and Compare == True
+                         -> SelfCompareContribution
+    }
+
+    matcher OtherCompareValueContributions(field: Fields, facade: Facades) -> contribution {
+        rule other_value when DecoratorEq == True
+                          and FieldKind == "field"
+                          and Compare == True
+                          -> OtherCompareContribution
+    }
+
+    matcher LtMethodContributions(facade: Facades) -> contribution {
+        default -> EmptyLtMethodContribution
+        rule lt when DecoratorOrder == True -> LtMethodContribution
+    }
+
+    matcher LeMethodContributions(facade: Facades) -> contribution {
+        default -> EmptyLeMethodContribution
+        rule le when DecoratorOrder == True -> LeMethodContribution
+    }
+
+    matcher GtMethodContributions(facade: Facades) -> contribution {
+        default -> EmptyGtMethodContribution
+        rule gt when DecoratorOrder == True -> GtMethodContribution
+    }
+
+    matcher GeMethodContributions(facade: Facades) -> contribution {
+        default -> EmptyGeMethodContribution
+        rule ge when DecoratorOrder == True -> GeMethodContribution
+    }
+
+    matcher SelfLtOrderValueContributions(field: Fields, facade: Facades) -> contribution {
+        rule value when DecoratorOrder == True
+                   and FieldKind == "field"
+                   and Compare == True
+                   -> SelfLtOrderContribution
+    }
+
+    matcher OtherLtOrderValueContributions(field: Fields, facade: Facades) -> contribution {
+        rule value when DecoratorOrder == True
+                   and FieldKind == "field"
+                   and Compare == True
+                   -> OtherLtOrderContribution
+    }
+
+    matcher SelfLeOrderValueContributions(field: Fields, facade: Facades) -> contribution {
+        rule value when DecoratorOrder == True
+                   and FieldKind == "field"
+                   and Compare == True
+                   -> SelfLeOrderContribution
+    }
+
+    matcher OtherLeOrderValueContributions(field: Fields, facade: Facades) -> contribution {
+        rule value when DecoratorOrder == True
+                   and FieldKind == "field"
+                   and Compare == True
+                   -> OtherLeOrderContribution
+    }
+
+    matcher SelfGtOrderValueContributions(field: Fields, facade: Facades) -> contribution {
+        rule value when DecoratorOrder == True
+                   and FieldKind == "field"
+                   and Compare == True
+                   -> SelfGtOrderContribution
+    }
+
+    matcher OtherGtOrderValueContributions(field: Fields, facade: Facades) -> contribution {
+        rule value when DecoratorOrder == True
+                   and FieldKind == "field"
+                   and Compare == True
+                   -> OtherGtOrderContribution
+    }
+
+    matcher SelfGeOrderValueContributions(field: Fields, facade: Facades) -> contribution {
+        rule value when DecoratorOrder == True
+                   and FieldKind == "field"
+                   and Compare == True
+                   -> SelfGeOrderContribution
+    }
+
+    matcher OtherGeOrderValueContributions(field: Fields, facade: Facades) -> contribution {
+        rule value when DecoratorOrder == True
+                   and FieldKind == "field"
+                   and Compare == True
+                   -> OtherGeOrderContribution
+    }
+
+    matcher HashMethodContributions(facade: Facades) -> contribution {
+        default -> EmptyHashMethodContribution
+        rule unsafe when DecoratorUnsafeHash == True -> HashMethodContribution
+        rule frozen_eq when DecoratorFrozen == True
+                       and DecoratorEq == True
+                       and DecoratorUnsafeHash == False
+                       -> HashMethodContribution
+        rule unhashable_eq when DecoratorFrozen == False
+                           and DecoratorEq == True
+                           and DecoratorUnsafeHash == False
+                           -> HashNoneContribution
+    }
+
+    matcher HashUnsafeValueContributions(field: Fields, facade: Facades) -> contribution {
+        rule explicit_hash when DecoratorUnsafeHash == True
+                           and FieldKind == "field"
+                           and Hash == True
+                           -> HashValueContribution
+        rule compare_hash when DecoratorUnsafeHash == True
+                          and FieldKind == "field"
+                          and Hash == None
+                          and Compare == True
+                          -> HashValueContribution
+    }
+
+    matcher HashFrozenEqValueContributions(field: Fields, facade: Facades) -> contribution {
+        rule explicit_hash when DecoratorUnsafeHash == False
+                           and DecoratorFrozen == True
+                           and DecoratorEq == True
+                           and FieldKind == "field"
+                           and Hash == True
+                           -> HashValueContribution
+        rule compare_hash when DecoratorUnsafeHash == False
+                          and DecoratorFrozen == True
+                          and DecoratorEq == True
+                          and FieldKind == "field"
+                          and Hash == None
+                          and Compare == True
+                          -> HashValueContribution
+    }
+
+    # -------------------------------------------------------------------------
+    # Frozen support.
+    # -------------------------------------------------------------------------
+
+    resource FrozenSetattr = template $[
+        def __setattr__(self, name, value):
+            raise FrozenInstanceError(f"cannot assign to field {name!r}")
+    ]$
+
+    resource FrozenDelattr = template $[
+        def __delattr__(self, name):
+            raise FrozenInstanceError(f"cannot delete field {name!r}")
+    ]$
+
+    contribution FrozenSetattrContribution = FrozenSetattr {
+        target frozen_methods {
+            build /ClassDef
+        }
+    }
+
+    contribution EmptyFrozenSetattrContribution = EmptyStatement {
+        target frozen_methods {
+            build /ClassDef
+        }
+    }
+
+    contribution FrozenDelattrContribution = FrozenDelattr {
+        target frozen_methods {
+            build /ClassDef
+        }
+    }
+
+    contribution EmptyFrozenDelattrContribution = EmptyStatement {
+        target frozen_methods {
+            build /ClassDef
+        }
+    }
+
+    matcher FrozenSetattrContributions(facade: Facades) -> contribution {
+        default -> EmptyFrozenSetattrContribution
+        rule setattr when DecoratorFrozen == True -> FrozenSetattrContribution
+    }
+
+    matcher FrozenDelattrContributions(facade: Facades) -> contribution {
+        default -> EmptyFrozenDelattrContribution
+        rule delattr when DecoratorFrozen == True -> FrozenDelattrContribution
+    }
+
+    # -------------------------------------------------------------------------
+    # Ordered composable production assembly.
+    # -------------------------------------------------------------------------
+    #
+    # Sugar pressure points this example exposes:
+    #
+    # - The repeated field-owner join wants assembly-source sugar, e.g.
+    #   `from field: Fields by FieldOwner == ClassId`.
+    # - The class and method scopes are composable productions. Facades are only
+    #   data rows that drive repeated production expansion.
+    # - Method path details are local to each method production. For example,
+    #   init parameters target `/InitMethod`, not the module-level class path.
+    # - Binding the same field name as both an identifier and an external string
+    #   is noisy: `external field_name_text = FieldName` plus
+    #   `ident field_name = FieldName`.
+    #
+    # The production graph is the stable expansion shape. The matchers above
+    # are the template/behavior merge points: another concept can override which
+    # contribution or production-backed contribution is selected for the same
+    # facade data.
+
+    production ModuleProduction -> composable {
+        root Root = ModuleRoot
+        apply classes
+            from facade: Facades
+            using ClassDefinitionContribution
+    }
+
+    production ClassProduction(facade: Facades) -> composable {
+        root ClassDef = ClassShell {
+            ident class_name = ClassName
+            external module_name = ModuleName
+            external dataclass_params = DataclassParams
+        }
+
+        apply slots using SlotsContribution
+        apply match_args using MatchArgsContributions
+
+        apply annotations
+            from field: Fields
+            where FieldOwner == ClassId
+            using AnnotationContributions
+
+        apply field_info
+            from field: Fields
+            where FieldOwner == ClassId
+            using FieldInfoContributions
+
+        apply field_defaults
+            from field: Fields
+            where FieldOwner == ClassId
+            using DefaultValueContributions
+
+        apply init_method using InitMethodContributions
+        apply repr_method using ReprMethodContributions
+        apply eq_method using EqMethodContributions
+
+        apply lt_method using LtMethodContributions
+        apply le_method using LeMethodContributions
+        apply gt_method using GtMethodContributions
+        apply ge_method using GeMethodContributions
+
+        apply hash_method using HashMethodContributions
+        apply frozen_setattr using FrozenSetattrContributions
+        apply frozen_delattr using FrozenDelattrContributions
+    }
+
+    production InitMethodProduction(facade: Facades) -> composable {
+        root InitMethod = InitMethodTemplate
+
+        apply kw_only_fence using KwOnlyFenceContributions
+
+        apply params
+            from field: Fields
+            where FieldOwner == ClassId
+            using InitParamContribution
+
+        apply default_factory_guards
+            from field: Fields
+            where FieldOwner == ClassId
+            using DefaultFactoryGuardContributions
+
+        apply assignments
+            from field: Fields
+            where FieldOwner == ClassId
+            using InitAssignContribution
+
+        apply post_init_call using PostInitContribution
+
+        apply post_init_args
+            from field: Fields
+            where FieldOwner == ClassId
+            using PostInitArgContributions
+    }
+
+    production ReprMethodProduction(facade: Facades) -> composable {
+        root ReprMethod = ReprMethodTemplate {
+            external class_name = ClassName
+        }
+
+        apply parts
+            from field: Fields
+            where FieldOwner == ClassId
+            using ReprPartContributions
+    }
+
+    production EqMethodProduction(facade: Facades) -> composable {
+        root EqMethod = EqMethodTemplate
+
+        apply self_values
+            from field: Fields
+            where FieldOwner == ClassId
+            using SelfCompareValueContributions
+
+        apply other_values
+            from field: Fields
+            where FieldOwner == ClassId
+            using OtherCompareValueContributions
+    }
+
+    production LtMethodProduction(facade: Facades) -> composable {
+        root LtMethod = LtMethodTemplate
+
+        apply self_values
+            from field: Fields
+            where FieldOwner == ClassId
+            using SelfLtOrderValueContributions
+
+        apply other_values
+            from field: Fields
+            where FieldOwner == ClassId
+            using OtherLtOrderValueContributions
+    }
+
+    production LeMethodProduction(facade: Facades) -> composable {
+        root LeMethod = LeMethodTemplate
+
+        apply self_values
+            from field: Fields
+            where FieldOwner == ClassId
+            using SelfLeOrderValueContributions
+
+        apply other_values
+            from field: Fields
+            where FieldOwner == ClassId
+            using OtherLeOrderValueContributions
+    }
+
+    production GtMethodProduction(facade: Facades) -> composable {
+        root GtMethod = GtMethodTemplate
+
+        apply self_values
+            from field: Fields
+            where FieldOwner == ClassId
+            using SelfGtOrderValueContributions
+
+        apply other_values
+            from field: Fields
+            where FieldOwner == ClassId
+            using OtherGtOrderValueContributions
+    }
+
+    production GeMethodProduction(facade: Facades) -> composable {
+        root GeMethod = GeMethodTemplate
+
+        apply self_values
+            from field: Fields
+            where FieldOwner == ClassId
+            using SelfGeOrderValueContributions
+
+        apply other_values
+            from field: Fields
+            where FieldOwner == ClassId
+            using OtherGeOrderValueContributions
+    }
+
+    production HashMethodProduction(facade: Facades) -> composable {
+        root HashMethod = HashMethodTemplate
+
+        apply unsafe_values
+            from field: Fields
+            where FieldOwner == ClassId
+            using HashUnsafeValueContributions
+
+        apply frozen_eq_values
+            from field: Fields
+            where FieldOwner == ClassId
+            using HashFrozenEqValueContributions
+    }
+
+    assembly DataclassModule = ModuleProduction
+}

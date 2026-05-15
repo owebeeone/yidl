@@ -23,7 +23,10 @@ classifiers = [
 yidl-compile = "yidl.cli:main"
 
 [project.optional-dependencies]
-dev = ["pytest>=7.0"]
+dev = ["black==26.3.1", "pytest>=7.0"]
+
+[tool.uv]
+exclude-newer = "1 week"
 
 [tool.hatch.build]
 sources = ["src"]

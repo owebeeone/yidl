@@ -10,6 +10,7 @@ from typing import cast
 
 import astichi
 from astichi.assembler.scope import AssemblyScope
+from astichi.assembler.scope import BindingCandidate
 from astichi.assembler.scope import as_composable
 from astichi.assembler.scope import as_external_value
 from astichi.assembler.scope import as_identifier
@@ -398,15 +399,21 @@ def _apply_contribution(
     concrete_build_paths: list[tuple[str, ...]] = []
     for build_match in build_selectors:
         for owner_match in owner_selectors:
-            candidate = require_one(
-                find_candidates(
-                    scope.inventory,
-                    resource,
-                    name=contribution.target.name,
-                    build_match=build_match,
-                    owner_match=owner_match,
+            try:
+                candidate = require_one(
+                    find_candidates(
+                        scope.inventory,
+                        resource,
+                        name=contribution.target.name,
+                        build_match=build_match,
+                        owner_match=owner_match,
+                    )
                 )
-            )
+            except ValueError as exc:
+                raise ValueError(
+                    f"contribution {contribution.name!r}: failed to target "
+                    f"{contribution.target.name!r}"
+                ) from exc
             scope.apply(candidate)
             if build_match is not None and not _selector_is_dynamic(build_match):
                 concrete_build_paths.append(build_match + (resource.instance_name,))
@@ -434,18 +441,38 @@ def _apply_bindings(
             resource = as_identifier(evaluate_identifier(binding.value, stack))
         else:
             resource = as_external_value(evaluate_external(binding.value, stack))
-        candidate = require_one(
-            find_candidates(
-                scope.inventory,
-                resource,
-                name=binding.name,
-                build_match=build_match,
-            )
-        )
         try:
+            candidate = _binding_candidate(
+                find_candidates(
+                    scope.inventory,
+                    resource,
+                    name=binding.name,
+                    build_match=build_match,
+                ),
+            )
             scope.apply(candidate)
         except ValueError as exc:
             raise ValueError(f"{context}: failed to bind {binding.name!r}") from exc
+
+
+def _binding_candidate(
+    candidates: tuple[BindingCandidate, ...],
+) -> BindingCandidate:
+    """Return one binding candidate, accepting repeated same-name demand sites."""
+    if len(candidates) <= 1:
+        return require_one(candidates)
+    first = candidates[0]
+    first_record = first.demand_record
+    for candidate in candidates[1:]:
+        record = candidate.demand_record
+        if (
+            record.build_path != first_record.build_path
+            or record.code_owner != first_record.code_owner
+            or record.name != first_record.name
+            or record.kind != first_record.kind
+        ):
+            return require_one(candidates)
+    return first
 
 
 def _target_selectors(

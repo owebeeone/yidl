@@ -200,7 +200,9 @@ match_ref: "match" "." "resource" "(" ")" -> match_resource
 lookup_expr: "lookup" "(" qname "," "key" "=" value_expr "," "value" "=" property_ref default_arg? ")"
 default_arg: "," "default" "=" value_expr
 port_address_expr: qname "." "of" "(" value_expr ")"
-tuple_expr: "(" value_expr ("," value_expr)+ ")"
+tuple_expr: "(" ")" -> tuple_empty
+          | "(" value_expr "," ")" -> tuple_single
+          | "(" value_expr "," value_expr ("," value_expr)* ","? ")" -> tuple_multi
 
 literal_expr: STRING
             | INT

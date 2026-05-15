@@ -131,6 +131,13 @@ _TYPE_NAMES: dict[str, type[object]] = {
     "bool": bool,
     "float": float,
 }
+_VALUE_CONSTANTS: dict[str, object] = {
+    **_TYPE_NAMES,
+    "dict": dict,
+    "list": list,
+    "set": set,
+    "tuple": tuple,
+}
 
 
 def parse_yidl_source(path: str, source: str) -> Tree:
@@ -303,7 +310,6 @@ class _ConceptCompiler:
                 self._local_operations[operation.name] = operation
             elif member.data in {
                 "use_decl",
-                "record_decl",
                 "union_decl",
                 "computed_collection_decl",
                 "port_decl",
@@ -340,6 +346,10 @@ class _ConceptCompiler:
         if data == "family_decl":
             self._compile_family(builder, member)
             return
+        if data == "record_decl":
+            record = self._compile_record(builder, member)
+            self._local_records[record.name] = record
+            return
         if data == "collection_decl":
             collection = self._compile_collection(builder, member)
             self._local_collections[collection.name] = collection
@@ -360,7 +370,6 @@ class _ConceptCompiler:
             return
         if data in {
             "use_decl",
-            "record_decl",
             "union_decl",
             "computed_collection_decl",
             "port_decl",
@@ -562,6 +571,15 @@ class _ConceptCompiler:
                 ),
             )
             self._local_records[variant.name] = variant
+
+    def _compile_record(self, builder: Any, tree: Tree) -> RecordHandle:
+        name = _token_text(tree.children[0])
+        try:
+            return getattr(builder.records, name)(
+                *(self._resolve_property(_qname(child)) for child in tree.children[1:])
+            )
+        except ValueError as exc:
+            raise YidlSymbolError(str(exc)) from exc
 
     def _compile_collection(self, builder: Any, tree: Tree) -> CollectionHandle:
         name = _token_text(tree.children[0])
@@ -1142,7 +1160,12 @@ class _ConceptCompiler:
                     "in assembly values"
                 )
             return ValueRef(name)
-        if node.data in {"contribution_tuple_expr", "tuple_expr"}:
+        if node.data in {
+            "contribution_tuple_expr",
+            "tuple_empty",
+            "tuple_single",
+            "tuple_multi",
+        }:
             return TupleValueRef(
                 items=tuple(self._assembly_value(child) for child in node.children)
             )
@@ -1810,6 +1833,10 @@ class _ConceptCompiler:
                 name = _qname(node)
                 if name == "REQUIRED":
                     return REQUIRED
+                if name in _VALUE_CONSTANTS:
+                    return _VALUE_CONSTANTS[name]
+            if node.data in {"tuple_empty", "tuple_single", "tuple_multi"}:
+                return tuple(self._value(child) for child in node.children)
         raise YidlSymbolError("unsupported value expression in this parser slice")
 
 
