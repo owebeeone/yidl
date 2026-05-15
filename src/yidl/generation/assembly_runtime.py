@@ -53,6 +53,10 @@ class AssemblyPathError(ValueError):
     """Raised when an assembly path selector cannot be rendered or parsed."""
 
 
+class AssemblyDiagnosticError(ValueError):
+    """Raised when a matcher-selected diagnostic contribution fires."""
+
+
 @dataclass(frozen=True, slots=True)
 class DataStack:
     """Stack of record values visible to one assembly scope."""
@@ -360,6 +364,9 @@ def _apply_contribution(
     context_records: Mapping[str, object],
     unroll: bool | str,
 ) -> None:
+    if contribution.source_kind == "diagnostic":
+        raise AssemblyDiagnosticError(_diagnostic_message(contribution, stack))
+
     if contribution.source_kind == "resource":
         composable = concept.resources[contribution.source_name].to_generator()
     else:
@@ -426,6 +433,25 @@ def _apply_contribution(
             build_match=build_path,
             context=f"contribution {contribution.name!r}",
         )
+
+
+def _diagnostic_message(contribution: ContributionSpec, stack: DataStack) -> str:
+    values: dict[str, object] = {}
+    for binding in contribution.bindings:
+        if binding.kind == "ident":
+            values[binding.name] = evaluate_identifier(binding.value, stack)
+        else:
+            values[binding.name] = evaluate_external(binding.value, stack)
+    message = contribution.diagnostic_message
+    if message is None:
+        message = f"diagnostic contribution {contribution.name!r} failed"
+    try:
+        return message.format_map(values)
+    except KeyError as exc:
+        raise ValueError(
+            f"diagnostic contribution {contribution.name!r} references "
+            f"undefined message value {exc.args[0]!r}"
+        ) from exc
 
 
 def _apply_bindings(

@@ -89,12 +89,13 @@ class BindingSpec:
 class ContributionSpec:
     name: str
     source_name: str
-    source_kind: Literal["resource", "production"]
+    source_kind: Literal["resource", "production", "diagnostic"]
     build_name: str
     index: AssemblyValueRef | None
     order: AssemblyValueRef | None
-    target: TargetSpec
+    target: TargetSpec | None
     bindings: tuple[BindingSpec, ...]
+    diagnostic_message: str | None = None
 
 
 @dataclass(frozen=True, slots=True)

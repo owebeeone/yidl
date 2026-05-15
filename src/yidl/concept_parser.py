@@ -811,10 +811,14 @@ class _ConceptCompiler:
         if name in self._local_contributions:
             raise YidlSymbolError(f"contribution {name!r} is already defined")
 
-        source_name, source_kind = self._contribution_source(
-            tree.children[1],
-            context=f"contribution {name!r} source",
-        )
+        source_name: str | None = None
+        source_kind: str | None = None
+        source_tree = _first_child(tree, "contribution_source")
+        if source_tree is not None:
+            source_name, source_kind = self._contribution_source(
+                source_tree.children[0],
+                context=f"contribution {name!r} source",
+            )
         build_name = name
         index: AssemblyValueRef | None = None
         order: AssemblyValueRef | None = None
@@ -822,6 +826,7 @@ class _ConceptCompiler:
         bindings: list[BindingSpec] = []
         seen_bindings: set[tuple[str, str]] = set()
         seen_as = False
+        diagnostic_message: str | None = None
 
         for member in _wrapped_children(tree, "contribution_member"):
             if member.data == "contribution_as":
@@ -859,22 +864,44 @@ class _ConceptCompiler:
                 seen_bindings.add(binding_key)
                 bindings.append(binding)
                 continue
+            if member.data == "contribution_diagnostic":
+                if diagnostic_message is not None:
+                    raise YidlSymbolError(f"contribution {name!r} repeats diagnostic")
+                diagnostic_message = _string_value(member.children[0])
+                continue
             raise YidlSymbolError(
                 f"contribution {name!r} has invalid member {member.data!r}"
             )
 
-        if target is None:
-            raise YidlSymbolError(f"contribution {name!r} must declare exactly one target")
+        if diagnostic_message is not None:
+            if source_name is not None:
+                raise YidlSymbolError(
+                    f"diagnostic contribution {name!r} must not declare a source"
+                )
+            if target is not None:
+                raise YidlSymbolError(
+                    f"diagnostic contribution {name!r} must not declare a target"
+                )
+            source_name = ""
+            source_kind = "diagnostic"
+        else:
+            if source_name is None or source_kind is None:
+                raise YidlSymbolError(f"contribution {name!r} must declare a source")
+            if target is None:
+                raise YidlSymbolError(
+                    f"contribution {name!r} must declare exactly one target"
+                )
 
         return ContributionSpec(
             name=name,
             source_name=source_name,
-            source_kind=source_kind,
+            source_kind=source_kind,  # type: ignore[arg-type]
             build_name=build_name,
             index=index,
             order=order,
             target=target,
             bindings=tuple(bindings),
+            diagnostic_message=diagnostic_message,
         )
 
     def _compile_composable_production(
@@ -1301,10 +1328,11 @@ class _ConceptCompiler:
             self._validate_value_names(contribution.index, names, context=context)
         if contribution.order is not None:
             self._validate_value_names(contribution.order, names, context=context)
-        for target_path in contribution.target.paths:
-            for segment in target_path.path.segments:
-                for index in segment.indexes:
-                    self._validate_value_names(index, names, context=context)
+        if contribution.target is not None:
+            for target_path in contribution.target.paths:
+                for segment in target_path.path.segments:
+                    for index in segment.indexes:
+                        self._validate_value_names(index, names, context=context)
         for binding in contribution.bindings:
             self._validate_value_names(binding.value, names, context=context)
 
@@ -1466,6 +1494,8 @@ class _ConceptCompiler:
         context: str,
     ) -> None:
         concrete_build_paths: list[tuple[str, ...]] = []
+        if contribution.target is None:
+            return
         for target_path in contribution.target.paths:
             parts, dynamic = _static_path_parts(target_path.path)
             if dynamic:

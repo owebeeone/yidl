@@ -164,6 +164,8 @@ def _target_path_expr(target_path: object) -> str:
 
 
 def _target_expr(target: object) -> str:
+    if target is None:
+        return "None"
     return (
         "TargetSpec("
         f"name={target.name!r}, "
@@ -181,17 +183,19 @@ def _binding_expr(binding: object) -> str:
 
 
 def _contribution_expr(contribution: object) -> str:
-    return (
-        "ContributionSpec("
-        f"name={contribution.name!r}, "
-        f"source_name={contribution.source_name!r}, "
-        f"source_kind={contribution.source_kind!r}, "
-        f"build_name={contribution.build_name!r}, "
-        f"index={_value_expr(contribution.index)}, "
-        f"order={_value_expr(contribution.order)}, "
-        f"target={_target_expr(contribution.target)}, "
-        f"bindings={_tuple_expr(_binding_expr(binding) for binding in contribution.bindings)})"
-    )
+    parts = [
+        f"name={contribution.name!r}",
+        f"source_name={contribution.source_name!r}",
+        f"source_kind={contribution.source_kind!r}",
+        f"build_name={contribution.build_name!r}",
+        f"index={_value_expr(contribution.index)}",
+        f"order={_value_expr(contribution.order)}",
+        f"target={_target_expr(contribution.target)}",
+        f"bindings={_tuple_expr(_binding_expr(binding) for binding in contribution.bindings)}",
+    ]
+    if contribution.diagnostic_message is not None:
+        parts.append(f"diagnostic_message={contribution.diagnostic_message!r}")
+    return "ContributionSpec(" + ", ".join(parts) + ")"
 
 
 def _rule_expr(rule: object) -> str:
