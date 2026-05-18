@@ -811,14 +811,13 @@ class _ConceptCompiler:
         if name in self._local_contributions:
             raise YidlSymbolError(f"contribution {name!r} is already defined")
 
-        source_name: str | None = None
-        source_kind: str | None = None
         source_tree = _first_child(tree, "contribution_source")
-        if source_tree is not None:
-            source_name, source_kind = self._contribution_source(
-                source_tree.children[0],
-                context=f"contribution {name!r} source",
-            )
+        if source_tree is None:
+            raise YidlSymbolError(f"contribution {name!r} must declare a source")
+        source_name, source_kind = self._contribution_source(
+            source_tree.children[0],
+            context=f"contribution {name!r} source",
+        )
         build_name = name
         index: AssemblyValueRef | None = None
         order: AssemblyValueRef | None = None
@@ -826,7 +825,7 @@ class _ConceptCompiler:
         bindings: list[BindingSpec] = []
         seen_bindings: set[tuple[str, str]] = set()
         seen_as = False
-        diagnostic_message: str | None = None
+        diagnostic = False
 
         for member in _wrapped_children(tree, "contribution_member"):
             if member.data == "contribution_as":
@@ -865,28 +864,32 @@ class _ConceptCompiler:
                 bindings.append(binding)
                 continue
             if member.data == "contribution_diagnostic":
-                if diagnostic_message is not None:
+                if diagnostic:
                     raise YidlSymbolError(f"contribution {name!r} repeats diagnostic")
-                diagnostic_message = _string_value(member.children[0])
+                diagnostic = True
                 continue
             raise YidlSymbolError(
                 f"contribution {name!r} has invalid member {member.data!r}"
             )
 
-        if diagnostic_message is not None:
-            if source_name is not None:
-                raise YidlSymbolError(
-                    f"diagnostic contribution {name!r} must not declare a source"
-                )
+        if diagnostic:
             if target is not None:
                 raise YidlSymbolError(
                     f"diagnostic contribution {name!r} must not declare a target"
                 )
-            source_name = ""
-            source_kind = "diagnostic"
+            if seen_as:
+                raise YidlSymbolError(
+                    f"diagnostic contribution {name!r} must not declare as"
+                )
+            if index is not None:
+                raise YidlSymbolError(
+                    f"diagnostic contribution {name!r} must not declare index"
+                )
+            if order is not None:
+                raise YidlSymbolError(
+                    f"diagnostic contribution {name!r} must not declare order"
+                )
         else:
-            if source_name is None or source_kind is None:
-                raise YidlSymbolError(f"contribution {name!r} must declare a source")
             if target is None:
                 raise YidlSymbolError(
                     f"contribution {name!r} must declare exactly one target"
@@ -901,7 +904,7 @@ class _ConceptCompiler:
             order=order,
             target=target,
             bindings=tuple(bindings),
-            diagnostic_message=diagnostic_message,
+            diagnostic=diagnostic,
         )
 
     def _compile_composable_production(

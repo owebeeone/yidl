@@ -434,8 +434,12 @@ concept DataclassSubstitute {
                        -> DefaultValueContribution
     }
 
-    contribution DefaultAndFactoryDiagnostic {
-        diagnostic "field {field_name} cannot specify both default and default_factory"
+    resource DefaultAndFactoryDiagnosticMessage = template $[
+        f"field {astichi_bind_external(field_name)} cannot specify both default and default_factory"
+    ]$
+
+    contribution DefaultAndFactoryDiagnostic = DefaultAndFactoryDiagnosticMessage {
+        diagnostic
         external field_name = FieldName
     }
 

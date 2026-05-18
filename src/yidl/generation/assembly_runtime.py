@@ -364,20 +364,20 @@ def _apply_contribution(
     context_records: Mapping[str, object],
     unroll: bool | str,
 ) -> None:
-    if contribution.source_kind == "diagnostic":
-        raise AssemblyDiagnosticError(_diagnostic_message(contribution, stack))
-
-    if contribution.source_kind == "resource":
-        composable = concept.resources[contribution.source_name].to_generator()
-    else:
-        composable = _run_production(
-            concept,
-            concept.composable_productions[contribution.source_name],
-            container,
-            context_records=context_records,
-            unroll=unroll,
+    composable = _contribution_composable(
+        concept,
+        contribution,
+        container,
+        context_records=context_records,
+        unroll=unroll,
+    )
+    if contribution.diagnostic:
+        raise AssemblyDiagnosticError(
+            _diagnostic_message(contribution, composable, stack),
         )
 
+    if contribution.target is None:
+        raise ValueError(f"contribution {contribution.name!r} must declare a target")
     build_index = evaluate_index(contribution.index, stack)
     order = (
         evaluate_order(contribution.order, stack)
@@ -435,23 +435,60 @@ def _apply_contribution(
         )
 
 
-def _diagnostic_message(contribution: ContributionSpec, stack: DataStack) -> str:
-    values: dict[str, object] = {}
+def _contribution_composable(
+    concept: object,
+    contribution: ContributionSpec,
+    container: object,
+    *,
+    context_records: Mapping[str, object],
+    unroll: bool | str,
+) -> object:
+    if contribution.source_kind == "resource":
+        return concept.resources[contribution.source_name].to_generator()
+    if contribution.source_kind == "production":
+        return _run_production(
+            concept,
+            concept.composable_productions[contribution.source_name],
+            container,
+            context_records=context_records,
+            unroll=unroll,
+        )
+    raise TypeError(f"unsupported contribution source kind {contribution.source_kind!r}")
+
+
+def _diagnostic_message(
+    contribution: ContributionSpec,
+    composable: object,
+    stack: DataStack,
+) -> str:
+    external_values: dict[str, object] = {}
+    identifier_values: dict[str, str] = {}
     for binding in contribution.bindings:
         if binding.kind == "ident":
-            values[binding.name] = evaluate_identifier(binding.value, stack)
+            identifier_values[binding.name] = evaluate_identifier(binding.value, stack)
         else:
-            values[binding.name] = evaluate_external(binding.value, stack)
-    message = contribution.diagnostic_message
-    if message is None:
-        message = f"diagnostic contribution {contribution.name!r} failed"
+            external_values[binding.name] = evaluate_external(binding.value, stack)
+    if external_values:
+        composable = composable.bind(external_values)
+    if identifier_values:
+        composable = composable.bind_identifier(identifier_values)
+    source = composable.materialize().emit(provenance=False).strip()
     try:
-        return message.format_map(values)
-    except KeyError as exc:
+        message = eval(
+            compile(source, f"<yidl diagnostic {contribution.name}>", "eval"),
+            {"__builtins__": {}},
+            {},
+        )
+    except SyntaxError as exc:
         raise ValueError(
-            f"diagnostic contribution {contribution.name!r} references "
-            f"undefined message value {exc.args[0]!r}"
+            f"diagnostic contribution {contribution.name!r} must materialize "
+            "to a Python expression"
         ) from exc
+    if not isinstance(message, str):
+        raise TypeError(
+            f"diagnostic contribution {contribution.name!r} must evaluate to str"
+        )
+    return message
 
 
 def _apply_bindings(

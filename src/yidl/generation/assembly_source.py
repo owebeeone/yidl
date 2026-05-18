@@ -193,8 +193,8 @@ def _contribution_expr(contribution: object) -> str:
         f"target={_target_expr(contribution.target)}",
         f"bindings={_tuple_expr(_binding_expr(binding) for binding in contribution.bindings)}",
     ]
-    if contribution.diagnostic_message is not None:
-        parts.append(f"diagnostic_message={contribution.diagnostic_message!r}")
+    if contribution.diagnostic:
+        parts.append("diagnostic=True")
     return "ContributionSpec(" + ", ".join(parts) + ")"
 
 

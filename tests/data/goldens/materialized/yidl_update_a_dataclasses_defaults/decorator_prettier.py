@@ -767,32 +767,39 @@ ASSEMBLY_RESOURCES = {
             keep_names=("_yidl_defaults",),
         )
     ),
+    "DefaultAndFactoryDiagnosticMessage": astichi_template(
+        from_astichi_code(
+            'f"field {astichi_bind_external(field_name)} cannot specify both default and default_factory"',
+            file_name="tests/data/yidl/dataclasses_defaults_example.yidl",
+            line_number=438,
+        )
+    ),
     "InitMethodTemplate": astichi_template(
         from_astichi_code(
             "def __init__(self, params__astichi_param_hole__):\n    astichi_hole(default_factory_guards)\n    astichi_hole(init_assignments)\n    astichi_hole(post_init_call)",
             file_name="tests/data/yidl/dataclasses_defaults_example.yidl",
-            line_number=453,
+            line_number=457,
         )
     ),
     "RequiredParam": astichi_template(
         from_astichi_code(
             "def astichi_params(field_name__astichi_arg__: astichi_bind_external(annotation)):\n    pass",
             file_name="tests/data/yidl/dataclasses_defaults_example.yidl",
-            line_number=460,
+            line_number=464,
         )
     ),
     "KwOnlyFence": astichi_template(
         from_astichi_code(
             "def astichi_params():\n    pass",
             file_name="tests/data/yidl/dataclasses_defaults_example.yidl",
-            line_number=465,
+            line_number=469,
         )
     ),
     "DefaultParam": astichi_template(
         from_astichi_code(
             "def astichi_params(\n    field_name__astichi_arg__: astichi_bind_external(annotation) =\n        _yidl_defaults[astichi_bind_external(default_key)]\n):\n    pass",
             file_name="tests/data/yidl/dataclasses_defaults_example.yidl",
-            line_number=470,
+            line_number=474,
             keep_names=("_yidl_defaults",),
         )
     ),
@@ -800,7 +807,7 @@ ASSEMBLY_RESOURCES = {
         from_astichi_code(
             "def astichi_params(\n    field_name__astichi_arg__: astichi_bind_external(annotation) = _HAS_DEFAULT_FACTORY\n):\n    pass",
             file_name="tests/data/yidl/dataclasses_defaults_example.yidl",
-            line_number=480,
+            line_number=484,
             keep_names=("_HAS_DEFAULT_FACTORY",),
         )
     ),
@@ -808,21 +815,21 @@ ASSEMBLY_RESOURCES = {
         from_astichi_code(
             "setattr(\n    astichi_pass(self, outer_bind=True),\n    astichi_bind_external(field_name_text),\n    astichi_pass(field_name__astichi_arg__, outer_bind=True),\n)",
             file_name="tests/data/yidl/dataclasses_defaults_example.yidl",
-            line_number=489,
+            line_number=493,
         )
     ),
     "FrozenInitAssign": astichi_template(
         from_astichi_code(
             "object.__setattr__(\n    astichi_pass(self, outer_bind=True),\n    astichi_bind_external(field_name_text),\n    astichi_pass(field_name__astichi_arg__, outer_bind=True),\n)",
             file_name="tests/data/yidl/dataclasses_defaults_example.yidl",
-            line_number=497,
+            line_number=501,
         )
     ),
     "DefaultFactoryGuard": astichi_template(
         from_astichi_code(
             "if astichi_pass(field_name, outer_bind=True) is _HAS_DEFAULT_FACTORY:\n    astichi_pass(field_name, outer_bind=True)._ = _yidl_default_factories[\n        astichi_bind_external(default_key)\n    ]()",
             file_name="tests/data/yidl/dataclasses_defaults_example.yidl",
-            line_number=505,
+            line_number=509,
             keep_names=("_HAS_DEFAULT_FACTORY", "_yidl_default_factories"),
         )
     ),
@@ -830,105 +837,105 @@ ASSEMBLY_RESOURCES = {
         from_astichi_code(
             "self.__post_init__(astichi_hole(post_init_args))",
             file_name="tests/data/yidl/dataclasses_defaults_example.yidl",
-            line_number=514,
+            line_number=518,
         )
     ),
     "PostInitArg": astichi_template(
         from_astichi_code(
             "astichi_funcargs(field_name__astichi_arg__)",
             file_name="tests/data/yidl/dataclasses_defaults_example.yidl",
-            line_number=518,
+            line_number=522,
         )
     ),
     "ReprMethodTemplate": astichi_template(
         from_astichi_code(
             'def __repr__(self):\n    return astichi_bind_external(class_name) + "(" + ", ".join((*astichi_hole(repr_parts),)) + ")"',
             file_name="tests/data/yidl/dataclasses_defaults_example.yidl",
-            line_number=738,
+            line_number=742,
         )
     ),
     "ReprPart": astichi_template(
         from_astichi_code(
             'astichi_bind_external(field_name_text) + "=" + repr(getattr(self, astichi_bind_external(field_name_text)))',
             file_name="tests/data/yidl/dataclasses_defaults_example.yidl",
-            line_number=743,
+            line_number=747,
         )
     ),
     "EqMethodTemplate": astichi_template(
         from_astichi_code(
             "def __eq__(self, other):\n    if other.__class__ is self.__class__:\n        return (*astichi_hole(self_compare_values),) == (*astichi_hole(other_compare_values),)\n    return NotImplemented",
             file_name="tests/data/yidl/dataclasses_defaults_example.yidl",
-            line_number=747,
+            line_number=751,
         )
     ),
     "SelfCompareValue": astichi_template(
         from_astichi_code(
             "getattr(self, astichi_bind_external(field_name_text))",
             file_name="tests/data/yidl/dataclasses_defaults_example.yidl",
-            line_number=754,
+            line_number=758,
         )
     ),
     "OtherCompareValue": astichi_template(
         from_astichi_code(
             "getattr(other, astichi_bind_external(field_name_text))",
             file_name="tests/data/yidl/dataclasses_defaults_example.yidl",
-            line_number=758,
+            line_number=762,
         )
     ),
     "LtMethodTemplate": astichi_template(
         from_astichi_code(
             "def __lt__(self, other):\n    if other.__class__ is self.__class__:\n        return (*astichi_hole(self_order_values),) < (*astichi_hole(other_order_values),)\n    return NotImplemented",
             file_name="tests/data/yidl/dataclasses_defaults_example.yidl",
-            line_number=762,
+            line_number=766,
         )
     ),
     "LeMethodTemplate": astichi_template(
         from_astichi_code(
             "def __le__(self, other):\n    if other.__class__ is self.__class__:\n        return (*astichi_hole(self_order_values),) <= (*astichi_hole(other_order_values),)\n    return NotImplemented",
             file_name="tests/data/yidl/dataclasses_defaults_example.yidl",
-            line_number=769,
+            line_number=773,
         )
     ),
     "GtMethodTemplate": astichi_template(
         from_astichi_code(
             "def __gt__(self, other):\n    if other.__class__ is self.__class__:\n        return (*astichi_hole(self_order_values),) > (*astichi_hole(other_order_values),)\n    return NotImplemented",
             file_name="tests/data/yidl/dataclasses_defaults_example.yidl",
-            line_number=776,
+            line_number=780,
         )
     ),
     "GeMethodTemplate": astichi_template(
         from_astichi_code(
             "def __ge__(self, other):\n    if other.__class__ is self.__class__:\n        return (*astichi_hole(self_order_values),) >= (*astichi_hole(other_order_values),)\n    return NotImplemented",
             file_name="tests/data/yidl/dataclasses_defaults_example.yidl",
-            line_number=783,
+            line_number=787,
         )
     ),
     "HashMethodTemplate": astichi_template(
         from_astichi_code(
             "def __hash__(self):\n    return hash((*astichi_hole(hash_values),))",
             file_name="tests/data/yidl/dataclasses_defaults_example.yidl",
-            line_number=790,
+            line_number=794,
         )
     ),
     "HashNone": astichi_template(
         from_astichi_code(
             "__hash__ = None",
             file_name="tests/data/yidl/dataclasses_defaults_example.yidl",
-            line_number=795,
+            line_number=799,
         )
     ),
     "FrozenSetattr": astichi_template(
         from_astichi_code(
             'def __setattr__(self, name, value):\n    raise FrozenInstanceError(f"cannot assign to field {name!r}")',
             file_name="tests/data/yidl/dataclasses_defaults_example.yidl",
-            line_number=1206,
+            line_number=1210,
         )
     ),
     "FrozenDelattr": astichi_template(
         from_astichi_code(
             'def __delattr__(self, name):\n    raise FrozenInstanceError(f"cannot delete field {name!r}")',
             file_name="tests/data/yidl/dataclasses_defaults_example.yidl",
-            line_number=1211,
+            line_number=1215,
         )
     ),
 }
@@ -1266,8 +1273,8 @@ ASSEMBLY_CONTRIBUTIONS = {
     ),
     "DefaultAndFactoryDiagnostic": ContributionSpec(
         name="DefaultAndFactoryDiagnostic",
-        source_name="",
-        source_kind="diagnostic",
+        source_name="DefaultAndFactoryDiagnosticMessage",
+        source_kind="resource",
         build_name="DefaultAndFactoryDiagnostic",
         index=None,
         order=None,
@@ -1277,7 +1284,7 @@ ASSEMBLY_CONTRIBUTIONS = {
                 kind="external", name="field_name", value=ValueRef("FieldName")
             ),
         ),
-        diagnostic_message="field {field_name} cannot specify both default and default_factory",
+        diagnostic=True,
     ),
     "InitMethodContribution": ContributionSpec(
         name="InitMethodContribution",

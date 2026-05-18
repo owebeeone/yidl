@@ -123,7 +123,7 @@ matcher_rule: "rule" CNAME "when" condition_expr "->" resource_ref_expr weight_c
 resource_ref: qname
 weight_clause: "weight" NUMBER
 
-contribution_decl: "contribution" CNAME contribution_source? "{" contribution_member* "}"
+contribution_decl: "contribution" CNAME contribution_source "{" contribution_member* "}"
 contribution_source: "=" resource_ref_expr
 contribution_member: contribution_as
                    | contribution_index
@@ -134,7 +134,7 @@ contribution_member: contribution_as
 contribution_as: "as" CNAME
 contribution_index: "index" contribution_value_expr
 contribution_order: "order" contribution_value_expr
-contribution_diagnostic: "diagnostic" STRING
+contribution_diagnostic: "diagnostic"
 target_decl: "target" CNAME "{" target_path_option* "}"
 target_path_option: "build" path -> target_build
                   | "owner" path -> target_owner
