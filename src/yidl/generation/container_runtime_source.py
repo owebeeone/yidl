@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import ast
 from collections.abc import Mapping, Sequence
 import textwrap
 
@@ -40,7 +39,7 @@ from yidl.generation.assembly_plan import LiteralValueRef
 from yidl.generation.assembly_plan import OperationMatcherSpec
 from yidl.generation.assembly_plan import TupleValueRef
 from yidl.generation.assembly_plan import ValueRef
-from yidl.generation.matcher_values import constructor_expr_for
+from yidl.generation.matcher_values import render_value_constructor
 from yidl.generation.matcher_values import GeneratedValue
 from yidl.generation.matcher_values import generated_value_constructor_names
 from yidl.generation.matcher_values import generated_value_uses_astichi_template
@@ -1153,9 +1152,7 @@ def _value_expr(value: object, source_names: SourceNameMap, label: str) -> str:
     if value is NOT_PROVIDED:
         return "NOT_PROVIDED"
     if is_generated_value(value):
-        expr = constructor_expr_for(value)
-        ast.fix_missing_locations(expr)
-        return ast.unparse(expr)
+        return render_value_constructor(value)
     if isinstance(value, type):
         return _type_expr(value)
     if isinstance(value, tuple):

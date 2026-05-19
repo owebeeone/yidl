@@ -1764,14 +1764,52 @@ ASSEMBLY_PROPERTIES = {
 }
 ASSEMBLY_RESOURCES = {
     "ModuleRoot": from_astichi_code(
-        "from __future__ import annotations\n\n_MISSING = object()\n_HAS_DEFAULT_FACTORY = object()\n\n\nclass FrozenInstanceError(AttributeError):\n    pass\n\n\ndef _field_info(**kw):\n    return kw\n\n\ndef build_generated_dataclasses(*, defaults=None, default_factories=None):\n    _yidl_defaults = {} if defaults is None else defaults\n    _yidl_default_factories = (\n        {} if default_factories is None else default_factories\n    )\n\n    astichi_hole(module_body)\n\n    return {**astichi_hole(class_exports)}",
+        """\
+from __future__ import annotations
+
+_MISSING = object()
+_HAS_DEFAULT_FACTORY = object()
+
+
+class FrozenInstanceError(AttributeError):
+    pass
+
+
+def _field_info(**kw):
+    return kw
+
+
+def build_generated_dataclasses(*, defaults=None, default_factories=None):
+    _yidl_defaults = {} if defaults is None else defaults
+    _yidl_default_factories = (
+        {} if default_factories is None else default_factories
+    )
+
+    astichi_hole(module_body)
+
+    return {**astichi_hole(class_exports)}""",
         file_name="tests/data/yidl/yidl_update_a_dataclasses_split/dataclasses_base.yidl",
         line_number=106,
         keep_names=("_yidl_defaults", "_yidl_default_factories"),
     ),
     "ClassShell": astichi_template(
         from_astichi_code(
-            "class class_name__astichi_arg__:\n    __module__ = astichi_bind_external(module_name)\n    __dataclass_params__ = astichi_bind_external(dataclass_params)\n    __dataclass_fields__ = {**astichi_hole(field_info_entries)}\n    __annotations__ = {**astichi_hole(annotation_entries)}\n\n    astichi_hole(slots_decl)\n    astichi_hole(field_defaults)\n    astichi_hole(match_args_decl)\n    astichi_hole(init_method)\n    astichi_hole(repr_method)\n    astichi_hole(eq_method)\n    astichi_hole(order_methods)\n    astichi_hole(hash_method)\n    astichi_hole(frozen_methods)",
+            """\
+class class_name__astichi_arg__:
+    __module__ = astichi_bind_external(module_name)
+    __dataclass_params__ = astichi_bind_external(dataclass_params)
+    __dataclass_fields__ = {**astichi_hole(field_info_entries)}
+    __annotations__ = {**astichi_hole(annotation_entries)}
+
+    astichi_hole(slots_decl)
+    astichi_hole(field_defaults)
+    astichi_hole(match_args_decl)
+    astichi_hole(init_method)
+    astichi_hole(repr_method)
+    astichi_hole(eq_method)
+    astichi_hole(order_methods)
+    astichi_hole(hash_method)
+    astichi_hole(frozen_methods)""",
             file_name="tests/data/yidl/yidl_update_a_dataclasses_split/dataclasses_base.yidl",
             line_number=134,
         )
@@ -1822,7 +1860,22 @@ ASSEMBLY_RESOURCES = {
     ),
     "FieldInfoEntry": astichi_template(
         from_astichi_code(
-            "{\n    astichi_bind_external(field_name): _field_info(\n        name=astichi_bind_external(field_name),\n        type=astichi_bind_external(annotation),\n        default=_MISSING,\n        default_factory=_MISSING,\n        init=astichi_bind_external(init),\n        repr=astichi_bind_external(repr),\n        compare=astichi_bind_external(compare),\n        hash=astichi_bind_external(hash),\n        kw_only=astichi_bind_external(kw_only),\n        metadata=astichi_bind_external(metadata),\n        kind=astichi_bind_external(kind),\n    )\n}",
+            """\
+{
+    astichi_bind_external(field_name): _field_info(
+        name=astichi_bind_external(field_name),
+        type=astichi_bind_external(annotation),
+        default=_MISSING,
+        default_factory=_MISSING,
+        init=astichi_bind_external(init),
+        repr=astichi_bind_external(repr),
+        compare=astichi_bind_external(compare),
+        hash=astichi_bind_external(hash),
+        kw_only=astichi_bind_external(kw_only),
+        metadata=astichi_bind_external(metadata),
+        kind=astichi_bind_external(kind),
+    )
+}""",
             file_name="tests/data/yidl/yidl_update_a_dataclasses_split/dataclasses_base.yidl",
             line_number=206,
             keep_names=("_field_info", "_MISSING"),
@@ -1830,7 +1883,22 @@ ASSEMBLY_RESOURCES = {
     ),
     "FieldInfoDefaultEntry": astichi_template(
         from_astichi_code(
-            "{\n    astichi_bind_external(field_name): _field_info(\n        name=astichi_bind_external(field_name),\n        type=astichi_bind_external(annotation),\n        default=_yidl_defaults[astichi_bind_external(default_key)],\n        default_factory=_MISSING,\n        init=astichi_bind_external(init),\n        repr=astichi_bind_external(repr),\n        compare=astichi_bind_external(compare),\n        hash=astichi_bind_external(hash),\n        kw_only=astichi_bind_external(kw_only),\n        metadata=astichi_bind_external(metadata),\n        kind=astichi_bind_external(kind),\n    )\n}",
+            """\
+{
+    astichi_bind_external(field_name): _field_info(
+        name=astichi_bind_external(field_name),
+        type=astichi_bind_external(annotation),
+        default=_yidl_defaults[astichi_bind_external(default_key)],
+        default_factory=_MISSING,
+        init=astichi_bind_external(init),
+        repr=astichi_bind_external(repr),
+        compare=astichi_bind_external(compare),
+        hash=astichi_bind_external(hash),
+        kw_only=astichi_bind_external(kw_only),
+        metadata=astichi_bind_external(metadata),
+        kind=astichi_bind_external(kind),
+    )
+}""",
             file_name="tests/data/yidl/yidl_update_a_dataclasses_split/dataclasses_base.yidl",
             line_number=226,
             keep_names=("_field_info", "_MISSING", "_yidl_defaults"),
@@ -1838,7 +1906,24 @@ ASSEMBLY_RESOURCES = {
     ),
     "FieldInfoDefaultFactoryEntry": astichi_template(
         from_astichi_code(
-            "{\n    astichi_bind_external(field_name): _field_info(\n        name=astichi_bind_external(field_name),\n        type=astichi_bind_external(annotation),\n        default=_MISSING,\n        default_factory=_yidl_default_factories[\n            astichi_bind_external(default_key)\n        ],\n        init=astichi_bind_external(init),\n        repr=astichi_bind_external(repr),\n        compare=astichi_bind_external(compare),\n        hash=astichi_bind_external(hash),\n        kw_only=astichi_bind_external(kw_only),\n        metadata=astichi_bind_external(metadata),\n        kind=astichi_bind_external(kind),\n    )\n}",
+            """\
+{
+    astichi_bind_external(field_name): _field_info(
+        name=astichi_bind_external(field_name),
+        type=astichi_bind_external(annotation),
+        default=_MISSING,
+        default_factory=_yidl_default_factories[
+            astichi_bind_external(default_key)
+        ],
+        init=astichi_bind_external(init),
+        repr=astichi_bind_external(repr),
+        compare=astichi_bind_external(compare),
+        hash=astichi_bind_external(hash),
+        kw_only=astichi_bind_external(kw_only),
+        metadata=astichi_bind_external(metadata),
+        kind=astichi_bind_external(kind),
+    )
+}""",
             file_name="tests/data/yidl/yidl_update_a_dataclasses_split/dataclasses_base.yidl",
             line_number=246,
             keep_names=("_field_info", "_MISSING", "_yidl_default_factories"),
@@ -1861,28 +1946,41 @@ ASSEMBLY_RESOURCES = {
     ),
     "InitMethodTemplate": astichi_template(
         from_astichi_code(
-            "def __init__(self, params__astichi_param_hole__):\n    astichi_hole(default_factory_guards)\n    astichi_hole(init_assignments)\n    astichi_hole(post_init_call)",
+            """\
+def __init__(self, params__astichi_param_hole__):
+    astichi_hole(default_factory_guards)
+    astichi_hole(init_assignments)
+    astichi_hole(post_init_call)""",
             file_name="tests/data/yidl/yidl_update_a_dataclasses_split/dataclasses_base.yidl",
             line_number=450,
         )
     ),
     "RequiredParam": astichi_template(
         from_astichi_code(
-            "def astichi_params(field_name__astichi_arg__: astichi_bind_external(annotation)):\n    pass",
+            """\
+def astichi_params(field_name__astichi_arg__: astichi_bind_external(annotation)):
+    pass""",
             file_name="tests/data/yidl/yidl_update_a_dataclasses_split/dataclasses_base.yidl",
             line_number=457,
         )
     ),
     "KwOnlyFence": astichi_template(
         from_astichi_code(
-            "def astichi_params():\n    pass",
+            """\
+def astichi_params():
+    pass""",
             file_name="tests/data/yidl/yidl_update_a_dataclasses_split/dataclasses_base.yidl",
             line_number=462,
         )
     ),
     "DefaultParam": astichi_template(
         from_astichi_code(
-            "def astichi_params(\n    field_name__astichi_arg__: astichi_bind_external(annotation) =\n        _yidl_defaults[astichi_bind_external(default_key)]\n):\n    pass",
+            """\
+def astichi_params(
+    field_name__astichi_arg__: astichi_bind_external(annotation) =
+        _yidl_defaults[astichi_bind_external(default_key)]
+):
+    pass""",
             file_name="tests/data/yidl/yidl_update_a_dataclasses_split/dataclasses_base.yidl",
             line_number=467,
             keep_names=("_yidl_defaults",),
@@ -1890,7 +1988,11 @@ ASSEMBLY_RESOURCES = {
     ),
     "DefaultFactoryParam": astichi_template(
         from_astichi_code(
-            "def astichi_params(\n    field_name__astichi_arg__: astichi_bind_external(annotation) = _HAS_DEFAULT_FACTORY\n):\n    pass",
+            """\
+def astichi_params(
+    field_name__astichi_arg__: astichi_bind_external(annotation) = _HAS_DEFAULT_FACTORY
+):
+    pass""",
             file_name="tests/data/yidl/yidl_update_a_dataclasses_split/dataclasses_base.yidl",
             line_number=477,
             keep_names=("_HAS_DEFAULT_FACTORY",),
@@ -1898,21 +2000,35 @@ ASSEMBLY_RESOURCES = {
     ),
     "PlainInitAssign": astichi_template(
         from_astichi_code(
-            "setattr(\n    astichi_pass(self, outer_bind=True),\n    astichi_bind_external(field_name_text),\n    astichi_pass(field_name__astichi_arg__, outer_bind=True),\n)",
+            """\
+setattr(
+    astichi_pass(self, outer_bind=True),
+    astichi_bind_external(field_name_text),
+    astichi_pass(field_name__astichi_arg__, outer_bind=True),
+)""",
             file_name="tests/data/yidl/yidl_update_a_dataclasses_split/dataclasses_base.yidl",
             line_number=486,
         )
     ),
     "FrozenInitAssign": astichi_template(
         from_astichi_code(
-            "object.__setattr__(\n    astichi_pass(self, outer_bind=True),\n    astichi_bind_external(field_name_text),\n    astichi_pass(field_name__astichi_arg__, outer_bind=True),\n)",
+            """\
+object.__setattr__(
+    astichi_pass(self, outer_bind=True),
+    astichi_bind_external(field_name_text),
+    astichi_pass(field_name__astichi_arg__, outer_bind=True),
+)""",
             file_name="tests/data/yidl/yidl_update_a_dataclasses_split/dataclasses_base.yidl",
             line_number=494,
         )
     ),
     "DefaultFactoryGuard": astichi_template(
         from_astichi_code(
-            "if astichi_pass(field_name, outer_bind=True) is _HAS_DEFAULT_FACTORY:\n    astichi_pass(field_name, outer_bind=True)._ = _yidl_default_factories[\n        astichi_bind_external(default_key)\n    ]()",
+            """\
+if astichi_pass(field_name, outer_bind=True) is _HAS_DEFAULT_FACTORY:
+    astichi_pass(field_name, outer_bind=True)._ = _yidl_default_factories[
+        astichi_bind_external(default_key)
+    ]()""",
             file_name="tests/data/yidl/yidl_update_a_dataclasses_split/dataclasses_base.yidl",
             line_number=502,
             keep_names=("_HAS_DEFAULT_FACTORY", "_yidl_default_factories"),
@@ -1948,7 +2064,11 @@ ASSEMBLY_RESOURCES = {
     ),
     "EqMethodTemplate": astichi_template(
         from_astichi_code(
-            "def __eq__(self, other):\n    if other.__class__ is self.__class__:\n        return (*astichi_hole(self_compare_values),) == (*astichi_hole(other_compare_values),)\n    return NotImplemented",
+            """\
+def __eq__(self, other):
+    if other.__class__ is self.__class__:
+        return (*astichi_hole(self_compare_values),) == (*astichi_hole(other_compare_values),)
+    return NotImplemented""",
             file_name="tests/data/yidl/yidl_update_a_dataclasses_split/dataclasses_base.yidl",
             line_number=742,
         )
@@ -1969,35 +2089,53 @@ ASSEMBLY_RESOURCES = {
     ),
     "LtMethodTemplate": astichi_template(
         from_astichi_code(
-            "def __lt__(self, other):\n    if other.__class__ is self.__class__:\n        return (*astichi_hole(self_order_values),) < (*astichi_hole(other_order_values),)\n    return NotImplemented",
+            """\
+def __lt__(self, other):
+    if other.__class__ is self.__class__:
+        return (*astichi_hole(self_order_values),) < (*astichi_hole(other_order_values),)
+    return NotImplemented""",
             file_name="tests/data/yidl/yidl_update_a_dataclasses_split/dataclasses_base.yidl",
             line_number=757,
         )
     ),
     "LeMethodTemplate": astichi_template(
         from_astichi_code(
-            "def __le__(self, other):\n    if other.__class__ is self.__class__:\n        return (*astichi_hole(self_order_values),) <= (*astichi_hole(other_order_values),)\n    return NotImplemented",
+            """\
+def __le__(self, other):
+    if other.__class__ is self.__class__:
+        return (*astichi_hole(self_order_values),) <= (*astichi_hole(other_order_values),)
+    return NotImplemented""",
             file_name="tests/data/yidl/yidl_update_a_dataclasses_split/dataclasses_base.yidl",
             line_number=764,
         )
     ),
     "GtMethodTemplate": astichi_template(
         from_astichi_code(
-            "def __gt__(self, other):\n    if other.__class__ is self.__class__:\n        return (*astichi_hole(self_order_values),) > (*astichi_hole(other_order_values),)\n    return NotImplemented",
+            """\
+def __gt__(self, other):
+    if other.__class__ is self.__class__:
+        return (*astichi_hole(self_order_values),) > (*astichi_hole(other_order_values),)
+    return NotImplemented""",
             file_name="tests/data/yidl/yidl_update_a_dataclasses_split/dataclasses_base.yidl",
             line_number=771,
         )
     ),
     "GeMethodTemplate": astichi_template(
         from_astichi_code(
-            "def __ge__(self, other):\n    if other.__class__ is self.__class__:\n        return (*astichi_hole(self_order_values),) >= (*astichi_hole(other_order_values),)\n    return NotImplemented",
+            """\
+def __ge__(self, other):
+    if other.__class__ is self.__class__:
+        return (*astichi_hole(self_order_values),) >= (*astichi_hole(other_order_values),)
+    return NotImplemented""",
             file_name="tests/data/yidl/yidl_update_a_dataclasses_split/dataclasses_base.yidl",
             line_number=778,
         )
     ),
     "HashMethodTemplate": astichi_template(
         from_astichi_code(
-            "def __hash__(self):\n    return hash((*astichi_hole(hash_values),))",
+            """\
+def __hash__(self):
+    return hash((*astichi_hole(hash_values),))""",
             file_name="tests/data/yidl/yidl_update_a_dataclasses_split/dataclasses_base.yidl",
             line_number=785,
         )
@@ -2011,20 +2149,202 @@ ASSEMBLY_RESOURCES = {
     ),
     "FrozenSetattr": astichi_template(
         from_astichi_code(
-            'def __setattr__(self, name, value):\n    raise FrozenInstanceError(f"cannot assign to field {name!r}")',
+            """\
+def __setattr__(self, name, value):
+    raise FrozenInstanceError(f"cannot assign to field {name!r}")""",
             file_name="tests/data/yidl/yidl_update_a_dataclasses_split/dataclasses_base.yidl",
             line_number=1306,
         )
     ),
     "FrozenDelattr": astichi_template(
         from_astichi_code(
-            'def __delattr__(self, name):\n    raise FrozenInstanceError(f"cannot delete field {name!r}")',
+            """\
+def __delattr__(self, name):
+    raise FrozenInstanceError(f"cannot delete field {name!r}")""",
             file_name="tests/data/yidl/yidl_update_a_dataclasses_split/dataclasses_base.yidl",
             line_number=1311,
         )
     ),
     "DefaultFactoryFactsBody": from_astichi_code(
-        'from inspect import Parameter, signature\n\nfields = sorted(\n    (\n        field for field in ctx.records(FieldsCollection)\n        if field.field_owner == facade.class_id\n    ),\n    key=lambda field: field.field_order,\n)\nby_name = {field.field_name: field for field in fields}\nby_id = {field.field_id: field for field in fields}\nfactory_fields = [field for field in fields if field.has_default_factory]\ngraph = {field.field_id: set() for field in factory_fields}\nparam_names_by_id = {}\ndeps = []\ndiagnostics = []\n\ndef add_diagnostic(field, suffix, message):\n    diagnostics.append(\n        ComputedClassDiagnostic(\n            diagnostic_id=f"{field.field_id}.{suffix}",\n            diagnostic_owner=facade.class_id,\n            diagnostic_field_id=field.field_id,\n            diagnostic_message=message,\n        )\n    )\n\nfor field in fields:\n    if (\n        field.field_kind == "initvar"\n        and field.init == False\n        and field.has_default == False\n        and field.has_default_factory == False\n    ):\n        add_diagnostic(\n            field,\n            "initvar",\n            (\n                f"init-only field {field.field_name} with init=False "\n                f"must specify default or default_factory"\n            ),\n        )\n\nfor field in factory_fields:\n    try:\n        parameters = tuple(\n            signature(field.default_factory).parameters.values()\n        )\n    except (TypeError, ValueError) as exc:\n        parameters = ()\n        add_diagnostic(\n            field,\n            "signature",\n            (\n                f"field {field.field_name} default_factory "\n                f"cannot be inspected: {exc}"\n            ),\n        )\n    param_names_by_id[field.field_id] = tuple(\n        parameter.name for parameter in parameters\n    )\n    for param_order, parameter in enumerate(parameters):\n        if parameter.kind in (\n            Parameter.POSITIONAL_ONLY,\n            Parameter.VAR_POSITIONAL,\n            Parameter.VAR_KEYWORD,\n        ):\n            add_diagnostic(\n                field,\n                parameter.name,\n                (\n                    f"field {field.field_name} default_factory "\n                    f"has unsupported parameter {parameter.name!r}"\n                ),\n            )\n            continue\n        provider = by_name.get(parameter.name)\n        if provider is None:\n            add_diagnostic(\n                field,\n                parameter.name,\n                (\n                    f"field {field.field_name} default_factory "\n                    f"unknown dependency {parameter.name!r}"\n                ),\n            )\n            continue\n        deps.append((field, provider, parameter.name, param_order))\n        if provider.field_id in graph:\n            graph[field.field_id].add(provider.field_id)\n\nfield_order = {field.field_id: field.field_order for field in fields}\nvisiting = set()\nvisited = set()\nordered_field_ids = []\n\ndef visit(field_id, path):\n    if field_id in visited:\n        return\n    if field_id in visiting:\n        cycle = path[path.index(field_id):]\n        names = " -> ".join(\n            f"{facade.class_name}.{by_id[item].field_name}"\n            for item in cycle\n        )\n        add_diagnostic(\n            by_id[field_id],\n            "cycle",\n            f"default_factory dependency cycle: {names}",\n        )\n        return\n    visiting.add(field_id)\n    for provider_id in sorted(\n        graph.get(field_id, ()),\n        key=lambda item: field_order[item],\n    ):\n        visit(provider_id, [*path, provider_id])\n    visiting.remove(field_id)\n    visited.add(field_id)\n    ordered_field_ids.append(field_id)\n\nfor field in factory_fields:\n    visit(field.field_id, [field.field_id])\n\neval_order_by_id = {\n    field_id: eval_order\n    for eval_order, field_id in enumerate(ordered_field_ids)\n}\n\nfor field in factory_fields:\n    param_names = param_names_by_id[field.field_id]\n    action_kind = "zero_arg" if not param_names else "parameterized"\n    ctx.write(\n        DefaultFactoryInitActionsCollection,\n        DefaultFactoryInitAction(\n            action_id=field.field_id,\n            action_owner=facade.class_id,\n            action_field_id=field.field_id,\n            action_field_name=field.field_name,\n            action_field_order=field.field_order,\n            action_kind=action_kind,\n            action_eval_order=eval_order_by_id[field.field_id],\n            factory_param_names=param_names,\n        ),\n        policy=RejectDuplicate,\n    )\n\nfor consumer, provider, param_name, param_order in deps:\n    ctx.write(\n        DefaultFactoryDepsCollection,\n        DefaultFactoryDep(\n            dependency_owner=facade.class_id,\n            consumer_field_id=consumer.field_id,\n            consumer_eval_order=eval_order_by_id[consumer.field_id],\n            provider_field_id=provider.field_id,\n            provider_name=provider.field_name,\n            param_name=param_name,\n            param_order=param_order,\n        ),\n        policy=RejectDuplicate,\n    )\n\nfor eval_order, field_id in enumerate(ordered_field_ids):\n    field = by_id[field_id]\n    ctx.write(\n        InitEvaluationStepsCollection,\n        InitEvaluationStep(\n            eval_step_id=field.field_id,\n            eval_owner=facade.class_id,\n            eval_field_id=field.field_id,\n            eval_field_name=field.field_name,\n            eval_order=eval_order,\n        ),\n        policy=RejectDuplicate,\n    )\n\nfor diagnostic in diagnostics:\n    ctx.write(DiagnosticsCollection, diagnostic, policy=ReplaceExisting)',
+        """\
+from inspect import Parameter, signature
+
+fields = sorted(
+    (
+        field for field in ctx.records(FieldsCollection)
+        if field.field_owner == facade.class_id
+    ),
+    key=lambda field: field.field_order,
+)
+by_name = {field.field_name: field for field in fields}
+by_id = {field.field_id: field for field in fields}
+factory_fields = [field for field in fields if field.has_default_factory]
+graph = {field.field_id: set() for field in factory_fields}
+param_names_by_id = {}
+deps = []
+diagnostics = []
+
+def add_diagnostic(field, suffix, message):
+    diagnostics.append(
+        ComputedClassDiagnostic(
+            diagnostic_id=f"{field.field_id}.{suffix}",
+            diagnostic_owner=facade.class_id,
+            diagnostic_field_id=field.field_id,
+            diagnostic_message=message,
+        )
+    )
+
+for field in fields:
+    if (
+        field.field_kind == "initvar"
+        and field.init == False
+        and field.has_default == False
+        and field.has_default_factory == False
+    ):
+        add_diagnostic(
+            field,
+            "initvar",
+            (
+                f"init-only field {field.field_name} with init=False "
+                f"must specify default or default_factory"
+            ),
+        )
+
+for field in factory_fields:
+    try:
+        parameters = tuple(
+            signature(field.default_factory).parameters.values()
+        )
+    except (TypeError, ValueError) as exc:
+        parameters = ()
+        add_diagnostic(
+            field,
+            "signature",
+            (
+                f"field {field.field_name} default_factory "
+                f"cannot be inspected: {exc}"
+            ),
+        )
+    param_names_by_id[field.field_id] = tuple(
+        parameter.name for parameter in parameters
+    )
+    for param_order, parameter in enumerate(parameters):
+        if parameter.kind in (
+            Parameter.POSITIONAL_ONLY,
+            Parameter.VAR_POSITIONAL,
+            Parameter.VAR_KEYWORD,
+        ):
+            add_diagnostic(
+                field,
+                parameter.name,
+                (
+                    f"field {field.field_name} default_factory "
+                    f"has unsupported parameter {parameter.name!r}"
+                ),
+            )
+            continue
+        provider = by_name.get(parameter.name)
+        if provider is None:
+            add_diagnostic(
+                field,
+                parameter.name,
+                (
+                    f"field {field.field_name} default_factory "
+                    f"unknown dependency {parameter.name!r}"
+                ),
+            )
+            continue
+        deps.append((field, provider, parameter.name, param_order))
+        if provider.field_id in graph:
+            graph[field.field_id].add(provider.field_id)
+
+field_order = {field.field_id: field.field_order for field in fields}
+visiting = set()
+visited = set()
+ordered_field_ids = []
+
+def visit(field_id, path):
+    if field_id in visited:
+        return
+    if field_id in visiting:
+        cycle = path[path.index(field_id):]
+        names = " -> ".join(
+            f"{facade.class_name}.{by_id[item].field_name}"
+            for item in cycle
+        )
+        add_diagnostic(
+            by_id[field_id],
+            "cycle",
+            f"default_factory dependency cycle: {names}",
+        )
+        return
+    visiting.add(field_id)
+    for provider_id in sorted(
+        graph.get(field_id, ()),
+        key=lambda item: field_order[item],
+    ):
+        visit(provider_id, [*path, provider_id])
+    visiting.remove(field_id)
+    visited.add(field_id)
+    ordered_field_ids.append(field_id)
+
+for field in factory_fields:
+    visit(field.field_id, [field.field_id])
+
+eval_order_by_id = {
+    field_id: eval_order
+    for eval_order, field_id in enumerate(ordered_field_ids)
+}
+
+for field in factory_fields:
+    param_names = param_names_by_id[field.field_id]
+    action_kind = "zero_arg" if not param_names else "parameterized"
+    ctx.write(
+        DefaultFactoryInitActionsCollection,
+        DefaultFactoryInitAction(
+            action_id=field.field_id,
+            action_owner=facade.class_id,
+            action_field_id=field.field_id,
+            action_field_name=field.field_name,
+            action_field_order=field.field_order,
+            action_kind=action_kind,
+            action_eval_order=eval_order_by_id[field.field_id],
+            factory_param_names=param_names,
+        ),
+        policy=RejectDuplicate,
+    )
+
+for consumer, provider, param_name, param_order in deps:
+    ctx.write(
+        DefaultFactoryDepsCollection,
+        DefaultFactoryDep(
+            dependency_owner=facade.class_id,
+            consumer_field_id=consumer.field_id,
+            consumer_eval_order=eval_order_by_id[consumer.field_id],
+            provider_field_id=provider.field_id,
+            provider_name=provider.field_name,
+            param_name=param_name,
+            param_order=param_order,
+        ),
+        policy=RejectDuplicate,
+    )
+
+for eval_order, field_id in enumerate(ordered_field_ids):
+    field = by_id[field_id]
+    ctx.write(
+        InitEvaluationStepsCollection,
+        InitEvaluationStep(
+            eval_step_id=field.field_id,
+            eval_owner=facade.class_id,
+            eval_field_id=field.field_id,
+            eval_field_name=field.field_name,
+            eval_order=eval_order,
+        ),
+        policy=RejectDuplicate,
+    )
+
+for diagnostic in diagnostics:
+    ctx.write(DiagnosticsCollection, diagnostic, policy=ReplaceExisting)""",
         file_name="tests/data/yidl/yidl_update_a_computedclass_defaults/computedclass_default_factory_params.yidl",
         line_number=88,
         keep_names=(
@@ -2046,14 +2366,23 @@ ASSEMBLY_RESOURCES = {
         ),
     ),
     "RaiseComputedClassDiagnosticsBody": from_astichi_code(
-        "for diagnostic in ctx.records(DiagnosticsCollection):\n    raise AssemblyDiagnosticError(diagnostic.diagnostic_message)",
+        """\
+for diagnostic in ctx.records(DiagnosticsCollection):
+    raise AssemblyDiagnosticError(diagnostic.diagnostic_message)""",
         file_name="tests/data/yidl/yidl_update_a_computedclass_defaults/computedclass_default_factory_params.yidl",
         line_number=285,
         keep_names=("ctx", "DiagnosticsCollection", "AssemblyDiagnosticError"),
     ),
     "DefaultFactoryEval": astichi_template(
         from_astichi_code(
-            "if astichi_pass(field_name, outer_bind=True) is _HAS_DEFAULT_FACTORY:\n    _yidl_factory_args = {}\n    for _yidl_factory_param in astichi_bind_external(factory_param_names):\n        _yidl_factory_args[_yidl_factory_param] = locals()[_yidl_factory_param]\n    astichi_pass(field_name, outer_bind=True)._ = _yidl_default_factories[\n        astichi_bind_external(default_key)\n    ](**_yidl_factory_args)",
+            """\
+if astichi_pass(field_name, outer_bind=True) is _HAS_DEFAULT_FACTORY:
+    _yidl_factory_args = {}
+    for _yidl_factory_param in astichi_bind_external(factory_param_names):
+        _yidl_factory_args[_yidl_factory_param] = locals()[_yidl_factory_param]
+    astichi_pass(field_name, outer_bind=True)._ = _yidl_default_factories[
+        astichi_bind_external(default_key)
+    ](**_yidl_factory_args)""",
             file_name="tests/data/yidl/yidl_update_a_computedclass_defaults/computedclass_default_factory_params.yidl",
             line_number=297,
             keep_names=("_HAS_DEFAULT_FACTORY", "_yidl_default_factories"),

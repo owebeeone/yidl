@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import ast
 from collections.abc import Mapping
 
 from yidl.generation.assembly_plan import AndConditionSpec
@@ -15,7 +14,7 @@ from yidl.generation.assembly_plan import TupleValueRef
 from yidl.generation.assembly_plan import ValueRef
 from yidl.generation.container_runtime_source import emit_container_runtime_source
 from yidl.generation.matcher_values import GeneratedValue
-from yidl.generation.matcher_values import constructor_expr_for
+from yidl.generation.matcher_values import render_value_constructor
 
 
 def emit_concept_runtime_source(
@@ -96,7 +95,7 @@ def _properties_expr(system: object) -> str:
 def _resources_expr(resources: Mapping[str, GeneratedValue]) -> str:
     items = []
     for name, resource in resources.items():
-        items.append(f"{name!r}: {ast.unparse(constructor_expr_for(resource))}")
+        items.append(f"{name!r}: {render_value_constructor(resource)}")
     return "{" + ", ".join(items) + "}"
 
 

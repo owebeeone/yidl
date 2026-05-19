@@ -191,6 +191,32 @@ def astichi_template(
 def constructor_expr_for(value: GeneratedValue) -> ast.expr:
     """Build an expression that recreates a matcher-generated value."""
 
+    return _constructor_expr(value, placeholders=None)
+
+
+def render_value_constructor(value: GeneratedValue) -> str:
+    """Render a generated-value constructor as Python source.
+
+    Source strings whose content spans multiple lines are emitted as
+    triple-quoted multi-line literals when that preserves the string byte for
+    byte and the result remains lexically unambiguous. Everything else falls
+    back to the default ``ast.unparse`` rendering.
+    """
+
+    placeholders: dict[str, str] = {}
+    expr = _constructor_expr(value, placeholders=placeholders)
+    ast.fix_missing_locations(expr)
+    rendered = ast.unparse(expr)
+    for token, literal in placeholders.items():
+        rendered = rendered.replace(repr(token), literal, 1)
+    return rendered
+
+
+def _constructor_expr(
+    value: GeneratedValue,
+    *,
+    placeholders: dict[str, str] | None,
+) -> ast.expr:
     if isinstance(value, ImportedGeneratedValue):
         return ast.Call(
             func=ast.Name(id="from_import", ctx=ast.Load()),
@@ -207,23 +233,26 @@ def constructor_expr_for(value: GeneratedValue) -> ast.expr:
             keywords.append(
                 ast.keyword(
                     arg="arg_names",
-                    value=constructor_expr_for(value.edge_arg_names),
+                    value=_constructor_expr(value.edge_arg_names, placeholders=placeholders),
                 )
             )
         if value.edge_bind is not None:
             keywords.append(
-                ast.keyword(arg="bind", value=constructor_expr_for(value.edge_bind))
+                ast.keyword(
+                    arg="bind",
+                    value=_constructor_expr(value.edge_bind, placeholders=placeholders),
+                )
             )
         if value.edge_keep_names is not None:
             keywords.append(
                 ast.keyword(
                     arg="keep_names",
-                    value=constructor_expr_for(value.edge_keep_names),
+                    value=_constructor_expr(value.edge_keep_names, placeholders=placeholders),
                 )
             )
         return ast.Call(
             func=ast.Name(id="astichi_template", ctx=ast.Load()),
-            args=[constructor_expr_for(value.template)],
+            args=[_constructor_expr(value.template, placeholders=placeholders)],
             keywords=keywords,
         )
 
@@ -253,8 +282,28 @@ def constructor_expr_for(value: GeneratedValue) -> ast.expr:
         )
     return ast.Call(
         func=ast.Name(id="from_astichi_code", ctx=ast.Load()),
-        args=[_literal_to_ast(value.source)],
+        args=[_source_arg(value.source, placeholders)],
         keywords=keywords,
+    )
+
+
+def _source_arg(
+    source: str,
+    placeholders: dict[str, str] | None,
+) -> ast.expr:
+    if placeholders is not None and _can_render_as_triple_quoted(source):
+        token = f"__YIDL_SOURCE_PLACEHOLDER_{len(placeholders)}__"
+        placeholders[token] = f'"""\\\n{source}"""'
+        return ast.Constant(value=token)
+    return ast.Constant(value=source)
+
+
+def _can_render_as_triple_quoted(source: str) -> bool:
+    return (
+        "\n" in source
+        and "\\" not in source
+        and '"""' not in source
+        and not source.endswith('"')
     )
 
 
@@ -386,4 +435,5 @@ __all__ = [
     "generated_value_keep_names",
     "generated_value_uses_astichi_template",
     "is_generated_value",
+    "render_value_constructor",
 ]
