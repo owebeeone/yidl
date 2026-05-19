@@ -1,0 +1,39 @@
+module tests.dataclasses_classvar_base
+
+import "dataclasses_base.yidl" as base
+
+export concept DataclassesClassVarBase
+
+concept DataclassesClassVarBase extends base.DataclassesBase {
+    family base.DataclassFieldSpec {
+        variant ClassVarField {
+        }
+    }
+
+    matcher AnnotationContributions(field: Fields, facade: Facades) -> contribution {
+        rule classvar_annotation when FieldOwner == ClassId
+                                  and FieldKind == "classvar"
+                                  -> AnnotationContribution
+    }
+
+    matcher FieldInfoContributions(field: Fields, facade: Facades) -> contribution {
+        rule classvar_plain when FieldOwner == ClassId
+                             and FieldKind == "classvar"
+                             and HasDefault == False
+                             and HasDefaultFactory == False
+                             -> FieldInfoContribution
+
+        rule classvar_default when FieldOwner == ClassId
+                               and FieldKind == "classvar"
+                               and HasDefault == True
+                               and HasDefaultFactory == False
+                               -> FieldInfoDefaultContribution
+    }
+
+    matcher DefaultValueContributions(field: Fields, facade: Facades) -> contribution {
+        rule classvar_default when FieldOwner == ClassId
+                              and FieldKind == "classvar"
+                              and HasDefault == True
+                              -> DefaultValueContribution
+    }
+}

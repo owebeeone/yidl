@@ -1,0 +1,64 @@
+module tests.dataclasses_initvar_base
+
+import "dataclasses_base.yidl" as base
+
+export concept DataclassesInitVarBase
+
+concept DataclassesInitVarBase extends base.DataclassesBase {
+    family base.DataclassFieldSpec {
+        variant InitVarField {
+        }
+    }
+
+    matcher AnnotationContributions(field: Fields, facade: Facades) -> contribution {
+        rule initvar_annotation when FieldOwner == ClassId
+                                and FieldKind == "initvar"
+                                -> AnnotationContribution
+    }
+
+    matcher FieldInfoContributions(field: Fields, facade: Facades) -> contribution {
+        rule initvar_plain when FieldOwner == ClassId
+                            and FieldKind == "initvar"
+                            and HasDefault == False
+                            and HasDefaultFactory == False
+                            -> FieldInfoContribution
+
+        rule initvar_default when FieldOwner == ClassId
+                              and FieldKind == "initvar"
+                              and HasDefault == True
+                              and HasDefaultFactory == False
+                              -> FieldInfoDefaultContribution
+
+        rule initvar_default_factory when FieldOwner == ClassId
+                                      and FieldKind == "initvar"
+                                      and HasDefault == False
+                                      and HasDefaultFactory == True
+                                      -> FieldInfoDefaultFactoryContribution
+    }
+
+    matcher InitParamContribution(field: Fields, facade: Facades) -> contribution {
+        rule initvar_required when DecoratorInit == True
+                              and FieldOwner == ClassId
+                              and FieldKind == "initvar"
+                              and Init == True
+                              and HasDefault == False
+                              and HasDefaultFactory == False
+                              -> RequiredParamContribution
+
+        rule initvar_default when DecoratorInit == True
+                             and FieldOwner == ClassId
+                             and FieldKind == "initvar"
+                             and Init == True
+                             and HasDefault == True
+                             and HasDefaultFactory == False
+                             -> DefaultParamContribution
+    }
+
+    matcher PostInitArgContributions(field: Fields, facade: Facades) -> contribution {
+        rule initvar when DecoratorInit == True
+                     and HasPostInit == True
+                     and FieldOwner == ClassId
+                     and FieldKind == "initvar"
+                     -> PostInitArgContribution
+    }
+}

@@ -1,0 +1,13 @@
+module tests.dataclasses_combined
+
+import "dataclasses_base.yidl" as base
+import "dataclasses_initvar_base.yidl" as initvar
+import "dataclasses_classvar_base.yidl" as classvar
+
+export concept DataclassSubstitute
+
+concept DataclassSubstitute extends
+    initvar.DataclassesInitVarBase,
+    classvar.DataclassesClassVarBase
+{
+}
