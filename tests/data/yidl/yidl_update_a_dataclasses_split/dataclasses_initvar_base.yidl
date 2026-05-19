@@ -36,6 +36,14 @@ concept DataclassesInitVarBase extends base.DataclassesBase {
                                       -> FieldInfoDefaultFactoryContribution
     }
 
+    matcher DefaultValueContributions(field: Fields, facade: Facades) -> contribution {
+        rule initvar_default when FieldOwner == ClassId
+                              and FieldKind == "initvar"
+                              and HasDefault == True
+                              and HasDefaultFactory == False
+                              -> EmptyDefaultValueContribution
+    }
+
     matcher InitParamContribution(field: Fields, facade: Facades) -> contribution {
         rule initvar_required when DecoratorInit == True
                               and FieldOwner == ClassId
@@ -54,11 +62,158 @@ concept DataclassesInitVarBase extends base.DataclassesBase {
                              -> DefaultParamContribution
     }
 
+    matcher DefaultFactoryGuardContributions(field: Fields, facade: Facades) -> contribution {
+        rule initvar_default_factory when DecoratorInit == True
+                                      and FieldOwner == ClassId
+                                      and FieldKind == "initvar"
+                                      and Init == True
+                                      and HasDefaultFactory == True
+                                      -> EmptyDefaultFactoryGuardContribution
+    }
+
+    matcher InitAssignContribution(field: Fields, facade: Facades) -> contribution {
+        rule initvar_mutable when DecoratorInit == True
+                              and FieldOwner == ClassId
+                              and FieldKind == "initvar"
+                              and Init == True
+                              and DecoratorFrozen == False
+                              -> EmptyInitAssignContribution
+
+        rule initvar_frozen when DecoratorInit == True
+                             and FieldOwner == ClassId
+                             and FieldKind == "initvar"
+                             and Init == True
+                             and DecoratorFrozen == True
+                             -> EmptyInitAssignContribution
+    }
+
     matcher PostInitArgContributions(field: Fields, facade: Facades) -> contribution {
         rule initvar when DecoratorInit == True
                      and HasPostInit == True
                      and FieldOwner == ClassId
                      and FieldKind == "initvar"
                      -> PostInitArgContribution
+    }
+
+    matcher ReprPartContributions(field: Fields, facade: Facades) -> contribution {
+        rule initvar_skip when DecoratorRepr == True
+                           and FieldOwner == ClassId
+                           and FieldKind == "initvar"
+                           and Repr == True
+                           -> EmptyReprPartContribution
+    }
+
+    matcher SelfCompareValueContributions(field: Fields, facade: Facades) -> contribution {
+        rule initvar_skip when DecoratorEq == True
+                           and FieldOwner == ClassId
+                           and FieldKind == "initvar"
+                           and Compare == True
+                           -> EmptySelfCompareContribution
+    }
+
+    matcher OtherCompareValueContributions(field: Fields, facade: Facades) -> contribution {
+        rule initvar_skip when DecoratorEq == True
+                           and FieldOwner == ClassId
+                           and FieldKind == "initvar"
+                           and Compare == True
+                           -> EmptyOtherCompareContribution
+    }
+
+    matcher SelfLtOrderValueContributions(field: Fields, facade: Facades) -> contribution {
+        rule initvar_skip when DecoratorOrder == True
+                           and FieldOwner == ClassId
+                           and FieldKind == "initvar"
+                           and Compare == True
+                           -> EmptySelfLtOrderContribution
+    }
+
+    matcher OtherLtOrderValueContributions(field: Fields, facade: Facades) -> contribution {
+        rule initvar_skip when DecoratorOrder == True
+                           and FieldOwner == ClassId
+                           and FieldKind == "initvar"
+                           and Compare == True
+                           -> EmptyOtherLtOrderContribution
+    }
+
+    matcher SelfLeOrderValueContributions(field: Fields, facade: Facades) -> contribution {
+        rule initvar_skip when DecoratorOrder == True
+                           and FieldOwner == ClassId
+                           and FieldKind == "initvar"
+                           and Compare == True
+                           -> EmptySelfLeOrderContribution
+    }
+
+    matcher OtherLeOrderValueContributions(field: Fields, facade: Facades) -> contribution {
+        rule initvar_skip when DecoratorOrder == True
+                           and FieldOwner == ClassId
+                           and FieldKind == "initvar"
+                           and Compare == True
+                           -> EmptyOtherLeOrderContribution
+    }
+
+    matcher SelfGtOrderValueContributions(field: Fields, facade: Facades) -> contribution {
+        rule initvar_skip when DecoratorOrder == True
+                           and FieldOwner == ClassId
+                           and FieldKind == "initvar"
+                           and Compare == True
+                           -> EmptySelfGtOrderContribution
+    }
+
+    matcher OtherGtOrderValueContributions(field: Fields, facade: Facades) -> contribution {
+        rule initvar_skip when DecoratorOrder == True
+                           and FieldOwner == ClassId
+                           and FieldKind == "initvar"
+                           and Compare == True
+                           -> EmptyOtherGtOrderContribution
+    }
+
+    matcher SelfGeOrderValueContributions(field: Fields, facade: Facades) -> contribution {
+        rule initvar_skip when DecoratorOrder == True
+                           and FieldOwner == ClassId
+                           and FieldKind == "initvar"
+                           and Compare == True
+                           -> EmptySelfGeOrderContribution
+    }
+
+    matcher OtherGeOrderValueContributions(field: Fields, facade: Facades) -> contribution {
+        rule initvar_skip when DecoratorOrder == True
+                           and FieldOwner == ClassId
+                           and FieldKind == "initvar"
+                           and Compare == True
+                           -> EmptyOtherGeOrderContribution
+    }
+
+    matcher HashUnsafeValueContributions(field: Fields, facade: Facades) -> contribution {
+        rule initvar_explicit_hash when DecoratorUnsafeHash == True
+                                    and FieldOwner == ClassId
+                                    and FieldKind == "initvar"
+                                    and Hash == True
+                                    -> EmptyHashValueContribution
+
+        rule initvar_compare_hash when DecoratorUnsafeHash == True
+                                   and FieldOwner == ClassId
+                                   and FieldKind == "initvar"
+                                   and Hash == None
+                                   and Compare == True
+                                   -> EmptyHashValueContribution
+    }
+
+    matcher HashFrozenEqValueContributions(field: Fields, facade: Facades) -> contribution {
+        rule initvar_explicit_hash when DecoratorUnsafeHash == False
+                                    and DecoratorFrozen == True
+                                    and DecoratorEq == True
+                                    and FieldOwner == ClassId
+                                    and FieldKind == "initvar"
+                                    and Hash == True
+                                    -> EmptyHashValueContribution
+
+        rule initvar_compare_hash when DecoratorUnsafeHash == False
+                                   and DecoratorFrozen == True
+                                   and DecoratorEq == True
+                                   and FieldOwner == ClassId
+                                   and FieldKind == "initvar"
+                                   and Hash == None
+                                   and Compare == True
+                                   -> EmptyHashValueContribution
     }
 }

@@ -36,4 +36,159 @@ concept DataclassesClassVarBase extends base.DataclassesBase {
                               and HasDefault == True
                               -> DefaultValueContribution
     }
+
+    matcher InitParamContribution(field: Fields, facade: Facades) -> contribution {
+        rule classvar_skip when DecoratorInit == True
+                            and FieldOwner == ClassId
+                            and FieldKind == "classvar"
+                            and Init == True
+                            -> EmptyInitParamContribution
+    }
+
+    matcher DefaultFactoryGuardContributions(field: Fields, facade: Facades) -> contribution {
+        rule classvar_default_factory when DecoratorInit == True
+                                      and FieldOwner == ClassId
+                                      and FieldKind == "classvar"
+                                      and Init == True
+                                      and HasDefaultFactory == True
+                                      -> EmptyDefaultFactoryGuardContribution
+    }
+
+    matcher InitAssignContribution(field: Fields, facade: Facades) -> contribution {
+        rule classvar_mutable when DecoratorInit == True
+                              and FieldOwner == ClassId
+                              and FieldKind == "classvar"
+                              and Init == True
+                              and DecoratorFrozen == False
+                              -> EmptyInitAssignContribution
+
+        rule classvar_frozen when DecoratorInit == True
+                             and FieldOwner == ClassId
+                             and FieldKind == "classvar"
+                             and Init == True
+                             and DecoratorFrozen == True
+                             -> EmptyInitAssignContribution
+    }
+
+    matcher ReprPartContributions(field: Fields, facade: Facades) -> contribution {
+        rule classvar_skip when DecoratorRepr == True
+                            and FieldOwner == ClassId
+                            and FieldKind == "classvar"
+                            and Repr == True
+                            -> EmptyReprPartContribution
+    }
+
+    matcher SelfCompareValueContributions(field: Fields, facade: Facades) -> contribution {
+        rule classvar_skip when DecoratorEq == True
+                            and FieldOwner == ClassId
+                            and FieldKind == "classvar"
+                            and Compare == True
+                            -> EmptySelfCompareContribution
+    }
+
+    matcher OtherCompareValueContributions(field: Fields, facade: Facades) -> contribution {
+        rule classvar_skip when DecoratorEq == True
+                            and FieldOwner == ClassId
+                            and FieldKind == "classvar"
+                            and Compare == True
+                            -> EmptyOtherCompareContribution
+    }
+
+    matcher SelfLtOrderValueContributions(field: Fields, facade: Facades) -> contribution {
+        rule classvar_skip when DecoratorOrder == True
+                            and FieldOwner == ClassId
+                            and FieldKind == "classvar"
+                            and Compare == True
+                            -> EmptySelfLtOrderContribution
+    }
+
+    matcher OtherLtOrderValueContributions(field: Fields, facade: Facades) -> contribution {
+        rule classvar_skip when DecoratorOrder == True
+                            and FieldOwner == ClassId
+                            and FieldKind == "classvar"
+                            and Compare == True
+                            -> EmptyOtherLtOrderContribution
+    }
+
+    matcher SelfLeOrderValueContributions(field: Fields, facade: Facades) -> contribution {
+        rule classvar_skip when DecoratorOrder == True
+                            and FieldOwner == ClassId
+                            and FieldKind == "classvar"
+                            and Compare == True
+                            -> EmptySelfLeOrderContribution
+    }
+
+    matcher OtherLeOrderValueContributions(field: Fields, facade: Facades) -> contribution {
+        rule classvar_skip when DecoratorOrder == True
+                            and FieldOwner == ClassId
+                            and FieldKind == "classvar"
+                            and Compare == True
+                            -> EmptyOtherLeOrderContribution
+    }
+
+    matcher SelfGtOrderValueContributions(field: Fields, facade: Facades) -> contribution {
+        rule classvar_skip when DecoratorOrder == True
+                            and FieldOwner == ClassId
+                            and FieldKind == "classvar"
+                            and Compare == True
+                            -> EmptySelfGtOrderContribution
+    }
+
+    matcher OtherGtOrderValueContributions(field: Fields, facade: Facades) -> contribution {
+        rule classvar_skip when DecoratorOrder == True
+                            and FieldOwner == ClassId
+                            and FieldKind == "classvar"
+                            and Compare == True
+                            -> EmptyOtherGtOrderContribution
+    }
+
+    matcher SelfGeOrderValueContributions(field: Fields, facade: Facades) -> contribution {
+        rule classvar_skip when DecoratorOrder == True
+                            and FieldOwner == ClassId
+                            and FieldKind == "classvar"
+                            and Compare == True
+                            -> EmptySelfGeOrderContribution
+    }
+
+    matcher OtherGeOrderValueContributions(field: Fields, facade: Facades) -> contribution {
+        rule classvar_skip when DecoratorOrder == True
+                            and FieldOwner == ClassId
+                            and FieldKind == "classvar"
+                            and Compare == True
+                            -> EmptyOtherGeOrderContribution
+    }
+
+    matcher HashUnsafeValueContributions(field: Fields, facade: Facades) -> contribution {
+        rule classvar_explicit_hash when DecoratorUnsafeHash == True
+                                     and FieldOwner == ClassId
+                                     and FieldKind == "classvar"
+                                     and Hash == True
+                                     -> EmptyHashValueContribution
+
+        rule classvar_compare_hash when DecoratorUnsafeHash == True
+                                    and FieldOwner == ClassId
+                                    and FieldKind == "classvar"
+                                    and Hash == None
+                                    and Compare == True
+                                    -> EmptyHashValueContribution
+    }
+
+    matcher HashFrozenEqValueContributions(field: Fields, facade: Facades) -> contribution {
+        rule classvar_explicit_hash when DecoratorUnsafeHash == False
+                                     and DecoratorFrozen == True
+                                     and DecoratorEq == True
+                                     and FieldOwner == ClassId
+                                     and FieldKind == "classvar"
+                                     and Hash == True
+                                     -> EmptyHashValueContribution
+
+        rule classvar_compare_hash when DecoratorUnsafeHash == False
+                                    and DecoratorFrozen == True
+                                    and DecoratorEq == True
+                                    and FieldOwner == ClassId
+                                    and FieldKind == "classvar"
+                                    and Hash == None
+                                    and Compare == True
+                                    -> EmptyHashValueContribution
+    }
 }

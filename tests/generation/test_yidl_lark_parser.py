@@ -439,7 +439,7 @@ def test_yidl_lark_code_resource_lowers_to_generated_value() -> None:
     getter.to_generator()
 
 
-def test_yidl_lark_empty_code_resource_reports_resource_name() -> None:
+def test_yidl_lark_empty_code_resource_lowers_to_no_output_resource() -> None:
     source = """
     module snippets
 
@@ -448,8 +448,12 @@ def test_yidl_lark_empty_code_resource_reports_resource_name() -> None:
     }
     """
 
-    with pytest.raises(YidlSymbolError, match="Empty"):
-        compile_yidl_files({"snippets.yidl": source}, "snippets.yidl")
+    compiled = compile_yidl_files({"snippets.yidl": source}, "snippets.yidl")
+    empty = compiled.concepts["Snippets"].resources["Empty"]
+
+    assert isinstance(empty, MatcherGeneratedValue)
+    assert empty.source == ""
+    assert empty.to_generator().tree.body == []
 
 
 def test_yidl_lark_template_resource_lowers_edges() -> None:

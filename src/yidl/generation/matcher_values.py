@@ -143,10 +143,8 @@ def from_astichi_code(
     """Create a matcher-generated value from Astichi source."""
 
     if not isinstance(astichi_code, str):
-        raise ValueError("astichi_code must be a non-empty string")
+        raise ValueError("astichi_code must be a string")
     source = textwrap.dedent(astichi_code).strip()
-    if not source:
-        raise ValueError("astichi_code must be a non-empty string")
     return MatcherGeneratedValue(
         source=source,
         file_name=file_name,

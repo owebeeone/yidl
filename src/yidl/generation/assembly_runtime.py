@@ -364,6 +364,10 @@ def _apply_contribution(
     context_records: Mapping[str, object],
     unroll: bool | str,
 ) -> None:
+    # Empty resources let a specific matcher rule suppress a broader rule.
+    if not contribution.diagnostic and _is_empty_resource_contribution(concept, contribution):
+        return
+
     composable = _contribution_composable(
         concept,
         contribution,
@@ -433,6 +437,16 @@ def _apply_contribution(
             build_match=build_path,
             context=f"contribution {contribution.name!r}",
         )
+
+
+def _is_empty_resource_contribution(concept: object, contribution: ContributionSpec) -> bool:
+    if contribution.source_kind != "resource":
+        return False
+    resource = concept.resources[contribution.source_name]
+    if getattr(resource, "source", None) == "":
+        return True
+    template = getattr(resource, "template", None)
+    return getattr(template, "source", None) == ""
 
 
 def _contribution_composable(

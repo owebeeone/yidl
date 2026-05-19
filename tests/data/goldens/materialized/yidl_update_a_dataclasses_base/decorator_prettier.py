@@ -708,39 +708,47 @@ ASSEMBLY_RESOURCES = {
             offset=40,
         )
     ),
+    "EmptyFragment": astichi_template(
+        from_astichi_code(
+            "",
+            file_name="tests/data/yidl/yidl_update_a_dataclasses_split/dataclasses_base.yidl",
+            line_number=152,
+            offset=39,
+        )
+    ),
     "ClassExportEntry": astichi_template(
         from_astichi_code(
             "{astichi_bind_external(class_name_text): class_name__astichi_arg__}",
             file_name="tests/data/yidl/yidl_update_a_dataclasses_split/dataclasses_base.yidl",
-            line_number=164,
+            line_number=165,
         )
     ),
     "SlotsDecl": astichi_template(
         from_astichi_code(
             "__slots__ = astichi_bind_external(slot_names)",
             file_name="tests/data/yidl/yidl_update_a_dataclasses_split/dataclasses_base.yidl",
-            line_number=193,
+            line_number=194,
         )
     ),
     "MatchArgsDecl": astichi_template(
         from_astichi_code(
             "__match_args__ = astichi_bind_external(match_args)",
             file_name="tests/data/yidl/yidl_update_a_dataclasses_split/dataclasses_base.yidl",
-            line_number=197,
+            line_number=198,
         )
     ),
     "AnnotationEntry": astichi_template(
         from_astichi_code(
             "{astichi_bind_external(field_name): astichi_bind_external(annotation)}",
             file_name="tests/data/yidl/yidl_update_a_dataclasses_split/dataclasses_base.yidl",
-            line_number=201,
+            line_number=202,
         )
     ),
     "FieldInfoEntry": astichi_template(
         from_astichi_code(
             "{\n    astichi_bind_external(field_name): _field_info(\n        name=astichi_bind_external(field_name),\n        type=astichi_bind_external(annotation),\n        default=_MISSING,\n        default_factory=_MISSING,\n        init=astichi_bind_external(init),\n        repr=astichi_bind_external(repr),\n        compare=astichi_bind_external(compare),\n        hash=astichi_bind_external(hash),\n        kw_only=astichi_bind_external(kw_only),\n        metadata=astichi_bind_external(metadata),\n        kind=astichi_bind_external(kind),\n    )\n}",
             file_name="tests/data/yidl/yidl_update_a_dataclasses_split/dataclasses_base.yidl",
-            line_number=205,
+            line_number=206,
             keep_names=("_field_info", "_MISSING"),
         )
     ),
@@ -748,7 +756,7 @@ ASSEMBLY_RESOURCES = {
         from_astichi_code(
             "{\n    astichi_bind_external(field_name): _field_info(\n        name=astichi_bind_external(field_name),\n        type=astichi_bind_external(annotation),\n        default=_yidl_defaults[astichi_bind_external(default_key)],\n        default_factory=_MISSING,\n        init=astichi_bind_external(init),\n        repr=astichi_bind_external(repr),\n        compare=astichi_bind_external(compare),\n        hash=astichi_bind_external(hash),\n        kw_only=astichi_bind_external(kw_only),\n        metadata=astichi_bind_external(metadata),\n        kind=astichi_bind_external(kind),\n    )\n}",
             file_name="tests/data/yidl/yidl_update_a_dataclasses_split/dataclasses_base.yidl",
-            line_number=225,
+            line_number=226,
             keep_names=("_field_info", "_MISSING", "_yidl_defaults"),
         )
     ),
@@ -756,7 +764,7 @@ ASSEMBLY_RESOURCES = {
         from_astichi_code(
             "{\n    astichi_bind_external(field_name): _field_info(\n        name=astichi_bind_external(field_name),\n        type=astichi_bind_external(annotation),\n        default=_MISSING,\n        default_factory=_yidl_default_factories[\n            astichi_bind_external(default_key)\n        ],\n        init=astichi_bind_external(init),\n        repr=astichi_bind_external(repr),\n        compare=astichi_bind_external(compare),\n        hash=astichi_bind_external(hash),\n        kw_only=astichi_bind_external(kw_only),\n        metadata=astichi_bind_external(metadata),\n        kind=astichi_bind_external(kind),\n    )\n}",
             file_name="tests/data/yidl/yidl_update_a_dataclasses_split/dataclasses_base.yidl",
-            line_number=245,
+            line_number=246,
             keep_names=("_field_info", "_MISSING", "_yidl_default_factories"),
         )
     ),
@@ -764,7 +772,7 @@ ASSEMBLY_RESOURCES = {
         from_astichi_code(
             "field_name__astichi_arg__ = _yidl_defaults[astichi_bind_external(default_key)]",
             file_name="tests/data/yidl/yidl_update_a_dataclasses_split/dataclasses_base.yidl",
-            line_number=267,
+            line_number=268,
             keep_names=("_yidl_defaults",),
         )
     ),
@@ -772,35 +780,35 @@ ASSEMBLY_RESOURCES = {
         from_astichi_code(
             'f"field {astichi_bind_external(field_name)} cannot specify both default and default_factory"',
             file_name="tests/data/yidl/yidl_update_a_dataclasses_split/dataclasses_base.yidl",
-            line_number=433,
+            line_number=431,
         )
     ),
     "InitMethodTemplate": astichi_template(
         from_astichi_code(
             "def __init__(self, params__astichi_param_hole__):\n    astichi_hole(default_factory_guards)\n    astichi_hole(init_assignments)\n    astichi_hole(post_init_call)",
             file_name="tests/data/yidl/yidl_update_a_dataclasses_split/dataclasses_base.yidl",
-            line_number=452,
+            line_number=450,
         )
     ),
     "RequiredParam": astichi_template(
         from_astichi_code(
             "def astichi_params(field_name__astichi_arg__: astichi_bind_external(annotation)):\n    pass",
             file_name="tests/data/yidl/yidl_update_a_dataclasses_split/dataclasses_base.yidl",
-            line_number=459,
+            line_number=457,
         )
     ),
     "KwOnlyFence": astichi_template(
         from_astichi_code(
             "def astichi_params():\n    pass",
             file_name="tests/data/yidl/yidl_update_a_dataclasses_split/dataclasses_base.yidl",
-            line_number=464,
+            line_number=462,
         )
     ),
     "DefaultParam": astichi_template(
         from_astichi_code(
             "def astichi_params(\n    field_name__astichi_arg__: astichi_bind_external(annotation) =\n        _yidl_defaults[astichi_bind_external(default_key)]\n):\n    pass",
             file_name="tests/data/yidl/yidl_update_a_dataclasses_split/dataclasses_base.yidl",
-            line_number=469,
+            line_number=467,
             keep_names=("_yidl_defaults",),
         )
     ),
@@ -808,7 +816,7 @@ ASSEMBLY_RESOURCES = {
         from_astichi_code(
             "def astichi_params(\n    field_name__astichi_arg__: astichi_bind_external(annotation) = _HAS_DEFAULT_FACTORY\n):\n    pass",
             file_name="tests/data/yidl/yidl_update_a_dataclasses_split/dataclasses_base.yidl",
-            line_number=479,
+            line_number=477,
             keep_names=("_HAS_DEFAULT_FACTORY",),
         )
     ),
@@ -816,21 +824,21 @@ ASSEMBLY_RESOURCES = {
         from_astichi_code(
             "setattr(\n    astichi_pass(self, outer_bind=True),\n    astichi_bind_external(field_name_text),\n    astichi_pass(field_name__astichi_arg__, outer_bind=True),\n)",
             file_name="tests/data/yidl/yidl_update_a_dataclasses_split/dataclasses_base.yidl",
-            line_number=488,
+            line_number=486,
         )
     ),
     "FrozenInitAssign": astichi_template(
         from_astichi_code(
             "object.__setattr__(\n    astichi_pass(self, outer_bind=True),\n    astichi_bind_external(field_name_text),\n    astichi_pass(field_name__astichi_arg__, outer_bind=True),\n)",
             file_name="tests/data/yidl/yidl_update_a_dataclasses_split/dataclasses_base.yidl",
-            line_number=496,
+            line_number=494,
         )
     ),
     "DefaultFactoryGuard": astichi_template(
         from_astichi_code(
             "if astichi_pass(field_name, outer_bind=True) is _HAS_DEFAULT_FACTORY:\n    astichi_pass(field_name, outer_bind=True)._ = _yidl_default_factories[\n        astichi_bind_external(default_key)\n    ]()",
             file_name="tests/data/yidl/yidl_update_a_dataclasses_split/dataclasses_base.yidl",
-            line_number=504,
+            line_number=502,
             keep_names=("_HAS_DEFAULT_FACTORY", "_yidl_default_factories"),
         )
     ),
@@ -838,105 +846,105 @@ ASSEMBLY_RESOURCES = {
         from_astichi_code(
             "self.__post_init__(astichi_hole(post_init_args))",
             file_name="tests/data/yidl/yidl_update_a_dataclasses_split/dataclasses_base.yidl",
-            line_number=513,
+            line_number=511,
         )
     ),
     "PostInitArg": astichi_template(
         from_astichi_code(
             "astichi_funcargs(field_name__astichi_arg__)",
             file_name="tests/data/yidl/yidl_update_a_dataclasses_split/dataclasses_base.yidl",
-            line_number=517,
+            line_number=515,
         )
     ),
     "ReprMethodTemplate": astichi_template(
         from_astichi_code(
             'def __repr__(self):\n    return astichi_bind_external(class_name) + "(" + ", ".join((*astichi_hole(repr_parts),)) + ")"',
             file_name="tests/data/yidl/yidl_update_a_dataclasses_split/dataclasses_base.yidl",
-            line_number=721,
+            line_number=733,
         )
     ),
     "ReprPart": astichi_template(
         from_astichi_code(
             'astichi_bind_external(field_name_text) + "=" + repr(getattr(self, astichi_bind_external(field_name_text)))',
             file_name="tests/data/yidl/yidl_update_a_dataclasses_split/dataclasses_base.yidl",
-            line_number=726,
+            line_number=738,
         )
     ),
     "EqMethodTemplate": astichi_template(
         from_astichi_code(
             "def __eq__(self, other):\n    if other.__class__ is self.__class__:\n        return (*astichi_hole(self_compare_values),) == (*astichi_hole(other_compare_values),)\n    return NotImplemented",
             file_name="tests/data/yidl/yidl_update_a_dataclasses_split/dataclasses_base.yidl",
-            line_number=730,
+            line_number=742,
         )
     ),
     "SelfCompareValue": astichi_template(
         from_astichi_code(
             "getattr(self, astichi_bind_external(field_name_text))",
             file_name="tests/data/yidl/yidl_update_a_dataclasses_split/dataclasses_base.yidl",
-            line_number=737,
+            line_number=749,
         )
     ),
     "OtherCompareValue": astichi_template(
         from_astichi_code(
             "getattr(other, astichi_bind_external(field_name_text))",
             file_name="tests/data/yidl/yidl_update_a_dataclasses_split/dataclasses_base.yidl",
-            line_number=741,
+            line_number=753,
         )
     ),
     "LtMethodTemplate": astichi_template(
         from_astichi_code(
             "def __lt__(self, other):\n    if other.__class__ is self.__class__:\n        return (*astichi_hole(self_order_values),) < (*astichi_hole(other_order_values),)\n    return NotImplemented",
             file_name="tests/data/yidl/yidl_update_a_dataclasses_split/dataclasses_base.yidl",
-            line_number=745,
+            line_number=757,
         )
     ),
     "LeMethodTemplate": astichi_template(
         from_astichi_code(
             "def __le__(self, other):\n    if other.__class__ is self.__class__:\n        return (*astichi_hole(self_order_values),) <= (*astichi_hole(other_order_values),)\n    return NotImplemented",
             file_name="tests/data/yidl/yidl_update_a_dataclasses_split/dataclasses_base.yidl",
-            line_number=752,
+            line_number=764,
         )
     ),
     "GtMethodTemplate": astichi_template(
         from_astichi_code(
             "def __gt__(self, other):\n    if other.__class__ is self.__class__:\n        return (*astichi_hole(self_order_values),) > (*astichi_hole(other_order_values),)\n    return NotImplemented",
             file_name="tests/data/yidl/yidl_update_a_dataclasses_split/dataclasses_base.yidl",
-            line_number=759,
+            line_number=771,
         )
     ),
     "GeMethodTemplate": astichi_template(
         from_astichi_code(
             "def __ge__(self, other):\n    if other.__class__ is self.__class__:\n        return (*astichi_hole(self_order_values),) >= (*astichi_hole(other_order_values),)\n    return NotImplemented",
             file_name="tests/data/yidl/yidl_update_a_dataclasses_split/dataclasses_base.yidl",
-            line_number=766,
+            line_number=778,
         )
     ),
     "HashMethodTemplate": astichi_template(
         from_astichi_code(
             "def __hash__(self):\n    return hash((*astichi_hole(hash_values),))",
             file_name="tests/data/yidl/yidl_update_a_dataclasses_split/dataclasses_base.yidl",
-            line_number=773,
+            line_number=785,
         )
     ),
     "HashNone": astichi_template(
         from_astichi_code(
             "__hash__ = None",
             file_name="tests/data/yidl/yidl_update_a_dataclasses_split/dataclasses_base.yidl",
-            line_number=778,
+            line_number=790,
         )
     ),
     "FrozenSetattr": astichi_template(
         from_astichi_code(
             'def __setattr__(self, name, value):\n    raise FrozenInstanceError(f"cannot assign to field {name!r}")',
             file_name="tests/data/yidl/yidl_update_a_dataclasses_split/dataclasses_base.yidl",
-            line_number=1189,
+            line_number=1306,
         )
     ),
     "FrozenDelattr": astichi_template(
         from_astichi_code(
             'def __delattr__(self, name):\n    raise FrozenInstanceError(f"cannot delete field {name!r}")',
             file_name="tests/data/yidl/yidl_update_a_dataclasses_split/dataclasses_base.yidl",
-            line_number=1194,
+            line_number=1311,
         )
     ),
 }
@@ -1413,6 +1421,28 @@ ASSEMBLY_CONTRIBUTIONS = {
             ),
         ),
     ),
+    "EmptyInitParamContribution": ContributionSpec(
+        name="EmptyInitParamContribution",
+        source_name="EmptyFragment",
+        source_kind="resource",
+        build_name="InitParam",
+        index=ValueRef("FieldOrder"),
+        order=ValueRef("FieldOrder"),
+        target=TargetSpec(
+            name="params",
+            paths=(
+                TargetPathSpec(
+                    kind="build",
+                    path=PathSpec(
+                        segments=(
+                            PathSegmentSpec(kind="name", name="InitMethod", indexes=()),
+                        )
+                    ),
+                ),
+            ),
+        ),
+        bindings=(),
+    ),
     "PlainInitAssignContribution": ContributionSpec(
         name="PlainInitAssignContribution",
         source_name="PlainInitAssign",
@@ -1466,6 +1496,28 @@ ASSEMBLY_CONTRIBUTIONS = {
             ),
             BindingSpec(kind="ident", name="field_name", value=ValueRef("FieldName")),
         ),
+    ),
+    "EmptyInitAssignContribution": ContributionSpec(
+        name="EmptyInitAssignContribution",
+        source_name="EmptyFragment",
+        source_kind="resource",
+        build_name="InitAssign",
+        index=ValueRef("FieldOrder"),
+        order=ValueRef("FieldOrder"),
+        target=TargetSpec(
+            name="init_assignments",
+            paths=(
+                TargetPathSpec(
+                    kind="build",
+                    path=PathSpec(
+                        segments=(
+                            PathSegmentSpec(kind="name", name="InitMethod", indexes=()),
+                        )
+                    ),
+                ),
+            ),
+        ),
+        bindings=(),
     ),
     "DefaultFactoryGuardContribution": ContributionSpec(
         name="DefaultFactoryGuardContribution",
@@ -1655,6 +1707,28 @@ ASSEMBLY_CONTRIBUTIONS = {
             ),
         ),
     ),
+    "EmptyReprPartContribution": ContributionSpec(
+        name="EmptyReprPartContribution",
+        source_name="EmptyFragment",
+        source_kind="resource",
+        build_name="ReprPart",
+        index=ValueRef("FieldOrder"),
+        order=ValueRef("FieldOrder"),
+        target=TargetSpec(
+            name="repr_parts",
+            paths=(
+                TargetPathSpec(
+                    kind="build",
+                    path=PathSpec(
+                        segments=(
+                            PathSegmentSpec(kind="name", name="ReprMethod", indexes=()),
+                        )
+                    ),
+                ),
+            ),
+        ),
+        bindings=(),
+    ),
     "EqMethodContribution": ContributionSpec(
         name="EqMethodContribution",
         source_name="EqMethodProduction",
@@ -1725,6 +1799,28 @@ ASSEMBLY_CONTRIBUTIONS = {
             ),
         ),
     ),
+    "EmptySelfCompareContribution": ContributionSpec(
+        name="EmptySelfCompareContribution",
+        source_name="EmptyFragment",
+        source_kind="resource",
+        build_name="SelfCompareValue",
+        index=ValueRef("FieldOrder"),
+        order=ValueRef("FieldOrder"),
+        target=TargetSpec(
+            name="self_compare_values",
+            paths=(
+                TargetPathSpec(
+                    kind="build",
+                    path=PathSpec(
+                        segments=(
+                            PathSegmentSpec(kind="name", name="EqMethod", indexes=()),
+                        )
+                    ),
+                ),
+            ),
+        ),
+        bindings=(),
+    ),
     "OtherCompareContribution": ContributionSpec(
         name="OtherCompareContribution",
         source_name="OtherCompareValue",
@@ -1750,6 +1846,28 @@ ASSEMBLY_CONTRIBUTIONS = {
                 kind="external", name="field_name_text", value=ValueRef("FieldName")
             ),
         ),
+    ),
+    "EmptyOtherCompareContribution": ContributionSpec(
+        name="EmptyOtherCompareContribution",
+        source_name="EmptyFragment",
+        source_kind="resource",
+        build_name="OtherCompareValue",
+        index=ValueRef("FieldOrder"),
+        order=ValueRef("FieldOrder"),
+        target=TargetSpec(
+            name="other_compare_values",
+            paths=(
+                TargetPathSpec(
+                    kind="build",
+                    path=PathSpec(
+                        segments=(
+                            PathSegmentSpec(kind="name", name="EqMethod", indexes=()),
+                        )
+                    ),
+                ),
+            ),
+        ),
+        bindings=(),
     ),
     "LtMethodContribution": ContributionSpec(
         name="LtMethodContribution",
@@ -1979,6 +2097,50 @@ ASSEMBLY_CONTRIBUTIONS = {
             ),
         ),
     ),
+    "EmptySelfLtOrderContribution": ContributionSpec(
+        name="EmptySelfLtOrderContribution",
+        source_name="EmptyFragment",
+        source_kind="resource",
+        build_name="SelfOrderValue",
+        index=ValueRef("FieldOrder"),
+        order=ValueRef("FieldOrder"),
+        target=TargetSpec(
+            name="self_order_values",
+            paths=(
+                TargetPathSpec(
+                    kind="build",
+                    path=PathSpec(
+                        segments=(
+                            PathSegmentSpec(kind="name", name="LtMethod", indexes=()),
+                        )
+                    ),
+                ),
+            ),
+        ),
+        bindings=(),
+    ),
+    "EmptyOtherLtOrderContribution": ContributionSpec(
+        name="EmptyOtherLtOrderContribution",
+        source_name="EmptyFragment",
+        source_kind="resource",
+        build_name="OtherOrderValue",
+        index=ValueRef("FieldOrder"),
+        order=ValueRef("FieldOrder"),
+        target=TargetSpec(
+            name="other_order_values",
+            paths=(
+                TargetPathSpec(
+                    kind="build",
+                    path=PathSpec(
+                        segments=(
+                            PathSegmentSpec(kind="name", name="LtMethod", indexes=()),
+                        )
+                    ),
+                ),
+            ),
+        ),
+        bindings=(),
+    ),
     "SelfLeOrderContribution": ContributionSpec(
         name="SelfLeOrderContribution",
         source_name="SelfCompareValue",
@@ -2030,6 +2192,50 @@ ASSEMBLY_CONTRIBUTIONS = {
                 kind="external", name="field_name_text", value=ValueRef("FieldName")
             ),
         ),
+    ),
+    "EmptySelfLeOrderContribution": ContributionSpec(
+        name="EmptySelfLeOrderContribution",
+        source_name="EmptyFragment",
+        source_kind="resource",
+        build_name="SelfOrderValue",
+        index=ValueRef("FieldOrder"),
+        order=ValueRef("FieldOrder"),
+        target=TargetSpec(
+            name="self_order_values",
+            paths=(
+                TargetPathSpec(
+                    kind="build",
+                    path=PathSpec(
+                        segments=(
+                            PathSegmentSpec(kind="name", name="LeMethod", indexes=()),
+                        )
+                    ),
+                ),
+            ),
+        ),
+        bindings=(),
+    ),
+    "EmptyOtherLeOrderContribution": ContributionSpec(
+        name="EmptyOtherLeOrderContribution",
+        source_name="EmptyFragment",
+        source_kind="resource",
+        build_name="OtherOrderValue",
+        index=ValueRef("FieldOrder"),
+        order=ValueRef("FieldOrder"),
+        target=TargetSpec(
+            name="other_order_values",
+            paths=(
+                TargetPathSpec(
+                    kind="build",
+                    path=PathSpec(
+                        segments=(
+                            PathSegmentSpec(kind="name", name="LeMethod", indexes=()),
+                        )
+                    ),
+                ),
+            ),
+        ),
+        bindings=(),
     ),
     "SelfGtOrderContribution": ContributionSpec(
         name="SelfGtOrderContribution",
@@ -2083,6 +2289,50 @@ ASSEMBLY_CONTRIBUTIONS = {
             ),
         ),
     ),
+    "EmptySelfGtOrderContribution": ContributionSpec(
+        name="EmptySelfGtOrderContribution",
+        source_name="EmptyFragment",
+        source_kind="resource",
+        build_name="SelfOrderValue",
+        index=ValueRef("FieldOrder"),
+        order=ValueRef("FieldOrder"),
+        target=TargetSpec(
+            name="self_order_values",
+            paths=(
+                TargetPathSpec(
+                    kind="build",
+                    path=PathSpec(
+                        segments=(
+                            PathSegmentSpec(kind="name", name="GtMethod", indexes=()),
+                        )
+                    ),
+                ),
+            ),
+        ),
+        bindings=(),
+    ),
+    "EmptyOtherGtOrderContribution": ContributionSpec(
+        name="EmptyOtherGtOrderContribution",
+        source_name="EmptyFragment",
+        source_kind="resource",
+        build_name="OtherOrderValue",
+        index=ValueRef("FieldOrder"),
+        order=ValueRef("FieldOrder"),
+        target=TargetSpec(
+            name="other_order_values",
+            paths=(
+                TargetPathSpec(
+                    kind="build",
+                    path=PathSpec(
+                        segments=(
+                            PathSegmentSpec(kind="name", name="GtMethod", indexes=()),
+                        )
+                    ),
+                ),
+            ),
+        ),
+        bindings=(),
+    ),
     "SelfGeOrderContribution": ContributionSpec(
         name="SelfGeOrderContribution",
         source_name="SelfCompareValue",
@@ -2134,6 +2384,50 @@ ASSEMBLY_CONTRIBUTIONS = {
                 kind="external", name="field_name_text", value=ValueRef("FieldName")
             ),
         ),
+    ),
+    "EmptySelfGeOrderContribution": ContributionSpec(
+        name="EmptySelfGeOrderContribution",
+        source_name="EmptyFragment",
+        source_kind="resource",
+        build_name="SelfOrderValue",
+        index=ValueRef("FieldOrder"),
+        order=ValueRef("FieldOrder"),
+        target=TargetSpec(
+            name="self_order_values",
+            paths=(
+                TargetPathSpec(
+                    kind="build",
+                    path=PathSpec(
+                        segments=(
+                            PathSegmentSpec(kind="name", name="GeMethod", indexes=()),
+                        )
+                    ),
+                ),
+            ),
+        ),
+        bindings=(),
+    ),
+    "EmptyOtherGeOrderContribution": ContributionSpec(
+        name="EmptyOtherGeOrderContribution",
+        source_name="EmptyFragment",
+        source_kind="resource",
+        build_name="OtherOrderValue",
+        index=ValueRef("FieldOrder"),
+        order=ValueRef("FieldOrder"),
+        target=TargetSpec(
+            name="other_order_values",
+            paths=(
+                TargetPathSpec(
+                    kind="build",
+                    path=PathSpec(
+                        segments=(
+                            PathSegmentSpec(kind="name", name="GeMethod", indexes=()),
+                        )
+                    ),
+                ),
+            ),
+        ),
+        bindings=(),
     ),
     "HashMethodContribution": ContributionSpec(
         name="HashMethodContribution",
@@ -2226,6 +2520,28 @@ ASSEMBLY_CONTRIBUTIONS = {
                 kind="external", name="field_name_text", value=ValueRef("FieldName")
             ),
         ),
+    ),
+    "EmptyHashValueContribution": ContributionSpec(
+        name="EmptyHashValueContribution",
+        source_name="EmptyFragment",
+        source_kind="resource",
+        build_name="HashValue",
+        index=ValueRef("FieldOrder"),
+        order=ValueRef("FieldOrder"),
+        target=TargetSpec(
+            name="hash_values",
+            paths=(
+                TargetPathSpec(
+                    kind="build",
+                    path=PathSpec(
+                        segments=(
+                            PathSegmentSpec(kind="name", name="HashMethod", indexes=()),
+                        )
+                    ),
+                ),
+            ),
+        ),
+        bindings=(),
     ),
     "FrozenSetattrContribution": ContributionSpec(
         name="FrozenSetattrContribution",
@@ -2404,9 +2720,6 @@ ASSEMBLY_MATCHERS = {
                             left=ValueRef("HasDefault"), right=LiteralValueRef(True)
                         ),
                         EqConditionSpec(
-                            left=ValueRef("FieldKind"), right=LiteralValueRef("field")
-                        ),
-                        EqConditionSpec(
                             left=ValueRef("HasDefaultFactory"),
                             right=LiteralValueRef(False),
                         ),
@@ -2421,9 +2734,6 @@ ASSEMBLY_MATCHERS = {
                     items=(
                         EqConditionSpec(
                             left=ValueRef("HasDefault"), right=LiteralValueRef(False)
-                        ),
-                        EqConditionSpec(
-                            left=ValueRef("FieldKind"), right=LiteralValueRef("field")
                         ),
                         EqConditionSpec(
                             left=ValueRef("HasDefaultFactory"),
@@ -2452,9 +2762,6 @@ ASSEMBLY_MATCHERS = {
                     items=(
                         EqConditionSpec(
                             left=ValueRef("HasDefault"), right=LiteralValueRef(True)
-                        ),
-                        EqConditionSpec(
-                            left=ValueRef("FieldKind"), right=LiteralValueRef("field")
                         ),
                         EqConditionSpec(
                             left=ValueRef("HasDefaultFactory"),
@@ -2559,9 +2866,6 @@ ASSEMBLY_MATCHERS = {
                             left=ValueRef("DecoratorInit"), right=LiteralValueRef(True)
                         ),
                         EqConditionSpec(
-                            left=ValueRef("FieldKind"), right=LiteralValueRef("field")
-                        ),
-                        EqConditionSpec(
                             left=ValueRef("Init"), right=LiteralValueRef(True)
                         ),
                         EqConditionSpec(
@@ -2584,9 +2888,6 @@ ASSEMBLY_MATCHERS = {
                             left=ValueRef("DecoratorInit"), right=LiteralValueRef(True)
                         ),
                         EqConditionSpec(
-                            left=ValueRef("FieldKind"), right=LiteralValueRef("field")
-                        ),
-                        EqConditionSpec(
                             left=ValueRef("Init"), right=LiteralValueRef(True)
                         ),
                         EqConditionSpec(
@@ -2607,9 +2908,6 @@ ASSEMBLY_MATCHERS = {
                     items=(
                         EqConditionSpec(
                             left=ValueRef("DecoratorInit"), right=LiteralValueRef(True)
-                        ),
-                        EqConditionSpec(
-                            left=ValueRef("FieldKind"), right=LiteralValueRef("field")
                         ),
                         EqConditionSpec(
                             left=ValueRef("Init"), right=LiteralValueRef(True)
@@ -2646,9 +2944,6 @@ ASSEMBLY_MATCHERS = {
                             left=ValueRef("DecoratorInit"), right=LiteralValueRef(True)
                         ),
                         EqConditionSpec(
-                            left=ValueRef("FieldKind"), right=LiteralValueRef("field")
-                        ),
-                        EqConditionSpec(
                             left=ValueRef("Init"), right=LiteralValueRef(True)
                         ),
                         EqConditionSpec(
@@ -2680,9 +2975,6 @@ ASSEMBLY_MATCHERS = {
                             left=ValueRef("DecoratorInit"), right=LiteralValueRef(True)
                         ),
                         EqConditionSpec(
-                            left=ValueRef("FieldKind"), right=LiteralValueRef("field")
-                        ),
-                        EqConditionSpec(
                             left=ValueRef("Init"), right=LiteralValueRef(True)
                         ),
                         EqConditionSpec(
@@ -2700,9 +2992,6 @@ ASSEMBLY_MATCHERS = {
                     items=(
                         EqConditionSpec(
                             left=ValueRef("DecoratorInit"), right=LiteralValueRef(True)
-                        ),
-                        EqConditionSpec(
-                            left=ValueRef("FieldKind"), right=LiteralValueRef("field")
                         ),
                         EqConditionSpec(
                             left=ValueRef("Init"), right=LiteralValueRef(True)
@@ -2792,9 +3081,6 @@ ASSEMBLY_MATCHERS = {
                             left=ValueRef("DecoratorRepr"), right=LiteralValueRef(True)
                         ),
                         EqConditionSpec(
-                            left=ValueRef("FieldKind"), right=LiteralValueRef("field")
-                        ),
-                        EqConditionSpec(
                             left=ValueRef("Repr"), right=LiteralValueRef(True)
                         ),
                     )
@@ -2841,9 +3127,6 @@ ASSEMBLY_MATCHERS = {
                             left=ValueRef("DecoratorEq"), right=LiteralValueRef(True)
                         ),
                         EqConditionSpec(
-                            left=ValueRef("FieldKind"), right=LiteralValueRef("field")
-                        ),
-                        EqConditionSpec(
                             left=ValueRef("Compare"), right=LiteralValueRef(True)
                         ),
                     )
@@ -2869,9 +3152,6 @@ ASSEMBLY_MATCHERS = {
                     items=(
                         EqConditionSpec(
                             left=ValueRef("DecoratorEq"), right=LiteralValueRef(True)
-                        ),
-                        EqConditionSpec(
-                            left=ValueRef("FieldKind"), right=LiteralValueRef("field")
                         ),
                         EqConditionSpec(
                             left=ValueRef("Compare"), right=LiteralValueRef(True)
@@ -2977,9 +3257,6 @@ ASSEMBLY_MATCHERS = {
                             left=ValueRef("DecoratorOrder"), right=LiteralValueRef(True)
                         ),
                         EqConditionSpec(
-                            left=ValueRef("FieldKind"), right=LiteralValueRef("field")
-                        ),
-                        EqConditionSpec(
                             left=ValueRef("Compare"), right=LiteralValueRef(True)
                         ),
                     )
@@ -3005,9 +3282,6 @@ ASSEMBLY_MATCHERS = {
                     items=(
                         EqConditionSpec(
                             left=ValueRef("DecoratorOrder"), right=LiteralValueRef(True)
-                        ),
-                        EqConditionSpec(
-                            left=ValueRef("FieldKind"), right=LiteralValueRef("field")
                         ),
                         EqConditionSpec(
                             left=ValueRef("Compare"), right=LiteralValueRef(True)
@@ -3037,9 +3311,6 @@ ASSEMBLY_MATCHERS = {
                             left=ValueRef("DecoratorOrder"), right=LiteralValueRef(True)
                         ),
                         EqConditionSpec(
-                            left=ValueRef("FieldKind"), right=LiteralValueRef("field")
-                        ),
-                        EqConditionSpec(
                             left=ValueRef("Compare"), right=LiteralValueRef(True)
                         ),
                     )
@@ -3065,9 +3336,6 @@ ASSEMBLY_MATCHERS = {
                     items=(
                         EqConditionSpec(
                             left=ValueRef("DecoratorOrder"), right=LiteralValueRef(True)
-                        ),
-                        EqConditionSpec(
-                            left=ValueRef("FieldKind"), right=LiteralValueRef("field")
                         ),
                         EqConditionSpec(
                             left=ValueRef("Compare"), right=LiteralValueRef(True)
@@ -3097,9 +3365,6 @@ ASSEMBLY_MATCHERS = {
                             left=ValueRef("DecoratorOrder"), right=LiteralValueRef(True)
                         ),
                         EqConditionSpec(
-                            left=ValueRef("FieldKind"), right=LiteralValueRef("field")
-                        ),
-                        EqConditionSpec(
                             left=ValueRef("Compare"), right=LiteralValueRef(True)
                         ),
                     )
@@ -3125,9 +3390,6 @@ ASSEMBLY_MATCHERS = {
                     items=(
                         EqConditionSpec(
                             left=ValueRef("DecoratorOrder"), right=LiteralValueRef(True)
-                        ),
-                        EqConditionSpec(
-                            left=ValueRef("FieldKind"), right=LiteralValueRef("field")
                         ),
                         EqConditionSpec(
                             left=ValueRef("Compare"), right=LiteralValueRef(True)
@@ -3157,9 +3419,6 @@ ASSEMBLY_MATCHERS = {
                             left=ValueRef("DecoratorOrder"), right=LiteralValueRef(True)
                         ),
                         EqConditionSpec(
-                            left=ValueRef("FieldKind"), right=LiteralValueRef("field")
-                        ),
-                        EqConditionSpec(
                             left=ValueRef("Compare"), right=LiteralValueRef(True)
                         ),
                     )
@@ -3185,9 +3444,6 @@ ASSEMBLY_MATCHERS = {
                     items=(
                         EqConditionSpec(
                             left=ValueRef("DecoratorOrder"), right=LiteralValueRef(True)
-                        ),
-                        EqConditionSpec(
-                            left=ValueRef("FieldKind"), right=LiteralValueRef("field")
                         ),
                         EqConditionSpec(
                             left=ValueRef("Compare"), right=LiteralValueRef(True)
@@ -3277,9 +3533,6 @@ ASSEMBLY_MATCHERS = {
                             right=LiteralValueRef(True),
                         ),
                         EqConditionSpec(
-                            left=ValueRef("FieldKind"), right=LiteralValueRef("field")
-                        ),
-                        EqConditionSpec(
                             left=ValueRef("Hash"), right=LiteralValueRef(True)
                         ),
                     )
@@ -3294,9 +3547,6 @@ ASSEMBLY_MATCHERS = {
                         EqConditionSpec(
                             left=ValueRef("DecoratorUnsafeHash"),
                             right=LiteralValueRef(True),
-                        ),
-                        EqConditionSpec(
-                            left=ValueRef("FieldKind"), right=LiteralValueRef("field")
                         ),
                         EqConditionSpec(
                             left=ValueRef("Hash"), right=LiteralValueRef(None)
@@ -3337,9 +3587,6 @@ ASSEMBLY_MATCHERS = {
                             left=ValueRef("DecoratorEq"), right=LiteralValueRef(True)
                         ),
                         EqConditionSpec(
-                            left=ValueRef("FieldKind"), right=LiteralValueRef("field")
-                        ),
-                        EqConditionSpec(
                             left=ValueRef("Hash"), right=LiteralValueRef(True)
                         ),
                     )
@@ -3361,9 +3608,6 @@ ASSEMBLY_MATCHERS = {
                         ),
                         EqConditionSpec(
                             left=ValueRef("DecoratorEq"), right=LiteralValueRef(True)
-                        ),
-                        EqConditionSpec(
-                            left=ValueRef("FieldKind"), right=LiteralValueRef("field")
                         ),
                         EqConditionSpec(
                             left=ValueRef("Hash"), right=LiteralValueRef(None)

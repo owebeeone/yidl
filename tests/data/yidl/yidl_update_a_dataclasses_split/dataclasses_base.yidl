@@ -149,6 +149,7 @@ concept DataclassesBase {
     ]$
 
     resource EmptyStatement = template `pass`
+    resource EmptyFragment = template ``
 
     contribution ClassDefinition = ClassProduction {
         as ClassDef
@@ -412,11 +413,9 @@ concept DataclassesBase {
     matcher FieldInfoContributions(field: Fields, facade: Facades) -> contribution {
         default -> FieldInfoContribution
         rule default_value when HasDefault == True
-                           and FieldKind == "field"
                            and HasDefaultFactory == False
                            -> FieldInfoDefaultContribution
         rule default_factory when HasDefault == False
-                             and FieldKind == "field"
                              and HasDefaultFactory == True
                              -> FieldInfoDefaultFactoryContribution
     }
@@ -424,7 +423,6 @@ concept DataclassesBase {
     matcher DefaultValueContributions(field: Fields, facade: Facades) -> contribution {
         default -> EmptyDefaultValueContribution
         rule defaulted when HasDefault == True
-                       and FieldKind == "field"
                        and HasDefaultFactory == False
                        -> DefaultValueContribution
     }
@@ -575,6 +573,16 @@ concept DataclassesBase {
         external annotation = Annotation
     }
 
+    contribution EmptyInitParamContribution = EmptyFragment {
+        as InitParam
+        index FieldOrder
+        order FieldOrder
+
+        target params {
+            build /InitMethod
+        }
+    }
+
     contribution PlainInitAssignContribution = PlainInitAssign {
         as InitAssign
         index FieldOrder
@@ -599,6 +607,16 @@ concept DataclassesBase {
 
         external field_name_text = FieldName
         ident field_name = FieldName
+    }
+
+    contribution EmptyInitAssignContribution = EmptyFragment {
+        as InitAssign
+        index FieldOrder
+        order FieldOrder
+
+        target init_assignments {
+            build /InitMethod
+        }
     }
 
     contribution DefaultFactoryGuardContribution = DefaultFactoryGuard {
@@ -662,19 +680,16 @@ concept DataclassesBase {
 
     matcher InitParamContribution(field: Fields, facade: Facades) -> contribution {
         rule required when DecoratorInit == True
-                      and FieldKind == "field"
                       and Init == True
                       and HasDefault == False
                       and HasDefaultFactory == False
                       -> RequiredParamContribution
         rule default_value when DecoratorInit == True
-                           and FieldKind == "field"
                            and Init == True
                            and HasDefault == True
                            and HasDefaultFactory == False
                            -> DefaultParamContribution
         rule default_factory when DecoratorInit == True
-                             and FieldKind == "field"
                              and Init == True
                              and HasDefault == False
                              and HasDefaultFactory == True
@@ -684,7 +699,6 @@ concept DataclassesBase {
     matcher DefaultFactoryGuardContributions(field: Fields, facade: Facades) -> contribution {
         default -> EmptyDefaultFactoryGuardContribution
         rule default_factory when DecoratorInit == True
-                             and FieldKind == "field"
                              and Init == True
                              and HasDefaultFactory == True
                              -> DefaultFactoryGuardContribution
@@ -692,12 +706,10 @@ concept DataclassesBase {
 
     matcher InitAssignContribution(field: Fields, facade: Facades) -> contribution {
         rule mutable when DecoratorInit == True
-                    and FieldKind == "field"
                     and Init == True
                     and DecoratorFrozen == False
                     -> PlainInitAssignContribution
         rule frozen when DecoratorInit == True
-                   and FieldKind == "field"
                    and Init == True
                    and DecoratorFrozen == True
                    -> FrozenInitAssignContribution
@@ -805,6 +817,16 @@ concept DataclassesBase {
         external field_name_text = FieldName
     }
 
+    contribution EmptyReprPartContribution = EmptyFragment {
+        as ReprPart
+        index FieldOrder
+        order FieldOrder
+
+        target repr_parts {
+            build /ReprMethod
+        }
+    }
+
     contribution EqMethodContribution = EqMethodProduction {
         as EqMethod
 
@@ -831,6 +853,16 @@ concept DataclassesBase {
         external field_name_text = FieldName
     }
 
+    contribution EmptySelfCompareContribution = EmptyFragment {
+        as SelfCompareValue
+        index FieldOrder
+        order FieldOrder
+
+        target self_compare_values {
+            build /EqMethod
+        }
+    }
+
     contribution OtherCompareContribution = OtherCompareValue {
         as OtherCompareValue
         index FieldOrder
@@ -841,6 +873,16 @@ concept DataclassesBase {
         }
 
         external field_name_text = FieldName
+    }
+
+    contribution EmptyOtherCompareContribution = EmptyFragment {
+        as OtherCompareValue
+        index FieldOrder
+        order FieldOrder
+
+        target other_compare_values {
+            build /EqMethod
+        }
     }
 
     contribution LtMethodContribution = LtMethodProduction {
@@ -923,6 +965,26 @@ concept DataclassesBase {
         external field_name_text = FieldName
     }
 
+    contribution EmptySelfLtOrderContribution = EmptyFragment {
+        as SelfOrderValue
+        index FieldOrder
+        order FieldOrder
+
+        target self_order_values {
+            build /LtMethod
+        }
+    }
+
+    contribution EmptyOtherLtOrderContribution = EmptyFragment {
+        as OtherOrderValue
+        index FieldOrder
+        order FieldOrder
+
+        target other_order_values {
+            build /LtMethod
+        }
+    }
+
     contribution SelfLeOrderContribution = SelfCompareValue {
         as SelfOrderValue
         index FieldOrder
@@ -945,6 +1007,26 @@ concept DataclassesBase {
         }
 
         external field_name_text = FieldName
+    }
+
+    contribution EmptySelfLeOrderContribution = EmptyFragment {
+        as SelfOrderValue
+        index FieldOrder
+        order FieldOrder
+
+        target self_order_values {
+            build /LeMethod
+        }
+    }
+
+    contribution EmptyOtherLeOrderContribution = EmptyFragment {
+        as OtherOrderValue
+        index FieldOrder
+        order FieldOrder
+
+        target other_order_values {
+            build /LeMethod
+        }
     }
 
     contribution SelfGtOrderContribution = SelfCompareValue {
@@ -971,6 +1053,26 @@ concept DataclassesBase {
         external field_name_text = FieldName
     }
 
+    contribution EmptySelfGtOrderContribution = EmptyFragment {
+        as SelfOrderValue
+        index FieldOrder
+        order FieldOrder
+
+        target self_order_values {
+            build /GtMethod
+        }
+    }
+
+    contribution EmptyOtherGtOrderContribution = EmptyFragment {
+        as OtherOrderValue
+        index FieldOrder
+        order FieldOrder
+
+        target other_order_values {
+            build /GtMethod
+        }
+    }
+
     contribution SelfGeOrderContribution = SelfCompareValue {
         as SelfOrderValue
         index FieldOrder
@@ -993,6 +1095,26 @@ concept DataclassesBase {
         }
 
         external field_name_text = FieldName
+    }
+
+    contribution EmptySelfGeOrderContribution = EmptyFragment {
+        as SelfOrderValue
+        index FieldOrder
+        order FieldOrder
+
+        target self_order_values {
+            build /GeMethod
+        }
+    }
+
+    contribution EmptyOtherGeOrderContribution = EmptyFragment {
+        as OtherOrderValue
+        index FieldOrder
+        order FieldOrder
+
+        target other_order_values {
+            build /GeMethod
+        }
     }
 
     contribution HashMethodContribution = HashMethodProduction {
@@ -1033,6 +1155,16 @@ concept DataclassesBase {
         external field_name_text = FieldName
     }
 
+    contribution EmptyHashValueContribution = EmptyFragment {
+        as HashValue
+        index FieldOrder
+        order FieldOrder
+
+        target hash_values {
+            build /HashMethod
+        }
+    }
+
     matcher ReprMethodContributions(facade: Facades) -> contribution {
         default -> EmptyReprMethodContribution
         rule enabled when DecoratorRepr == True -> ReprMethodContribution
@@ -1040,7 +1172,6 @@ concept DataclassesBase {
 
     matcher ReprPartContributions(field: Fields, facade: Facades) -> contribution {
         rule repr_field when DecoratorRepr == True
-                         and FieldKind == "field"
                          and Repr == True
                          -> ReprPartContribution
     }
@@ -1052,14 +1183,12 @@ concept DataclassesBase {
 
     matcher SelfCompareValueContributions(field: Fields, facade: Facades) -> contribution {
         rule self_value when DecoratorEq == True
-                         and FieldKind == "field"
                          and Compare == True
                          -> SelfCompareContribution
     }
 
     matcher OtherCompareValueContributions(field: Fields, facade: Facades) -> contribution {
         rule other_value when DecoratorEq == True
-                          and FieldKind == "field"
                           and Compare == True
                           -> OtherCompareContribution
     }
@@ -1086,56 +1215,48 @@ concept DataclassesBase {
 
     matcher SelfLtOrderValueContributions(field: Fields, facade: Facades) -> contribution {
         rule value when DecoratorOrder == True
-                   and FieldKind == "field"
                    and Compare == True
                    -> SelfLtOrderContribution
     }
 
     matcher OtherLtOrderValueContributions(field: Fields, facade: Facades) -> contribution {
         rule value when DecoratorOrder == True
-                   and FieldKind == "field"
                    and Compare == True
                    -> OtherLtOrderContribution
     }
 
     matcher SelfLeOrderValueContributions(field: Fields, facade: Facades) -> contribution {
         rule value when DecoratorOrder == True
-                   and FieldKind == "field"
                    and Compare == True
                    -> SelfLeOrderContribution
     }
 
     matcher OtherLeOrderValueContributions(field: Fields, facade: Facades) -> contribution {
         rule value when DecoratorOrder == True
-                   and FieldKind == "field"
                    and Compare == True
                    -> OtherLeOrderContribution
     }
 
     matcher SelfGtOrderValueContributions(field: Fields, facade: Facades) -> contribution {
         rule value when DecoratorOrder == True
-                   and FieldKind == "field"
                    and Compare == True
                    -> SelfGtOrderContribution
     }
 
     matcher OtherGtOrderValueContributions(field: Fields, facade: Facades) -> contribution {
         rule value when DecoratorOrder == True
-                   and FieldKind == "field"
                    and Compare == True
                    -> OtherGtOrderContribution
     }
 
     matcher SelfGeOrderValueContributions(field: Fields, facade: Facades) -> contribution {
         rule value when DecoratorOrder == True
-                   and FieldKind == "field"
                    and Compare == True
                    -> SelfGeOrderContribution
     }
 
     matcher OtherGeOrderValueContributions(field: Fields, facade: Facades) -> contribution {
         rule value when DecoratorOrder == True
-                   and FieldKind == "field"
                    and Compare == True
                    -> OtherGeOrderContribution
     }
@@ -1155,11 +1276,9 @@ concept DataclassesBase {
 
     matcher HashUnsafeValueContributions(field: Fields, facade: Facades) -> contribution {
         rule explicit_hash when DecoratorUnsafeHash == True
-                           and FieldKind == "field"
                            and Hash == True
                            -> HashValueContribution
         rule compare_hash when DecoratorUnsafeHash == True
-                          and FieldKind == "field"
                           and Hash == None
                           and Compare == True
                           -> HashValueContribution
@@ -1169,13 +1288,11 @@ concept DataclassesBase {
         rule explicit_hash when DecoratorUnsafeHash == False
                            and DecoratorFrozen == True
                            and DecoratorEq == True
-                           and FieldKind == "field"
                            and Hash == True
                            -> HashValueContribution
         rule compare_hash when DecoratorUnsafeHash == False
                           and DecoratorFrozen == True
                           and DecoratorEq == True
-                          and FieldKind == "field"
                           and Hash == None
                           and Compare == True
                           -> HashValueContribution
