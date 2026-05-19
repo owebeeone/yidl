@@ -119,6 +119,7 @@ matcher_input_list: matcher_input ("," matcher_input)*
 matcher_input: CNAME ":" qname
 matcher_kind: "->" "resource" -> matcher_kind_resource
             | "->" "contribution" -> matcher_kind_contribution
+            | "->" "operation" -> matcher_kind_operation
 matcher_default: "default" "->" resource_ref_expr
 matcher_rule: "rule" CNAME "when" condition_expr "->" resource_ref_expr weight_clause?
 resource_ref: qname

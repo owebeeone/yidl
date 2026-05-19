@@ -48,6 +48,8 @@ from yidl.generation.assembly_plan import EdgeApplySpec
 from yidl.generation.assembly_plan import EqConditionSpec
 from yidl.generation.assembly_plan import InlineApplySpec
 from yidl.generation.assembly_plan import LiteralValueRef
+from yidl.generation.assembly_plan import OperationMatcherSpec
+from yidl.generation.assembly_plan import OperationRuleSpec
 from yidl.generation.assembly_plan import PathSegmentSpec
 from yidl.generation.assembly_plan import PathSpec
 from yidl.generation.assembly_plan import RootSpec
@@ -91,6 +93,7 @@ class YidlCompiledConcept:
     operations: Mapping[str, OperationHandle]
     contributions: Mapping[str, ContributionSpec]
     contribution_matchers: Mapping[str, ContributionMatcherSpec]
+    operation_matchers: Mapping[str, OperationMatcherSpec]
     composable_productions: Mapping[str, ComposableProductionSpec]
     assembly_edges: Mapping[str, AssemblyEdgeSpec]
     assemblies: Mapping[str, AssemblySpec]
@@ -305,6 +308,7 @@ class _ConceptCompiler:
         self._local_operations: dict[str, OperationHandle] = {}
         self._local_contributions: dict[str, ContributionSpec] = {}
         self._local_contribution_matchers: dict[str, ContributionMatcherSpec] = {}
+        self._local_operation_matchers: dict[str, OperationMatcherSpec] = {}
         self._local_composable_productions: dict[str, ComposableProductionSpec] = {}
         self._local_assembly_edges: dict[str, AssemblyEdgeSpec] = {}
         self._local_assemblies: dict[str, AssemblySpec] = {}
@@ -340,6 +344,10 @@ class _ConceptCompiler:
             if member.data == "matcher_decl" and _matcher_kind(member) == "contribution":
                 matcher = self._compile_contribution_matcher(member)
                 self._local_contribution_matchers[matcher.name] = matcher
+        for member in members:
+            if member.data == "matcher_decl" and _matcher_kind(member) == "operation":
+                matcher = self._compile_operation_matcher(member)
+                self._local_operation_matchers[matcher.name] = matcher
         for member in members:
             if member.data == "production_decl":
                 production = self._compile_production(builder, member)
@@ -443,6 +451,11 @@ class _ConceptCompiler:
             local=self._local_contribution_matchers,
             concept_name=name,
         )
+        operation_matchers = _merge_operation_matchers(
+            extensions=self._extensions,
+            local=self._local_operation_matchers,
+            concept_name=name,
+        )
         composable_productions = _merge_named_maps(
             kind="composable production",
             extensions=self._extensions,
@@ -477,6 +490,7 @@ class _ConceptCompiler:
             operations=operations,
             contributions=contributions,
             contribution_matchers=contribution_matchers,
+            operation_matchers=operation_matchers,
             composable_productions=composable_productions,
             assembly_edges=assembly_edges,
             assemblies=assemblies,
@@ -758,7 +772,11 @@ class _ConceptCompiler:
 
     def _compile_matcher(self, builder: Any, tree: Tree) -> MatcherHandle | None:
         name = _token_text(tree.children[0])
-        if name in self._local_matchers or name in self._local_contribution_matchers:
+        if (
+            name in self._local_matchers
+            or name in self._local_contribution_matchers
+            or name in self._local_operation_matchers
+        ):
             raise YidlSymbolError(f"matcher {name!r} is already defined")
         inherited = self._inherited_resource_matcher(name)
         if inherited is None:
@@ -814,11 +832,19 @@ class _ConceptCompiler:
 
     def _compile_contribution_matcher(self, tree: Tree) -> ContributionMatcherSpec:
         name = _token_text(tree.children[0])
-        if name in self._local_matchers or name in self._local_contribution_matchers:
+        if (
+            name in self._local_matchers
+            or name in self._local_contribution_matchers
+            or name in self._local_operation_matchers
+        ):
             raise YidlSymbolError(f"matcher {name!r} is already defined")
         if any(name in extension.matchers for extension in self._extensions):
             raise YidlSymbolError(
                 f"matcher {name!r} is inherited as a resource matcher"
+            )
+        if any(name in extension.operation_matchers for extension in self._extensions):
+            raise YidlSymbolError(
+                f"matcher {name!r} is inherited as an operation matcher"
             )
 
         inputs = self._assembly_inputs(_first_child(tree, "matcher_input_list"))
@@ -859,6 +885,61 @@ class _ConceptCompiler:
             rules=tuple(rules),
         )
 
+    def _compile_operation_matcher(self, tree: Tree) -> OperationMatcherSpec:
+        name = _token_text(tree.children[0])
+        if (
+            name in self._local_matchers
+            or name in self._local_contribution_matchers
+            or name in self._local_operation_matchers
+        ):
+            raise YidlSymbolError(f"matcher {name!r} is already defined")
+        if any(name in extension.matchers for extension in self._extensions):
+            raise YidlSymbolError(
+                f"matcher {name!r} is inherited as a resource matcher"
+            )
+        if any(name in extension.contribution_matchers for extension in self._extensions):
+            raise YidlSymbolError(
+                f"matcher {name!r} is inherited as a contribution matcher"
+            )
+
+        inputs = self._assembly_inputs(_first_child(tree, "matcher_input_list"))
+        default_name: str | None = None
+        rules: list[OperationRuleSpec] = []
+        for child in tree.children[1:]:
+            if not isinstance(child, Tree):
+                continue
+            if child.data == "matcher_default":
+                default_name = self._resolve_operation_resource_ref(
+                    child.children[0],
+                    context=f"matcher {name!r} default",
+                )
+                continue
+            if child.data == "matcher_rule":
+                rule_name = _token_text(child.children[0])
+                condition = self._assembly_condition(child.children[1])
+                resource_name = self._resolve_operation_resource_ref(
+                    child.children[2],
+                    context=f"matcher {name!r} rule {rule_name!r}",
+                )
+                weight = 1.0
+                weight_tree = _first_child(child, "weight_clause")
+                if weight_tree is not None:
+                    weight = float(str(weight_tree.children[0]))
+                rules.append(
+                    OperationRuleSpec(
+                        name=rule_name,
+                        condition=condition,
+                        resource_name=resource_name,
+                        weight=weight,
+                    )
+                )
+        return OperationMatcherSpec(
+            name=name,
+            inputs=inputs,
+            default_resource_name=default_name,
+            rules=tuple(rules),
+        )
+
     def _inherited_resource_matcher(self, name: str) -> MatcherHandle | None:
         inherited: MatcherHandle | None = None
         owner_name: str | None = None
@@ -866,6 +947,10 @@ class _ConceptCompiler:
             if name in extension.contribution_matchers:
                 raise YidlSymbolError(
                     f"matcher {name!r} is inherited as a contribution matcher"
+                )
+            if name in extension.operation_matchers:
+                raise YidlSymbolError(
+                    f"matcher {name!r} is inherited as an operation matcher"
                 )
             matcher = extension.matchers.get(name)
             if matcher is None:
@@ -1410,6 +1495,17 @@ class _ConceptCompiler:
         name = _qname(tree)
         return self._resolve_contribution_name(name, context=context)
 
+    def _resolve_operation_resource_ref(self, tree: Tree, *, context: str) -> str:
+        if tree.data == "resource_match_ref":
+            raise YidlSymbolError(f"{context} cannot use match.resource()")
+        if tree.data not in {"resource_ref", "resource_name_ref"}:
+            raise YidlSymbolError(
+                f"{context} has unsupported resource expression {tree.data!r}"
+            )
+        name = _qname(tree)
+        self._resolve_resource(name)
+        return name
+
     def _resolve_contribution_name(self, name: str, *, context: str) -> str:
         if self._contribution_exists(name):
             return name
@@ -1422,17 +1518,23 @@ class _ConceptCompiler:
             return name
         if name in self._local_matchers:
             raise YidlSymbolError(f"{context} {name!r} is a resource matcher")
+        if name in self._local_operation_matchers:
+            raise YidlSymbolError(f"{context} {name!r} is an operation matcher")
         for extension in self._extensions:
             if name in extension.contribution_matchers:
                 return name
             if name in extension.matchers:
                 raise YidlSymbolError(f"{context} {name!r} is a resource matcher")
+            if name in extension.operation_matchers:
+                raise YidlSymbolError(f"{context} {name!r} is an operation matcher")
         imported = self._imported_symbol(name)
         if imported is not None:
             if isinstance(imported.target, ContributionMatcherSpec):
                 return name
             if isinstance(imported.target, MatcherHandle):
                 raise YidlSymbolError(f"{context} {name!r} is a resource matcher")
+            if isinstance(imported.target, OperationMatcherSpec):
+                raise YidlSymbolError(f"{context} {name!r} is an operation matcher")
             raise YidlSymbolError(
                 f"{context} {name!r} is a {imported.kind}, not a contribution matcher"
             )
@@ -2204,6 +2306,8 @@ def _wrapped_children(tree: Tree, wrapper_data: str) -> tuple[Tree, ...]:
 
 
 def _matcher_kind(tree: Tree) -> str:
+    if _first_child(tree, "matcher_kind_operation") is not None:
+        return "operation"
     if _first_child(tree, "matcher_kind_contribution") is not None:
         return "contribution"
     return "resource"
@@ -2332,6 +2436,90 @@ def _combine_contribution_matchers(
         name=left.name,
         inputs=tuple(inputs.values()),
         default_contribution_name=default,
+        rules=tuple(rules),
+    )
+
+
+def _merge_operation_matchers(
+    *,
+    extensions: tuple[YidlCompiledConcept, ...],
+    local: Mapping[str, OperationMatcherSpec],
+    concept_name: str,
+) -> dict[str, OperationMatcherSpec]:
+    merged: dict[str, OperationMatcherSpec] = {}
+    owners: dict[str, str] = {}
+    for extension in extensions:
+        for name, matcher in extension.operation_matchers.items():
+            existing = merged.get(name)
+            if existing is None:
+                merged[name] = matcher
+                owners[name] = extension.name
+                continue
+            merged[name] = _combine_operation_matchers(
+                existing,
+                matcher,
+                context=(
+                    f"operation matcher {name!r} inherited from both "
+                    f"{owners[name]!r} and {extension.name!r}"
+                ),
+            )
+    for name, matcher in local.items():
+        existing = merged.get(name)
+        if existing is None:
+            merged[name] = matcher
+            continue
+        merged[name] = _combine_operation_matchers(
+            existing,
+            matcher,
+            context=(
+                f"operation matcher {name!r} extended by concept "
+                f"{concept_name!r}"
+            ),
+        )
+    return merged
+
+
+def _combine_operation_matchers(
+    left: OperationMatcherSpec,
+    right: OperationMatcherSpec,
+    *,
+    context: str,
+) -> OperationMatcherSpec:
+    inputs: dict[str, AssemblyInputSpec] = {}
+    for input_spec in (*left.inputs, *right.inputs):
+        existing = inputs.get(input_spec.name)
+        if existing is None:
+            inputs[input_spec.name] = input_spec
+            continue
+        if existing.collection_name != input_spec.collection_name:
+            raise YidlSymbolError(
+                f"{context}: input {input_spec.name!r} references both "
+                f"{existing.collection_name!r} and {input_spec.collection_name!r}"
+            )
+
+    default = left.default_resource_name
+    if right.default_resource_name is not None:
+        if default is None:
+            default = right.default_resource_name
+        elif default != right.default_resource_name:
+            raise YidlSymbolError(f"{context}: duplicate default")
+
+    rules: list[OperationRuleSpec] = []
+    rules_by_name: dict[str, OperationRuleSpec] = {}
+    for rule in (*left.rules, *right.rules):
+        existing = rules_by_name.get(rule.name)
+        if existing is None:
+            rules_by_name[rule.name] = rule
+            rules.append(rule)
+            continue
+        if existing is rule:
+            continue
+        raise YidlSymbolError(f"{context}: duplicate rule {rule.name!r}")
+
+    return OperationMatcherSpec(
+        name=left.name,
+        inputs=tuple(inputs.values()),
+        default_resource_name=default,
         rules=tuple(rules),
     )
 
@@ -2514,10 +2702,13 @@ def _imported_symbol_targets(
         if kind == "matcher":
             matcher = concept.matchers.get(name)
             contribution_matcher = concept.contribution_matchers.get(name)
+            operation_matcher = concept.operation_matchers.get(name)
             if matcher is not None:
                 targets.append(matcher)
             if contribution_matcher is not None:
                 targets.append(contribution_matcher)
+            if operation_matcher is not None:
+                targets.append(operation_matcher)
             continue
         if kind == "production":
             production = concept.productions.get(name)

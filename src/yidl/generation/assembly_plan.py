@@ -115,6 +115,22 @@ class ContributionMatcherSpec:
 
 
 @dataclass(frozen=True, slots=True)
+class OperationRuleSpec:
+    name: str
+    condition: AssemblyConditionSpec
+    resource_name: str
+    weight: float
+
+
+@dataclass(frozen=True, slots=True)
+class OperationMatcherSpec:
+    name: str
+    inputs: tuple[AssemblyInputSpec, ...]
+    default_resource_name: str | None
+    rules: tuple[OperationRuleSpec, ...]
+
+
+@dataclass(frozen=True, slots=True)
 class AssemblyEdgeSpec:
     name: str
     context_inputs: tuple[AssemblyInputSpec, ...]
