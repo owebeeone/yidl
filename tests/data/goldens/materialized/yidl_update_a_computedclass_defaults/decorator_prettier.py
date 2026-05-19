@@ -143,8 +143,14 @@ _ActionEvalOrderProperty = RuntimeProperty(
 _FactoryParamNamesProperty = RuntimeProperty(
     "FactoryParamNames", object, default=(), storage_name="factory_param_names"
 )
+_DependencyOwnerProperty = RuntimeProperty(
+    "DependencyOwner", str, default=REQUIRED, storage_name="dependency_owner"
+)
 _ConsumerFieldIdProperty = RuntimeProperty(
     "ConsumerFieldId", str, default=REQUIRED, storage_name="consumer_field_id"
+)
+_ConsumerEvalOrderProperty = RuntimeProperty(
+    "ConsumerEvalOrder", int, default=REQUIRED, storage_name="consumer_eval_order"
 )
 _ProviderFieldIdProperty = RuntimeProperty(
     "ProviderFieldId", str, default=REQUIRED, storage_name="provider_field_id"
@@ -290,7 +296,9 @@ _DefaultFactoryInitActionSpec = RuntimeRecord(
 _DefaultFactoryDepSpec = RuntimeRecord(
     "DefaultFactoryDep",
     (
+        _DependencyOwnerProperty,
         _ConsumerFieldIdProperty,
+        _ConsumerEvalOrderProperty,
         _ProviderFieldIdProperty,
         _ProviderNameProperty,
         _ParamNameProperty,
@@ -1075,14 +1083,18 @@ _DefaultFactoryInitActionSpec.bind_record_class(DefaultFactoryInitAction)
 
 class DefaultFactoryDep:
     __slots__ = (
+        "dependency_owner",
         "consumer_field_id",
+        "consumer_eval_order",
         "provider_field_id",
         "provider_name",
         "param_name",
         "param_order",
     )
     __dds_record_spec__ = _DefaultFactoryDepSpec
+    dependency_owner: str
     consumer_field_id: str
+    consumer_eval_order: int
     provider_field_id: str
     provider_name: str
     param_name: str
@@ -1091,17 +1103,30 @@ class DefaultFactoryDep:
     def __init__(
         self,
         *,
+        dependency_owner: str,
         consumer_field_id: str,
+        consumer_eval_order: int,
         provider_field_id: str,
         provider_name: str,
         param_name: str,
         param_order: int = 0,
     ):
+        if not isinstance(dependency_owner, str):
+            raise TypeError(
+                "DependencyOwner must be str, got " + type(dependency_owner).__name__
+            )
+        object.__setattr__(self, "dependency_owner", dependency_owner)
         if not isinstance(consumer_field_id, str):
             raise TypeError(
                 "ConsumerFieldId must be str, got " + type(consumer_field_id).__name__
             )
         object.__setattr__(self, "consumer_field_id", consumer_field_id)
+        if not isinstance(consumer_eval_order, int):
+            raise TypeError(
+                "ConsumerEvalOrder must be int, got "
+                + type(consumer_eval_order).__name__
+            )
+        object.__setattr__(self, "consumer_eval_order", consumer_eval_order)
         if not isinstance(provider_field_id, str):
             raise TypeError(
                 "ProviderFieldId must be str, got " + type(provider_field_id).__name__
@@ -1121,7 +1146,9 @@ class DefaultFactoryDep:
 
     def __setattr__(self, name, value):
         if name in (
+            "dependency_owner",
             "consumer_field_id",
+            "consumer_eval_order",
             "provider_field_id",
             "provider_name",
             "param_name",
@@ -1132,7 +1159,9 @@ class DefaultFactoryDep:
 
     def __repr__(self):
         pieces = []
+        pieces.append("dependency_owner=" + repr(self.dependency_owner))
         pieces.append("consumer_field_id=" + repr(self.consumer_field_id))
+        pieces.append("consumer_eval_order=" + repr(self.consumer_eval_order))
         pieces.append("provider_field_id=" + repr(self.provider_field_id))
         pieces.append("provider_name=" + repr(self.provider_name))
         pieces.append("param_name=" + repr(self.param_name))
@@ -1440,9 +1469,6 @@ def _operation_0_body_0_default_factory_facts(ctx, facade):
     for field in factory_fields:
         param_names = param_names_by_id[field.field_id]
         action_kind = "zero_arg" if not param_names else "parameterized"
-        action_eval_order = (
-            eval_order_by_id[field.field_id] if action_kind == "parameterized" else 0
-        )
         ctx.write(
             DefaultFactoryInitActionsCollection,
             DefaultFactoryInitAction(
@@ -1452,7 +1478,7 @@ def _operation_0_body_0_default_factory_facts(ctx, facade):
                 action_field_name=field.field_name,
                 action_field_order=field.field_order,
                 action_kind=action_kind,
-                action_eval_order=action_eval_order,
+                action_eval_order=eval_order_by_id[field.field_id],
                 factory_param_names=param_names,
             ),
             policy=RejectDuplicate,
@@ -1461,7 +1487,9 @@ def _operation_0_body_0_default_factory_facts(ctx, facade):
         ctx.write(
             DefaultFactoryDepsCollection,
             DefaultFactoryDep(
+                dependency_owner=facade.class_id,
                 consumer_field_id=consumer.field_id,
+                consumer_eval_order=eval_order_by_id[consumer.field_id],
                 provider_field_id=provider.field_id,
                 provider_name=provider.field_name,
                 param_name=param_name,
@@ -1674,8 +1702,14 @@ ASSEMBLY_PROPERTIES = {
     "FactoryParamNames": _YidlSimpleNamespace(
         name="FactoryParamNames", storage_name="factory_param_names"
     ),
+    "DependencyOwner": _YidlSimpleNamespace(
+        name="DependencyOwner", storage_name="dependency_owner"
+    ),
     "ConsumerFieldId": _YidlSimpleNamespace(
         name="ConsumerFieldId", storage_name="consumer_field_id"
+    ),
+    "ConsumerEvalOrder": _YidlSimpleNamespace(
+        name="ConsumerEvalOrder", storage_name="consumer_eval_order"
     ),
     "ProviderFieldId": _YidlSimpleNamespace(
         name="ProviderFieldId", storage_name="provider_field_id"
@@ -1969,9 +2003,9 @@ ASSEMBLY_RESOURCES = {
         )
     ),
     "DefaultFactoryFactsBody": from_astichi_code(
-        'from inspect import Parameter, signature\n\nfields = sorted(\n    (\n        field for field in ctx.records(FieldsCollection)\n        if field.field_owner == facade.class_id\n    ),\n    key=lambda field: field.field_order,\n)\nby_name = {field.field_name: field for field in fields}\nby_id = {field.field_id: field for field in fields}\nfactory_fields = [field for field in fields if field.has_default_factory]\ngraph = {field.field_id: set() for field in factory_fields}\nparam_names_by_id = {}\ndeps = []\ndiagnostics = []\n\ndef add_diagnostic(field, suffix, message):\n    diagnostics.append(\n        ComputedClassDiagnostic(\n            diagnostic_id=f"{field.field_id}.{suffix}",\n            diagnostic_owner=facade.class_id,\n            diagnostic_field_id=field.field_id,\n            diagnostic_message=message,\n        )\n    )\n\nfor field in factory_fields:\n    try:\n        parameters = tuple(\n            signature(field.default_factory).parameters.values()\n        )\n    except (TypeError, ValueError) as exc:\n        parameters = ()\n        add_diagnostic(\n            field,\n            "signature",\n            (\n                f"field {field.field_name} default_factory "\n                f"cannot be inspected: {exc}"\n            ),\n        )\n    param_names_by_id[field.field_id] = tuple(\n        parameter.name for parameter in parameters\n    )\n    for param_order, parameter in enumerate(parameters):\n        if parameter.kind in (\n            Parameter.POSITIONAL_ONLY,\n            Parameter.VAR_POSITIONAL,\n            Parameter.VAR_KEYWORD,\n        ):\n            add_diagnostic(\n                field,\n                parameter.name,\n                (\n                    f"field {field.field_name} default_factory "\n                    f"has unsupported parameter {parameter.name!r}"\n                ),\n            )\n            continue\n        provider = by_name.get(parameter.name)\n        if provider is None:\n            add_diagnostic(\n                field,\n                parameter.name,\n                (\n                    f"field {field.field_name} default_factory "\n                    f"unknown dependency {parameter.name!r}"\n                ),\n            )\n            continue\n        deps.append((field, provider, parameter.name, param_order))\n        if provider.field_id in graph:\n            graph[field.field_id].add(provider.field_id)\n\nfield_order = {field.field_id: field.field_order for field in fields}\nvisiting = set()\nvisited = set()\nordered_field_ids = []\n\ndef visit(field_id, path):\n    if field_id in visited:\n        return\n    if field_id in visiting:\n        cycle = path[path.index(field_id):] + [field_id]\n        names = " -> ".join(\n            f"{facade.class_name}.{by_id[item].field_name}"\n            for item in cycle\n        )\n        add_diagnostic(\n            by_id[field_id],\n            "cycle",\n            f"default_factory dependency cycle: {names}",\n        )\n        return\n    visiting.add(field_id)\n    for provider_id in sorted(\n        graph.get(field_id, ()),\n        key=lambda item: field_order[item],\n    ):\n        visit(provider_id, [*path, provider_id])\n    visiting.remove(field_id)\n    visited.add(field_id)\n    ordered_field_ids.append(field_id)\n\nfor field in factory_fields:\n    visit(field.field_id, [field.field_id])\n\neval_order_by_id = {\n    field_id: eval_order\n    for eval_order, field_id in enumerate(ordered_field_ids)\n}\n\nfor field in factory_fields:\n    param_names = param_names_by_id[field.field_id]\n    action_kind = "zero_arg" if not param_names else "parameterized"\n    action_eval_order = (\n        eval_order_by_id[field.field_id]\n        if action_kind == "parameterized"\n        else 0\n    )\n    ctx.write(\n        DefaultFactoryInitActionsCollection,\n        DefaultFactoryInitAction(\n            action_id=field.field_id,\n            action_owner=facade.class_id,\n            action_field_id=field.field_id,\n            action_field_name=field.field_name,\n            action_field_order=field.field_order,\n            action_kind=action_kind,\n            action_eval_order=action_eval_order,\n            factory_param_names=param_names,\n        ),\n        policy=RejectDuplicate,\n    )\n\nfor consumer, provider, param_name, param_order in deps:\n    ctx.write(\n        DefaultFactoryDepsCollection,\n        DefaultFactoryDep(\n            consumer_field_id=consumer.field_id,\n            provider_field_id=provider.field_id,\n            provider_name=provider.field_name,\n            param_name=param_name,\n            param_order=param_order,\n        ),\n        policy=RejectDuplicate,\n    )\n\nfor eval_order, field_id in enumerate(ordered_field_ids):\n    field = by_id[field_id]\n    ctx.write(\n        InitEvaluationStepsCollection,\n        InitEvaluationStep(\n            eval_step_id=field.field_id,\n            eval_owner=facade.class_id,\n            eval_field_id=field.field_id,\n            eval_field_name=field.field_name,\n            eval_order=eval_order,\n        ),\n        policy=RejectDuplicate,\n    )\n\nfor diagnostic in diagnostics:\n    ctx.write(DiagnosticsCollection, diagnostic, policy=ReplaceExisting)',
+        'from inspect import Parameter, signature\n\nfields = sorted(\n    (\n        field for field in ctx.records(FieldsCollection)\n        if field.field_owner == facade.class_id\n    ),\n    key=lambda field: field.field_order,\n)\nby_name = {field.field_name: field for field in fields}\nby_id = {field.field_id: field for field in fields}\nfactory_fields = [field for field in fields if field.has_default_factory]\ngraph = {field.field_id: set() for field in factory_fields}\nparam_names_by_id = {}\ndeps = []\ndiagnostics = []\n\ndef add_diagnostic(field, suffix, message):\n    diagnostics.append(\n        ComputedClassDiagnostic(\n            diagnostic_id=f"{field.field_id}.{suffix}",\n            diagnostic_owner=facade.class_id,\n            diagnostic_field_id=field.field_id,\n            diagnostic_message=message,\n        )\n    )\n\nfor field in factory_fields:\n    try:\n        parameters = tuple(\n            signature(field.default_factory).parameters.values()\n        )\n    except (TypeError, ValueError) as exc:\n        parameters = ()\n        add_diagnostic(\n            field,\n            "signature",\n            (\n                f"field {field.field_name} default_factory "\n                f"cannot be inspected: {exc}"\n            ),\n        )\n    param_names_by_id[field.field_id] = tuple(\n        parameter.name for parameter in parameters\n    )\n    for param_order, parameter in enumerate(parameters):\n        if parameter.kind in (\n            Parameter.POSITIONAL_ONLY,\n            Parameter.VAR_POSITIONAL,\n            Parameter.VAR_KEYWORD,\n        ):\n            add_diagnostic(\n                field,\n                parameter.name,\n                (\n                    f"field {field.field_name} default_factory "\n                    f"has unsupported parameter {parameter.name!r}"\n                ),\n            )\n            continue\n        provider = by_name.get(parameter.name)\n        if provider is None:\n            add_diagnostic(\n                field,\n                parameter.name,\n                (\n                    f"field {field.field_name} default_factory "\n                    f"unknown dependency {parameter.name!r}"\n                ),\n            )\n            continue\n        deps.append((field, provider, parameter.name, param_order))\n        if provider.field_id in graph:\n            graph[field.field_id].add(provider.field_id)\n\nfield_order = {field.field_id: field.field_order for field in fields}\nvisiting = set()\nvisited = set()\nordered_field_ids = []\n\ndef visit(field_id, path):\n    if field_id in visited:\n        return\n    if field_id in visiting:\n        cycle = path[path.index(field_id):] + [field_id]\n        names = " -> ".join(\n            f"{facade.class_name}.{by_id[item].field_name}"\n            for item in cycle\n        )\n        add_diagnostic(\n            by_id[field_id],\n            "cycle",\n            f"default_factory dependency cycle: {names}",\n        )\n        return\n    visiting.add(field_id)\n    for provider_id in sorted(\n        graph.get(field_id, ()),\n        key=lambda item: field_order[item],\n    ):\n        visit(provider_id, [*path, provider_id])\n    visiting.remove(field_id)\n    visited.add(field_id)\n    ordered_field_ids.append(field_id)\n\nfor field in factory_fields:\n    visit(field.field_id, [field.field_id])\n\neval_order_by_id = {\n    field_id: eval_order\n    for eval_order, field_id in enumerate(ordered_field_ids)\n}\n\nfor field in factory_fields:\n    param_names = param_names_by_id[field.field_id]\n    action_kind = "zero_arg" if not param_names else "parameterized"\n    ctx.write(\n        DefaultFactoryInitActionsCollection,\n        DefaultFactoryInitAction(\n            action_id=field.field_id,\n            action_owner=facade.class_id,\n            action_field_id=field.field_id,\n            action_field_name=field.field_name,\n            action_field_order=field.field_order,\n            action_kind=action_kind,\n            action_eval_order=eval_order_by_id[field.field_id],\n            factory_param_names=param_names,\n        ),\n        policy=RejectDuplicate,\n    )\n\nfor consumer, provider, param_name, param_order in deps:\n    ctx.write(\n        DefaultFactoryDepsCollection,\n        DefaultFactoryDep(\n            dependency_owner=facade.class_id,\n            consumer_field_id=consumer.field_id,\n            consumer_eval_order=eval_order_by_id[consumer.field_id],\n            provider_field_id=provider.field_id,\n            provider_name=provider.field_name,\n            param_name=param_name,\n            param_order=param_order,\n        ),\n        policy=RejectDuplicate,\n    )\n\nfor eval_order, field_id in enumerate(ordered_field_ids):\n    field = by_id[field_id]\n    ctx.write(\n        InitEvaluationStepsCollection,\n        InitEvaluationStep(\n            eval_step_id=field.field_id,\n            eval_owner=facade.class_id,\n            eval_field_id=field.field_id,\n            eval_field_name=field.field_name,\n            eval_order=eval_order,\n        ),\n        policy=RejectDuplicate,\n    )\n\nfor diagnostic in diagnostics:\n    ctx.write(DiagnosticsCollection, diagnostic, policy=ReplaceExisting)',
         file_name="tests/data/yidl/yidl_update_a_computedclass_defaults/computedclass_default_factory_params.yidl",
-        line_number=84,
+        line_number=88,
         keep_names=(
             "ctx",
             "facade",
@@ -1989,6 +2023,14 @@ ASSEMBLY_RESOURCES = {
             "ReplaceExisting",
             "signature",
         ),
+    ),
+    "DefaultFactoryEval": astichi_template(
+        from_astichi_code(
+            "if astichi_pass(field_name, outer_bind=True) is _HAS_DEFAULT_FACTORY:\n    _yidl_factory_args = {}\n    for _yidl_factory_param in astichi_bind_external(factory_param_names):\n        _yidl_factory_args[_yidl_factory_param] = locals()[_yidl_factory_param]\n    astichi_pass(field_name, outer_bind=True)._ = _yidl_default_factories[\n        astichi_bind_external(default_key)\n    ](**_yidl_factory_args)",
+            file_name="tests/data/yidl/yidl_update_a_computedclass_defaults/computedclass_default_factory_params.yidl",
+            line_number=269,
+            keep_names=("_HAS_DEFAULT_FACTORY", "_yidl_default_factories"),
+        )
     ),
 }
 ASSEMBLY_CONTRIBUTIONS = {
@@ -3674,6 +3716,62 @@ ASSEMBLY_CONTRIBUTIONS = {
         ),
         bindings=(),
     ),
+    "ComputedInitMethodContribution": ContributionSpec(
+        name="ComputedInitMethodContribution",
+        source_name="ComputedInitMethodProduction",
+        source_kind="production",
+        build_name="InitMethod",
+        index=None,
+        order=None,
+        target=TargetSpec(
+            name="init_method",
+            paths=(
+                TargetPathSpec(
+                    kind="build",
+                    path=PathSpec(
+                        segments=(
+                            PathSegmentSpec(kind="name", name="ClassDef", indexes=()),
+                        )
+                    ),
+                ),
+            ),
+        ),
+        bindings=(),
+    ),
+    "DefaultFactoryEvalContribution": ContributionSpec(
+        name="DefaultFactoryEvalContribution",
+        source_name="DefaultFactoryEval",
+        source_kind="resource",
+        build_name="DefaultFactoryEval",
+        index=ValueRef("ActionEvalOrder"),
+        order=ValueRef("ActionEvalOrder"),
+        target=TargetSpec(
+            name="default_factory_guards",
+            paths=(
+                TargetPathSpec(
+                    kind="build",
+                    path=PathSpec(
+                        segments=(
+                            PathSegmentSpec(kind="name", name="InitMethod", indexes=()),
+                        )
+                    ),
+                ),
+            ),
+        ),
+        bindings=(
+            BindingSpec(
+                kind="ident", name="field_name", value=ValueRef("ActionFieldName")
+            ),
+            BindingSpec(
+                kind="external", name="default_key", value=ValueRef("ActionFieldId")
+            ),
+            BindingSpec(
+                kind="external",
+                name="factory_param_names",
+                value=ValueRef("FactoryParamNames"),
+            ),
+        ),
+    ),
 }
 ASSEMBLY_MATCHERS = {
     "ClassDefinitionContribution": ContributionMatcherSpec(
@@ -4046,6 +4144,14 @@ ASSEMBLY_MATCHERS = {
                 ),
                 contribution_name="InitMethodContribution",
                 weight=1.0,
+            ),
+            ContributionRuleSpec(
+                name="computed_defaults",
+                condition=EqConditionSpec(
+                    left=ValueRef("DecoratorInit"), right=LiteralValueRef(True)
+                ),
+                contribution_name="ComputedInitMethodContribution",
+                weight=2.0,
             ),
         ),
     ),
@@ -5834,6 +5940,30 @@ ASSEMBLY_MATCHERS = {
             ),
         ),
     ),
+    "DefaultFactoryEvalContributions": ContributionMatcherSpec(
+        name="DefaultFactoryEvalContributions",
+        inputs=(
+            AssemblyInputSpec(
+                name="action",
+                collection_name="DefaultFactoryInitActions",
+                collection=None,
+            ),
+            AssemblyInputSpec(
+                name="facade", collection_name="Facades", collection=None
+            ),
+        ),
+        default_contribution_name=None,
+        rules=(
+            ContributionRuleSpec(
+                name="owner",
+                condition=EqConditionSpec(
+                    left=ValueRef("ActionOwner"), right=ValueRef("ClassId")
+                ),
+                contribution_name="DefaultFactoryEvalContribution",
+                weight=1.0,
+            ),
+        ),
+    ),
 }
 ASSEMBLY_EDGES = {
     "ModuleProduction.diagnostics": AssemblyEdgeSpec(
@@ -6325,6 +6455,92 @@ ASSEMBLY_EDGES = {
             left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
         ),
         matcher_name="HashFrozenEqValueContributions",
+    ),
+    "ComputedInitMethodProduction.kw_only_fence": AssemblyEdgeSpec(
+        name="ComputedInitMethodProduction.kw_only_fence",
+        context_inputs=(
+            AssemblyInputSpec(
+                name="facade", collection_name="Facades", collection=None
+            ),
+        ),
+        from_inputs=(),
+        condition=None,
+        matcher_name="KwOnlyFenceContributions",
+    ),
+    "ComputedInitMethodProduction.params": AssemblyEdgeSpec(
+        name="ComputedInitMethodProduction.params",
+        context_inputs=(
+            AssemblyInputSpec(
+                name="facade", collection_name="Facades", collection=None
+            ),
+        ),
+        from_inputs=(
+            AssemblyInputSpec(name="field", collection_name="Fields", collection=None),
+        ),
+        condition=EqConditionSpec(
+            left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
+        ),
+        matcher_name="InitParamContribution",
+    ),
+    "ComputedInitMethodProduction.default_factory_evals": AssemblyEdgeSpec(
+        name="ComputedInitMethodProduction.default_factory_evals",
+        context_inputs=(
+            AssemblyInputSpec(
+                name="facade", collection_name="Facades", collection=None
+            ),
+        ),
+        from_inputs=(
+            AssemblyInputSpec(
+                name="action",
+                collection_name="DefaultFactoryInitActions",
+                collection=None,
+            ),
+        ),
+        condition=EqConditionSpec(
+            left=ValueRef("ActionOwner"), right=ValueRef("ClassId")
+        ),
+        matcher_name="DefaultFactoryEvalContributions",
+    ),
+    "ComputedInitMethodProduction.assignments": AssemblyEdgeSpec(
+        name="ComputedInitMethodProduction.assignments",
+        context_inputs=(
+            AssemblyInputSpec(
+                name="facade", collection_name="Facades", collection=None
+            ),
+        ),
+        from_inputs=(
+            AssemblyInputSpec(name="field", collection_name="Fields", collection=None),
+        ),
+        condition=EqConditionSpec(
+            left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
+        ),
+        matcher_name="InitAssignContribution",
+    ),
+    "ComputedInitMethodProduction.post_init_call": AssemblyEdgeSpec(
+        name="ComputedInitMethodProduction.post_init_call",
+        context_inputs=(
+            AssemblyInputSpec(
+                name="facade", collection_name="Facades", collection=None
+            ),
+        ),
+        from_inputs=(),
+        condition=None,
+        matcher_name="PostInitContribution",
+    ),
+    "ComputedInitMethodProduction.post_init_args": AssemblyEdgeSpec(
+        name="ComputedInitMethodProduction.post_init_args",
+        context_inputs=(
+            AssemblyInputSpec(
+                name="facade", collection_name="Facades", collection=None
+            ),
+        ),
+        from_inputs=(
+            AssemblyInputSpec(name="field", collection_name="Fields", collection=None),
+        ),
+        condition=EqConditionSpec(
+            left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
+        ),
+        matcher_name="PostInitArgContributions",
     ),
 }
 ASSEMBLY_PRODUCTIONS = {
@@ -7074,6 +7290,123 @@ ASSEMBLY_PRODUCTIONS = {
                         left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
                     ),
                     matcher_name="HashFrozenEqValueContributions",
+                )
+            ),
+        ),
+    ),
+    "ComputedInitMethodProduction": ComposableProductionSpec(
+        name="ComputedInitMethodProduction",
+        inputs=(
+            AssemblyInputSpec(
+                name="facade", collection_name="Facades", collection=None
+            ),
+        ),
+        root=RootSpec(
+            build_name="InitMethod", resource_name="InitMethodTemplate", bindings=()
+        ),
+        applies=(
+            InlineApplySpec(
+                edge=AssemblyEdgeSpec(
+                    name="ComputedInitMethodProduction.kw_only_fence",
+                    context_inputs=(
+                        AssemblyInputSpec(
+                            name="facade", collection_name="Facades", collection=None
+                        ),
+                    ),
+                    from_inputs=(),
+                    condition=None,
+                    matcher_name="KwOnlyFenceContributions",
+                )
+            ),
+            InlineApplySpec(
+                edge=AssemblyEdgeSpec(
+                    name="ComputedInitMethodProduction.params",
+                    context_inputs=(
+                        AssemblyInputSpec(
+                            name="facade", collection_name="Facades", collection=None
+                        ),
+                    ),
+                    from_inputs=(
+                        AssemblyInputSpec(
+                            name="field", collection_name="Fields", collection=None
+                        ),
+                    ),
+                    condition=EqConditionSpec(
+                        left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
+                    ),
+                    matcher_name="InitParamContribution",
+                )
+            ),
+            InlineApplySpec(
+                edge=AssemblyEdgeSpec(
+                    name="ComputedInitMethodProduction.default_factory_evals",
+                    context_inputs=(
+                        AssemblyInputSpec(
+                            name="facade", collection_name="Facades", collection=None
+                        ),
+                    ),
+                    from_inputs=(
+                        AssemblyInputSpec(
+                            name="action",
+                            collection_name="DefaultFactoryInitActions",
+                            collection=None,
+                        ),
+                    ),
+                    condition=EqConditionSpec(
+                        left=ValueRef("ActionOwner"), right=ValueRef("ClassId")
+                    ),
+                    matcher_name="DefaultFactoryEvalContributions",
+                )
+            ),
+            InlineApplySpec(
+                edge=AssemblyEdgeSpec(
+                    name="ComputedInitMethodProduction.assignments",
+                    context_inputs=(
+                        AssemblyInputSpec(
+                            name="facade", collection_name="Facades", collection=None
+                        ),
+                    ),
+                    from_inputs=(
+                        AssemblyInputSpec(
+                            name="field", collection_name="Fields", collection=None
+                        ),
+                    ),
+                    condition=EqConditionSpec(
+                        left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
+                    ),
+                    matcher_name="InitAssignContribution",
+                )
+            ),
+            InlineApplySpec(
+                edge=AssemblyEdgeSpec(
+                    name="ComputedInitMethodProduction.post_init_call",
+                    context_inputs=(
+                        AssemblyInputSpec(
+                            name="facade", collection_name="Facades", collection=None
+                        ),
+                    ),
+                    from_inputs=(),
+                    condition=None,
+                    matcher_name="PostInitContribution",
+                )
+            ),
+            InlineApplySpec(
+                edge=AssemblyEdgeSpec(
+                    name="ComputedInitMethodProduction.post_init_args",
+                    context_inputs=(
+                        AssemblyInputSpec(
+                            name="facade", collection_name="Facades", collection=None
+                        ),
+                    ),
+                    from_inputs=(
+                        AssemblyInputSpec(
+                            name="field", collection_name="Fields", collection=None
+                        ),
+                    ),
+                    condition=EqConditionSpec(
+                        left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
+                    ),
+                    matcher_name="PostInitArgContributions",
                 )
             ),
         ),

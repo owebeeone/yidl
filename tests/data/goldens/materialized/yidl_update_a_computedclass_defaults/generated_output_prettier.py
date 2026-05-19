@@ -16,12 +16,12 @@ def build_generated_dataclasses(*, defaults=None, default_factories=None):
     _yidl_defaults = {} if defaults is None else defaults
     _yidl_default_factories = {} if default_factories is None else default_factories
 
-    class Widget:
+    class Example:
         __module__ = "generated_dataclasses"
-        __dataclass_params__ = {"frozen": True}
+        __dataclass_params__ = None
         __dataclass_fields__ = {
-            "count": _field_info(
-                name="count",
+            "v1": _field_info(
+                name="v1",
                 type="int",
                 default=_MISSING,
                 default_factory=_MISSING,
@@ -33,11 +33,11 @@ def build_generated_dataclasses(*, defaults=None, default_factories=None):
                 metadata=None,
                 kind="field",
             ),
-            "level": _field_info(
-                name="level",
+            "v3": _field_info(
+                name="v3",
                 type="int",
-                default=_yidl_defaults["Widget.level"],
-                default_factory=_MISSING,
+                default=_MISSING,
+                default_factory=_yidl_default_factories["Example.v3"],
                 init=True,
                 repr=True,
                 compare=True,
@@ -46,104 +46,63 @@ def build_generated_dataclasses(*, defaults=None, default_factories=None):
                 metadata=None,
                 kind="field",
             ),
-            "tags": _field_info(
-                name="tags",
-                type="list[str]",
-                default=_MISSING,
-                default_factory=_yidl_default_factories["Widget.tags"],
-                init=True,
-                repr=True,
-                compare=False,
-                hash=None,
-                kw_only=False,
-                metadata=None,
-                kind="field",
-            ),
-            "scale": _field_info(
-                name="scale",
+            "v2": _field_info(
+                name="v2",
                 type="int",
-                default=_yidl_defaults["Widget.scale"],
-                default_factory=_MISSING,
+                default=_MISSING,
+                default_factory=_yidl_default_factories["Example.v2"],
                 init=True,
                 repr=True,
-                compare=False,
-                hash=None,
-                kw_only=False,
-                metadata=None,
-                kind="initvar",
-            ),
-            "hidden": _field_info(
-                name="hidden",
-                type="str",
-                default=_yidl_defaults["Widget.hidden"],
-                default_factory=_MISSING,
-                init=False,
-                repr=False,
-                compare=False,
+                compare=True,
                 hash=None,
                 kw_only=False,
                 metadata=None,
                 kind="field",
             ),
-            "kind": _field_info(
-                name="kind",
-                type="str",
-                default=_yidl_defaults["Widget.kind"],
-                default_factory=_MISSING,
-                init=False,
-                repr=False,
-                compare=False,
-                hash=None,
-                kw_only=False,
-                metadata=None,
-                kind="classvar",
-            ),
         }
-        __annotations__ = {
-            "count": "int",
-            "level": "int",
-            "tags": "list[str]",
-            "scale": "int",
-            "hidden": "str",
-            "kind": "str",
-        }
+        __annotations__ = {"v1": "int", "v3": "int", "v2": "int"}
         pass
         pass
-        level = _yidl_defaults["Widget.level"]
         pass
         pass
-        hidden = _yidl_defaults["Widget.hidden"]
-        kind = _yidl_defaults["Widget.kind"]
-        __match_args__ = ("count", "level", "tags", "scale")
+        __match_args__ = ("v1", "v3", "v2")
 
         def __init__(
             self,
-            count: "int",
-            level: "int" = _yidl_defaults["Widget.level"],
-            tags: "list[str]" = _HAS_DEFAULT_FACTORY,
-            scale: "int" = _yidl_defaults["Widget.scale"],
+            v1: "int",
+            v3: "int" = _HAS_DEFAULT_FACTORY,
+            v2: "int" = _HAS_DEFAULT_FACTORY,
         ):
-            pass
-            pass
-            if tags is _HAS_DEFAULT_FACTORY:
-                tags = _yidl_default_factories["Widget.tags"]()
-            pass
-            pass
-            pass
-            object.__setattr__(self, "count", count)
-            object.__setattr__(self, "level", level)
-            object.__setattr__(self, "tags", tags)
+            if v2 is _HAS_DEFAULT_FACTORY:
+                _yidl_factory_args = {}
+                for _yidl_factory_param in ("v1",):
+                    _yidl_factory_args[_yidl_factory_param] = locals()[
+                        _yidl_factory_param
+                    ]
+                v2 = _yidl_default_factories["Example.v2"](**_yidl_factory_args)
+            if v3 is _HAS_DEFAULT_FACTORY:
+                _yidl_factory_args__astichi_scoped_1 = {}
+                for _yidl_factory_param__astichi_scoped_2 in ("v2", "v1"):
+                    _yidl_factory_args__astichi_scoped_1[
+                        _yidl_factory_param__astichi_scoped_2
+                    ] = locals()[_yidl_factory_param__astichi_scoped_2]
+                v3 = _yidl_default_factories["Example.v3"](
+                    **_yidl_factory_args__astichi_scoped_1
+                )
+            setattr(self, "v1", v1)
+            setattr(self, "v3", v3)
+            setattr(self, "v2", v2)
             pass
 
         def __repr__(self):
             return (
-                "Widget"
+                "Example"
                 + "("
                 + ", ".join(
                     (
-                        "count" + "=" + repr(getattr(self, "count")),
-                        "level" + "=" + repr(getattr(self, "level")),
-                        "tags" + "=" + repr(getattr(self, "tags")),
+                        "v1" + "=" + repr(getattr(self, "v1")),
+                        "v3" + "=" + repr(getattr(self, "v3")),
+                        "v2" + "=" + repr(getattr(self, "v2")),
                     )
                 )
                 + ")"
@@ -151,24 +110,19 @@ def build_generated_dataclasses(*, defaults=None, default_factories=None):
 
         def __eq__(self, other):
             if other.__class__ is self.__class__:
-                return (getattr(self, "count"), getattr(self, "level")) == (
-                    getattr(other, "count"),
-                    getattr(other, "level"),
-                )
+                return (
+                    getattr(self, "v1"),
+                    getattr(self, "v3"),
+                    getattr(self, "v2"),
+                ) == (getattr(other, "v1"), getattr(other, "v3"), getattr(other, "v2"))
             return NotImplemented
 
         pass
         pass
         pass
         pass
+        __hash__ = None
+        pass
+        pass
 
-        def __hash__(self):
-            return hash((getattr(self, "count"), getattr(self, "level")))
-
-        def __setattr__(self, name, value):
-            raise FrozenInstanceError(f"cannot assign to field {name!r}")
-
-        def __delattr__(self, name):
-            raise FrozenInstanceError(f"cannot delete field {name!r}")
-
-    return {"Widget": Widget}
+    return {"Example": Example}

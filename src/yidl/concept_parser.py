@@ -1806,7 +1806,7 @@ class _ConceptCompiler:
                     names,
                     context=f"assembly edge {edge.name!r}",
                 )
-            matcher = self._local_contribution_matchers[edge.matcher_name]
+            matcher = self._resolve_contribution_matcher_spec(edge.matcher_name)
             for contribution_name in _matcher_contribution_names(matcher):
                 contribution = self._resolve_contribution_spec(contribution_name)
                 self._validate_contribution_names(
@@ -1930,6 +1930,25 @@ class _ConceptCompiler:
                 return contribution
         raise YidlSymbolError(f"undefined contribution {name!r}")
 
+    def _resolve_contribution_matcher_spec(
+        self,
+        name: str,
+    ) -> ContributionMatcherSpec:
+        matcher = self._local_contribution_matchers.get(name)
+        if matcher is not None:
+            return matcher
+        for extension in self._extensions:
+            matcher = extension.contribution_matchers.get(name)
+            if matcher is not None:
+                return matcher
+        imported = self._imported_symbol(name)
+        if imported is not None and isinstance(
+            imported.target,
+            ContributionMatcherSpec,
+        ):
+            return imported.target
+        raise YidlSymbolError(f"undefined contribution matcher {name!r}")
+
     def _validate_static_assembly_scopes(self) -> None:
         validated: set[str] = set()
         for production in self._local_composable_productions.values():
@@ -1964,7 +1983,7 @@ class _ConceptCompiler:
                 if isinstance(apply, InlineApplySpec)
                 else self._local_assembly_edges[apply.edge_name]
             )
-            matcher = self._local_contribution_matchers[edge.matcher_name]
+            matcher = self._resolve_contribution_matcher_spec(edge.matcher_name)
             for contribution_name in _matcher_contribution_names(matcher):
                 contribution = self._resolve_contribution_spec(contribution_name)
                 if contribution.source_kind == "production":

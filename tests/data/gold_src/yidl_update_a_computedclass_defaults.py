@@ -8,7 +8,6 @@ import black
 from support.golden_case import run_multi_source_case
 from yidl.concept_parser import compile_yidl_files
 from yidl.generation.data_def_sys import emit_concept_runtime_source
-from yidl_update_a_dataclasses_split import _container
 
 BASE_FIXTURE_DIR = Path("tests/data/yidl/yidl_update_a_dataclasses_split")
 FEATURE_FIXTURE_DIR = Path("tests/data/yidl/yidl_update_a_computedclass_defaults")
@@ -21,6 +20,18 @@ YIDL_PATHS = (
     FEATURE_FIXTURE_DIR / "computedclass_defaults.yidl",
 )
 ENTRY_PATH = FEATURE_FIXTURE_DIR / "computedclass_defaults.yidl"
+
+
+def _tags_factory() -> list[str]:
+    return []
+
+
+def _example_v2_factory(v1: int) -> int:
+    return v1 + 2
+
+
+def _example_v3_factory(v2: int, v1: int) -> int:
+    return v1 + v2 + 2
 
 
 def render_case() -> Mapping[str, str]:
@@ -68,28 +79,27 @@ def validate_case(sources: Mapping[str, str]) -> None:
     exec(output_prettier_source, output_prettier_namespace)
 
     classes = generated_namespace["build_generated_dataclasses"](
-        defaults={
-            "Widget.level": 7,
-            "Widget.hidden": "secret",
-            "Widget.scale": 1,
-            "Widget.kind": "widget",
+        default_factories={
+            "Example.v2": _example_v2_factory,
+            "Example.v3": _example_v3_factory,
         },
-        default_factories={"Widget.tags": list},
     )
     pretty_classes = output_prettier_namespace["build_generated_dataclasses"](
-        defaults={
-            "Widget.level": 7,
-            "Widget.hidden": "secret",
-            "Widget.scale": 1,
-            "Widget.kind": "widget",
+        default_factories={
+            "Example.v2": _example_v2_factory,
+            "Example.v3": _example_v3_factory,
         },
-        default_factories={"Widget.tags": list},
     )
 
-    assert repr(classes["Widget"](3, scale=5)) == "Widget(count=3, level=7, tags=[])"
-    assert (
-        repr(pretty_classes["Widget"](3, scale=5))
-        == "Widget(count=3, level=7, tags=[])"
+    example = classes["Example"](10)
+    pretty_example = pretty_classes["Example"](10)
+    assert example.v2 == 12
+    assert example.v3 == 24
+    assert pretty_example.v2 == 12
+    assert pretty_example.v3 == 24
+    assert list(classes["Example"].__dataclass_fields__) == ["v1", "v3", "v2"]
+    assert output_source.index("v2 = _yidl_default_factories['Example.v2']") < (
+        output_source.index("v3 = _yidl_default_factories['Example.v3']")
     )
 
 
@@ -106,6 +116,60 @@ def _output_source(decorator_source: str) -> str:
     return namespace["build_DataclassModule"](
         _container(namespace),
     ).emit_commented()
+
+
+def _container(namespace: Mapping[str, object]) -> object:
+    builder = namespace["new_builder"]()
+    facade = namespace["DataclassFacade"]
+    field = namespace["InstanceField"]
+    facades = namespace["FacadesCollection"]
+    fields = namespace["FieldsCollection"]
+
+    builder.add(
+        facades,
+        facade(
+            class_id="Example",
+            class_name="Example",
+            class_order=20,
+            module_name="generated_dataclasses",
+            match_args=("v1", "v3", "v2"),
+        ),
+    )
+    builder.add(
+        fields,
+        field(
+            field_id="Example.v1",
+            field_owner="Example",
+            field_name="v1",
+            field_order=10,
+            annotation="int",
+        ),
+    )
+    builder.add(
+        fields,
+        field(
+            field_id="Example.v3",
+            field_owner="Example",
+            field_name="v3",
+            field_order=20,
+            annotation="int",
+            has_default_factory=True,
+            default_factory=_example_v3_factory,
+        ),
+    )
+    builder.add(
+        fields,
+        field(
+            field_id="Example.v2",
+            field_owner="Example",
+            field_name="v2",
+            field_order=30,
+            annotation="int",
+            has_default_factory=True,
+            default_factory=_example_v2_factory,
+        ),
+    )
+    return namespace["build_container"](builder)
 
 
 def _assert_schema(namespace: Mapping[str, object]) -> None:
@@ -246,7 +310,9 @@ def _assert_refined_view(namespace: Mapping[str, object]) -> None:
     ]
     assert [
         (
+            record.dependency_owner,
             record.consumer_field_id,
+            record.consumer_eval_order,
             record.provider_field_id,
             record.provider_name,
             record.param_name,
@@ -254,8 +320,8 @@ def _assert_refined_view(namespace: Mapping[str, object]) -> None:
         )
         for record in container.DefaultFactoryDeps.sequence()
     ] == [
-        ("Widget.total", "Widget.count", "count", "count", 0),
-        ("Widget.total", "Widget.tags", "tags", "tags", 1),
+        ("Widget", "Widget.total", 1, "Widget.count", "count", "count", 0),
+        ("Widget", "Widget.total", 1, "Widget.tags", "tags", "tags", 1),
     ]
     assert [
         (record.eval_field_id, record.eval_field_name, record.eval_order)

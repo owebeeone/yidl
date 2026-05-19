@@ -14,7 +14,9 @@ concept ComputedClassDefaultFactoryParams extends dataclasses.DataclassSubstitut
     property ActionEvalOrder: int = 0
     property FactoryParamNames: object = ()
 
+    property DependencyOwner: str
     property ConsumerFieldId: str
+    property ConsumerEvalOrder: int
     property ProviderFieldId: str
     property ProviderName: str
     property ParamName: str
@@ -43,7 +45,9 @@ concept ComputedClassDefaultFactoryParams extends dataclasses.DataclassSubstitut
     }
 
     record DefaultFactoryDep {
+        DependencyOwner
         ConsumerFieldId
+        ConsumerEvalOrder
         ProviderFieldId
         ProviderName
         ParamName
@@ -197,11 +201,6 @@ concept ComputedClassDefaultFactoryParams extends dataclasses.DataclassSubstitut
         for field in factory_fields:
             param_names = param_names_by_id[field.field_id]
             action_kind = "zero_arg" if not param_names else "parameterized"
-            action_eval_order = (
-                eval_order_by_id[field.field_id]
-                if action_kind == "parameterized"
-                else 0
-            )
             ctx.write(
                 DefaultFactoryInitActionsCollection,
                 DefaultFactoryInitAction(
@@ -211,7 +210,7 @@ concept ComputedClassDefaultFactoryParams extends dataclasses.DataclassSubstitut
                     action_field_name=field.field_name,
                     action_field_order=field.field_order,
                     action_kind=action_kind,
-                    action_eval_order=action_eval_order,
+                    action_eval_order=eval_order_by_id[field.field_id],
                     factory_param_names=param_names,
                 ),
                 policy=RejectDuplicate,
@@ -221,7 +220,9 @@ concept ComputedClassDefaultFactoryParams extends dataclasses.DataclassSubstitut
             ctx.write(
                 DefaultFactoryDepsCollection,
                 DefaultFactoryDep(
+                    dependency_owner=facade.class_id,
                     consumer_field_id=consumer.field_id,
+                    consumer_eval_order=eval_order_by_id[consumer.field_id],
                     provider_field_id=provider.field_id,
                     provider_name=provider.field_name,
                     param_name=param_name,
@@ -263,4 +264,75 @@ concept ComputedClassDefaultFactoryParams extends dataclasses.DataclassSubstitut
         inputs(Facades, Fields)
         outputs(DefaultFactoryInitActions, DefaultFactoryDeps, InitEvaluationSteps, Diagnostics)
         using matcher DefaultFactoryFactOperations
+
+    resource DefaultFactoryEval = template $[
+        if astichi_pass(field_name, outer_bind=True) is _HAS_DEFAULT_FACTORY:
+            _yidl_factory_args = {}
+            for _yidl_factory_param in astichi_bind_external(factory_param_names):
+                _yidl_factory_args[_yidl_factory_param] = locals()[_yidl_factory_param]
+            astichi_pass(field_name, outer_bind=True)._ = _yidl_default_factories[
+                astichi_bind_external(default_key)
+            ](**_yidl_factory_args)
+    ]$ {
+        keep _HAS_DEFAULT_FACTORY, _yidl_default_factories
+    }
+
+    contribution ComputedInitMethodContribution = ComputedInitMethodProduction {
+        as InitMethod
+
+        target init_method {
+            build /ClassDef
+        }
+    }
+
+    contribution DefaultFactoryEvalContribution = DefaultFactoryEval {
+        as DefaultFactoryEval
+        index ActionEvalOrder
+        order ActionEvalOrder
+
+        target default_factory_guards {
+            build /InitMethod
+        }
+
+        ident field_name = ActionFieldName
+        external default_key = ActionFieldId
+        external factory_param_names = FactoryParamNames
+    }
+
+    matcher InitMethodContributions(facade: Facades) -> contribution {
+        rule computed_defaults when DecoratorInit == True
+                               -> ComputedInitMethodContribution weight 2
+    }
+
+    matcher DefaultFactoryEvalContributions(action: DefaultFactoryInitActions, facade: Facades) -> contribution {
+        rule owner when ActionOwner == ClassId -> DefaultFactoryEvalContribution
+    }
+
+    production ComputedInitMethodProduction(facade: Facades) -> composable {
+        root InitMethod = InitMethodTemplate
+
+        apply kw_only_fence using KwOnlyFenceContributions
+
+        apply params
+            from field: Fields
+            where FieldOwner == ClassId
+            using InitParamContribution
+
+        apply default_factory_evals
+            from action: DefaultFactoryInitActions
+            where ActionOwner == ClassId
+            using DefaultFactoryEvalContributions
+
+        apply assignments
+            from field: Fields
+            where FieldOwner == ClassId
+            using InitAssignContribution
+
+        apply post_init_call using PostInitContribution
+
+        apply post_init_args
+            from field: Fields
+            where FieldOwner == ClassId
+            using PostInitArgContributions
+    }
 }
