@@ -40,6 +40,7 @@ concept_member: use_decl
               | family_decl
               | collection_decl
               | computed_collection_decl
+              | computed_collection_filter_decl
               | port_decl
               | resource_decl
               | matcher_decl
@@ -85,6 +86,7 @@ cardinality_clause: "single" -> cardinality_single
                   | "many" -> cardinality_many
 
 computed_collection_decl: "computed" "collection" CNAME ":" type_ref "from" qname "where" condition_expr
+computed_collection_filter_decl: "filter" qname "where" condition_expr
 
 port_decl: "port" CNAME STRING cardinality_clause
 

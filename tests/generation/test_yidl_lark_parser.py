@@ -160,6 +160,181 @@ def test_yidl_lark_record_decl_and_default_values_lower() -> None:
     ]
 
 
+def test_yidl_lark_computed_collection_filter_parse() -> None:
+    source = """
+    module filters
+
+    concept Filters {
+        property Name: str
+        property Init: bool = False
+        property Kind: str = "plain"
+
+        record Field {
+            Name
+            Init
+            Kind
+        }
+
+        collection Fields: Field identity Name many
+        computed collection InitFields: Field from Fields where Init == True
+        filter InitFields where Kind == "managed"
+    }
+    """
+
+    tree = parse_yidl_source("filters.yidl", source)
+
+    assert len(tuple(tree.find_data("computed_collection_filter_decl"))) == 1
+
+
+def test_yidl_lark_computed_collection_filter_refines_runtime_view() -> None:
+    module = compile_yidl_files(
+        {
+            "base.yidl": _computed_filter_base_source(),
+            "managed.yidl": """
+                module managed
+
+                import "base.yidl" as base
+
+                concept Managed extends base.Base {
+                    filter InitFields where Kind == "managed"
+                }
+            """,
+        },
+        "managed.yidl",
+    )
+    concept = module.concepts["Managed"]
+    source = emit_concept_runtime_source(
+        concept.plan.build_data_definition(),
+        resources=concept.resources,
+        assembly_plan=concept,
+    )
+    namespace: dict[str, object] = {}
+    exec(source, namespace)
+
+    builder = namespace["new_builder"]()
+    fields = namespace["FieldsCollection"]
+    field = namespace["Field"]
+    builder.add(fields, field(name="plain_init", init=True, kind="plain"))
+    builder.add(fields, field(name="managed_init", init=True, kind="managed"))
+    builder.add(fields, field(name="managed_no_init", init=False, kind="managed"))
+
+    container = namespace["build_container"](builder)
+
+    assert [record.name for record in container.InitFields.sequence()] == [
+        "managed_init"
+    ]
+
+
+def test_yidl_lark_computed_collection_duplicate_diamond_filters_dedupe() -> None:
+    module = compile_yidl_files(
+        {
+            "base.yidl": _computed_filter_base_source(),
+            "left.yidl": """
+                module left
+
+                import "base.yidl" as base
+
+                concept Left extends base.Base {
+                    filter InitFields where Kind == "managed"
+                }
+            """,
+            "right.yidl": """
+                module right
+
+                import "base.yidl" as base
+
+                concept Right extends base.Base {
+                    filter InitFields where Kind == "managed"
+                }
+            """,
+            "combined.yidl": """
+                module combined
+
+                import "left.yidl" as left
+                import "right.yidl" as right
+
+                concept Combined extends left.Left, right.Right {}
+            """,
+        },
+        "combined.yidl",
+    )
+
+    dds = module.concepts["Combined"].plan.build_data_definition()
+
+    assert [
+        condition.property.name for condition in dds.computed_collections[0].conditions
+    ] == [
+        "Init",
+        "Kind",
+    ]
+
+
+def test_yidl_lark_computed_collection_filter_rejects_wrong_target_kind() -> None:
+    with pytest.raises(YidlSymbolError, match="not a computed collection"):
+        compile_yidl_files(
+            {"filters.yidl": """
+                    module filters
+
+                    concept Filters {
+                        property Name: str
+                        property Kind: str = "plain"
+
+                        record Field {
+                            Name
+                            Kind
+                        }
+
+                        collection Fields: Field identity Name many
+                        filter Fields where Kind == "managed"
+                    }
+                """},
+            "filters.yidl",
+        )
+
+
+def test_yidl_lark_computed_collection_filter_rejects_unknown_property() -> None:
+    with pytest.raises(YidlSymbolError, match="undefined property 'Missing'"):
+        compile_yidl_files(
+            {"filters.yidl": """
+                    module filters
+
+                    concept Filters {
+                        property Name: str
+                        property Init: bool = False
+
+                        record Field {
+                            Name
+                            Init
+                        }
+
+                        collection Fields: Field identity Name many
+                        computed collection InitFields: Field from Fields where Init == True
+                        filter InitFields where Missing == True
+                    }
+                """},
+            "filters.yidl",
+        )
+
+
+def test_yidl_lark_computed_collection_redefinition_rejects() -> None:
+    with pytest.raises(YidlSymbolError, match="already inherited"):
+        compile_yidl_files(
+            {
+                "base.yidl": _computed_filter_base_source(),
+                "child.yidl": """
+                    module child
+
+                    import "base.yidl" as base
+
+                    concept Child extends base.Base {
+                        computed collection InitFields: Field from Fields where Kind == "managed"
+                    }
+                """,
+            },
+            "child.yidl",
+        )
+
+
 def test_yidl_lark_dataclasses_source_fixture_compiles() -> None:
     entry_path = "tests/data/yidl/dataclasses_example.yidl"
     source = (_DATA_YIDL / "dataclasses_example.yidl").read_text(encoding="utf-8")
@@ -173,7 +348,7 @@ def test_yidl_lark_dataclasses_source_fixture_compiles() -> None:
 
 
 def test_yidl_lark_resource_snippet_forms_parse() -> None:
-    source = '''
+    source = """
     module snippets
 
     concept Snippets {
@@ -209,7 +384,7 @@ def test_yidl_lark_resource_snippet_forms_parse() -> None:
             edge bind = BindResource
         }
     }
-    '''
+    """
 
     tree = parse_yidl_source("snippets.yidl", source)
 
@@ -702,7 +877,9 @@ def test_yidl_lark_from_import_local_shadow_rejects() -> None:
     }
     """
 
-    with pytest.raises(YidlSymbolError, match="Root.*import.*already|already.*import.*Root"):
+    with pytest.raises(
+        YidlSymbolError, match="Root.*import.*already|already.*import.*Root"
+    ):
         compile_yidl_files(
             {"core.yidl": core, "child.yidl": child},
             "child.yidl",
@@ -1054,7 +1231,9 @@ def test_yidl_lark_resource_matcher_diamond_rules_merge_once() -> None:
     }
     """
 
-    compiled = compile_yidl_files({"matcher_diamond.yidl": source}, "matcher_diamond.yidl")
+    compiled = compile_yidl_files(
+        {"matcher_diamond.yidl": source}, "matcher_diamond.yidl"
+    )
     concept = compiled.concepts["Combined"]
     dds = concept.plan.build_data_definition()
     matcher = next(matcher for matcher in dds.matchers if matcher.name == "ResourceFor")
@@ -1361,6 +1540,29 @@ def test_yidl_lark_operation_reports_unsupported_diagnostics_option() -> None:
 
     with pytest.raises(YidlSymbolError, match="diagnostics"):
         compile_yidl_files({"operation.yidl": source}, "operation.yidl")
+
+
+def _computed_filter_base_source() -> str:
+    return """
+        module base
+
+        export concept Base
+
+        concept Base {
+            property Name: str
+            property Init: bool = False
+            property Kind: str = "plain"
+
+            record Field {
+                Name
+                Init
+                Kind
+            }
+
+            collection Fields: Field identity Name many
+            computed collection InitFields: Field from Fields where Init == True
+        }
+    """
 
 
 def _children(tree: Tree, data: str) -> tuple[Tree, ...]:

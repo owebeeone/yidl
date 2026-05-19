@@ -115,7 +115,9 @@ class DataDefinitionSystem:
         storage_name: str | None = None,
     ) -> PropertySpec:
         _require_name(name, "property name")
-        resolved_storage_name = _to_snake_case(name) if storage_name is None else storage_name
+        resolved_storage_name = (
+            _to_snake_case(name) if storage_name is None else storage_name
+        )
         _require_name(resolved_storage_name, "property storage name")
         if name in self._properties:
             raise ValueError(f"property {name!r} is already defined")
@@ -160,7 +162,9 @@ class DataDefinitionSystem:
                 default=default,
                 storage_name=storage_name,
             )
-        resolved_storage_name = _to_snake_case(name) if storage_name is None else storage_name
+        resolved_storage_name = (
+            _to_snake_case(name) if storage_name is None else storage_name
+        )
         if (
             existing.value_type != value_type
             or existing.default != default
@@ -216,7 +220,9 @@ class DataDefinitionSystem:
         if name in self._collections or name in self._computed_collections:
             raise ValueError(f"collection {name!r} is already defined")
         if record.system is not self:
-            raise ValueError("collection record shape belongs to another data-definition system")
+            raise ValueError(
+                "collection record shape belongs to another data-definition system"
+            )
         resolved_identity = _normalize_identity(identity)
         _require_identity_properties(record, resolved_identity)
         spec = CollectionSpec(
@@ -249,8 +255,7 @@ class DataDefinitionSystem:
         if (
             existing.record_shape is not record
             or not _identities_equal(existing.identity, resolved_identity)
-            or existing.cardinality.allows_multiple()
-            != cardinality.allows_multiple()
+            or existing.cardinality.allows_multiple() != cardinality.allows_multiple()
         ):
             raise ValueError(f"collection {name!r} is already defined differently")
         return existing
@@ -266,7 +271,9 @@ class DataDefinitionSystem:
         if name in self._collections or name in self._computed_collections:
             raise ValueError(f"collection {name!r} is already defined")
         if source.system is not self:
-            raise ValueError("computed collection source belongs to another data-definition system")
+            raise ValueError(
+                "computed collection source belongs to another data-definition system"
+            )
         for condition in when:
             source.record_shape.require_property(condition.property)
         spec = ComputedCollectionSpec(
@@ -288,14 +295,54 @@ class DataDefinitionSystem:
         existing = self._computed_collections.get(name)
         if existing is None:
             return self.computed_collection(name, source=source, when=when)
-        if (
-            existing.source is not source
-            or not _conditions_equal(existing.conditions, tuple(when))
+        if existing.source is not source or not _conditions_equal(
+            existing.conditions, tuple(when)
         ):
             raise ValueError(
                 f"computed collection {name!r} is already defined differently"
             )
         return existing
+
+    def refine_computed_collection(
+        self,
+        collection: ComputedCollectionSpec | str,
+        *,
+        when: Sequence[PropertyEquals],
+    ) -> ComputedCollectionSpec:
+        spec = self._computed_collection_for_refinement(collection)
+        additions = tuple(when)
+        for condition in additions:
+            spec.record_shape.require_property(condition.property)
+        conditions = list(spec.conditions)
+        for condition in additions:
+            if not any(
+                _condition_equal(existing, condition) for existing in conditions
+            ):
+                conditions.append(condition)
+        spec.conditions = tuple(conditions)
+        return spec
+
+    def _computed_collection_for_refinement(
+        self,
+        collection: ComputedCollectionSpec | str,
+    ) -> ComputedCollectionSpec:
+        if isinstance(collection, str):
+            try:
+                return self._computed_collections[collection]
+            except KeyError as exc:
+                raise ValueError(
+                    f"undefined computed collection {collection!r}"
+                ) from exc
+        if not isinstance(collection, ComputedCollectionSpec):
+            raise TypeError(
+                "computed collection refinement target must be a computed collection"
+            )
+        if collection.system is not self:
+            raise ValueError(
+                "computed collection refinement target belongs to another "
+                "data-definition system"
+            )
+        return collection
 
     def container_builder(self) -> DDSContainerBuilder:
         from yidl.generation.data_container import DDSContainerBuilder
@@ -330,7 +377,9 @@ class DataDefinitionSystem:
         if self._port_index is not None:
             raise ValueError("port index is already defined")
         if target.system is not self or order.system is not self:
-            raise ValueError("port index properties must belong to this data-definition system")
+            raise ValueError(
+                "port index properties must belong to this data-definition system"
+            )
         if target.value_type is not object:
             raise TypeError("port index target property must have value_type=object")
         if order.value_type is not int:
@@ -370,7 +419,9 @@ class DataDefinitionSystem:
         if name in self._productions:
             raise ValueError(f"production {name!r} is already defined")
         if source.system is not self or target.system is not self:
-            raise ValueError("production source and target must belong to the same data-definition system")
+            raise ValueError(
+                "production source and target must belong to the same data-definition system"
+            )
         if isinstance(target.record_shape, UnionSpec):
             raise ValueError("production target collections must use a concrete record")
         resolved_policy = RejectDuplicate if policy is None else policy
@@ -380,7 +431,9 @@ class DataDefinitionSystem:
             )
         if isinstance(source, MatcherResultSource):
             if when:
-                raise ValueError("matcher-result productions do not support property when= conditions")
+                raise ValueError(
+                    "matcher-result productions do not support property when= conditions"
+                )
         else:
             for condition in when:
                 source.record_shape.require_property(condition.property)
@@ -449,11 +502,15 @@ class DataDefinitionSystem:
             raise ValueError("operation must declare at least one input or output")
         for collection in (*resolved_inputs, *resolved_outputs):
             if collection.system is not self:
-                raise ValueError("operation collections must belong to the same data-definition system")
+                raise ValueError(
+                    "operation collections must belong to the same data-definition system"
+                )
         resolved_order_by = tuple(order_by)
         for prop in resolved_order_by:
             if prop.system is not self:
-                raise ValueError("operation order properties must belong to this data-definition system")
+                raise ValueError(
+                    "operation order properties must belong to this data-definition system"
+                )
             for collection in resolved_inputs:
                 collection.record_shape.require_property(prop)
         spec = OperationSpec(
@@ -477,7 +534,9 @@ class DataDefinitionSystem:
             raise ValueError(f"production group {name!r} is already defined")
         for entry in entries:
             if entry.system is not self:
-                raise ValueError("production group entries must belong to the same data-definition system")
+                raise ValueError(
+                    "production group entries must belong to the same data-definition system"
+                )
         spec = ProductionGroupSpec(system=self, name=name, entries=tuple(entries))
         self._production_groups[name] = spec
         return spec
@@ -509,7 +568,9 @@ class DataDefinitionSystem:
         if name in self._transforms:
             raise ValueError(f"transform {name!r} is already defined")
         if source.system is not self or target.system is not self:
-            raise ValueError("transform collections must belong to this data-definition system")
+            raise ValueError(
+                "transform collections must belong to this data-definition system"
+            )
         resolved_values = values or {}
         for condition in when:
             source.record_spec.require_property(condition.property)
@@ -595,7 +656,9 @@ class RecordSpec:
 
     def require_property(self, prop: PropertySpec) -> None:
         if prop.system is not self.system:
-            raise ValueError(f"property {prop.name!r} belongs to another data-definition system")
+            raise ValueError(
+                f"property {prop.name!r} belongs to another data-definition system"
+            )
         if prop not in self.properties:
             raise ValueError(f"record {self.name!r} has no property {prop.name!r}")
 
@@ -620,7 +683,9 @@ class RecordSpec:
     def bind_record_class(self, record_class: type[object]) -> type[object]:
         record_spec = getattr(record_class, "__dds_record_spec__", None)
         if record_spec is not self:
-            raise TypeError(f"{record_class.__name__} is not bound to record {self.name}")
+            raise TypeError(
+                f"{record_class.__name__} is not bound to record {self.name}"
+            )
         self._record_class = record_class
         return record_class
 
@@ -629,10 +694,7 @@ class RecordSpec:
 
     def values_of(self, record: object) -> dict[PropertySpec, object]:
         self.validate_record(record)
-        return {
-            prop: prop.value_from(record)
-            for prop in self.properties
-        }
+        return {prop: prop.value_from(record) for prop in self.properties}
 
     def validate_record(self, record: object) -> None:
         record_spec = getattr(type(record), "__dds_record_spec__", None)
@@ -677,17 +739,21 @@ class UnionSpec:
 
     def require_property(self, prop: PropertySpec) -> None:
         if prop.system is not self.system:
-            raise ValueError(f"property {prop.name!r} belongs to another data-definition system")
+            raise ValueError(
+                f"property {prop.name!r} belongs to another data-definition system"
+            )
         if not any(prop in variant.properties for variant in self.variants):
-            raise ValueError(f"union {self.name!r} has no variant with property {prop.name!r}")
+            raise ValueError(
+                f"union {self.name!r} has no variant with property {prop.name!r}"
+            )
 
     def require_identity_property(self, prop: PropertySpec) -> None:
         if prop.system is not self.system:
-            raise ValueError(f"property {prop.name!r} belongs to another data-definition system")
+            raise ValueError(
+                f"property {prop.name!r} belongs to another data-definition system"
+            )
         missing = [
-            variant.name
-            for variant in self.variants
-            if prop not in variant.properties
+            variant.name for variant in self.variants if prop not in variant.properties
         ]
         if missing:
             names = ", ".join(missing)
@@ -701,7 +767,9 @@ class UnionSpec:
         for variant in self.variants:
             if _record_specs_match(record_spec, variant):
                 return variant
-        raise TypeError(f"expected {self.name} variant record, got {type(record).__name__}")
+        raise TypeError(
+            f"expected {self.name} variant record, got {type(record).__name__}"
+        )
 
     def validate_record(self, record: object) -> None:
         self.record_spec_for(record)
@@ -901,7 +969,9 @@ class ComputedCollectionSpec:
         return self.source.fact_keys(record)
 
     def matches(self, record: object) -> bool:
-        if isinstance(self.source, ComputedCollectionSpec) and not self.source.matches(record):
+        if isinstance(self.source, ComputedCollectionSpec) and not self.source.matches(
+            record
+        ):
             return False
         self.record_shape.validate_record(record)
         return all(condition.matches(record) for condition in self.conditions)
@@ -1276,7 +1346,9 @@ class TransformSpec:
 
     def derive(self, source: object) -> object | None:
         if isinstance(self.target.record_shape, UnionSpec):
-            raise ValueError("transform target collections must use a concrete record shape")
+            raise ValueError(
+                "transform target collections must use a concrete record shape"
+            )
         if not self.matches(source):
             return None
         values = {
@@ -1288,10 +1360,7 @@ class TransformSpec:
         return self.target.record(**values)
 
     def lookup_keys(self) -> tuple[LookupKey, ...]:
-        return tuple(
-            condition.lookup_key(self.source)
-            for condition in self.conditions
-        )
+        return tuple(condition.lookup_key(self.source) for condition in self.conditions)
 
     def __repr__(self) -> str:
         return self.name
@@ -1346,7 +1415,9 @@ class ProductionSpec:
         self.source.record_shape.validate_record(source)
         return all(condition.matches(source) for condition in self.conditions)
 
-    def make_record(self, source: object, *, container: object | None = None) -> object | None:
+    def make_record(
+        self, source: object, *, container: object | None = None
+    ) -> object | None:
         if not self.matches(source):
             return None
         values = {
@@ -1436,9 +1507,7 @@ class ProductionGroupSpec:
     @property
     def productions(self) -> tuple[ProductionSpec, ...]:
         return tuple(
-            entry
-            for entry in self.entries
-            if isinstance(entry, ProductionSpec)
+            entry for entry in self.entries if isinstance(entry, ProductionSpec)
         )
 
 
@@ -1492,8 +1561,7 @@ def _compile_template(source: str) -> astichi.Composable:
     return astichi.compile(textwrap.dedent(source).strip() + "\n")
 
 
-_RECORD_CLASS = _compile_template(
-    """
+_RECORD_CLASS = _compile_template("""
 from yidl.generation.data_def_sys import REQUIRED, dds_property, dds_record_spec
 
 class record_class_name__astichi_arg__:
@@ -1503,11 +1571,9 @@ class record_class_name__astichi_arg__:
         astichi_hole(property_specs),
     )
     astichi_hole(body)
-"""
-)
+""")
 
-_EMPTY_RECORD_CLASS = _compile_template(
-    """
+_EMPTY_RECORD_CLASS = _compile_template("""
 from yidl.generation.data_def_sys import dds_record_spec
 
 class record_class_name__astichi_arg__:
@@ -1519,64 +1585,50 @@ class record_class_name__astichi_arg__:
 
     def __repr__(self):
         return astichi_bind_external(record_name) + "()"
-"""
-)
+""")
 
-_REQUIRED_PROPERTY_SPEC = _compile_template(
-    """
+_REQUIRED_PROPERTY_SPEC = _compile_template("""
 dds_property(
     astichi_bind_external(property_name),
     astichi_ref(external=value_type_path),
     default=REQUIRED,
     storage_name=astichi_bind_external(storage_name),
 )
-"""
-)
+""")
 
-_DEFAULTED_PROPERTY_SPEC = _compile_template(
-    """
+_DEFAULTED_PROPERTY_SPEC = _compile_template("""
 dds_property(
     astichi_bind_external(property_name),
     astichi_ref(external=value_type_path),
     default=astichi_bind_external(default_value),
     storage_name=astichi_bind_external(storage_name),
 )
-"""
-)
+""")
 
-_FIELD_ANNOTATION = _compile_template(
-    """
+_FIELD_ANNOTATION = _compile_template("""
 field_name__astichi_arg__: astichi_ref(external=value_type_path)
-"""
-)
+""")
 
-_INIT_METHOD = _compile_template(
-    """
+_INIT_METHOD = _compile_template("""
 def __init__(self, params__astichi_param_hole__):
     astichi_hole(body)
-"""
-)
+""")
 
-_REQUIRED_PARAM = _compile_template(
-    """
+_REQUIRED_PARAM = _compile_template("""
 def astichi_params(*, field_name__astichi_arg__: astichi_ref(external=value_type_path)):
     pass
-"""
-)
+""")
 
-_DEFAULTED_PARAM = _compile_template(
-    """
+_DEFAULTED_PARAM = _compile_template("""
 def astichi_params(
     *,
     field_name__astichi_arg__: astichi_ref(external=value_type_path)
     = astichi_bind_external(default_value),
 ):
     pass
-"""
-)
+""")
 
-_VALIDATE_TYPE = _compile_template(
-    """
+_VALIDATE_TYPE = _compile_template("""
 if not isinstance(
     astichi_pass(field_name, outer_bind=True),
     astichi_ref(external=value_type_path),
@@ -1585,45 +1637,36 @@ if not isinstance(
         astichi_bind_external(error_prefix)
         + type(astichi_pass(field_name, outer_bind=True)).__name__
     )
-"""
-)
+""")
 
-_INIT_ASSIGN = _compile_template(
-    """
+_INIT_ASSIGN = _compile_template("""
 object.__setattr__(
     astichi_pass(self, outer_bind=True),
     astichi_bind_external(field_name_literal),
     astichi_pass(field_name, outer_bind=True),
 )
-"""
-)
+""")
 
-_SETATTR_METHOD = _compile_template(
-    """
+_SETATTR_METHOD = _compile_template("""
 def __setattr__(self, name, value):
     if name in astichi_bind_external(frozen_names):
         raise AttributeError(astichi_bind_external(error_message))
     object.__setattr__(self, name, value)
-"""
-)
+""")
 
-_REPR_METHOD = _compile_template(
-    """
+_REPR_METHOD = _compile_template("""
 def __repr__(self):
     pieces = []
     astichi_hole(parts)
     return astichi_bind_external(record_name) + "(" + ", ".join(pieces) + ")"
-"""
-)
+""")
 
-_REPR_PART = _compile_template(
-    """
+_REPR_PART = _compile_template("""
 astichi_pass(pieces, outer_bind=True).append(
     astichi_bind_external(label)
     + repr(astichi_pass(self, outer_bind=True).astichi_ref(external=field_path))
 )
-"""
-)
+""")
 
 
 def _make_record_class(spec: RecordSpec) -> type[object]:
@@ -1645,8 +1688,7 @@ def _materialize_record_class(
     class_name = spec.name
     if not spec.properties:
         return (
-            _EMPTY_RECORD_CLASS
-            .bind(
+            _EMPTY_RECORD_CLASS.bind(
                 record_name=class_name,
             )
             .bind_identifier(record_class_name=class_name)
@@ -1775,7 +1817,9 @@ def _execute_record_class(
     class_name: str,
     namespace: dict[str, object],
 ) -> type[object]:
-    code = compile(composable.tree, f"<yidl.dds.{class_name}>", "exec", dont_inherit=True)
+    code = compile(
+        composable.tree, f"<yidl.dds.{class_name}>", "exec", dont_inherit=True
+    )
     exec(code, namespace)
     record_class = namespace[class_name]
     if not isinstance(record_class, type):
@@ -1793,7 +1837,9 @@ def _value_type_ref_path(value_type: type[object] | tuple[type[object], ...]) ->
     return value_type.__qualname__
 
 
-def _value_type_keep_names(value_type: type[object] | tuple[type[object], ...]) -> tuple[str, ...]:
+def _value_type_keep_names(
+    value_type: type[object] | tuple[type[object], ...],
+) -> tuple[str, ...]:
     return (_value_type_ref_path(value_type),)
 
 
@@ -1845,10 +1891,13 @@ def _conditions_equal(
     if len(left) != len(right):
         return False
     return all(
-        left_item.property is right_item.property
-        and left_item.value == right_item.value
+        _condition_equal(left_item, right_item)
         for left_item, right_item in zip(left, right, strict=True)
     )
+
+
+def _condition_equal(left: PropertyEquals, right: PropertyEquals) -> bool:
+    return left.property is right.property and left.value == right.value
 
 
 def _normalize_identity(identity: IdentitySpec | None) -> IdentitySpec | None:
@@ -1952,11 +2001,17 @@ def _resolve_lookup_value_expression(
     expression: LookupValue,
 ) -> LookupValue:
     if expression.collection.system is not source.system:
-        raise ValueError("lookup collection must belong to the same data-definition system")
+        raise ValueError(
+            "lookup collection must belong to the same data-definition system"
+        )
     if expression.collection.identity is None:
-        raise ValueError(f"lookup collection {expression.collection.name!r} has no identity")
+        raise ValueError(
+            f"lookup collection {expression.collection.name!r} has no identity"
+        )
     expression.collection.record_shape.require_property(expression.value)
-    _validate_lookup_key_matches_identity(expression.collection.identity, expression.key)
+    _validate_lookup_key_matches_identity(
+        expression.collection.identity, expression.key
+    )
     resolved_key = _resolve_lookup_key_expression(source, expression.key)
     resolved_default = (
         _NO_LOOKUP_DEFAULT
@@ -2022,7 +2077,9 @@ def _unique_properties(
     resolved: list[PropertySpec] = []
     for prop in properties:
         if prop.system is not system:
-            raise ValueError(f"property {prop.name!r} belongs to another data-definition system")
+            raise ValueError(
+                f"property {prop.name!r} belongs to another data-definition system"
+            )
         if prop in seen:
             continue
         if prop.storage_name in storage_names:

@@ -22,6 +22,7 @@ from lark.exceptions import UnexpectedInput
 
 from yidl.capsule.recorded_builder import CapsuleConceptPlan
 from yidl.capsule.recorded_builder import CollectionHandle
+from yidl.capsule.recorded_builder import ComputedCollectionHandle
 from yidl.capsule.recorded_builder import MatcherHandle
 from yidl.capsule.recorded_builder import MatcherInputHandle
 from yidl.capsule.recorded_builder import MatcherResultSourceHandle
@@ -87,7 +88,7 @@ class YidlCompiledConcept:
     properties: Mapping[str, PropertyHandle]
     families: Mapping[str, SchemaFamilyHandle]
     records: Mapping[str, RecordHandle]
-    collections: Mapping[str, CollectionHandle]
+    collections: Mapping[str, CollectionHandle | ComputedCollectionHandle]
     resources: Mapping[str, GeneratedValue]
     matchers: Mapping[str, MatcherHandle]
     productions: Mapping[str, ProductionHandle]
@@ -200,7 +201,9 @@ class _YidlCompiler:
         try:
             source = self._sources[resolved_path]
         except KeyError as exc:
-            raise YidlSymbolError(f"missing imported YIDL source {resolved_path!r}") from exc
+            raise YidlSymbolError(
+                f"missing imported YIDL source {resolved_path!r}"
+            ) from exc
 
         self._active.add(resolved_path)
         tree = _file_tree(parse_yidl_source(resolved_path, source))
@@ -232,15 +235,21 @@ class _YidlCompiler:
     ) -> _CompiledImports:
         aliases: dict[str, YidlCompiledModule] = {}
         for import_tree in _children(tree, "import_alias"):
-            imported_path = _resolve_import_path(path, _string_value(import_tree.children[0]))
+            imported_path = _resolve_import_path(
+                path, _string_value(import_tree.children[0])
+            )
             alias = _token_text(import_tree.children[1])
             if alias in aliases:
-                raise YidlSymbolError(f"{path}: import alias {alias!r} is already defined")
+                raise YidlSymbolError(
+                    f"{path}: import alias {alias!r} is already defined"
+                )
             aliases[alias] = self.compile(imported_path)
 
         symbols: dict[str, _ImportedSymbol] = {}
         for import_tree in _children(tree, "import_from"):
-            imported_path = _resolve_import_path(path, _string_value(import_tree.children[0]))
+            imported_path = _resolve_import_path(
+                path, _string_value(import_tree.children[0])
+            )
             module = self.compile(imported_path)
             for item in import_tree.children[1:]:
                 if not isinstance(item, Tree) or item.data != "import_item":
@@ -251,7 +260,9 @@ class _YidlCompiler:
                         f"{path}: from-import of {kind} is not implemented"
                     )
                 name = _token_text(item.children[1])
-                alias = _token_text(item.children[2]) if len(item.children) > 2 else name
+                alias = (
+                    _token_text(item.children[2]) if len(item.children) > 2 else name
+                )
                 if alias in aliases or alias in symbols:
                     raise YidlSymbolError(
                         f"{path}: import alias {alias!r} is already defined"
@@ -300,8 +311,15 @@ class _ConceptCompiler:
         self._prior_concepts = prior_concepts
         self._local_properties: dict[str, PropertyHandle] = {}
         self._local_families: dict[str, SchemaFamilyHandle] = {}
+        self._local_family_common: dict[
+            SchemaFamilyHandle, tuple[PropertyHandle, ...]
+        ] = {}
+        self._local_family_variants: dict[SchemaFamilyHandle, list[RecordHandle]] = {}
         self._local_records: dict[str, RecordHandle] = {}
-        self._local_collections: dict[str, CollectionHandle] = {}
+        self._local_collections: dict[
+            str,
+            CollectionHandle | ComputedCollectionHandle,
+        ] = {}
         self._local_resources: dict[str, GeneratedValue] = {}
         self._local_matchers: dict[str, MatcherHandle] = {}
         self._local_matcher_inputs: dict[str, frozenset[str]] = {}
@@ -323,7 +341,9 @@ class _ConceptCompiler:
         name = _token_text(tree.children[0])
         extends_tree = _first_child(tree, "extends_clause")
         self._extensions = (
-            tuple(self._resolve_concept(_qname(child)) for child in extends_tree.children)
+            tuple(
+                self._resolve_concept(_qname(child)) for child in extends_tree.children
+            )
             if extends_tree is not None
             else ()
         )
@@ -335,6 +355,9 @@ class _ConceptCompiler:
         self._reject_from_import_local_collisions(members)
         for member in members:
             self._compile_base_member(builder, member)
+        for member in members:
+            if member.data == "computed_collection_filter_decl":
+                self._compile_computed_collection_filter(builder, member)
         self._declare_update_a_members(members)
         for member in members:
             if member.data == "matcher_decl" and _matcher_kind(member) == "resource":
@@ -342,7 +365,10 @@ class _ConceptCompiler:
                 if matcher is not None:
                     self._local_matchers[matcher.name] = matcher
         for member in members:
-            if member.data == "matcher_decl" and _matcher_kind(member) == "contribution":
+            if (
+                member.data == "matcher_decl"
+                and _matcher_kind(member) == "contribution"
+            ):
                 matcher = self._compile_contribution_matcher(member)
                 self._local_contribution_matchers[matcher.name] = matcher
         for member in members:
@@ -376,7 +402,6 @@ class _ConceptCompiler:
             elif member.data in {
                 "use_decl",
                 "union_decl",
-                "computed_collection_decl",
                 "port_decl",
                 "diagnostics_decl",
             }:
@@ -514,6 +539,10 @@ class _ConceptCompiler:
             collection = self._compile_collection(builder, member)
             self._local_collections[collection.name] = collection
             return
+        if data == "computed_collection_decl":
+            collection = self._compile_computed_collection(builder, member)
+            self._local_collections[collection.name] = collection
+            return
         if data == "resource_decl":
             name, resource = self._compile_resource(member)
             self._local_resources[name] = resource
@@ -532,7 +561,7 @@ class _ConceptCompiler:
         if data in {
             "use_decl",
             "union_decl",
-            "computed_collection_decl",
+            "computed_collection_filter_decl",
             "port_decl",
             "diagnostics_decl",
         }:
@@ -624,7 +653,9 @@ class _ConceptCompiler:
         except ValueError as exc:
             raise YidlSymbolError(f"resource {name!r}: {exc}") from exc
 
-        raise YidlSymbolError(f"resource {name!r} uses unsupported expression {expr.data!r}")
+        raise YidlSymbolError(
+            f"resource {name!r} uses unsupported expression {expr.data!r}"
+        )
 
     def _resource_options(self, tree: Tree, resource_name: str) -> _ResourceOptions:
         options_tree = _first_child(tree, "resource_options")
@@ -636,7 +667,9 @@ class _ConceptCompiler:
         for option in _children(options_tree, "resource_keep"):
             keep_list = option.children[0]
             if not isinstance(keep_list, Tree):
-                raise YidlSymbolError(f"resource {resource_name!r} has invalid keep list")
+                raise YidlSymbolError(
+                    f"resource {resource_name!r} has invalid keep list"
+                )
             keep_names.extend(_token_text(child) for child in keep_list.children)
         edge_options.extend(_children(options_tree, "resource_edge"))
         return _ResourceOptions(
@@ -722,6 +755,7 @@ class _ConceptCompiler:
             editor = builder.schema_family(family_name)
             self._local_families[family_name] = editor.handle
             owner = None
+        family = editor.handle
         for raw_member in tree.children[1:]:
             member = (
                 raw_member.children[0]
@@ -729,9 +763,11 @@ class _ConceptCompiler:
                 else raw_member
             )
             if member.data == "family_common":
-                editor.common(
-                    *(self._resolve_property(_qname(child)) for child in member.children)
+                properties = tuple(
+                    self._resolve_property(_qname(child)) for child in member.children
                 )
+                editor.common(*properties)
+                self._local_family_common[family] = properties
                 continue
             if member.data != "variant_decl":
                 continue
@@ -744,6 +780,7 @@ class _ConceptCompiler:
                 ),
             )
             self._local_records[variant.name] = variant
+            self._local_family_variants.setdefault(family, []).append(variant)
 
     def _compile_record(self, builder: Any, tree: Tree) -> RecordHandle:
         name = _token_text(tree.children[0])
@@ -772,6 +809,108 @@ class _ConceptCompiler:
             identity=identity,
         )
 
+    def _compile_computed_collection(
+        self,
+        builder: Any,
+        tree: Tree,
+    ) -> ComputedCollectionHandle:
+        name = _token_text(tree.children[0])
+        record_shape = self._resolve_record_shape(_qname(tree.children[1].children[0]))
+        source = self._resolve_collection(_qname(tree.children[2]))
+        source_record_shape = self._collection_record_shape(source)
+        if source_record_shape is not record_shape:
+            raise YidlSymbolError(
+                f"computed collection {name!r} record shape does not match source"
+            )
+        return getattr(builder.computed, name)(
+            source=source,
+            when=self._property_conditions(tree.children[3], source),
+        )
+
+    def _compile_computed_collection_filter(self, builder: Any, tree: Tree) -> None:
+        collection = self._resolve_computed_collection(_qname(tree.children[0]))
+        builder.refine_computed_collection(
+            collection,
+            when=self._property_conditions(tree.children[1], collection),
+        )
+
+    def _property_conditions(
+        self,
+        tree: Tree,
+        source: CollectionHandle | ComputedCollectionHandle,
+    ) -> tuple[Any, ...]:
+        if tree.data == "condition_and":
+            return (
+                *self._property_conditions(tree.children[0], source),
+                *self._property_conditions(tree.children[1], source),
+            )
+        if tree.data == "condition_term":
+            left = tree.children[0]
+            right = tree.children[1]
+            left_ref = self._source_property_ref(left, source)
+            right_ref = self._source_property_ref(right, source)
+            if left_ref is not None and right_ref is None:
+                return (left_ref.eq(self._value(right)),)
+            if right_ref is not None and left_ref is None:
+                return (right_ref.eq(self._value(left)),)
+            raise YidlSymbolError(
+                "computed collection conditions must compare one source property"
+            )
+        raise YidlSymbolError(
+            f"unsupported computed collection condition {tree.data!r}"
+        )
+
+    def _source_property_ref(
+        self,
+        node: object,
+        source: CollectionHandle | ComputedCollectionHandle,
+    ) -> PropertyHandle | None:
+        if (
+            not isinstance(node, Tree)
+            or node.data != "qname"
+            or len(node.children) != 1
+        ):
+            return None
+        prop = self._resolve_property(_qname(node))
+        if not self._collection_has_property(source, prop):
+            raise YidlSymbolError(
+                f"property {prop.name!r} is not visible on collection {source.name!r}"
+            )
+        return prop
+
+    def _collection_record_shape(
+        self,
+        collection: CollectionHandle | ComputedCollectionHandle,
+    ) -> RecordHandle | SchemaFamilyHandle:
+        if isinstance(collection, ComputedCollectionHandle):
+            return self._collection_record_shape(collection.source)
+        return collection.record
+
+    def _collection_has_property(
+        self,
+        collection: CollectionHandle | ComputedCollectionHandle,
+        prop: PropertyHandle,
+    ) -> bool:
+        record_shape = self._collection_record_shape(collection)
+        if isinstance(record_shape, RecordHandle):
+            return prop in record_shape.properties
+        return self._schema_family_has_property(record_shape, prop)
+
+    def _schema_family_has_property(
+        self,
+        family: SchemaFamilyHandle,
+        prop: PropertyHandle,
+    ) -> bool:
+        if prop in self._local_family_common.get(family, ()):
+            return True
+        for record in self._local_family_variants.get(family, ()):
+            if prop in record.properties:
+                return True
+        for extension in self._extensions:
+            if _plan_schema_family_has_property(extension.plan, family, prop):
+                return True
+        return False
+
     def _compile_matcher(self, builder: Any, tree: Tree) -> MatcherHandle | None:
         name = _token_text(tree.children[0])
         if (
@@ -792,7 +931,10 @@ class _ConceptCompiler:
         input_list = _first_child(tree, "matcher_input_list")
         if input_list is not None:
             for input_tree in input_list.children:
-                if not isinstance(input_tree, Tree) or input_tree.data != "matcher_input":
+                if (
+                    not isinstance(input_tree, Tree)
+                    or input_tree.data != "matcher_input"
+                ):
                     continue
                 input_name = _token_text(input_tree.children[0])
                 source = self._resolve_collection(_qname(input_tree.children[1]))
@@ -803,7 +945,10 @@ class _ConceptCompiler:
             if not isinstance(child, Tree):
                 continue
             if child.data == "matcher_default":
-                if inherited is not None and self._inherited_resource_matcher_has_default(name):
+                if (
+                    inherited is not None
+                    and self._inherited_resource_matcher_has_default(name)
+                ):
                     raise YidlSymbolError(
                         f"matcher {name!r} cannot redefine inherited default"
                     )
@@ -899,7 +1044,9 @@ class _ConceptCompiler:
             raise YidlSymbolError(
                 f"matcher {name!r} is inherited as a resource matcher"
             )
-        if any(name in extension.contribution_matchers for extension in self._extensions):
+        if any(
+            name in extension.contribution_matchers for extension in self._extensions
+        ):
             raise YidlSymbolError(
                 f"matcher {name!r} is inherited as a contribution matcher"
             )
@@ -970,7 +1117,10 @@ class _ConceptCompiler:
         return inherited
 
     def _inherited_resource_matcher_has_default(self, name: str) -> bool:
-        return any(_plan_has_matcher_default(extension.plan, name) for extension in self._extensions)
+        return any(
+            _plan_has_matcher_default(extension.plan, name)
+            for extension in self._extensions
+        )
 
     def _matcher_conditions(
         self,
@@ -999,7 +1149,11 @@ class _ConceptCompiler:
         node: object,
         inputs: Mapping[str, MatcherInputHandle],
     ) -> Any | None:
-        if not isinstance(node, Tree) or node.data != "qname" or len(node.children) != 2:
+        if (
+            not isinstance(node, Tree)
+            or node.data != "qname"
+            or len(node.children) != 2
+        ):
             return None
         input_name = _token_text(node.children[0])
         input_handle = inputs.get(input_name)
@@ -1030,7 +1184,9 @@ class _ConceptCompiler:
                 continue
             if len(member.children) == 2:
                 prop = self._resolve_property(_qname(member.children[0]))
-                values[prop] = self._production_value(member.children[1], matcher_inputs)
+                values[prop] = self._production_value(
+                    member.children[1], matcher_inputs
+                )
                 continue
             raise YidlSymbolError(f"production {name!r} has invalid member")
 
@@ -1196,7 +1352,10 @@ class _ConceptCompiler:
         tree: Tree,
     ) -> ComposableProductionSpec:
         name = _token_text(tree.children[0])
-        if name in self._local_composable_productions or name in self._local_productions:
+        if (
+            name in self._local_composable_productions
+            or name in self._local_productions
+        ):
             raise YidlSymbolError(f"production {name!r} is already defined")
 
         inputs_tree = _first_child(tree, "composable_production_inputs")
@@ -1306,10 +1465,18 @@ class _ConceptCompiler:
             if not isinstance(child, Tree):
                 continue
             if child.data == "target_build":
-                paths.append(TargetPathSpec(kind="build", path=self._path_spec(child.children[0])))
+                paths.append(
+                    TargetPathSpec(
+                        kind="build", path=self._path_spec(child.children[0])
+                    )
+                )
                 continue
             if child.data == "target_owner":
-                paths.append(TargetPathSpec(kind="owner", path=self._path_spec(child.children[0])))
+                paths.append(
+                    TargetPathSpec(
+                        kind="owner", path=self._path_spec(child.children[0])
+                    )
+                )
                 continue
             raise YidlSymbolError(f"{context} has invalid target option {child.data!r}")
         return TargetSpec(name=_token_text(tree.children[0]), paths=tuple(paths))
@@ -1391,7 +1558,9 @@ class _ConceptCompiler:
         matcher_name: str | None = None
         for child in tail_children:
             if isinstance(child, Tree) and child.data == "assemble_from":
-                from_inputs = self._assembly_inputs(_first_child(child, "matcher_input_list"))
+                from_inputs = self._assembly_inputs(
+                    _first_child(child, "matcher_input_list")
+                )
                 continue
             if isinstance(child, Tree) and child.data == "where_clause":
                 condition = self._assembly_condition(child.children[0])
@@ -1422,7 +1591,9 @@ class _ConceptCompiler:
             value=self._assembly_value(tree.children[2]),
         )
 
-    def _assembly_inputs(self, input_list: Tree | None) -> tuple[AssemblyInputSpec, ...]:
+    def _assembly_inputs(
+        self, input_list: Tree | None
+    ) -> tuple[AssemblyInputSpec, ...]:
         if input_list is None:
             return ()
         inputs: list[AssemblyInputSpec] = []
@@ -1483,9 +1654,7 @@ class _ConceptCompiler:
             return TupleValueRef(
                 items=tuple(self._assembly_value(child) for child in node.children)
             )
-        raise YidlSymbolError(
-            f"unsupported assembly value expression {node.data!r}"
-        )
+        raise YidlSymbolError(f"unsupported assembly value expression {node.data!r}")
 
     def _resolve_contribution_ref(self, tree: Tree, *, context: str) -> str:
         if tree.data == "resource_match_ref":
@@ -1512,7 +1681,9 @@ class _ConceptCompiler:
         if self._contribution_exists(name):
             return name
         if self._resource_exists(name):
-            raise YidlSymbolError(f"{context} {name!r} is a resource, not a contribution")
+            raise YidlSymbolError(
+                f"{context} {name!r} is a resource, not a contribution"
+            )
         raise YidlSymbolError(f"{context} references undefined contribution {name!r}")
 
     def _resolve_contribution_matcher_name(self, name: str, *, context: str) -> str:
@@ -1540,7 +1711,9 @@ class _ConceptCompiler:
             raise YidlSymbolError(
                 f"{context} {name!r} is a {imported.kind}, not a contribution matcher"
             )
-        raise YidlSymbolError(f"{context} references undefined contribution matcher {name!r}")
+        raise YidlSymbolError(
+            f"{context} references undefined contribution matcher {name!r}"
+        )
 
     def _resource_exists(self, name: str) -> bool:
         try:
@@ -1554,10 +1727,15 @@ class _ConceptCompiler:
         if len(parts) == 1:
             if parts[0] in self._declared_contributions:
                 return True
-            return any(parts[0] in extension.contributions for extension in self._extensions)
+            return any(
+                parts[0] in extension.contributions for extension in self._extensions
+            )
         if len(parts) == 2:
             module = self._import_module(parts[0])
-            return any(parts[1] in concept.contributions for concept in module.concepts.values())
+            return any(
+                parts[1] in concept.contributions
+                for concept in module.concepts.values()
+            )
         return False
 
     def _composable_production_exists(self, name: str) -> bool:
@@ -1701,7 +1879,9 @@ class _ConceptCompiler:
     ) -> frozenset[str]:
         names: dict[str, str] = {}
         for input_spec in inputs:
-            for prop_name in self._collection_property_names(plan, input_spec.collection):
+            for prop_name in self._collection_property_names(
+                plan, input_spec.collection
+            ):
                 owner = names.get(prop_name)
                 if owner is not None:
                     raise YidlSymbolError(
@@ -1716,9 +1896,9 @@ class _ConceptCompiler:
         plan: CapsuleConceptPlan,
         collection: object,
     ) -> tuple[str, ...]:
-        if not isinstance(collection, CollectionHandle):
+        if not isinstance(collection, CollectionHandle | ComputedCollectionHandle):
             raise YidlSymbolError("assembly inputs must reference collections")
-        record = collection.record
+        record = self._collection_record_shape(collection)
         if isinstance(record, RecordHandle):
             return tuple(prop.name for prop in record.properties)
         if isinstance(record, SchemaFamilyHandle):
@@ -1883,7 +2063,9 @@ class _ConceptCompiler:
                 raise YidlSymbolError(f"operation {name!r} must declare from input")
             from_input = self._operation_from_input(name, from_tree)
             matcher_name = _token_text(tree.children[3])
-            matcher = self._resolve_operation_matcher(matcher_name, context=f"operation {name!r}")
+            matcher = self._resolve_operation_matcher(
+                matcher_name, context=f"operation {name!r}"
+            )
             self._validate_operation_from_matcher(
                 name,
                 from_input=from_input,
@@ -1910,7 +2092,10 @@ class _ConceptCompiler:
                 if not isinstance(option, Tree) or option.data != "operation_option":
                     continue
                 option_value = option.children[0]
-                if isinstance(option_value, Tree) and option_value.data == "property_ref":
+                if (
+                    isinstance(option_value, Tree)
+                    and option_value.data == "property_ref"
+                ):
                     order_by.append(self._resolve_property(_qname(option_value)))
                     continue
                 if isinstance(option_value, Tree) and option_value.data == "qname":
@@ -1931,8 +2116,8 @@ class _ConceptCompiler:
         operation_name: str,
         tree: Tree,
     ) -> tuple[
-        tuple[CollectionHandle, ...],
-        tuple[CollectionHandle, ...],
+        tuple[CollectionHandle | ComputedCollectionHandle, ...],
+        tuple[CollectionHandle | ComputedCollectionHandle, ...],
     ]:
         input_list = _first_child(tree, "operation_input_list")
         output_list = _first_child(tree, "operation_output_list")
@@ -1947,7 +2132,7 @@ class _ConceptCompiler:
     def _operation_collection_list(
         self,
         tree: Tree | None,
-    ) -> tuple[CollectionHandle, ...]:
+    ) -> tuple[CollectionHandle | ComputedCollectionHandle, ...]:
         if tree is None:
             return ()
         qname_list = _first_child(tree, "qname_list")
@@ -1966,7 +2151,9 @@ class _ConceptCompiler:
     ) -> AssemblyInputSpec:
         input_tree = _first_child(tree, "matcher_input")
         if input_tree is None:
-            raise YidlSymbolError(f"operation {operation_name!r} has invalid from input")
+            raise YidlSymbolError(
+                f"operation {operation_name!r} has invalid from input"
+            )
         collection_name = _qname(input_tree.children[1])
         return AssemblyInputSpec(
             name=_token_text(input_tree.children[0]),
@@ -2004,7 +2191,9 @@ class _ConceptCompiler:
             raise YidlSymbolError(
                 f"{context} {name!r} is a {imported.kind}, not an operation matcher"
             )
-        raise YidlSymbolError(f"{context} references undefined operation matcher {name!r}")
+        raise YidlSymbolError(
+            f"{context} references undefined operation matcher {name!r}"
+        )
 
     def _validate_operation_from_matcher(
         self,
@@ -2012,7 +2201,7 @@ class _ConceptCompiler:
         *,
         from_input: AssemblyInputSpec,
         matcher: OperationMatcherSpec,
-        inputs: tuple[CollectionHandle, ...],
+        inputs: tuple[CollectionHandle | ComputedCollectionHandle, ...],
     ) -> None:
         if len(matcher.inputs) != 1:
             raise YidlSymbolError(
@@ -2026,7 +2215,9 @@ class _ConceptCompiler:
             raise YidlSymbolError(
                 f"operation {operation_name!r} matcher input set must match from input"
             )
-        if not any(collection.name == from_input.collection_name for collection in inputs):
+        if not any(
+            collection.name == from_input.collection_name for collection in inputs
+        ):
             raise YidlSymbolError(
                 f"operation {operation_name!r} from collection "
                 f"{from_input.collection_name!r} must also be an input"
@@ -2042,9 +2233,7 @@ class _ConceptCompiler:
             if imported is not None:
                 if isinstance(imported.target, YidlCompiledConcept):
                     return imported.target
-                raise YidlSymbolError(
-                    f"{name!r} is a {imported.kind}, not a concept"
-                )
+                raise YidlSymbolError(f"{name!r} is a {imported.kind}, not a concept")
             raise YidlSymbolError(f"undefined concept {name!r}")
         if len(parts) == 2:
             module = self._import_module(parts[0])
@@ -2097,7 +2286,10 @@ class _ConceptCompiler:
             )
         raise YidlSymbolError(f"undefined record or schema family {name!r}")
 
-    def _resolve_collection(self, name: str) -> CollectionHandle:
+    def _resolve_collection(
+        self,
+        name: str,
+    ) -> CollectionHandle | ComputedCollectionHandle:
         parts = name.split(".")
         if len(parts) == 1:
             collection = self._local_collections.get(parts[0])
@@ -2109,7 +2301,9 @@ class _ConceptCompiler:
                     return collection
             imported = self._imported_symbol(parts[0])
             if imported is not None:
-                if isinstance(imported.target, CollectionHandle):
+                if isinstance(
+                    imported.target, CollectionHandle | ComputedCollectionHandle
+                ):
                     return imported.target
                 raise YidlSymbolError(
                     f"{name!r} is a {imported.kind}, not a collection"
@@ -2123,6 +2317,12 @@ class _ConceptCompiler:
                     return collection
             raise YidlSymbolError(f"undefined collection {name!r}")
         raise YidlSymbolError(f"unsupported collection reference {name!r}")
+
+    def _resolve_computed_collection(self, name: str) -> ComputedCollectionHandle:
+        collection = self._resolve_collection(name)
+        if not isinstance(collection, ComputedCollectionHandle):
+            raise YidlSymbolError(f"{name!r} is not a computed collection")
+        return collection
 
     def _resolve_matcher(self, name: str) -> MatcherHandle:
         parts = name.split(".")
@@ -2190,9 +2390,7 @@ class _ConceptCompiler:
             if imported is not None:
                 if isinstance(imported.target, PropertyHandle):
                     return imported.target
-                raise YidlSymbolError(
-                    f"{name!r} is a {imported.kind}, not a property"
-                )
+                raise YidlSymbolError(f"{name!r} is a {imported.kind}, not a property")
             raise YidlSymbolError(f"undefined property {name!r}")
         if len(parts) == 2:
             module = self._import_module(parts[0])
@@ -2220,9 +2418,7 @@ class _ConceptCompiler:
             if imported is not None:
                 if isinstance(imported.target, GeneratedValue):
                     return imported.target
-                raise YidlSymbolError(
-                    f"{name!r} is a {imported.kind}, not a resource"
-                )
+                raise YidlSymbolError(f"{name!r} is a {imported.kind}, not a resource")
             raise YidlSymbolError(f"undefined resource {name!r}")
         if len(parts) == 2:
             module = self._import_module(parts[0])
@@ -2359,7 +2555,10 @@ def _children(tree: Tree, data: str) -> tuple[Tree, ...]:
     for child in tree.children:
         if isinstance(child, Tree) and child.data == data:
             result.append(child)
-        elif isinstance(child, Tree) and child.data in {"top_level_decl", "concept_member"}:
+        elif isinstance(child, Tree) and child.data in {
+            "top_level_decl",
+            "concept_member",
+        }:
             result.extend(_children(child, data))
     return tuple(result)
 
@@ -2459,8 +2658,7 @@ def _merge_named_maps(
     for name, value in local.items():
         if name in merged:
             raise YidlSymbolError(
-                f"{kind} {name!r} is already inherited by concept "
-                f"{concept_name!r}"
+                f"{kind} {name!r} is already inherited by concept " f"{concept_name!r}"
             )
         merged[name] = value
     return merged
@@ -2582,8 +2780,7 @@ def _merge_operation_matchers(
             existing,
             matcher,
             context=(
-                f"operation matcher {name!r} extended by concept "
-                f"{concept_name!r}"
+                f"operation matcher {name!r} extended by concept " f"{concept_name!r}"
             ),
         )
     return merged
@@ -2638,7 +2835,9 @@ def _plan_has_matcher_default(plan: CapsuleConceptPlan, name: str) -> bool:
     for operation in plan.matcher_defaults:
         if operation.matcher.name == name:
             return True
-    return any(_plan_has_matcher_default(extension, name) for extension in plan.extensions)
+    return any(
+        _plan_has_matcher_default(extension, name) for extension in plan.extensions
+    )
 
 
 def _static_path_parts(path: PathSpec) -> tuple[tuple[str, ...], bool]:
@@ -2664,6 +2863,23 @@ def _plan_for_owner(plan: CapsuleConceptPlan, owner_id: int) -> CapsuleConceptPl
     raise YidlSymbolError(f"undefined concept plan owner {owner_id!r}")
 
 
+def _plan_schema_family_has_property(
+    plan: CapsuleConceptPlan,
+    family: SchemaFamilyHandle,
+    prop: PropertyHandle,
+) -> bool:
+    for operation in plan.schema_family_common:
+        if operation.family is family and prop in operation.properties:
+            return True
+    for operation in plan.schema_family_variants:
+        if operation.family is family and prop in operation.record.properties:
+            return True
+    return any(
+        _plan_schema_family_has_property(extension, family, prop)
+        for extension in plan.extensions
+    )
+
+
 def _qname(tree: Tree) -> str:
     if tree.data in {"property_ref", "type_ref", "resource_ref", "resource_name_ref"}:
         return _qname(tree.children[0])
@@ -2682,7 +2898,11 @@ def _first_qname(tree: Tree) -> str:
     for child in tree.children:
         if isinstance(child, Tree):
             if child.data in {"qname", "property_ref", "identity_expr"}:
-                return _first_qname(child) if child.data == "identity_expr" else _qname(child)
+                return (
+                    _first_qname(child)
+                    if child.data == "identity_expr"
+                    else _qname(child)
+                )
     raise YidlSymbolError("expected property reference")
 
 

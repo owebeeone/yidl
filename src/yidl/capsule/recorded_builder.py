@@ -41,7 +41,6 @@ from yidl.generation.data_def_sys import match as dds_match
 from yidl.generation.data_def_sys import UnionSpec
 from yidl.generation.data_schema import ValueExpression
 
-
 ValueTypeSpec = type[object] | tuple[type[object], ...]
 HandleKey = tuple[int, int]
 NamedHandle = TypeVar(
@@ -196,6 +195,15 @@ class ComputedCollectionHandle:
     owner_name: str
     name: str
     source: CollectionHandle | ComputedCollectionHandle
+    conditions: tuple[PropertyEqualsHandle, ...]
+    sequence: int
+
+
+@dataclass(frozen=True, slots=True)
+class ComputedCollectionRefinementOperation:
+    """Recorded monotonic filter refinement for a computed collection."""
+
+    collection: ComputedCollectionHandle
     conditions: tuple[PropertyEqualsHandle, ...]
     sequence: int
 
@@ -404,9 +412,7 @@ class ProductionGroupOperation:
     @property
     def productions(self) -> tuple[ProductionHandle, ...]:
         return tuple(
-            entry
-            for entry in self.entries
-            if isinstance(entry, ProductionHandle)
+            entry for entry in self.entries if isinstance(entry, ProductionHandle)
         )
 
 
@@ -460,6 +466,7 @@ class CapsuleConceptPlan:
     schema_family_variants: tuple[SchemaFamilyVariantOperation, ...]
     collection_definitions: tuple[CollectionHandle, ...]
     computed_collection_definitions: tuple[ComputedCollectionHandle, ...]
+    computed_collection_refinements: tuple[ComputedCollectionRefinementOperation, ...]
     port_definitions: tuple[PortHandle, ...]
     port_index_definition: PortIndexOperation | None
     matcher_definitions: tuple[MatcherHandle, ...]
@@ -542,6 +549,7 @@ class CapsuleConceptBuilder:
         "_collection_order",
         "_collections",
         "_computed_collection_order",
+        "_computed_collection_refinements",
         "_computed_collections",
         "_extensions",
         "_matcher_defaults",
@@ -611,6 +619,9 @@ class CapsuleConceptBuilder:
         self._collection_order: list[CollectionHandle] = []
         self._computed_collections: dict[str, ComputedCollectionHandle] = {}
         self._computed_collection_order: list[ComputedCollectionHandle] = []
+        self._computed_collection_refinements: list[
+            ComputedCollectionRefinementOperation
+        ] = []
         self._ports: dict[str, PortHandle] = {}
         self._port_order: list[PortHandle] = []
         self._port_index: PortIndexOperation | None = None
@@ -658,8 +669,9 @@ class CapsuleConceptBuilder:
             ),
             schema_family_variants=tuple(self._schema_family_variants),
             collection_definitions=tuple(self._collection_order),
-            computed_collection_definitions=tuple(
-                self._computed_collection_order
+            computed_collection_definitions=tuple(self._computed_collection_order),
+            computed_collection_refinements=tuple(
+                self._computed_collection_refinements
             ),
             port_definitions=tuple(self._port_order),
             port_index_definition=self._port_index,
@@ -688,6 +700,17 @@ class CapsuleConceptBuilder:
 
     def schema_family(self, name: str) -> SchemaFamilyEditor:
         return self._define_schema_family(name)
+
+    def refine_computed_collection(
+        self,
+        collection: ComputedCollectionHandle,
+        *,
+        when: Sequence[PropertyEqualsHandle],
+    ) -> ComputedCollectionRefinementOperation:
+        return self._define_computed_collection_refinement(
+            collection,
+            conditions=when,
+        )
 
     def extend_schema_family(self, family: SchemaFamilyHandle) -> SchemaFamilyEditor:
         self._require_unbuilt()
@@ -852,7 +875,9 @@ class CapsuleConceptBuilder:
         resolved_conditions = tuple(conditions)
         for condition in resolved_conditions:
             if not isinstance(condition, PropertyEqualsHandle):
-                raise TypeError("production conditions must be property equality handles")
+                raise TypeError(
+                    "production conditions must be property equality handles"
+                )
         resolved_values = tuple(
             ProductionValueOperation(prop, expression)
             for prop, expression in values.items()
@@ -930,14 +955,14 @@ class CapsuleConceptBuilder:
         resolved_entries = tuple(entries)
         for entry in resolved_entries:
             if not isinstance(entry, ProductionHandle | OperationHandle):
-                raise TypeError("production group entries must be production or operation handles")
+                raise TypeError(
+                    "production group entries must be production or operation handles"
+                )
         for index, group in enumerate(self._production_groups):
             if group.name != name:
                 continue
             additions = tuple(
-                entry
-                for entry in resolved_entries
-                if entry not in group.entries
+                entry for entry in resolved_entries if entry not in group.entries
             )
             if not additions:
                 return
@@ -1082,8 +1107,7 @@ class CapsuleConceptBuilder:
                 f"concept {self.name!r}"
             )
         if any(
-            operation.record.name == name
-            for operation in self._schema_family_variants
+            operation.record.name == name for operation in self._schema_family_variants
         ):
             raise ValueError(
                 f"schema family variant {name!r} is already defined in "
@@ -1120,7 +1144,9 @@ class CapsuleConceptBuilder:
         self._require_unbuilt()
         _require_name(name, "collection name")
         if not isinstance(record, RecordHandle | SchemaFamilyHandle):
-            raise TypeError("collection record must be a record or schema family handle")
+            raise TypeError(
+                "collection record must be a record or schema family handle"
+            )
         if not isinstance(cardinality, RecordedCollectionCardinality):
             raise TypeError(
                 "collection cardinality must be builder.single or builder.many"
@@ -1175,6 +1201,31 @@ class CapsuleConceptBuilder:
         self._computed_collections[name] = handle
         self._computed_collection_order.append(handle)
         return handle
+
+    def _define_computed_collection_refinement(
+        self,
+        collection: ComputedCollectionHandle,
+        *,
+        conditions: Sequence[PropertyEqualsHandle],
+    ) -> ComputedCollectionRefinementOperation:
+        self._require_unbuilt()
+        if not isinstance(collection, ComputedCollectionHandle):
+            raise TypeError(
+                "computed collection refinement target must be a computed collection handle"
+            )
+        resolved_conditions = tuple(conditions)
+        for condition in resolved_conditions:
+            if not isinstance(condition, PropertyEqualsHandle):
+                raise TypeError(
+                    "computed collection refinement conditions must be property equality handles"
+                )
+        operation = ComputedCollectionRefinementOperation(
+            collection=collection,
+            conditions=resolved_conditions,
+            sequence=len(self._computed_collection_refinements),
+        )
+        self._computed_collection_refinements.append(operation)
+        return operation
 
     def _define_port(
         self,
@@ -1855,12 +1906,12 @@ class RecordedConceptRuntimeLoader:
         source = self._plan.build_data_definition().emit_container_runtime_source(
             evaluator_names=tuple((helper.value, helper.name) for helper in helpers),
         )
-        namespace: dict[str, object] = {
-            helper.name: helper.value
-            for helper in helpers
-        }
+        namespace: dict[str, object] = {helper.name: helper.value for helper in helpers}
         namespace.update(runtime_globals or {})
-        exec(compile(source, f"<yidl.recorded_capsule.{self._plan.name}>", "exec"), namespace)
+        exec(
+            compile(source, f"<yidl.recorded_capsule.{self._plan.name}>", "exec"),
+            namespace,
+        )
         return CapsuleRuntime(
             definition=self._plan,
             source=source,
@@ -1868,10 +1919,7 @@ class RecordedConceptRuntimeLoader:
         )
 
     def _evaluator_names(self) -> tuple[tuple[object, str], ...]:
-        return tuple(
-            (helper.value, helper.name)
-            for helper in self._runtime_helpers()
-        )
+        return tuple((helper.value, helper.name) for helper in self._runtime_helpers())
 
     def _runtime_helpers(self) -> tuple[RuntimeHelperOperation, ...]:
         by_name: dict[str, RuntimeHelperOperation] = {}
@@ -1969,6 +2017,8 @@ class ReplayContext:
             self._apply_collection(collection)
         for collection in plan.computed_collection_definitions:
             self._apply_computed_collection(collection)
+        for refinement in plan.computed_collection_refinements:
+            self._apply_computed_collection_refinement(refinement)
         for port in plan.port_definitions:
             self._apply_port(port)
         if plan.port_index_definition is not None:
@@ -2097,6 +2147,22 @@ class ReplayContext:
         self._collection_name_owners[collection.name] = collection
         self._computed_collection_specs[_handle_key(collection)] = spec
 
+    def _apply_computed_collection_refinement(
+        self,
+        operation: ComputedCollectionRefinementOperation,
+    ) -> None:
+        spec = self._resolve_collection_source(operation.collection)
+        if not isinstance(spec, ComputedCollectionSpec):
+            raise ValueError(
+                f"collection {operation.collection.name!r} is not a computed collection"
+            )
+        self._dds.refine_computed_collection(
+            spec,
+            when=tuple(
+                self._resolve_condition(condition) for condition in operation.conditions
+            ),
+        )
+
     def _apply_port(self, port: PortHandle) -> None:
         existing = self._port_owners.get(port.name)
         if existing is not None:
@@ -2194,7 +2260,9 @@ class ReplayContext:
             resource = OperationMatcherDispatch(
                 matcher_name=resource.matcher_name,
                 from_input_name=resource.from_input_name,
-                from_collection=self._resolve_collection_source(resource.from_collection),
+                from_collection=self._resolve_collection_source(
+                    resource.from_collection
+                ),
             )
         spec = self._dds.operation(
             operation.name,
@@ -2203,13 +2271,9 @@ class ReplayContext:
                 for collection in operation.inputs
             ),
             outputs=tuple(
-                self._resolve_collection(collection)
-                for collection in operation.outputs
+                self._resolve_collection(collection) for collection in operation.outputs
             ),
-            order_by=tuple(
-                self._resolve_property(prop)
-                for prop in operation.order_by
-            ),
+            order_by=tuple(self._resolve_property(prop) for prop in operation.order_by),
             resource=resource,
         )
         self._operation_specs[_handle_key(operation)] = spec
@@ -2217,10 +2281,7 @@ class ReplayContext:
     def _apply_production_group(self, group: ProductionGroupOperation) -> None:
         self._dds.ensure_production_group(
             group.name,
-            *(
-                self._resolve_production_group_entry(entry)
-                for entry in group.entries
-            ),
+            *(self._resolve_production_group_entry(entry) for entry in group.entries),
         )
 
     def _resolve_production_group_entry(self, entry: ProductionGroupEntry) -> object:
@@ -2331,9 +2392,11 @@ class ReplayContext:
         self,
         condition: MatcherConditionHandle,
     ) -> MatcherCondition:
-        return self._resolve_matcher_input(condition.ref.input).prop(
-            self._resolve_property(condition.ref.property)
-        ).eq(condition.value)
+        return (
+            self._resolve_matcher_input(condition.ref.input)
+            .prop(self._resolve_property(condition.ref.property))
+            .eq(condition.value)
+        )
 
     def _resolve_production_source(
         self,
@@ -2476,22 +2539,22 @@ def _validate_property_value(prop: PropertyHandle, value: object) -> None:
             expected = " or ".join(item.__name__ for item in prop.value_type)
         else:
             expected = prop.value_type.__name__
-        raise TypeError(
-            f"{prop.name} must be {expected}, got {type(value).__name__}"
-        )
+        raise TypeError(f"{prop.name} must be {expected}, got {type(value).__name__}")
 
 
 def _handle_key(
-    handle: PropertyHandle
-    | RecordHandle
-    | SchemaFamilyHandle
-    | CollectionHandle
-    | ComputedCollectionHandle
-    | PortHandle
-    | MatcherHandle
-    | MatcherInputHandle
-    | ProductionHandle
-    | OperationHandle,
+    handle: (
+        PropertyHandle
+        | RecordHandle
+        | SchemaFamilyHandle
+        | CollectionHandle
+        | ComputedCollectionHandle
+        | PortHandle
+        | MatcherHandle
+        | MatcherInputHandle
+        | ProductionHandle
+        | OperationHandle
+    ),
 ) -> HandleKey:
     return (handle.owner_id, handle.sequence)
 
