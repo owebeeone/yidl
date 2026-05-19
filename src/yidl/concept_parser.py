@@ -794,11 +794,16 @@ class _ConceptCompiler:
     def _compile_collection(self, builder: Any, tree: Tree) -> CollectionHandle:
         name = _token_text(tree.children[0])
         record_shape = self._resolve_record_shape(_qname(tree.children[1].children[0]))
-        identity: PropertyHandle | None = None
+        identity: PropertyHandle | tuple[PropertyHandle, ...] | None = None
         cardinality = builder.many
         for child in tree.children[2:]:
             if child.data == "identity_clause":
-                identity = self._resolve_property(_first_qname(child))
+                identity_props = tuple(
+                    self._resolve_property(name) for name in _identity_qnames(child)
+                )
+                identity = (
+                    identity_props[0] if len(identity_props) == 1 else identity_props
+                )
             elif child.data == "cardinality_single":
                 cardinality = builder.single
             elif child.data == "cardinality_many":
@@ -2904,6 +2909,24 @@ def _first_qname(tree: Tree) -> str:
                     else _qname(child)
                 )
     raise YidlSymbolError("expected property reference")
+
+
+def _identity_qnames(tree: Tree) -> tuple[str, ...]:
+    identity_expr = tree
+    if tree.data == "identity_clause":
+        identity_expr = _first_child(tree, "identity_expr")
+        if identity_expr is None:
+            raise YidlSymbolError("expected collection identity expression")
+    if identity_expr.data != "identity_expr":
+        raise YidlSymbolError("expected collection identity expression")
+    names = tuple(
+        _qname(child)
+        for child in identity_expr.children
+        if isinstance(child, Tree) and child.data == "property_ref"
+    )
+    if not names:
+        raise YidlSymbolError("expected collection identity property")
+    return names
 
 
 def _token_text(value: object) -> str:

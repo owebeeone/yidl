@@ -124,10 +124,31 @@ def _assert_schema(namespace: Mapping[str, object]) -> None:
 
 def _assert_refined_view(namespace: Mapping[str, object]) -> None:
     builder = namespace["new_builder"]()
+    facades = namespace["FacadesCollection"]
+    facade = namespace["DataclassFacade"]
     fields = namespace["FieldsCollection"]
     field = namespace["InstanceField"]
-    actions = namespace["DefaultFactoryInitActionsCollection"]
-    action = namespace["DefaultFactoryInitAction"]
+
+    def _tags_factory() -> list[str]:
+        return []
+
+    def _total_factory(count: int, tags: list[str]) -> int:
+        return count + len(tags)
+
+    def _unknown_factory(missing: object) -> object:
+        return missing
+
+    def _unsupported_factory(*items: object) -> tuple[object, ...]:
+        return items
+
+    builder.add(
+        facades,
+        facade(
+            class_id="Widget",
+            class_name="Widget",
+            class_order=10,
+        ),
+    )
 
     builder.add(
         fields,
@@ -148,6 +169,19 @@ def _assert_refined_view(namespace: Mapping[str, object]) -> None:
             field_order=20,
             annotation="list[str]",
             has_default_factory=True,
+            default_factory=_tags_factory,
+        ),
+    )
+    builder.add(
+        fields,
+        field(
+            field_id="Widget.total",
+            field_owner="Widget",
+            field_name="total",
+            field_order=30,
+            annotation="int",
+            has_default_factory=True,
+            default_factory=_total_factory,
         ),
     )
     builder.add(
@@ -156,33 +190,35 @@ def _assert_refined_view(namespace: Mapping[str, object]) -> None:
             field_id="Widget.hidden",
             field_owner="Widget",
             field_name="hidden",
-            field_order=30,
+            field_order=40,
             annotation="str",
             has_default_factory=True,
+            default_factory=_tags_factory,
             init=False,
         ),
     )
     builder.add(
-        actions,
-        action(
-            action_id="Widget.tags",
-            action_owner="Widget",
-            action_field_id="Widget.tags",
-            action_field_name="tags",
-            action_field_order=20,
-            action_kind="zero_arg",
+        fields,
+        field(
+            field_id="Widget.unknown",
+            field_owner="Widget",
+            field_name="unknown",
+            field_order=50,
+            annotation="object",
+            has_default_factory=True,
+            default_factory=_unknown_factory,
         ),
     )
     builder.add(
-        actions,
-        action(
-            action_id="Widget.total",
-            action_owner="Widget",
-            action_field_id="Widget.total",
-            action_field_name="total",
-            action_field_order=30,
-            action_kind="parameterized",
-            factory_param_names=("count",),
+        fields,
+        field(
+            field_id="Widget.unsupported",
+            field_owner="Widget",
+            field_name="unsupported",
+            field_order=60,
+            annotation="object",
+            has_default_factory=True,
+            default_factory=_unsupported_factory,
         ),
     )
 
@@ -191,15 +227,59 @@ def _assert_refined_view(namespace: Mapping[str, object]) -> None:
     assert [
         record.field_name
         for record in container.InitDefaultFactoryGuardFields.sequence()
-    ] == ["tags"]
+    ] == ["tags", "total", "unknown", "unsupported"]
     assert [
-        record.action_field_name
+        (record.action_field_name, record.factory_param_names)
         for record in container.ZeroArgDefaultFactoryActions.sequence()
-    ] == ["tags"]
+    ] == [("tags", ()), ("hidden", ())]
     assert [
-        record.action_field_name
+        (
+            record.action_field_name,
+            record.factory_param_names,
+            record.action_eval_order,
+        )
         for record in container.ParameterizedDefaultFactoryActions.sequence()
-    ] == ["total"]
+    ] == [
+        ("total", ("count", "tags"), 1),
+        ("unknown", ("missing",), 3),
+        ("unsupported", ("items",), 4),
+    ]
+    assert [
+        (
+            record.consumer_field_id,
+            record.provider_field_id,
+            record.provider_name,
+            record.param_name,
+            record.param_order,
+        )
+        for record in container.DefaultFactoryDeps.sequence()
+    ] == [
+        ("Widget.total", "Widget.count", "count", "count", 0),
+        ("Widget.total", "Widget.tags", "tags", "tags", 1),
+    ]
+    assert [
+        (record.eval_field_id, record.eval_field_name, record.eval_order)
+        for record in container.InitEvaluationSteps.sequence()
+    ] == [
+        ("Widget.tags", "tags", 0),
+        ("Widget.total", "total", 1),
+        ("Widget.hidden", "hidden", 2),
+        ("Widget.unknown", "unknown", 3),
+        ("Widget.unsupported", "unsupported", 4),
+    ]
+    assert [
+        (record.diagnostic_field_id, record.diagnostic_message)
+        for record in container.Diagnostics.sequence()
+    ] == [
+        (
+            "Widget.unknown",
+            "field unknown default_factory unknown dependency 'missing'",
+        ),
+        (
+            "Widget.unsupported",
+            "field unsupported default_factory has unsupported parameter 'items'",
+        ),
+    ]
 
 
 def _prettier_source(source: str) -> str:

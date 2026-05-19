@@ -1,7 +1,10 @@
 from yidl.generation.data_def_sys import (
     AddIfAbsent,
+    AssemblyDiagnosticError,
     DDSContainerBuilder,
+    DDSOperationContext,
     NOT_PROVIDED,
+    OperationExecutionError,
     REQUIRED,
     RejectDuplicate,
     ReplaceExisting,
@@ -133,6 +136,9 @@ _ActionFieldOrderProperty = RuntimeProperty(
 )
 _ActionKindProperty = RuntimeProperty(
     "ActionKind", str, default="zero_arg", storage_name="action_kind"
+)
+_ActionEvalOrderProperty = RuntimeProperty(
+    "ActionEvalOrder", int, default=0, storage_name="action_eval_order"
 )
 _FactoryParamNamesProperty = RuntimeProperty(
     "FactoryParamNames", object, default=(), storage_name="factory_param_names"
@@ -277,6 +283,7 @@ _DefaultFactoryInitActionSpec = RuntimeRecord(
         _ActionFieldNameProperty,
         _ActionFieldOrderProperty,
         _ActionKindProperty,
+        _ActionEvalOrderProperty,
         _FactoryParamNamesProperty,
     ),
 )
@@ -384,7 +391,7 @@ class DataclassFacade:
         kw_only_fence_order: int = 0,
         dataclass_params: object = None,
         slot_names: object = (),
-        match_args: object = ()
+        match_args: object = (),
     ):
         if not isinstance(class_id, str):
             raise TypeError("ClassId must be str, got " + type(class_id).__name__)
@@ -584,7 +591,7 @@ class InstanceField:
         compare: bool = True,
         hash: object = None,
         kw_only: bool = False,
-        metadata: object = None
+        metadata: object = None,
     ):
         if not isinstance(field_id, str):
             raise TypeError("FieldId must be str, got " + type(field_id).__name__)
@@ -731,7 +738,7 @@ class InitVarField:
         compare: bool = True,
         hash: object = None,
         kw_only: bool = False,
-        metadata: object = None
+        metadata: object = None,
     ):
         if not isinstance(field_id, str):
             raise TypeError("FieldId must be str, got " + type(field_id).__name__)
@@ -878,7 +885,7 @@ class ClassVarField:
         compare: bool = True,
         hash: object = None,
         kw_only: bool = False,
-        metadata: object = None
+        metadata: object = None,
     ):
         if not isinstance(field_id, str):
             raise TypeError("FieldId must be str, got " + type(field_id).__name__)
@@ -978,6 +985,7 @@ class DefaultFactoryInitAction:
         "action_field_name",
         "action_field_order",
         "action_kind",
+        "action_eval_order",
         "factory_param_names",
     )
     __dds_record_spec__ = _DefaultFactoryInitActionSpec
@@ -987,6 +995,7 @@ class DefaultFactoryInitAction:
     action_field_name: str
     action_field_order: int
     action_kind: str
+    action_eval_order: int
     factory_param_names: object
 
     def __init__(
@@ -998,7 +1007,8 @@ class DefaultFactoryInitAction:
         action_field_name: str,
         action_field_order: int,
         action_kind: str = "zero_arg",
-        factory_param_names: object = ()
+        action_eval_order: int = 0,
+        factory_param_names: object = (),
     ):
         if not isinstance(action_id, str):
             raise TypeError("ActionId must be str, got " + type(action_id).__name__)
@@ -1026,6 +1036,11 @@ class DefaultFactoryInitAction:
         if not isinstance(action_kind, str):
             raise TypeError("ActionKind must be str, got " + type(action_kind).__name__)
         object.__setattr__(self, "action_kind", action_kind)
+        if not isinstance(action_eval_order, int):
+            raise TypeError(
+                "ActionEvalOrder must be int, got " + type(action_eval_order).__name__
+            )
+        object.__setattr__(self, "action_eval_order", action_eval_order)
         object.__setattr__(self, "factory_param_names", factory_param_names)
 
     def __setattr__(self, name, value):
@@ -1036,6 +1051,7 @@ class DefaultFactoryInitAction:
             "action_field_name",
             "action_field_order",
             "action_kind",
+            "action_eval_order",
             "factory_param_names",
         ):
             raise AttributeError("DefaultFactoryInitAction records are immutable")
@@ -1049,6 +1065,7 @@ class DefaultFactoryInitAction:
         pieces.append("action_field_name=" + repr(self.action_field_name))
         pieces.append("action_field_order=" + repr(self.action_field_order))
         pieces.append("action_kind=" + repr(self.action_kind))
+        pieces.append("action_eval_order=" + repr(self.action_eval_order))
         pieces.append("factory_param_names=" + repr(self.factory_param_names))
         return "DefaultFactoryInitAction" + "(" + ", ".join(pieces) + ")"
 
@@ -1078,7 +1095,7 @@ class DefaultFactoryDep:
         provider_field_id: str,
         provider_name: str,
         param_name: str,
-        param_order: int = 0
+        param_order: int = 0,
     ):
         if not isinstance(consumer_field_id, str):
             raise TypeError(
@@ -1148,7 +1165,7 @@ class InitEvaluationStep:
         eval_owner: str,
         eval_field_id: str,
         eval_field_name: str,
-        eval_order: int
+        eval_order: int,
     ):
         if not isinstance(eval_step_id, str):
             raise TypeError(
@@ -1215,7 +1232,7 @@ class ComputedClassDiagnostic:
         diagnostic_id: str,
         diagnostic_owner: str,
         diagnostic_field_id: str,
-        diagnostic_message: str
+        diagnostic_message: str,
     ):
         if not isinstance(diagnostic_id, str):
             raise TypeError(
@@ -1276,7 +1293,7 @@ DefaultFactoryDepsCollection = RuntimeCollection(
     "DefaultFactoryDeps",
     _DefaultFactoryDepSpec,
     allows_multiple=True,
-    identity=_ConsumerFieldIdProperty,
+    identity=(_ConsumerFieldIdProperty, _ParamNameProperty),
 )
 InitEvaluationStepsCollection = RuntimeCollection(
     "InitEvaluationSteps",
@@ -1322,6 +1339,174 @@ _RUNTIME_SPEC = RuntimeContainerSpec(
     ports=(),
     port_index=None,
 )
+
+
+def _operation_0_body_0_default_factory_facts(ctx, facade):
+    from inspect import Parameter, signature
+
+    fields = sorted(
+        (
+            field
+            for field in ctx.records(FieldsCollection)
+            if field.field_owner == facade.class_id
+        ),
+        key=lambda field: field.field_order,
+    )
+    by_name = {field.field_name: field for field in fields}
+    by_id = {field.field_id: field for field in fields}
+    factory_fields = [field for field in fields if field.has_default_factory]
+    graph = {field.field_id: set() for field in factory_fields}
+    param_names_by_id = {}
+    deps = []
+    diagnostics = []
+
+    def add_diagnostic(field, suffix, message):
+        diagnostics.append(
+            ComputedClassDiagnostic(
+                diagnostic_id=f"{field.field_id}.{suffix}",
+                diagnostic_owner=facade.class_id,
+                diagnostic_field_id=field.field_id,
+                diagnostic_message=message,
+            )
+        )
+
+    for field in factory_fields:
+        try:
+            parameters = tuple(signature(field.default_factory).parameters.values())
+        except (TypeError, ValueError) as exc:
+            parameters = ()
+            add_diagnostic(
+                field,
+                "signature",
+                f"field {field.field_name} default_factory cannot be inspected: {exc}",
+            )
+        param_names_by_id[field.field_id] = tuple(
+            (parameter.name for parameter in parameters)
+        )
+        for param_order, parameter in enumerate(parameters):
+            if parameter.kind in (
+                Parameter.POSITIONAL_ONLY,
+                Parameter.VAR_POSITIONAL,
+                Parameter.VAR_KEYWORD,
+            ):
+                add_diagnostic(
+                    field,
+                    parameter.name,
+                    f"field {field.field_name} default_factory has unsupported parameter {parameter.name!r}",
+                )
+                continue
+            provider = by_name.get(parameter.name)
+            if provider is None:
+                add_diagnostic(
+                    field,
+                    parameter.name,
+                    f"field {field.field_name} default_factory unknown dependency {parameter.name!r}",
+                )
+                continue
+            deps.append((field, provider, parameter.name, param_order))
+            if provider.field_id in graph:
+                graph[field.field_id].add(provider.field_id)
+    field_order = {field.field_id: field.field_order for field in fields}
+    visiting = set()
+    visited = set()
+    ordered_field_ids = []
+
+    def visit(field_id, path):
+        if field_id in visited:
+            return
+        if field_id in visiting:
+            cycle = path[path.index(field_id) :] + [field_id]
+            names = " -> ".join(
+                (f"{facade.class_name}.{by_id[item].field_name}" for item in cycle)
+            )
+            add_diagnostic(
+                by_id[field_id], "cycle", f"default_factory dependency cycle: {names}"
+            )
+            return
+        visiting.add(field_id)
+        for provider_id in sorted(
+            graph.get(field_id, ()), key=lambda item: field_order[item]
+        ):
+            visit(provider_id, [*path, provider_id])
+        visiting.remove(field_id)
+        visited.add(field_id)
+        ordered_field_ids.append(field_id)
+
+    for field in factory_fields:
+        visit(field.field_id, [field.field_id])
+    eval_order_by_id = {
+        field_id: eval_order for eval_order, field_id in enumerate(ordered_field_ids)
+    }
+    for field in factory_fields:
+        param_names = param_names_by_id[field.field_id]
+        action_kind = "zero_arg" if not param_names else "parameterized"
+        action_eval_order = (
+            eval_order_by_id[field.field_id] if action_kind == "parameterized" else 0
+        )
+        ctx.write(
+            DefaultFactoryInitActionsCollection,
+            DefaultFactoryInitAction(
+                action_id=field.field_id,
+                action_owner=facade.class_id,
+                action_field_id=field.field_id,
+                action_field_name=field.field_name,
+                action_field_order=field.field_order,
+                action_kind=action_kind,
+                action_eval_order=action_eval_order,
+                factory_param_names=param_names,
+            ),
+            policy=RejectDuplicate,
+        )
+    for consumer, provider, param_name, param_order in deps:
+        ctx.write(
+            DefaultFactoryDepsCollection,
+            DefaultFactoryDep(
+                consumer_field_id=consumer.field_id,
+                provider_field_id=provider.field_id,
+                provider_name=provider.field_name,
+                param_name=param_name,
+                param_order=param_order,
+            ),
+            policy=RejectDuplicate,
+        )
+    for eval_order, field_id in enumerate(ordered_field_ids):
+        field = by_id[field_id]
+        ctx.write(
+            InitEvaluationStepsCollection,
+            InitEvaluationStep(
+                eval_step_id=field.field_id,
+                eval_owner=facade.class_id,
+                eval_field_id=field.field_id,
+                eval_field_name=field.field_name,
+                eval_order=eval_order,
+            ),
+            policy=RejectDuplicate,
+        )
+    for diagnostic in diagnostics:
+        ctx.write(DiagnosticsCollection, diagnostic, policy=ReplaceExisting)
+
+
+def run_build_default_factory_facts(builder):
+    ctx = DDSOperationContext(builder, "BuildDefaultFactoryFacts", ordered_inputs={})
+    for facade in ctx.records(FacadesCollection):
+        try:
+            _operation_0_body_0_default_factory_facts(ctx, facade)
+        except AssemblyDiagnosticError:
+            raise
+        except Exception as exc:
+            raise OperationExecutionError(
+                f"operation 'BuildDefaultFactoryFacts' failed for facade={facade!r}"
+            ) from exc
+
+
+def run_operations(builder):
+    run_build_default_factory_facts(builder)
+    return builder
+
+
+def build_container(builder):
+    run_operations(builder)
+    return builder.freeze()
 
 
 class _GeneratedMatcherNamespace:
@@ -1483,6 +1668,9 @@ ASSEMBLY_PROPERTIES = {
         name="ActionFieldOrder", storage_name="action_field_order"
     ),
     "ActionKind": _YidlSimpleNamespace(name="ActionKind", storage_name="action_kind"),
+    "ActionEvalOrder": _YidlSimpleNamespace(
+        name="ActionEvalOrder", storage_name="action_eval_order"
+    ),
     "FactoryParamNames": _YidlSimpleNamespace(
         name="FactoryParamNames", storage_name="factory_param_names"
     ),
@@ -1779,6 +1967,28 @@ ASSEMBLY_RESOURCES = {
             file_name="tests/data/yidl/yidl_update_a_dataclasses_split/dataclasses_base.yidl",
             line_number=1311,
         )
+    ),
+    "DefaultFactoryFactsBody": from_astichi_code(
+        'from inspect import Parameter, signature\n\nfields = sorted(\n    (\n        field for field in ctx.records(FieldsCollection)\n        if field.field_owner == facade.class_id\n    ),\n    key=lambda field: field.field_order,\n)\nby_name = {field.field_name: field for field in fields}\nby_id = {field.field_id: field for field in fields}\nfactory_fields = [field for field in fields if field.has_default_factory]\ngraph = {field.field_id: set() for field in factory_fields}\nparam_names_by_id = {}\ndeps = []\ndiagnostics = []\n\ndef add_diagnostic(field, suffix, message):\n    diagnostics.append(\n        ComputedClassDiagnostic(\n            diagnostic_id=f"{field.field_id}.{suffix}",\n            diagnostic_owner=facade.class_id,\n            diagnostic_field_id=field.field_id,\n            diagnostic_message=message,\n        )\n    )\n\nfor field in factory_fields:\n    try:\n        parameters = tuple(\n            signature(field.default_factory).parameters.values()\n        )\n    except (TypeError, ValueError) as exc:\n        parameters = ()\n        add_diagnostic(\n            field,\n            "signature",\n            (\n                f"field {field.field_name} default_factory "\n                f"cannot be inspected: {exc}"\n            ),\n        )\n    param_names_by_id[field.field_id] = tuple(\n        parameter.name for parameter in parameters\n    )\n    for param_order, parameter in enumerate(parameters):\n        if parameter.kind in (\n            Parameter.POSITIONAL_ONLY,\n            Parameter.VAR_POSITIONAL,\n            Parameter.VAR_KEYWORD,\n        ):\n            add_diagnostic(\n                field,\n                parameter.name,\n                (\n                    f"field {field.field_name} default_factory "\n                    f"has unsupported parameter {parameter.name!r}"\n                ),\n            )\n            continue\n        provider = by_name.get(parameter.name)\n        if provider is None:\n            add_diagnostic(\n                field,\n                parameter.name,\n                (\n                    f"field {field.field_name} default_factory "\n                    f"unknown dependency {parameter.name!r}"\n                ),\n            )\n            continue\n        deps.append((field, provider, parameter.name, param_order))\n        if provider.field_id in graph:\n            graph[field.field_id].add(provider.field_id)\n\nfield_order = {field.field_id: field.field_order for field in fields}\nvisiting = set()\nvisited = set()\nordered_field_ids = []\n\ndef visit(field_id, path):\n    if field_id in visited:\n        return\n    if field_id in visiting:\n        cycle = path[path.index(field_id):] + [field_id]\n        names = " -> ".join(\n            f"{facade.class_name}.{by_id[item].field_name}"\n            for item in cycle\n        )\n        add_diagnostic(\n            by_id[field_id],\n            "cycle",\n            f"default_factory dependency cycle: {names}",\n        )\n        return\n    visiting.add(field_id)\n    for provider_id in sorted(\n        graph.get(field_id, ()),\n        key=lambda item: field_order[item],\n    ):\n        visit(provider_id, [*path, provider_id])\n    visiting.remove(field_id)\n    visited.add(field_id)\n    ordered_field_ids.append(field_id)\n\nfor field in factory_fields:\n    visit(field.field_id, [field.field_id])\n\neval_order_by_id = {\n    field_id: eval_order\n    for eval_order, field_id in enumerate(ordered_field_ids)\n}\n\nfor field in factory_fields:\n    param_names = param_names_by_id[field.field_id]\n    action_kind = "zero_arg" if not param_names else "parameterized"\n    action_eval_order = (\n        eval_order_by_id[field.field_id]\n        if action_kind == "parameterized"\n        else 0\n    )\n    ctx.write(\n        DefaultFactoryInitActionsCollection,\n        DefaultFactoryInitAction(\n            action_id=field.field_id,\n            action_owner=facade.class_id,\n            action_field_id=field.field_id,\n            action_field_name=field.field_name,\n            action_field_order=field.field_order,\n            action_kind=action_kind,\n            action_eval_order=action_eval_order,\n            factory_param_names=param_names,\n        ),\n        policy=RejectDuplicate,\n    )\n\nfor consumer, provider, param_name, param_order in deps:\n    ctx.write(\n        DefaultFactoryDepsCollection,\n        DefaultFactoryDep(\n            consumer_field_id=consumer.field_id,\n            provider_field_id=provider.field_id,\n            provider_name=provider.field_name,\n            param_name=param_name,\n            param_order=param_order,\n        ),\n        policy=RejectDuplicate,\n    )\n\nfor eval_order, field_id in enumerate(ordered_field_ids):\n    field = by_id[field_id]\n    ctx.write(\n        InitEvaluationStepsCollection,\n        InitEvaluationStep(\n            eval_step_id=field.field_id,\n            eval_owner=facade.class_id,\n            eval_field_id=field.field_id,\n            eval_field_name=field.field_name,\n            eval_order=eval_order,\n        ),\n        policy=RejectDuplicate,\n    )\n\nfor diagnostic in diagnostics:\n    ctx.write(DiagnosticsCollection, diagnostic, policy=ReplaceExisting)',
+        file_name="tests/data/yidl/yidl_update_a_computedclass_defaults/computedclass_default_factory_params.yidl",
+        line_number=84,
+        keep_names=(
+            "ctx",
+            "facade",
+            "FieldsCollection",
+            "DefaultFactoryInitActionsCollection",
+            "DefaultFactoryDepsCollection",
+            "InitEvaluationStepsCollection",
+            "DiagnosticsCollection",
+            "DefaultFactoryInitAction",
+            "DefaultFactoryDep",
+            "InitEvaluationStep",
+            "ComputedClassDiagnostic",
+            "Parameter",
+            "RejectDuplicate",
+            "ReplaceExisting",
+            "signature",
+        ),
     ),
 }
 ASSEMBLY_CONTRIBUTIONS = {

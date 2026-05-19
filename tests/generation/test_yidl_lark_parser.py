@@ -1497,6 +1497,30 @@ def test_yidl_lark_operation_lowers_direct_resource_and_ordering() -> None:
     assert operation.order_by[0].name == "Order"
 
 
+def test_yidl_lark_collection_lowers_composite_identity() -> None:
+    source = """
+    module composite_identity_example
+
+    concept CompositeIdentityExample {
+        property Owner: str
+        property Name: str
+
+        record Item {
+            Owner
+            Name
+        }
+
+        collection Items: Item identity (Owner, Name) many
+    }
+    """
+
+    compiled = compile_yidl_files({"collection.yidl": source}, "collection.yidl")
+    concept = compiled.concepts["CompositeIdentityExample"]
+    collection = concept.plan.build_data_definition().collections[0]
+
+    assert [prop.name for prop in collection.identity] == ["Owner", "Name"]
+
+
 def test_yidl_lark_operation_rejects_match_resource_body() -> None:
     source = """
     module operation_example
