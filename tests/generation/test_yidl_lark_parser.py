@@ -859,6 +859,207 @@ def test_yidl_lark_local_redefinition_of_inherited_resource_rejects() -> None:
     assert "inherited" in message
 
 
+def test_yidl_lark_contribution_matcher_rules_merge_across_extends() -> None:
+    parent = """
+    module parent
+
+    concept Parent {
+        property Name: str
+        property Kind: str
+
+        record Field {
+            Name
+            Kind
+        }
+
+        collection Fields: Field identity Name many
+
+        resource PlainTemplate = template `pass`
+
+        contribution PlainContribution = PlainTemplate {
+            as Plain
+            target body { build /Root }
+        }
+
+        matcher FieldContributions(field: Fields) -> contribution {
+            rule plain when Kind == "plain" -> PlainContribution
+        }
+    }
+    """
+    child = """
+    module child
+    import "parent.yidl" as parent
+
+    concept Child extends parent.Parent {
+        resource SpecialTemplate = template `pass`
+
+        contribution SpecialContribution = SpecialTemplate {
+            as Special
+            target body { build /Root }
+        }
+
+        matcher FieldContributions(field: Fields) -> contribution {
+            rule special when Kind == "special" -> SpecialContribution weight 10
+        }
+    }
+    """
+
+    compiled = compile_yidl_files(
+        {"parent.yidl": parent, "child.yidl": child},
+        "child.yidl",
+    )
+
+    matcher = compiled.concepts["Child"].contribution_matchers["FieldContributions"]
+
+    assert [rule.name for rule in matcher.rules] == ["plain", "special"]
+    assert [rule.contribution_name for rule in matcher.rules] == [
+        "PlainContribution",
+        "SpecialContribution",
+    ]
+
+
+def test_yidl_lark_resource_matcher_rules_merge_across_extends() -> None:
+    parent = """
+    module parent
+
+    concept Parent {
+        property Name: str
+        property Kind: str
+
+        record Field {
+            Name
+            Kind
+        }
+
+        collection Fields: Field identity Name many
+
+        resource Plain = code `{"selected": "plain"}`
+
+        matcher ResourceFor(field: Fields) {
+            default -> Plain
+        }
+    }
+    """
+    child = """
+    module child
+    import "parent.yidl" as parent
+
+    concept Child extends parent.Parent {
+        resource Special = code `{"selected": "special"}`
+
+        matcher ResourceFor(field: Fields) {
+            rule special when field.Kind == "special" -> Special weight 10
+        }
+    }
+    """
+
+    compiled = compile_yidl_files(
+        {"parent.yidl": parent, "child.yidl": child},
+        "child.yidl",
+    )
+    concept = compiled.concepts["Child"]
+    dds = concept.plan.build_data_definition()
+    matcher = next(matcher for matcher in dds.matchers if matcher.name == "ResourceFor")
+
+    assert concept.matchers["ResourceFor"].name == "ResourceFor"
+    assert matcher.default_resource is concept.resources["Plain"]
+    assert [rule.name for rule in matcher.rules] == ["special"]
+    assert matcher.rules[0].resource is concept.resources["Special"]
+
+
+def test_yidl_lark_resource_matcher_inherited_default_redefinition_rejects() -> None:
+    parent = """
+    module parent
+
+    concept Parent {
+        property Name: str
+        record Field { Name }
+        collection Fields: Field identity Name many
+
+        resource Plain = code `{"selected": "plain"}`
+
+        matcher ResourceFor(field: Fields) {
+            default -> Plain
+        }
+    }
+    """
+    child = """
+    module child
+    import "parent.yidl" as parent
+
+    concept Child extends parent.Parent {
+        resource Special = code `{"selected": "special"}`
+
+        matcher ResourceFor(field: Fields) {
+            default -> Special
+        }
+    }
+    """
+
+    with pytest.raises(YidlSymbolError) as exc_info:
+        compile_yidl_files(
+            {"parent.yidl": parent, "child.yidl": child},
+            "child.yidl",
+        )
+
+    message = str(exc_info.value)
+    assert "ResourceFor" in message
+    assert "default" in message
+    assert "inherited" in message
+
+
+def test_yidl_lark_resource_matcher_diamond_rules_merge_once() -> None:
+    source = """
+    module matcher_diamond
+
+    concept Base {
+        property Name: str
+        property Kind: str
+
+        record Field {
+            Name
+            Kind
+        }
+
+        collection Fields: Field identity Name many
+
+        resource Plain = code `{"selected": "plain"}`
+
+        matcher ResourceFor(field: Fields) {
+            default -> Plain
+        }
+    }
+
+    concept Left extends Base {
+        resource LeftResource = code `{"selected": "left"}`
+
+        matcher ResourceFor(field: Fields) {
+            rule left when field.Kind == "left" -> LeftResource weight 10
+        }
+    }
+
+    concept Right extends Base {
+        resource RightResource = code `{"selected": "right"}`
+
+        matcher ResourceFor(field: Fields) {
+            rule right when field.Kind == "right" -> RightResource weight 10
+        }
+    }
+
+    concept Combined extends Left, Right {
+    }
+    """
+
+    compiled = compile_yidl_files({"matcher_diamond.yidl": source}, "matcher_diamond.yidl")
+    concept = compiled.concepts["Combined"]
+    dds = concept.plan.build_data_definition()
+    matcher = next(matcher for matcher in dds.matchers if matcher.name == "ResourceFor")
+
+    assert sorted(concept.resources) == ["LeftResource", "Plain", "RightResource"]
+    assert matcher.default_resource is concept.resources["Plain"]
+    assert [rule.name for rule in matcher.rules] == ["left", "right"]
+
+
 def test_yidl_lark_resource_expression_reports_wrong_kind() -> None:
     source = """
     module snippets

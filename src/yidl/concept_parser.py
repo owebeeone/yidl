@@ -334,7 +334,8 @@ class _ConceptCompiler:
         for member in members:
             if member.data == "matcher_decl" and _matcher_kind(member) == "resource":
                 matcher = self._compile_matcher(builder, member)
-                self._local_matchers[matcher.name] = matcher
+                if matcher is not None:
+                    self._local_matchers[matcher.name] = matcher
         for member in members:
             if member.data == "matcher_decl" and _matcher_kind(member) == "contribution":
                 matcher = self._compile_contribution_matcher(member)
@@ -437,11 +438,9 @@ class _ConceptCompiler:
             getter=lambda concept: concept.contributions,
             concept_name=name,
         )
-        contribution_matchers = _merge_named_maps(
-            kind="contribution matcher",
+        contribution_matchers = _merge_contribution_matchers(
             extensions=self._extensions,
             local=self._local_contribution_matchers,
-            getter=lambda concept: concept.contribution_matchers,
             concept_name=name,
         )
         composable_productions = _merge_named_maps(
@@ -757,11 +756,17 @@ class _ConceptCompiler:
             identity=identity,
         )
 
-    def _compile_matcher(self, builder: Any, tree: Tree) -> MatcherHandle:
+    def _compile_matcher(self, builder: Any, tree: Tree) -> MatcherHandle | None:
         name = _token_text(tree.children[0])
         if name in self._local_matchers or name in self._local_contribution_matchers:
             raise YidlSymbolError(f"matcher {name!r} is already defined")
-        editor = getattr(builder.matchers, name)()
+        inherited = self._inherited_resource_matcher(name)
+        if inherited is None:
+            editor = getattr(builder.matchers, name)()
+            handle: MatcherHandle | None = editor.handle
+        else:
+            editor = builder.use_matcher(inherited)
+            handle = None
         inputs: dict[str, MatcherInputHandle] = {}
 
         input_list = _first_child(tree, "matcher_input_list")
@@ -778,6 +783,10 @@ class _ConceptCompiler:
             if not isinstance(child, Tree):
                 continue
             if child.data == "matcher_default":
+                if inherited is not None and self._inherited_resource_matcher_has_default(name):
+                    raise YidlSymbolError(
+                        f"matcher {name!r} cannot redefine inherited default"
+                    )
                 editor.default(
                     self._lower_resource_expr(
                         child.children[0],
@@ -801,12 +810,16 @@ class _ConceptCompiler:
                     resource=resource,
                     weight=weight,
                 )
-        return editor.handle
+        return handle
 
     def _compile_contribution_matcher(self, tree: Tree) -> ContributionMatcherSpec:
         name = _token_text(tree.children[0])
         if name in self._local_matchers or name in self._local_contribution_matchers:
             raise YidlSymbolError(f"matcher {name!r} is already defined")
+        if any(name in extension.matchers for extension in self._extensions):
+            raise YidlSymbolError(
+                f"matcher {name!r} is inherited as a resource matcher"
+            )
 
         inputs = self._assembly_inputs(_first_child(tree, "matcher_input_list"))
         default_name: str | None = None
@@ -845,6 +858,32 @@ class _ConceptCompiler:
             default_contribution_name=default_name,
             rules=tuple(rules),
         )
+
+    def _inherited_resource_matcher(self, name: str) -> MatcherHandle | None:
+        inherited: MatcherHandle | None = None
+        owner_name: str | None = None
+        for extension in self._extensions:
+            if name in extension.contribution_matchers:
+                raise YidlSymbolError(
+                    f"matcher {name!r} is inherited as a contribution matcher"
+                )
+            matcher = extension.matchers.get(name)
+            if matcher is None:
+                continue
+            if inherited is None:
+                inherited = matcher
+                owner_name = extension.name
+                continue
+            if inherited is matcher:
+                continue
+            raise YidlSymbolError(
+                f"matcher {name!r} is inherited from both "
+                f"{owner_name!r} and {extension.name!r}"
+            )
+        return inherited
+
+    def _inherited_resource_matcher_has_default(self, name: str) -> bool:
+        return any(_plan_has_matcher_default(extension.plan, name) for extension in self._extensions)
 
     def _matcher_conditions(
         self,
@@ -1383,6 +1422,20 @@ class _ConceptCompiler:
             return name
         if name in self._local_matchers:
             raise YidlSymbolError(f"{context} {name!r} is a resource matcher")
+        for extension in self._extensions:
+            if name in extension.contribution_matchers:
+                return name
+            if name in extension.matchers:
+                raise YidlSymbolError(f"{context} {name!r} is a resource matcher")
+        imported = self._imported_symbol(name)
+        if imported is not None:
+            if isinstance(imported.target, ContributionMatcherSpec):
+                return name
+            if isinstance(imported.target, MatcherHandle):
+                raise YidlSymbolError(f"{context} {name!r} is a resource matcher")
+            raise YidlSymbolError(
+                f"{context} {name!r} is a {imported.kind}, not a contribution matcher"
+            )
         raise YidlSymbolError(f"{context} references undefined contribution matcher {name!r}")
 
     def _resource_exists(self, name: str) -> bool:
@@ -2197,6 +2250,97 @@ def _merge_named_maps(
             )
         merged[name] = value
     return merged
+
+
+def _merge_contribution_matchers(
+    *,
+    extensions: tuple[YidlCompiledConcept, ...],
+    local: Mapping[str, ContributionMatcherSpec],
+    concept_name: str,
+) -> dict[str, ContributionMatcherSpec]:
+    merged: dict[str, ContributionMatcherSpec] = {}
+    owners: dict[str, str] = {}
+    for extension in extensions:
+        for name, matcher in extension.contribution_matchers.items():
+            existing = merged.get(name)
+            if existing is None:
+                merged[name] = matcher
+                owners[name] = extension.name
+                continue
+            merged[name] = _combine_contribution_matchers(
+                existing,
+                matcher,
+                context=(
+                    f"contribution matcher {name!r} inherited from both "
+                    f"{owners[name]!r} and {extension.name!r}"
+                ),
+            )
+    for name, matcher in local.items():
+        existing = merged.get(name)
+        if existing is None:
+            merged[name] = matcher
+            continue
+        merged[name] = _combine_contribution_matchers(
+            existing,
+            matcher,
+            context=(
+                f"contribution matcher {name!r} extended by concept "
+                f"{concept_name!r}"
+            ),
+        )
+    return merged
+
+
+def _combine_contribution_matchers(
+    left: ContributionMatcherSpec,
+    right: ContributionMatcherSpec,
+    *,
+    context: str,
+) -> ContributionMatcherSpec:
+    inputs: dict[str, AssemblyInputSpec] = {}
+    for input_spec in (*left.inputs, *right.inputs):
+        existing = inputs.get(input_spec.name)
+        if existing is None:
+            inputs[input_spec.name] = input_spec
+            continue
+        if existing.collection_name != input_spec.collection_name:
+            raise YidlSymbolError(
+                f"{context}: input {input_spec.name!r} references both "
+                f"{existing.collection_name!r} and {input_spec.collection_name!r}"
+            )
+
+    default = left.default_contribution_name
+    if right.default_contribution_name is not None:
+        if default is None:
+            default = right.default_contribution_name
+        elif default != right.default_contribution_name:
+            raise YidlSymbolError(f"{context}: duplicate default")
+
+    rules: list[ContributionRuleSpec] = []
+    rules_by_name: dict[str, ContributionRuleSpec] = {}
+    for rule in (*left.rules, *right.rules):
+        existing = rules_by_name.get(rule.name)
+        if existing is None:
+            rules_by_name[rule.name] = rule
+            rules.append(rule)
+            continue
+        if existing is rule:
+            continue
+        raise YidlSymbolError(f"{context}: duplicate rule {rule.name!r}")
+
+    return ContributionMatcherSpec(
+        name=left.name,
+        inputs=tuple(inputs.values()),
+        default_contribution_name=default,
+        rules=tuple(rules),
+    )
+
+
+def _plan_has_matcher_default(plan: CapsuleConceptPlan, name: str) -> bool:
+    for operation in plan.matcher_defaults:
+        if operation.matcher.name == name:
+            return True
+    return any(_plan_has_matcher_default(extension, name) for extension in plan.extensions)
 
 
 def _static_path_parts(path: PathSpec) -> tuple[tuple[str, ...], bool]:
