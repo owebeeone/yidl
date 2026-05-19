@@ -35,7 +35,6 @@ from yidl.generation.assembly_plan import TargetPathSpec
 from yidl.generation.assembly_plan import TupleValueRef
 from yidl.generation.assembly_plan import ValueRef
 
-
 _MISSING = object()
 _PATH_OPERATOR_TEXT = {
     "current": ".",
@@ -55,6 +54,10 @@ class AssemblyPathError(ValueError):
 
 class AssemblyDiagnosticError(ValueError):
     """Raised when a matcher-selected diagnostic contribution fires."""
+
+
+class OperationExecutionError(RuntimeError):
+    """Raised when a generated operation body fails unexpectedly."""
 
 
 @dataclass(frozen=True, slots=True)
@@ -149,7 +152,11 @@ def evaluate_identifier(value: AssemblyValueRef, stack: DataStack) -> str:
     """Evaluate an identifier binding value."""
 
     result = evaluate_value(value, stack)
-    if not isinstance(result, str) or not result.isidentifier() or keyword.iskeyword(result):
+    if (
+        not isinstance(result, str)
+        or not result.isidentifier()
+        or keyword.iskeyword(result)
+    ):
         raise TypeError("identifier binding must evaluate to a valid Python identifier")
     return result
 
@@ -185,8 +192,7 @@ def render_path_selector(path: PathSpec, stack: DataStack) -> str:
                 parts.append(segment.name)
                 continue
             indexes = tuple(
-                evaluate_path_index(index, stack)
-                for index in segment.indexes
+                evaluate_path_index(index, stack) for index in segment.indexes
             )
             parts.append(f"{segment.name}[{','.join(str(index) for index in indexes)}]")
             continue
@@ -209,7 +215,9 @@ def path_selector_tuple(
     try:
         return parse_path_selector(rendered)
     except ValueError as exc:
-        raise AssemblyPathError(f"{context}: invalid path selector {rendered!r}") from exc
+        raise AssemblyPathError(
+            f"{context}: invalid path selector {rendered!r}"
+        ) from exc
 
 
 def run_assembly(
@@ -267,7 +275,11 @@ def _run_production(
     )
 
     for apply in production.applies:
-        edge = apply.edge if isinstance(apply, InlineApplySpec) else concept.assembly_edges[apply.edge_name]
+        edge = (
+            apply.edge
+            if isinstance(apply, InlineApplySpec)
+            else concept.assembly_edges[apply.edge_name]
+        )
         _run_edge(
             concept,
             edge,
@@ -314,10 +326,7 @@ def _run_edge(
         stack = DataStack(
             (
                 *context_values,
-                *(
-                    _record_mapping(concept, record)
-                    for record in from_records.values()
-                ),
+                *(_record_mapping(concept, record) for record in from_records.values()),
             )
         )
         if edge.condition is not None and not evaluate_condition(edge.condition, stack):
@@ -365,7 +374,9 @@ def _apply_contribution(
     unroll: bool | str,
 ) -> None:
     # Empty resources let a specific matcher rule suppress a broader rule.
-    if not contribution.diagnostic and _is_empty_resource_contribution(concept, contribution):
+    if not contribution.diagnostic and _is_empty_resource_contribution(
+        concept, contribution
+    ):
         return
 
     composable = _contribution_composable(
@@ -439,7 +450,9 @@ def _apply_contribution(
         )
 
 
-def _is_empty_resource_contribution(concept: object, contribution: ContributionSpec) -> bool:
+def _is_empty_resource_contribution(
+    concept: object, contribution: ContributionSpec
+) -> bool:
     if contribution.source_kind != "resource":
         return False
     resource = concept.resources[contribution.source_name]
@@ -467,7 +480,9 @@ def _contribution_composable(
             context_records=context_records,
             unroll=unroll,
         )
-    raise TypeError(f"unsupported contribution source kind {contribution.source_kind!r}")
+    raise TypeError(
+        f"unsupported contribution source kind {contribution.source_kind!r}"
+    )
 
 
 def _diagnostic_message(

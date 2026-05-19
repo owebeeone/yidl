@@ -4,12 +4,12 @@ import pytest
 
 from yidl.concept_parser import YidlSymbolError
 from yidl.concept_parser import compile_yidl_files
+from yidl.generation.assembly_source import emit_concept_runtime_source
 from yidl.generation.data_schema import OperationMatcherDispatch
 
 
 def test_operation_matcher_lowers_rules_and_default() -> None:
-    concept = _compile_concept(
-        """
+    concept = _compile_concept("""
         resource BuildDefault = code `pass`
         resource BuildSpecial = code `pass`
 
@@ -17,8 +17,7 @@ def test_operation_matcher_lowers_rules_and_default() -> None:
             default -> BuildDefault
             rule special when Name == "special" -> BuildSpecial weight 2
         }
-        """
-    )
+        """)
 
     matcher = concept.operation_matchers["BuildFacts"]
     assert matcher.default_resource_name == "BuildDefault"
@@ -75,8 +74,7 @@ def test_operation_matcher_merges_inherited_rules() -> None:
 
 def test_operation_matcher_rejects_contribution_rhs() -> None:
     with pytest.raises(YidlSymbolError, match="contribution, not a resource"):
-        _compile_concept(
-            """
+        _compile_concept("""
             resource Root = code `astichi_hole(body)`
             resource Item = template `pass`
 
@@ -89,13 +87,11 @@ def test_operation_matcher_rejects_contribution_rhs() -> None:
             matcher BuildFacts(field: Fields) -> operation {
                 default -> ItemContribution
             }
-            """
-        )
+            """)
 
 
 def test_matcher_selected_operation_lowers_dispatch() -> None:
-    concept = _compile_concept(
-        """
+    concept = _compile_concept("""
         resource BuildDefault = code `pass`
 
         matcher BuildFacts(field: Fields) -> operation {
@@ -107,8 +103,7 @@ def test_matcher_selected_operation_lowers_dispatch() -> None:
             inputs(Fields)
             outputs(Fields)
             using matcher BuildFacts
-        """
-    )
+        """)
 
     system = concept.plan.build_data_definition()
     operation = system.operations[0]
@@ -120,8 +115,7 @@ def test_matcher_selected_operation_lowers_dispatch() -> None:
 
 def test_matcher_selected_operation_requires_matching_input_name() -> None:
     with pytest.raises(YidlSymbolError, match="input set"):
-        _compile_concept(
-            """
+        _compile_concept("""
             resource BuildDefault = code `pass`
 
             matcher BuildFacts(source: Fields) -> operation {
@@ -133,14 +127,82 @@ def test_matcher_selected_operation_requires_matching_input_name() -> None:
                 inputs(Fields)
                 outputs(Fields)
                 using matcher BuildFacts
-            """
-        )
+            """)
+
+
+def test_matcher_selected_operation_generated_source_dispatches_body() -> None:
+    concept = _compile_concept("""
+        property Kind: str
+
+        record Output {
+            Name
+            Kind
+        }
+
+        collection Outputs: Output identity Name many
+
+        resource BuildDefault = code $[
+            ctx.write(
+                OutputsCollection,
+                Output(name=field.name, kind="default"),
+                policy=RejectDuplicate,
+            )
+        ]$ {
+            keep ctx, field, OutputsCollection, Output, RejectDuplicate
+        }
+
+        resource BuildSpecial = code $[
+            ctx.write(
+                OutputsCollection,
+                Output(name=field.name, kind="special"),
+                policy=RejectDuplicate,
+            )
+        ]$ {
+            keep ctx, field, OutputsCollection, Output, RejectDuplicate
+        }
+
+        matcher BuildFacts(field: Fields) -> operation {
+            default -> BuildDefault
+            rule special when Name == "special" -> BuildSpecial
+        }
+
+        operation BuildFactsOperation
+            from field: Fields
+            inputs(Fields)
+            outputs(Outputs)
+            using matcher BuildFacts
+        """)
+    system = concept.plan.build_data_definition()
+    source = emit_concept_runtime_source(
+        system,
+        resources=concept.resources,
+        assembly_plan=concept,
+    )
+    namespace: dict[str, object] = {}
+    exec(source, namespace)
+
+    builder = namespace["new_builder"]()
+    fields_collection = namespace["FieldsCollection"]
+    field_record = namespace["Field"]
+    builder.add(fields_collection, field_record(name="plain"))
+    builder.add(fields_collection, field_record(name="special"))
+
+    container = namespace["build_container"](builder)
+    outputs = tuple(container.Outputs.sequence())
+
+    assert [(item.name, item.kind) for item in outputs] == [
+        ("plain", "default"),
+        ("special", "special"),
+    ]
+    assert "def _operation_0_body_0_build_default(ctx, field):" in source
+    assert "def _operation_0_body_1_build_special(ctx, field):" in source
+    assert "if field.name == 'special':" in source
+    assert "OperationExecutionError" in source
 
 
 def _compile_concept(body: str) -> object:
     module = compile_yidl_files(
-        {
-            "operation_matchers.yidl": f"""
+        {"operation_matchers.yidl": f"""
                 module operation_matchers
 
                 concept OperationMatchers {{
@@ -154,8 +216,7 @@ def _compile_concept(body: str) -> object:
 
                     {body}
                 }}
-            """
-        },
+            """},
         "operation_matchers.yidl",
     )
     return module.concepts["OperationMatchers"]

@@ -27,7 +27,11 @@ def emit_concept_runtime_source(
     """Emit DDS runtime source plus YIDL assembly metadata and helpers."""
 
     lines = [
-        emit_container_runtime_source(system),
+        emit_container_runtime_source(
+            system,
+            operation_matchers=assembly_plan.operation_matchers,
+            resources=resources,
+        ),
         "",
         "from types import SimpleNamespace as _YidlSimpleNamespace",
         "from yidl.generation.assembly_plan import AndConditionSpec, "
@@ -118,7 +122,9 @@ def _value_expr(value: object) -> str:
     if isinstance(value, LiteralValueRef):
         return f"LiteralValueRef({value.value!r})"
     if isinstance(value, TupleValueRef):
-        return f"TupleValueRef({_tuple_expr(_value_expr(item) for item in value.items)})"
+        return (
+            f"TupleValueRef({_tuple_expr(_value_expr(item) for item in value.items)})"
+        )
     raise TypeError(f"unsupported assembly value: {type(value).__name__}")
 
 

@@ -20,6 +20,7 @@ from yidl.generation.data_schema import MatcherResultSource
 from yidl.generation.data_schema import MatchResource
 from yidl.generation.data_schema import MatchTupleValue
 from yidl.generation.data_schema import OrderedCollectionSource
+from yidl.generation.data_schema import OperationMatcherDispatch
 from yidl.generation.data_schema import OperationSpec
 from yidl.generation.data_schema import PortAddress
 from yidl.generation.data_schema import PropertySpec
@@ -31,11 +32,19 @@ from yidl.generation.data_schema import UnionSpec
 from yidl.generation.data_schema import _NO_LOOKUP_DEFAULT
 from yidl.generation.matcher import MatcherSpec
 from yidl.generation.matcher import NOT_PROVIDED
+from yidl.generation.assembly_plan import AndConditionSpec
+from yidl.generation.assembly_plan import AssemblyConditionSpec
+from yidl.generation.assembly_plan import AssemblyValueRef
+from yidl.generation.assembly_plan import EqConditionSpec
+from yidl.generation.assembly_plan import LiteralValueRef
+from yidl.generation.assembly_plan import OperationMatcherSpec
+from yidl.generation.assembly_plan import TupleValueRef
+from yidl.generation.assembly_plan import ValueRef
 from yidl.generation.matcher_values import constructor_expr_for
+from yidl.generation.matcher_values import GeneratedValue
 from yidl.generation.matcher_values import generated_value_constructor_names
 from yidl.generation.matcher_values import generated_value_uses_astichi_template
 from yidl.generation.matcher_values import is_generated_value
-
 
 SourceNameMap = Mapping[object, str] | Sequence[tuple[object, str]]
 
@@ -44,6 +53,8 @@ def emit_container_runtime_source(
     system: DataDefinitionSystem,
     *,
     evaluator_names: SourceNameMap = (),
+    operation_matchers: Mapping[str, OperationMatcherSpec] = (),
+    resources: Mapping[str, GeneratedValue] = (),
     value_names: SourceNameMap = (),
 ) -> str:
     """Emit a Python module containing DDS records, collections, and matchers."""
@@ -51,11 +62,16 @@ def emit_container_runtime_source(
     generated_value_import_names = _system_generated_value_import_names(system)
     uses_astichi_templates = _system_uses_astichi_templates(system)
     uses_operations = bool(system.operations)
+    uses_operation_dispatch = any(
+        isinstance(operation.resource, OperationMatcherDispatch)
+        for operation in system.operations
+    )
     lines: list[str] = [
         _pyimport_prefix(
             generated_value_import_names,
             uses_astichi_templates,
             uses_operations,
+            uses_operation_dispatch,
         )
     ]
     prop_vars = _property_vars(system)
@@ -108,16 +124,16 @@ def emit_container_runtime_source(
     for collection in system.collections:
         collection_var = _collection_var(collection)
         collection_vars[collection] = collection_var
-        record_expr = _record_shape_expr(collection.record_shape, record_vars, union_vars)
+        record_expr = _record_shape_expr(
+            collection.record_shape, record_vars, union_vars
+        )
         identity_expr = (
             "None"
             if collection.identity is None
             else _identity_expr(collection.identity, prop_vars)
         )
         cardinality_expr = (
-            "True"
-            if collection.cardinality.allows_multiple()
-            else "False"
+            "True" if collection.cardinality.allows_multiple() else "False"
         )
         lines.append(
             f"{collection_var} = RuntimeCollection("
@@ -195,7 +211,9 @@ def emit_container_runtime_source(
                 operation,
                 operation_index=order,
                 collection_vars=collection_vars,
+                operation_matchers=operation_matchers,
                 prop_vars=prop_vars,
+                resources=resources,
             )
         )
         lines.append("")
@@ -210,6 +228,8 @@ def emit_container_runtime_source(
         matchers=matchers,
         evaluator_names=evaluator_names,
         value_names=value_names,
+        operation_matchers=operation_matchers,
+        resources=resources,
     )
 
 
@@ -219,6 +239,8 @@ def _materialize_container_module(
     system: DataDefinitionSystem,
     matchers: Sequence[MatcherSpec],
     evaluator_names: SourceNameMap,
+    operation_matchers: Mapping[str, OperationMatcherSpec],
+    resources: Mapping[str, GeneratedValue],
     value_names: SourceNameMap,
 ) -> str:
     root = astichi.compile(
@@ -227,6 +249,8 @@ def _materialize_container_module(
             system,
             matchers,
             evaluator_names,
+            operation_matchers,
+            resources,
             value_names,
         ),
     )
@@ -245,15 +269,30 @@ def _materialize_container_module(
             )
         )
         builder.Root.matcher_definitions.add.Matcher[order](order=order)
+    body_order = 0
     for order, operation in enumerate(system.operations):
+        if isinstance(operation.resource, OperationMatcherDispatch):
+            for body_index, _, resource in _operation_matcher_body_resources(
+                operation,
+                operation_matchers=operation_matchers,
+                resources=resources,
+            ):
+                builder.add.OperationBody[body_order](resource.to_generator())
+                getattr(
+                    builder.Root,
+                    _operation_matcher_body_hole(order, body_index),
+                ).add.OperationBody[body_order](order=body_order)
+                body_order += 1
+            continue
         if not is_generated_value(operation.resource):
             raise TypeError(
                 f"operation {operation.name!r} resource must be a generated value"
             )
-        builder.add.OperationBody[order](operation.resource.to_generator())
-        getattr(builder.Root, _operation_body_hole(order)).add.OperationBody[order](
-            order=order
-        )
+        builder.add.OperationBody[body_order](operation.resource.to_generator())
+        getattr(builder.Root, _operation_body_hole(order)).add.OperationBody[
+            body_order
+        ](order=body_order)
+        body_order += 1
     return builder.build().materialize().emit(provenance=False)
 
 
@@ -261,11 +300,17 @@ def _container_keep_names(
     system: DataDefinitionSystem,
     matchers: Sequence[MatcherSpec],
     evaluator_names: SourceNameMap,
+    operation_matchers: Mapping[str, OperationMatcherSpec],
+    resources: Mapping[str, GeneratedValue],
     value_names: SourceNameMap,
 ) -> tuple[str, ...]:
     generated_value_import_names = _system_generated_value_import_names(system)
     uses_astichi_templates = _system_uses_astichi_templates(system)
     uses_operations = bool(system.operations)
+    uses_operation_dispatch = any(
+        isinstance(operation.resource, OperationMatcherDispatch)
+        for operation in system.operations
+    )
     return tuple(
         dict.fromkeys(
             (
@@ -273,6 +318,7 @@ def _container_keep_names(
                     generated_value_import_names,
                     uses_astichi_templates,
                     uses_operations,
+                    uses_operation_dispatch,
                 ),
                 *_BUILTIN_KEEP_NAMES,
                 "_RUNTIME_SPEC",
@@ -293,17 +339,23 @@ def _container_keep_names(
                 *(_port_vars(system).values()),
                 *(record.name for record in system.records),
                 *(_matcher_runtime_class_name(matcher) for matcher in matchers),
-                *(
-                    f"_Container{matcher.name}Matcher"
-                    for matcher in matchers
-                ),
+                *(f"_Container{matcher.name}Matcher" for matcher in matchers),
                 *(
                     _production_func_name(production)
                     for production in system.productions
                 ),
+                *(_operation_func_name(operation) for operation in system.operations),
                 *(
-                    _operation_func_name(operation)
-                    for operation in system.operations
+                    _operation_body_func_name(
+                        operation_index, body_index, resource_name
+                    )
+                    for operation_index, operation in enumerate(system.operations)
+                    if isinstance(operation.resource, OperationMatcherDispatch)
+                    for body_index, resource_name, _ in _operation_matcher_body_resources(
+                        operation,
+                        operation_matchers=operation_matchers,
+                        resources=resources,
+                    )
                 ),
                 *_source_name_roots(evaluator_names),
                 *_source_name_roots(value_names),
@@ -459,8 +511,19 @@ def _emit_aggregate_operation_lines(
     *,
     operation_index: int,
     collection_vars: Mapping[CollectionSpec | ComputedCollectionSpec, str],
+    operation_matchers: Mapping[str, OperationMatcherSpec],
     prop_vars: Mapping[PropertySpec, str],
+    resources: Mapping[str, GeneratedValue],
 ) -> list[str]:
+    if isinstance(operation.resource, OperationMatcherDispatch):
+        return _emit_matcher_operation_lines(
+            operation,
+            operation_index=operation_index,
+            collection_vars=collection_vars,
+            matcher=_operation_matcher_for(operation, operation_matchers),
+            prop_vars=prop_vars,
+            resources=resources,
+        )
     return [
         f"def {_operation_func_name(operation)}(builder):",
         "    ctx = DDSOperationContext(",
@@ -470,6 +533,241 @@ def _emit_aggregate_operation_lines(
         "    )",
         f"    astichi_hole({_operation_body_hole(operation_index)})",
     ]
+
+
+def _emit_matcher_operation_lines(
+    operation: OperationSpec,
+    *,
+    operation_index: int,
+    collection_vars: Mapping[CollectionSpec | ComputedCollectionSpec, str],
+    matcher: OperationMatcherSpec,
+    prop_vars: Mapping[PropertySpec, str],
+    resources: Mapping[str, GeneratedValue],
+) -> list[str]:
+    dispatch = _operation_dispatch_for(operation)
+    body_entries = _operation_matcher_body_resources(
+        operation,
+        operation_matchers={matcher.name: matcher},
+        resources=resources,
+    )
+    body_funcs = {
+        resource_name: _operation_body_func_name(
+            operation_index, body_index, resource_name
+        )
+        for body_index, resource_name, _ in body_entries
+    }
+    from_var = dispatch.from_input_name
+    from_collection = dispatch.from_collection
+    from_collection_var = collection_vars[from_collection]
+    lines: list[str] = []
+    for body_index, resource_name, _ in body_entries:
+        lines.extend(
+            [
+                f"def {_operation_body_func_name(operation_index, body_index, resource_name)}(ctx, {from_var}):",
+                f"    astichi_hole({_operation_matcher_body_hole(operation_index, body_index)})",
+                "",
+            ]
+        )
+
+    lines.extend(
+        [
+            f"def {_operation_func_name(operation)}(builder):",
+            "    ctx = DDSOperationContext(",
+            "        builder,",
+            f"        {operation.name!r},",
+            f"        ordered_inputs={_operation_ordered_inputs_expr(operation, collection_vars, prop_vars)},",
+            "    )",
+            f"    for {from_var} in ctx.records({from_collection_var}):",
+            "        try:",
+        ]
+    )
+    sorted_rules = sorted(
+        enumerate(matcher.rules),
+        key=lambda item: _operation_condition_score(item[1].condition) * item[1].weight,
+        reverse=True,
+    )
+    if not sorted_rules and matcher.default_resource_name is None:
+        lines.append("            pass")
+    for branch_index, (_, rule) in enumerate(sorted_rules):
+        prefix = "if" if branch_index == 0 else "elif"
+        lines.append(
+            "            "
+            f"{prefix} {_operation_condition_expr(rule.condition, from_var, from_collection)}:"
+        )
+        _append_operation_body_call(
+            lines,
+            body_funcs=body_funcs,
+            from_var=from_var,
+            resource_name=rule.resource_name,
+        )
+    if matcher.default_resource_name is not None:
+        if sorted_rules:
+            lines.append("            else:")
+        _append_operation_body_call(
+            lines,
+            body_funcs=body_funcs,
+            from_var=from_var,
+            resource_name=matcher.default_resource_name,
+        )
+    elif sorted_rules:
+        lines.extend(
+            [
+                "            else:",
+                "                pass",
+            ]
+        )
+    lines.extend(
+        [
+            "        except AssemblyDiagnosticError:",
+            "            raise",
+            "        except Exception as exc:",
+            "            raise OperationExecutionError(",
+            f'                "operation {operation.name!r} failed for "',
+            f'                f"{from_var}={{{from_var}!r}}"',
+            "            ) from exc",
+        ]
+    )
+    return lines
+
+
+def _append_operation_body_call(
+    lines: list[str],
+    *,
+    body_funcs: Mapping[str, str],
+    from_var: str,
+    resource_name: str,
+) -> None:
+    body_func = body_funcs.get(resource_name)
+    if body_func is None:
+        lines.append("                pass")
+        return
+    lines.append(f"                {body_func}(ctx, {from_var})")
+
+
+def _operation_matcher_for(
+    operation: OperationSpec,
+    operation_matchers: Mapping[str, OperationMatcherSpec],
+) -> OperationMatcherSpec:
+    dispatch = _operation_dispatch_for(operation)
+    matcher = operation_matchers.get(dispatch.matcher_name)
+    if matcher is None:
+        raise ValueError(
+            f"operation {operation.name!r} references unknown operation matcher "
+            f"{dispatch.matcher_name!r}"
+        )
+    return matcher
+
+
+def _operation_dispatch_for(operation: OperationSpec) -> OperationMatcherDispatch:
+    if not isinstance(operation.resource, OperationMatcherDispatch):
+        raise TypeError(f"operation {operation.name!r} is not matcher-selected")
+    return operation.resource
+
+
+def _operation_matcher_body_resources(
+    operation: OperationSpec,
+    *,
+    operation_matchers: Mapping[str, OperationMatcherSpec],
+    resources: Mapping[str, GeneratedValue],
+) -> tuple[tuple[int, str, GeneratedValue], ...]:
+    matcher = _operation_matcher_for(operation, operation_matchers)
+    ordered_names: list[str] = []
+    if matcher.default_resource_name is not None:
+        ordered_names.append(matcher.default_resource_name)
+    ordered_names.extend(rule.resource_name for rule in matcher.rules)
+
+    entries: list[tuple[int, str, GeneratedValue]] = []
+    seen: set[str] = set()
+    for resource_name in ordered_names:
+        if resource_name in seen:
+            continue
+        seen.add(resource_name)
+        resource = resources.get(resource_name)
+        if resource is None:
+            raise ValueError(
+                f"operation matcher {matcher.name!r} references unknown resource "
+                f"{resource_name!r}"
+            )
+        if _is_empty_generated_value(resource):
+            continue
+        entries.append((len(entries), resource_name, resource))
+    return tuple(entries)
+
+
+def _is_empty_generated_value(resource: GeneratedValue) -> bool:
+    source = getattr(resource, "source", None)
+    if isinstance(source, str):
+        return source == ""
+    template = getattr(resource, "template", None)
+    source = getattr(template, "source", None)
+    return isinstance(source, str) and source == ""
+
+
+def _operation_condition_expr(
+    condition: AssemblyConditionSpec,
+    from_var: str,
+    from_collection: CollectionSpec | ComputedCollectionSpec,
+) -> str:
+    if isinstance(condition, EqConditionSpec):
+        return (
+            f"{_operation_value_expr(condition.left, from_var, from_collection)} == "
+            f"{_operation_value_expr(condition.right, from_var, from_collection)}"
+        )
+    if isinstance(condition, AndConditionSpec):
+        items = tuple(
+            _operation_condition_expr(item, from_var, from_collection)
+            for item in condition.items
+        )
+        if not items:
+            return "True"
+        return " and ".join(f"({item})" for item in items)
+    raise TypeError(f"unsupported operation condition: {type(condition).__name__}")
+
+
+def _operation_value_expr(
+    value: AssemblyValueRef,
+    from_var: str,
+    from_collection: CollectionSpec | ComputedCollectionSpec,
+) -> str:
+    if isinstance(value, ValueRef):
+        prop = _operation_property_for(from_collection, value.name)
+        return f"{from_var}.{prop.storage_name}"
+    if isinstance(value, LiteralValueRef):
+        return repr(value.value)
+    if isinstance(value, TupleValueRef):
+        return _tuple_expr(
+            _operation_value_expr(item, from_var, from_collection)
+            for item in value.items
+        )
+    raise TypeError(f"unsupported operation value: {type(value).__name__}")
+
+
+def _operation_property_for(
+    collection: CollectionSpec | ComputedCollectionSpec,
+    property_name: str,
+) -> PropertySpec:
+    shape = collection.record_shape
+    if isinstance(shape, UnionSpec):
+        for variant in shape.variants:
+            for prop in variant.properties:
+                if prop.name == property_name:
+                    return prop
+    else:
+        for prop in shape.properties:
+            if prop.name == property_name:
+                return prop
+    raise ValueError(
+        f"operation matcher condition references unknown property "
+        f"{property_name!r} on collection {collection.name!r}"
+    )
+
+
+def _operation_condition_score(condition: AssemblyConditionSpec) -> int:
+    if isinstance(condition, AndConditionSpec):
+        return sum(_operation_condition_score(item) for item in condition.items)
+    if isinstance(condition, EqConditionSpec):
+        return 1
+    return 0
 
 
 def _operation_ordered_inputs_expr(
@@ -490,11 +788,7 @@ def _operation_ordered_inputs_expr(
 def _emit_operation_runner_lines(system: DataDefinitionSystem) -> list[str]:
     production_groups = system.production_groups
     if production_groups:
-        steps = tuple(
-            entry
-            for group in production_groups
-            for entry in group.entries
-        )
+        steps = tuple(entry for group in production_groups for entry in group.entries)
     else:
         steps = (*system.productions, *system.operations)
     lines = ["def run_operations(builder):"]
@@ -784,12 +1078,7 @@ def _port_vars(system: DataDefinitionSystem) -> dict[object, str]:
 
 
 def _port_var(name: str) -> str:
-    parts = [
-        part
-        for token in name.split(".")
-        for part in token.split("_")
-        if part
-    ]
+    parts = [part for token in name.split(".") for part in token.split("_") if part]
     return "".join(part[:1].upper() + part[1:] for part in parts) + "Port"
 
 
@@ -807,6 +1096,27 @@ def _operation_func_name(operation: OperationSpec) -> str:
 
 def _operation_body_hole(index: int) -> str:
     return f"operation_body_{index}"
+
+
+def _operation_matcher_body_hole(operation_index: int, body_index: int) -> str:
+    return f"operation_body_{operation_index}_{body_index}"
+
+
+def _operation_body_func_name(
+    operation_index: int,
+    body_index: int,
+    resource_name: str,
+) -> str:
+    return f"_operation_{operation_index}_body_{body_index}_{_operation_resource_slug(resource_name)}"
+
+
+def _operation_resource_slug(resource_name: str) -> str:
+    stem = (
+        resource_name[:-4]
+        if resource_name.endswith("Body") and len(resource_name) > len("Body")
+        else resource_name
+    )
+    return _snake_name(stem).strip("_") or "body"
 
 
 def _snake_name(name: str) -> str:
@@ -849,16 +1159,15 @@ def _value_expr(value: object, source_names: SourceNameMap, label: str) -> str:
     if isinstance(value, type):
         return _type_expr(value)
     if isinstance(value, tuple):
-        return _tuple_expr(
-            _value_expr(item, source_names, label)
-            for item in value
-        )
+        return _tuple_expr(_value_expr(item, source_names, label) for item in value)
     if value is None or isinstance(value, (bool, int, float, str)):
         return repr(value)
     return _source_path_for(value, source_names, label)
 
 
-def _system_generated_value_import_names(system: DataDefinitionSystem) -> tuple[str, ...]:
+def _system_generated_value_import_names(
+    system: DataDefinitionSystem,
+) -> tuple[str, ...]:
     names: set[str] = set()
     for prop in system.properties:
         names.update(_generated_value_constructor_names_in(prop.default))
@@ -871,9 +1180,13 @@ def _system_generated_value_import_names(system: DataDefinitionSystem) -> tuple[
         if production.identity is not None and _expression_uses_generated_values(
             production.identity
         ):
-            names.update(_generated_value_constructor_names_in_expression(production.identity))
+            names.update(
+                _generated_value_constructor_names_in_expression(production.identity)
+            )
         for value in production.values:
-            names.update(_generated_value_constructor_names_in_expression(value.expression))
+            names.update(
+                _generated_value_constructor_names_in_expression(value.expression)
+            )
     for matcher in _system_matchers(system):
         if matcher.has_default_resource:
             names.update(generated_value_constructor_names(matcher.default_resource))
@@ -949,9 +1262,7 @@ def _contains_generated_value(value: object) -> bool:
         return any(_contains_generated_value(item) for item in value)
     if isinstance(value, dict):
         return any(
-            _contains_generated_value(item)
-            for pair in value.items()
-            for item in pair
+            _contains_generated_value(item) for pair in value.items() for item in pair
         )
     return False
 
@@ -973,14 +1284,18 @@ def _generated_value_constructor_names_in(value: object) -> tuple[str, ...]:
     return ()
 
 
-def _generated_value_constructor_names_in_expression(expression: object) -> tuple[str, ...]:
+def _generated_value_constructor_names_in_expression(
+    expression: object,
+) -> tuple[str, ...]:
     if isinstance(expression, LiteralValue):
         return _generated_value_constructor_names_in(expression.value)
     if isinstance(expression, LookupValue):
         names: set[str] = set()
         names.update(_generated_value_constructor_names_in_lookup_key(expression.key))
         if expression.default is not _NO_LOOKUP_DEFAULT:
-            names.update(_generated_value_constructor_names_in_expression(expression.default))
+            names.update(
+                _generated_value_constructor_names_in_expression(expression.default)
+            )
         return tuple(sorted(names))
     return ()
 
@@ -1026,7 +1341,9 @@ def _iter_source_names(
 
 def _require_ref_path(path: str, label: str) -> None:
     if not path or any(not part.isidentifier() for part in path.split(".")):
-        raise ValueError(f"{label} source path must be a dotted identifier path: {path!r}")
+        raise ValueError(
+            f"{label} source path must be a dotted identifier path: {path!r}"
+        )
 
 
 def _type_name(value_type: type[object] | tuple[type[object], ...]) -> str:
@@ -1040,10 +1357,7 @@ def _system_matchers(system: DataDefinitionSystem) -> tuple[MatcherSpec, ...]:
 
 
 def _source_name_roots(source_names: SourceNameMap) -> tuple[str, ...]:
-    return tuple(
-        path.split(".", 1)[0]
-        for _, path in _iter_source_names(source_names)
-    )
+    return tuple(path.split(".", 1)[0] for _, path in _iter_source_names(source_names))
 
 
 _RUNTIME_IMPORT_NAMES = (
@@ -1068,6 +1382,7 @@ def _runtime_import_names(
     generated_value_import_names: tuple[str, ...],
     uses_astichi_templates: bool,
     uses_operations: bool,
+    uses_operation_dispatch: bool = False,
 ) -> tuple[str, ...]:
     names = [*_RUNTIME_IMPORT_NAMES]
     names.extend(generated_value_import_names)
@@ -1075,7 +1390,11 @@ def _runtime_import_names(
         names.append("astichi_template")
     if uses_operations:
         names.append("DDSOperationContext")
+    if uses_operation_dispatch:
+        names.append("AssemblyDiagnosticError")
+        names.append("OperationExecutionError")
     return tuple(dict.fromkeys(names))
+
 
 _BUILTIN_KEEP_NAMES = (
     "AttributeError",
@@ -1093,10 +1412,12 @@ _BUILTIN_KEEP_NAMES = (
     "type",
 )
 
+
 def _pyimport_prefix(
     generated_value_import_names: tuple[str, ...],
     uses_astichi_templates: bool,
     uses_operations: bool,
+    uses_operation_dispatch: bool = False,
 ) -> str:
     names = "\n".join(
         f"        {name},"
@@ -1104,18 +1425,17 @@ def _pyimport_prefix(
             generated_value_import_names,
             uses_astichi_templates,
             uses_operations,
+            uses_operation_dispatch,
         )
     )
-    return textwrap.dedent(
-        f"""
+    return textwrap.dedent(f"""
         astichi_pyimport(
             module=yidl.generation.data_def_sys,
             names=(
         {names}
             ),
         )
-        """
-    ).strip()
+        """).strip()
 
 
 __all__ = ["SourceNameMap", "emit_container_runtime_source"]

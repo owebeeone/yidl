@@ -13,11 +13,15 @@ from yidl.generation.container_runtime_source import emit_container_runtime_sour
 from yidl.generation.data_container import *  # noqa: F403
 from yidl.generation.data_schema import *  # noqa: F403
 from yidl.generation.data_schema import _emit_record_class_source
-from yidl.generation.data_schema import DataDefinitionSystem as _SchemaDataDefinitionSystem
+from yidl.generation.data_schema import (
+    DataDefinitionSystem as _SchemaDataDefinitionSystem,
+)
 from yidl.generation.matcher_values import *  # noqa: F403
 from yidl.generation.matcher import *  # noqa: F403
 from yidl.generation.matcher import MatcherSpec
 from yidl.generation import matcher as _matcher
+from yidl.generation.assembly_runtime import AssemblyDiagnosticError
+from yidl.generation.assembly_runtime import OperationExecutionError
 
 
 class DataDefinitionSystem(_SchemaDataDefinitionSystem):
@@ -65,7 +69,9 @@ __all__ = [
     *_data_schema.__all__,
     *_matcher.__all__,
     *_matcher_values.__all__,
+    "AssemblyDiagnosticError",
     "DataDefinitionSystem",
+    "OperationExecutionError",
     "emit_concept_runtime_source",
     "_emit_record_class_source",
 ]
