@@ -31,6 +31,7 @@ from yidl.generation.data_def_sys import is_generated_value
 from yidl.generation.data_def_sys import MatcherInputSpec
 from yidl.generation.data_def_sys import MatcherResultSource
 from yidl.generation.data_def_sys import MatcherSpec
+from yidl.generation.data_def_sys import OperationMatcherDispatch
 from yidl.generation.data_def_sys import PortSpec
 from yidl.generation.data_def_sys import PropertyEquals
 from yidl.generation.data_def_sys import PropertySpec
@@ -376,8 +377,17 @@ class OperationHandle:
     inputs: tuple[CollectionHandle | ComputedCollectionHandle, ...]
     outputs: tuple[CollectionHandle, ...]
     order_by: tuple[PropertyHandle, ...]
-    resource: GeneratedValue
+    resource: GeneratedValue | OperationMatcherDispatchHandle
     sequence: int
+
+
+@dataclass(frozen=True, slots=True)
+class OperationMatcherDispatchHandle:
+    """Symbolic matcher-selected operation body dispatch metadata."""
+
+    matcher_name: str
+    from_input_name: str
+    from_collection: CollectionHandle | ComputedCollectionHandle
 
 
 ProductionGroupEntry = ProductionHandle | OperationHandle
@@ -869,7 +879,7 @@ class CapsuleConceptBuilder:
         *,
         inputs: Sequence[CollectionHandle | ComputedCollectionHandle],
         outputs: Sequence[CollectionHandle],
-        resource: GeneratedValue,
+        resource: GeneratedValue | OperationMatcherDispatchHandle,
         order_by: Sequence[PropertyHandle] = (),
     ) -> OperationEditor:
         self._require_unbuilt()
@@ -890,8 +900,12 @@ class CapsuleConceptBuilder:
         for prop in resolved_order_by:
             if not isinstance(prop, PropertyHandle):
                 raise TypeError("operation order_by values must be property handles")
-        if not is_generated_value(resource):
-            raise TypeError("operation resource must be a generated value")
+        if not is_generated_value(resource) and not isinstance(
+            resource, OperationMatcherDispatchHandle
+        ):
+            raise TypeError(
+                "operation resource must be a generated value or matcher dispatch"
+            )
         handle = OperationHandle(
             owner_id=self._owner_id,
             owner_name=self.name,
@@ -1628,7 +1642,7 @@ class OperationDefinition:
         *,
         inputs: Sequence[CollectionHandle | ComputedCollectionHandle],
         outputs: Sequence[CollectionHandle],
-        resource: GeneratedValue,
+        resource: GeneratedValue | OperationMatcherDispatchHandle,
         order_by: Sequence[PropertyHandle] = (),
     ) -> OperationEditor:
         return self._builder._define_operation(
@@ -2175,6 +2189,13 @@ class ReplayContext:
         self._production_specs[_handle_key(production)] = spec
 
     def _apply_operation(self, operation: OperationHandle) -> None:
+        resource: object = operation.resource
+        if isinstance(resource, OperationMatcherDispatchHandle):
+            resource = OperationMatcherDispatch(
+                matcher_name=resource.matcher_name,
+                from_input_name=resource.from_input_name,
+                from_collection=self._resolve_collection_source(resource.from_collection),
+            )
         spec = self._dds.operation(
             operation.name,
             inputs=tuple(
@@ -2189,7 +2210,7 @@ class ReplayContext:
                 self._resolve_property(prop)
                 for prop in operation.order_by
             ),
-            resource=operation.resource,
+            resource=resource,
         )
         self._operation_specs[_handle_key(operation)] = spec
 
@@ -2497,6 +2518,7 @@ __all__ = [
     "ComputedCollectionHandle",
     "MatcherHandle",
     "OperationHandle",
+    "OperationMatcherDispatchHandle",
     "PortHandle",
     "PropertyHandle",
     "RecordHandle",

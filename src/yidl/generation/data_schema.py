@@ -1387,6 +1387,33 @@ class OperationSpec:
         return self.name
 
 
+class OperationMatcherDispatch:
+    """Matcher-selected operation body dispatch metadata."""
+
+    __slots__ = ("from_collection", "from_input_name", "matcher_name")
+
+    def __init__(
+        self,
+        *,
+        matcher_name: str,
+        from_input_name: str,
+        from_collection: CollectionSpec | ComputedCollectionSpec,
+    ) -> None:
+        _require_name(matcher_name, "operation matcher name")
+        _require_name(from_input_name, "operation from input name")
+        self.matcher_name = matcher_name
+        self.from_input_name = from_input_name
+        self.from_collection = from_collection
+
+    def __repr__(self) -> str:
+        return (
+            "OperationMatcherDispatch("
+            f"matcher_name={self.matcher_name!r}, "
+            f"from_input_name={self.from_input_name!r}, "
+            f"from_collection={self.from_collection!r})"
+        )
+
+
 OperationStepSpec = ProductionSpec | OperationSpec
 
 
@@ -2042,6 +2069,7 @@ __all__ = [
     "ManyCollectionCardinality",
     "OrderedCollectionSource",
     "OperationSpec",
+    "OperationMatcherDispatch",
     "OperationStepSpec",
     "PortAddress",
     "PortIndexSpec",

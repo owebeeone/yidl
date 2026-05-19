@@ -4,6 +4,7 @@ import pytest
 
 from yidl.concept_parser import YidlSymbolError
 from yidl.concept_parser import compile_yidl_files
+from yidl.generation.data_schema import OperationMatcherDispatch
 
 
 def test_operation_matcher_lowers_rules_and_default() -> None:
@@ -88,6 +89,50 @@ def test_operation_matcher_rejects_contribution_rhs() -> None:
             matcher BuildFacts(field: Fields) -> operation {
                 default -> ItemContribution
             }
+            """
+        )
+
+
+def test_matcher_selected_operation_lowers_dispatch() -> None:
+    concept = _compile_concept(
+        """
+        resource BuildDefault = code `pass`
+
+        matcher BuildFacts(field: Fields) -> operation {
+            default -> BuildDefault
+        }
+
+        operation BuildFactsOperation
+            from field: Fields
+            inputs(Fields)
+            outputs(Fields)
+            using matcher BuildFacts
+        """
+    )
+
+    system = concept.plan.build_data_definition()
+    operation = system.operations[0]
+    assert isinstance(operation.resource, OperationMatcherDispatch)
+    assert operation.resource.matcher_name == "BuildFacts"
+    assert operation.resource.from_input_name == "field"
+    assert operation.resource.from_collection.name == "Fields"
+
+
+def test_matcher_selected_operation_requires_matching_input_name() -> None:
+    with pytest.raises(YidlSymbolError, match="input set"):
+        _compile_concept(
+            """
+            resource BuildDefault = code `pass`
+
+            matcher BuildFacts(source: Fields) -> operation {
+                default -> BuildDefault
+            }
+
+            operation BuildFactsOperation
+                from field: Fields
+                inputs(Fields)
+                outputs(Fields)
+                using matcher BuildFacts
             """
         )
 

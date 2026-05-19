@@ -48,7 +48,8 @@ concept_member: use_decl
               | composable_production_decl
               | assemble_decl
               | assembly_decl
-              | operation_decl
+              | direct_operation_decl
+              | matcher_operation_decl
               | diagnostics_decl
 
 use_decl: "use" qname ("as" CNAME)?
@@ -177,8 +178,12 @@ assemble_from: "from" matcher_input_list
 where_clause: "where" condition_expr
 assembly_decl: "assembly" CNAME "=" qname
 
-operation_decl: "operation" CNAME operation_io "using" resource_ref_expr operation_options?
-operation_io: "inputs" "(" qname_list? ")" "outputs" "(" qname_list? ")"
+direct_operation_decl: "operation" CNAME operation_io "using" resource_ref_expr operation_options?
+matcher_operation_decl: "operation" CNAME operation_from operation_io "using" "matcher" CNAME operation_options?
+operation_from: "from" matcher_input
+operation_io: "inputs" "(" operation_input_list? ")" "outputs" "(" operation_output_list? ")"
+operation_input_list: qname_list
+operation_output_list: qname_list
 qname_list: qname ("," qname)*
 operation_options: "{" operation_option* "}"
 operation_option: "ordered" "(" property_ref ("," property_ref)* ")"

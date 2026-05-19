@@ -26,6 +26,7 @@ from yidl.capsule.recorded_builder import MatcherHandle
 from yidl.capsule.recorded_builder import MatcherInputHandle
 from yidl.capsule.recorded_builder import MatcherResultSourceHandle
 from yidl.capsule.recorded_builder import OperationHandle
+from yidl.capsule.recorded_builder import OperationMatcherDispatchHandle
 from yidl.capsule.recorded_builder import PropertyHandle
 from yidl.capsule.recorded_builder import ProductionHandle
 from yidl.capsule.recorded_builder import RecordHandle
@@ -369,7 +370,7 @@ class _ConceptCompiler:
                 assembly = self._compile_assembly(member)
                 self._local_assemblies[assembly.name] = assembly
         for member in members:
-            if member.data == "operation_decl":
+            if member.data in {"direct_operation_decl", "matcher_operation_decl"}:
                 operation = self._compile_operation(builder, member)
                 self._local_operations[operation.name] = operation
             elif member.data in {
@@ -524,7 +525,8 @@ class _ConceptCompiler:
             "contribution_decl",
             "assemble_decl",
             "assembly_decl",
-            "operation_decl",
+            "direct_operation_decl",
+            "matcher_operation_decl",
         }:
             return
         if data in {
@@ -1871,35 +1873,36 @@ class _ConceptCompiler:
         name = _token_text(tree.children[0])
         if name in self._local_operations:
             raise YidlSymbolError(f"operation {name!r} is already defined")
-        io_tree = tree.children[1]
-        if not isinstance(io_tree, Tree) or io_tree.data != "operation_io":
+        io_tree = _first_child(tree, "operation_io")
+        if io_tree is None:
             raise YidlSymbolError(f"operation {name!r} has invalid inputs/outputs")
-        qname_lists = [
-            child
-            for child in io_tree.children
-            if isinstance(child, Tree) and child.data == "qname_list"
-        ]
-        if len(qname_lists) != 2:
-            raise YidlSymbolError(
-                f"operation {name!r} must declare input and output lists"
+        inputs, outputs = self._operation_io(name, io_tree)
+        if tree.data == "matcher_operation_decl":
+            from_tree = _first_child(tree, "operation_from")
+            if from_tree is None:
+                raise YidlSymbolError(f"operation {name!r} must declare from input")
+            from_input = self._operation_from_input(name, from_tree)
+            matcher_name = _token_text(tree.children[3])
+            matcher = self._resolve_operation_matcher(matcher_name, context=f"operation {name!r}")
+            self._validate_operation_from_matcher(
+                name,
+                from_input=from_input,
+                matcher=matcher,
+                inputs=inputs,
             )
-        inputs = tuple(
-            self._resolve_collection(_qname(child))
-            for child in qname_lists[0].children
-            if isinstance(child, Tree)
-        )
-        outputs = tuple(
-            self._resolve_collection(_qname(child))
-            for child in qname_lists[1].children
-            if isinstance(child, Tree)
-        )
-        resource_expr = tree.children[2]
-        if not isinstance(resource_expr, Tree):
-            raise YidlSymbolError(f"operation {name!r} has invalid resource")
-        resource = self._lower_resource_expr(
-            resource_expr,
-            context=f"operation {name!r} resource",
-        )
+            resource: object = OperationMatcherDispatchHandle(
+                matcher_name=matcher_name,
+                from_input_name=from_input.name,
+                from_collection=from_input.collection,
+            )
+        else:
+            resource_expr = tree.children[2]
+            if not isinstance(resource_expr, Tree):
+                raise YidlSymbolError(f"operation {name!r} has invalid resource")
+            resource = self._lower_resource_expr(
+                resource_expr,
+                context=f"operation {name!r} resource",
+            )
         order_by: list[PropertyHandle] = []
         options = _first_child(tree, "operation_options")
         if options is not None:
@@ -1922,6 +1925,112 @@ class _ConceptCompiler:
             resource=resource,
             order_by=tuple(order_by),
         ).handle
+
+    def _operation_io(
+        self,
+        operation_name: str,
+        tree: Tree,
+    ) -> tuple[
+        tuple[CollectionHandle, ...],
+        tuple[CollectionHandle, ...],
+    ]:
+        input_list = _first_child(tree, "operation_input_list")
+        output_list = _first_child(tree, "operation_output_list")
+        inputs = self._operation_collection_list(input_list)
+        outputs = self._operation_collection_list(output_list)
+        if not inputs and not outputs:
+            raise YidlSymbolError(
+                f"operation {operation_name!r} must declare at least one input or output"
+            )
+        return inputs, outputs
+
+    def _operation_collection_list(
+        self,
+        tree: Tree | None,
+    ) -> tuple[CollectionHandle, ...]:
+        if tree is None:
+            return ()
+        qname_list = _first_child(tree, "qname_list")
+        if qname_list is None:
+            return ()
+        return tuple(
+            self._resolve_collection(_qname(child))
+            for child in qname_list.children
+            if isinstance(child, Tree)
+        )
+
+    def _operation_from_input(
+        self,
+        operation_name: str,
+        tree: Tree,
+    ) -> AssemblyInputSpec:
+        input_tree = _first_child(tree, "matcher_input")
+        if input_tree is None:
+            raise YidlSymbolError(f"operation {operation_name!r} has invalid from input")
+        collection_name = _qname(input_tree.children[1])
+        return AssemblyInputSpec(
+            name=_token_text(input_tree.children[0]),
+            collection_name=collection_name,
+            collection=self._resolve_collection(collection_name),
+        )
+
+    def _resolve_operation_matcher(
+        self,
+        name: str,
+        *,
+        context: str,
+    ) -> OperationMatcherSpec:
+        if name in self._local_operation_matchers:
+            return self._local_operation_matchers[name]
+        if name in self._local_matchers:
+            raise YidlSymbolError(f"{context} {name!r} is a resource matcher")
+        if name in self._local_contribution_matchers:
+            raise YidlSymbolError(f"{context} {name!r} is a contribution matcher")
+        for extension in self._extensions:
+            if name in extension.operation_matchers:
+                return extension.operation_matchers[name]
+            if name in extension.matchers:
+                raise YidlSymbolError(f"{context} {name!r} is a resource matcher")
+            if name in extension.contribution_matchers:
+                raise YidlSymbolError(f"{context} {name!r} is a contribution matcher")
+        imported = self._imported_symbol(name)
+        if imported is not None:
+            if isinstance(imported.target, OperationMatcherSpec):
+                return imported.target
+            if isinstance(imported.target, MatcherHandle):
+                raise YidlSymbolError(f"{context} {name!r} is a resource matcher")
+            if isinstance(imported.target, ContributionMatcherSpec):
+                raise YidlSymbolError(f"{context} {name!r} is a contribution matcher")
+            raise YidlSymbolError(
+                f"{context} {name!r} is a {imported.kind}, not an operation matcher"
+            )
+        raise YidlSymbolError(f"{context} references undefined operation matcher {name!r}")
+
+    def _validate_operation_from_matcher(
+        self,
+        operation_name: str,
+        *,
+        from_input: AssemblyInputSpec,
+        matcher: OperationMatcherSpec,
+        inputs: tuple[CollectionHandle, ...],
+    ) -> None:
+        if len(matcher.inputs) != 1:
+            raise YidlSymbolError(
+                f"operation {operation_name!r} matcher input set must match from input"
+            )
+        matcher_input = matcher.inputs[0]
+        if (
+            matcher_input.name != from_input.name
+            or matcher_input.collection_name != from_input.collection_name
+        ):
+            raise YidlSymbolError(
+                f"operation {operation_name!r} matcher input set must match from input"
+            )
+        if not any(collection.name == from_input.collection_name for collection in inputs):
+            raise YidlSymbolError(
+                f"operation {operation_name!r} from collection "
+                f"{from_input.collection_name!r} must also be an input"
+            )
 
     def _resolve_concept(self, name: str) -> YidlCompiledConcept:
         parts = name.split(".")
@@ -2284,7 +2393,8 @@ def _declared_member_name(tree: Tree) -> str | None:
         "composable_production_decl",
         "assemble_decl",
         "assembly_decl",
-        "operation_decl",
+        "direct_operation_decl",
+        "matcher_operation_decl",
     }:
         return _token_text(tree.children[0])
     if tree.data == "family_decl":
