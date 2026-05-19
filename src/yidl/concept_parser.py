@@ -8,6 +8,7 @@ or field-spec runtime paths.
 from __future__ import annotations
 
 import ast
+from collections.abc import Callable
 from collections.abc import Mapping
 from dataclasses import dataclass
 from importlib import resources
@@ -139,6 +140,7 @@ _POLICIES: Mapping[str, object] = {
     "RejectDuplicate": RejectDuplicate,
     "ReplaceExisting": ReplaceExisting,
 }
+_MERGE_MISSING = object()
 _PARSER: Lark | None = None
 _TYPE_NAMES: dict[str, type[object]] = {
     "object": object,
@@ -372,22 +374,113 @@ class _ConceptCompiler:
         plan = builder.build()
         self._validate_assembly_value_contexts(plan)
         self._validate_static_assembly_scopes()
+        properties = _merge_named_maps(
+            kind="property",
+            extensions=self._extensions,
+            local=self._local_properties,
+            getter=lambda concept: concept.properties,
+            concept_name=name,
+        )
+        families = _merge_named_maps(
+            kind="schema family",
+            extensions=self._extensions,
+            local=self._local_families,
+            getter=lambda concept: concept.families,
+            concept_name=name,
+        )
+        records = _merge_named_maps(
+            kind="record",
+            extensions=self._extensions,
+            local=self._local_records,
+            getter=lambda concept: concept.records,
+            concept_name=name,
+        )
+        collections = _merge_named_maps(
+            kind="collection",
+            extensions=self._extensions,
+            local=self._local_collections,
+            getter=lambda concept: concept.collections,
+            concept_name=name,
+        )
+        resources = _merge_named_maps(
+            kind="resource",
+            extensions=self._extensions,
+            local=self._local_resources,
+            getter=lambda concept: concept.resources,
+            concept_name=name,
+        )
+        matchers = _merge_named_maps(
+            kind="matcher",
+            extensions=self._extensions,
+            local=self._local_matchers,
+            getter=lambda concept: concept.matchers,
+            concept_name=name,
+        )
+        productions = _merge_named_maps(
+            kind="production",
+            extensions=self._extensions,
+            local=self._local_productions,
+            getter=lambda concept: concept.productions,
+            concept_name=name,
+        )
+        operations = _merge_named_maps(
+            kind="operation",
+            extensions=self._extensions,
+            local=self._local_operations,
+            getter=lambda concept: concept.operations,
+            concept_name=name,
+        )
+        contributions = _merge_named_maps(
+            kind="contribution",
+            extensions=self._extensions,
+            local=self._local_contributions,
+            getter=lambda concept: concept.contributions,
+            concept_name=name,
+        )
+        contribution_matchers = _merge_named_maps(
+            kind="contribution matcher",
+            extensions=self._extensions,
+            local=self._local_contribution_matchers,
+            getter=lambda concept: concept.contribution_matchers,
+            concept_name=name,
+        )
+        composable_productions = _merge_named_maps(
+            kind="composable production",
+            extensions=self._extensions,
+            local=self._local_composable_productions,
+            getter=lambda concept: concept.composable_productions,
+            concept_name=name,
+        )
+        assembly_edges = _merge_named_maps(
+            kind="assembly edge",
+            extensions=self._extensions,
+            local=self._local_assembly_edges,
+            getter=lambda concept: concept.assembly_edges,
+            concept_name=name,
+        )
+        assemblies = _merge_named_maps(
+            kind="assembly",
+            extensions=self._extensions,
+            local=self._local_assemblies,
+            getter=lambda concept: concept.assemblies,
+            concept_name=name,
+        )
         return YidlCompiledConcept(
             name=name,
             plan=plan,
-            properties=dict(self._local_properties),
-            families=dict(self._local_families),
-            records=dict(self._local_records),
-            collections=dict(self._local_collections),
-            resources=dict(self._local_resources),
-            matchers=dict(self._local_matchers),
-            productions=dict(self._local_productions),
-            operations=dict(self._local_operations),
-            contributions=dict(self._local_contributions),
-            contribution_matchers=dict(self._local_contribution_matchers),
-            composable_productions=dict(self._local_composable_productions),
-            assembly_edges=dict(self._local_assembly_edges),
-            assemblies=dict(self._local_assemblies),
+            properties=properties,
+            families=families,
+            records=records,
+            collections=collections,
+            resources=resources,
+            matchers=matchers,
+            productions=productions,
+            operations=operations,
+            contributions=contributions,
+            contribution_matchers=contribution_matchers,
+            composable_productions=composable_productions,
+            assembly_edges=assembly_edges,
+            assemblies=assemblies,
         )
 
     def _compile_base_member(self, builder: Any, member: Tree) -> None:
@@ -2071,6 +2164,39 @@ def _matcher_contribution_names(
         names.append(matcher.default_contribution_name)
     names.extend(rule.contribution_name for rule in matcher.rules)
     return tuple(dict.fromkeys(names))
+
+
+def _merge_named_maps(
+    *,
+    kind: str,
+    extensions: tuple[YidlCompiledConcept, ...],
+    local: Mapping[str, object],
+    getter: Callable[[YidlCompiledConcept], Mapping[str, object]],
+    concept_name: str,
+) -> dict[str, object]:
+    merged: dict[str, object] = {}
+    owners: dict[str, str] = {}
+    for extension in extensions:
+        for name, value in getter(extension).items():
+            existing = merged.get(name, _MERGE_MISSING)
+            if existing is _MERGE_MISSING:
+                merged[name] = value
+                owners[name] = extension.name
+                continue
+            if existing is value:
+                continue
+            raise YidlSymbolError(
+                f"{kind} {name!r} is inherited from both "
+                f"{owners[name]!r} and {extension.name!r}"
+            )
+    for name, value in local.items():
+        if name in merged:
+            raise YidlSymbolError(
+                f"{kind} {name!r} is already inherited by concept "
+                f"{concept_name!r}"
+            )
+        merged[name] = value
+    return merged
 
 
 def _static_path_parts(path: PathSpec) -> tuple[tuple[str, ...], bool]:

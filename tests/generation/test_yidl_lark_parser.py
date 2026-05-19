@@ -9,6 +9,7 @@ from yidl.concept_parser import YidlSyntaxError
 from yidl.concept_parser import YidlSymbolError
 from yidl.concept_parser import compile_yidl_files
 from yidl.concept_parser import parse_yidl_source
+from yidl.generation.data_def_sys import emit_concept_runtime_source
 from yidl.generation.data_def_sys import AstichiTemplateValue
 from yidl.generation.data_def_sys import MatcherGeneratedValue
 
@@ -729,6 +730,133 @@ def test_yidl_lark_from_import_unsupported_kind_rejects() -> None:
     assert "from-import" in message
     assert "port" in message
     assert "not implemented" in message
+
+
+def test_yidl_lark_child_exposes_inherited_assembly_runtime() -> None:
+    parent = """
+    module parent
+
+    concept Parent {
+        resource ModuleRoot = code $[
+            VALUE = "parent"
+        ]$
+
+        production ModuleProduction -> composable {
+            root Root = ModuleRoot
+        }
+
+        assembly Module = ModuleProduction
+    }
+    """
+    child = """
+    module child
+    import "parent.yidl" as parent
+
+    concept Child extends parent.Parent {
+        property Extra: str = "x"
+    }
+    """
+
+    compiled = compile_yidl_files(
+        {"parent.yidl": parent, "child.yidl": child},
+        "child.yidl",
+    )
+    concept = compiled.concepts["Child"]
+
+    assert "ModuleRoot" in concept.resources
+    assert "ModuleProduction" in concept.composable_productions
+    assert "Module" in concept.assemblies
+    assert "Extra" in concept.properties
+
+    source = emit_concept_runtime_source(
+        concept.plan.build_data_definition(),
+        resources=concept.resources,
+        assembly_plan=concept,
+    )
+    namespace: dict[str, object] = {}
+    exec(source, namespace)
+
+    assert "build_Module" in namespace
+    rendered = namespace["build_Module"](
+        namespace["new_builder"]().freeze(),
+    ).emit_commented()
+    assert "VALUE = 'parent'" in rendered
+
+
+def test_yidl_lark_diamond_inheritance_dedupes_inherited_maps() -> None:
+    source = """
+    module diamond
+
+    concept Base {
+        property Name: str
+        resource Root = code `1`
+    }
+
+    concept Left extends Base {
+    }
+
+    concept Right extends Base {
+    }
+
+    concept Combined extends Left, Right {
+        property Count: int
+    }
+    """
+
+    compiled = compile_yidl_files({"diamond.yidl": source}, "diamond.yidl")
+    concept = compiled.concepts["Combined"]
+
+    assert sorted(concept.properties) == ["Count", "Name"]
+    assert sorted(concept.resources) == ["Root"]
+
+
+def test_yidl_lark_inherited_resource_collision_rejects() -> None:
+    source = """
+    module collision
+
+    concept Left {
+        resource Root = code `1`
+    }
+
+    concept Right {
+        resource Root = code `2`
+    }
+
+    concept Combined extends Left, Right {
+    }
+    """
+
+    with pytest.raises(YidlSymbolError) as exc_info:
+        compile_yidl_files({"collision.yidl": source}, "collision.yidl")
+
+    message = str(exc_info.value)
+    assert "resource" in message
+    assert "Root" in message
+    assert "Left" in message
+    assert "Right" in message
+
+
+def test_yidl_lark_local_redefinition_of_inherited_resource_rejects() -> None:
+    source = """
+    module redefinition
+
+    concept Parent {
+        resource Root = code `1`
+    }
+
+    concept Child extends Parent {
+        resource Root = code `2`
+    }
+    """
+
+    with pytest.raises(YidlSymbolError) as exc_info:
+        compile_yidl_files({"redefinition.yidl": source}, "redefinition.yidl")
+
+    message = str(exc_info.value)
+    assert "resource" in message
+    assert "Root" in message
+    assert "Child" in message
+    assert "inherited" in message
 
 
 def test_yidl_lark_resource_expression_reports_wrong_kind() -> None:
