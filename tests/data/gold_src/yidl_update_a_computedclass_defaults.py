@@ -60,11 +60,13 @@ def validate_case(sources: Mapping[str, str]) -> None:
     exec(decorator_source, namespace)
     _assert_schema(namespace)
     _assert_refined_view(namespace)
+    _assert_diagnostics(namespace)
 
     prettier_namespace: dict[str, object] = {}
     exec(decorator_prettier_source, prettier_namespace)
     _assert_schema(prettier_namespace)
     _assert_refined_view(prettier_namespace)
+    _assert_diagnostics(prettier_namespace)
 
     assert (
         prettier_namespace["build_DataclassModule"](
@@ -199,12 +201,6 @@ def _assert_refined_view(namespace: Mapping[str, object]) -> None:
     def _total_factory(count: int, tags: list[str]) -> int:
         return count + len(tags)
 
-    def _unknown_factory(missing: object) -> object:
-        return missing
-
-    def _unsupported_factory(*items: object) -> tuple[object, ...]:
-        return items
-
     builder.add(
         facades,
         facade(
@@ -261,37 +257,12 @@ def _assert_refined_view(namespace: Mapping[str, object]) -> None:
             init=False,
         ),
     )
-    builder.add(
-        fields,
-        field(
-            field_id="Widget.unknown",
-            field_owner="Widget",
-            field_name="unknown",
-            field_order=50,
-            annotation="object",
-            has_default_factory=True,
-            default_factory=_unknown_factory,
-        ),
-    )
-    builder.add(
-        fields,
-        field(
-            field_id="Widget.unsupported",
-            field_owner="Widget",
-            field_name="unsupported",
-            field_order=60,
-            annotation="object",
-            has_default_factory=True,
-            default_factory=_unsupported_factory,
-        ),
-    )
-
     container = namespace["build_container"](builder)
 
     assert [
         record.field_name
         for record in container.InitDefaultFactoryGuardFields.sequence()
-    ] == ["tags", "total", "unknown", "unsupported"]
+    ] == ["tags", "total"]
     assert [
         (record.action_field_name, record.factory_param_names)
         for record in container.ZeroArgDefaultFactoryActions.sequence()
@@ -305,8 +276,6 @@ def _assert_refined_view(namespace: Mapping[str, object]) -> None:
         for record in container.ParameterizedDefaultFactoryActions.sequence()
     ] == [
         ("total", ("count", "tags"), 1),
-        ("unknown", ("missing",), 3),
-        ("unsupported", ("items",), 4),
     ]
     assert [
         (
@@ -330,22 +299,157 @@ def _assert_refined_view(namespace: Mapping[str, object]) -> None:
         ("Widget.tags", "tags", 0),
         ("Widget.total", "total", 1),
         ("Widget.hidden", "hidden", 2),
-        ("Widget.unknown", "unknown", 3),
-        ("Widget.unsupported", "unsupported", 4),
     ]
-    assert [
-        (record.diagnostic_field_id, record.diagnostic_message)
-        for record in container.Diagnostics.sequence()
-    ] == [
-        (
-            "Widget.unknown",
-            "field unknown default_factory unknown dependency 'missing'",
+    assert list(container.Diagnostics.sequence()) == []
+
+
+def _assert_diagnostics(namespace: Mapping[str, object]) -> None:
+    _assert_diagnostic_message(
+        namespace,
+        _diagnostic_builder_unknown_dependency(namespace),
+        "field unknown default_factory unknown dependency 'missing'",
+    )
+    _assert_diagnostic_message(
+        namespace,
+        _diagnostic_builder_unsupported_parameter(namespace),
+        "field unsupported default_factory has unsupported parameter 'items'",
+    )
+    _assert_diagnostic_message(
+        namespace,
+        _diagnostic_builder_cycle(namespace),
+        "default_factory dependency cycle: Cycle.a -> Cycle.b -> Cycle.a",
+    )
+    _assert_diagnostic_message(
+        namespace,
+        _diagnostic_builder_invalid_initvar(namespace),
+        "init-only field scratch with init=False must specify default or default_factory",
+    )
+
+
+def _assert_diagnostic_message(
+    namespace: Mapping[str, object],
+    builder: object,
+    expected: str,
+) -> None:
+    diagnostic_error = namespace["AssemblyDiagnosticError"]
+    try:
+        namespace["build_container"](builder)
+    except diagnostic_error as exc:
+        assert str(exc) == expected
+    else:
+        raise AssertionError(f"expected diagnostic {expected!r}")
+
+
+def _diagnostic_builder_unknown_dependency(namespace: Mapping[str, object]) -> object:
+    def _unknown_factory(missing: object) -> object:
+        return missing
+
+    builder, field, _ = _diagnostic_builder(namespace, "Unknown")
+    builder.add(
+        namespace["FieldsCollection"],
+        field(
+            field_id="Unknown.unknown",
+            field_owner="Unknown",
+            field_name="unknown",
+            field_order=10,
+            annotation="object",
+            has_default_factory=True,
+            default_factory=_unknown_factory,
         ),
-        (
-            "Widget.unsupported",
-            "field unsupported default_factory has unsupported parameter 'items'",
+    )
+    return builder
+
+
+def _diagnostic_builder_unsupported_parameter(
+    namespace: Mapping[str, object],
+) -> object:
+    def _unsupported_factory(*items: object) -> tuple[object, ...]:
+        return items
+
+    builder, field, _ = _diagnostic_builder(namespace, "Unsupported")
+    builder.add(
+        namespace["FieldsCollection"],
+        field(
+            field_id="Unsupported.unsupported",
+            field_owner="Unsupported",
+            field_name="unsupported",
+            field_order=10,
+            annotation="object",
+            has_default_factory=True,
+            default_factory=_unsupported_factory,
         ),
-    ]
+    )
+    return builder
+
+
+def _diagnostic_builder_cycle(namespace: Mapping[str, object]) -> object:
+    def _cycle_a(b: object) -> object:
+        return b
+
+    def _cycle_b(a: object) -> object:
+        return a
+
+    builder, field, fields = _diagnostic_builder(namespace, "Cycle")
+    builder.add(
+        fields,
+        field(
+            field_id="Cycle.a",
+            field_owner="Cycle",
+            field_name="a",
+            field_order=10,
+            annotation="object",
+            has_default_factory=True,
+            default_factory=_cycle_a,
+        ),
+    )
+    builder.add(
+        fields,
+        field(
+            field_id="Cycle.b",
+            field_owner="Cycle",
+            field_name="b",
+            field_order=20,
+            annotation="object",
+            has_default_factory=True,
+            default_factory=_cycle_b,
+        ),
+    )
+    return builder
+
+
+def _diagnostic_builder_invalid_initvar(namespace: Mapping[str, object]) -> object:
+    builder = namespace["new_builder"]()
+    facades = namespace["FacadesCollection"]
+    fields = namespace["FieldsCollection"]
+    facade = namespace["DataclassFacade"]
+    initvar = namespace["InitVarField"]
+    builder.add(facades, facade(class_id="InitOnly", class_name="InitOnly"))
+    builder.add(
+        fields,
+        initvar(
+            field_id="InitOnly.scratch",
+            field_owner="InitOnly",
+            field_name="scratch",
+            field_order=10,
+            field_kind="initvar",
+            annotation="object",
+            init=False,
+        ),
+    )
+    return builder
+
+
+def _diagnostic_builder(
+    namespace: Mapping[str, object],
+    class_id: str,
+) -> tuple[object, object, object]:
+    builder = namespace["new_builder"]()
+    facades = namespace["FacadesCollection"]
+    fields = namespace["FieldsCollection"]
+    facade = namespace["DataclassFacade"]
+    field = namespace["InstanceField"]
+    builder.add(facades, facade(class_id=class_id, class_name=class_id))
+    return builder, field, fields
 
 
 def _prettier_source(source: str) -> str:

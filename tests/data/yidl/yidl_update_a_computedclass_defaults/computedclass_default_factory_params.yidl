@@ -112,6 +112,22 @@ concept ComputedClassDefaultFactoryParams extends dataclasses.DataclassSubstitut
                 )
             )
 
+        for field in fields:
+            if (
+                field.field_kind == "initvar"
+                and field.init == False
+                and field.has_default == False
+                and field.has_default_factory == False
+            ):
+                add_diagnostic(
+                    field,
+                    "initvar",
+                    (
+                        f"init-only field {field.field_name} with init=False "
+                        f"must specify default or default_factory"
+                    ),
+                )
+
         for field in factory_fields:
             try:
                 parameters = tuple(
@@ -169,7 +185,7 @@ concept ComputedClassDefaultFactoryParams extends dataclasses.DataclassSubstitut
             if field_id in visited:
                 return
             if field_id in visiting:
-                cycle = path[path.index(field_id):] + [field_id]
+                cycle = path[path.index(field_id):]
                 names = " -> ".join(
                     f"{facade.class_name}.{by_id[item].field_name}"
                     for item in cycle
@@ -264,6 +280,18 @@ concept ComputedClassDefaultFactoryParams extends dataclasses.DataclassSubstitut
         inputs(Facades, Fields)
         outputs(DefaultFactoryInitActions, DefaultFactoryDeps, InitEvaluationSteps, Diagnostics)
         using matcher DefaultFactoryFactOperations
+
+    resource RaiseComputedClassDiagnosticsBody = code $[
+        for diagnostic in ctx.records(DiagnosticsCollection):
+            raise AssemblyDiagnosticError(diagnostic.diagnostic_message)
+    ]$ {
+        keep ctx, DiagnosticsCollection, AssemblyDiagnosticError
+    }
+
+    operation RaiseComputedClassDiagnostics
+        inputs(Diagnostics)
+        outputs()
+        using RaiseComputedClassDiagnosticsBody
 
     resource DefaultFactoryEval = template $[
         if astichi_pass(field_name, outer_bind=True) is _HAS_DEFAULT_FACTORY:
