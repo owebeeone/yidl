@@ -1,0 +1,10 @@
+module tests.computedclass_defaults
+
+import "computedclass_default_factory_params.yidl" as default_factory_params
+
+export concept ComputedClassDefaults
+
+concept ComputedClassDefaults extends
+    default_factory_params.ComputedClassDefaultFactoryParams
+{
+}

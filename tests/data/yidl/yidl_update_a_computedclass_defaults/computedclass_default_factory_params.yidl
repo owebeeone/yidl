@@ -1,0 +1,80 @@
+module tests.computedclass_default_factory_params
+
+import "../yidl_update_a_dataclasses_split/dataclasses_combined.yidl" as dataclasses
+
+export concept ComputedClassDefaultFactoryParams
+
+concept ComputedClassDefaultFactoryParams extends dataclasses.DataclassSubstitute {
+    property ActionId: str
+    property ActionOwner: str
+    property ActionFieldId: str
+    property ActionFieldName: str
+    property ActionFieldOrder: int
+    property ActionKind: str = "zero_arg"
+    property FactoryParamNames: object = ()
+
+    property ConsumerFieldId: str
+    property ProviderFieldId: str
+    property ProviderName: str
+    property ParamName: str
+    property ParamOrder: int = 0
+
+    property EvalStepId: str
+    property EvalOwner: str
+    property EvalFieldId: str
+    property EvalFieldName: str
+    property EvalOrder: int
+
+    property DiagnosticId: str
+    property DiagnosticOwner: str
+    property DiagnosticFieldId: str
+    property DiagnosticMessage: str
+
+    record DefaultFactoryInitAction {
+        ActionId
+        ActionOwner
+        ActionFieldId
+        ActionFieldName
+        ActionFieldOrder
+        ActionKind
+        FactoryParamNames
+    }
+
+    record DefaultFactoryDep {
+        ConsumerFieldId
+        ProviderFieldId
+        ProviderName
+        ParamName
+        ParamOrder
+    }
+
+    record InitEvaluationStep {
+        EvalStepId
+        EvalOwner
+        EvalFieldId
+        EvalFieldName
+        EvalOrder
+    }
+
+    record ComputedClassDiagnostic {
+        DiagnosticId
+        DiagnosticOwner
+        DiagnosticFieldId
+        DiagnosticMessage
+    }
+
+    collection DefaultFactoryInitActions: DefaultFactoryInitAction identity ActionId many
+    collection DefaultFactoryDeps: DefaultFactoryDep identity (ConsumerFieldId, ParamName) many
+    collection InitEvaluationSteps: InitEvaluationStep identity EvalStepId many
+    collection Diagnostics: ComputedClassDiagnostic identity DiagnosticId many
+
+    computed collection InitDefaultFactoryGuardFields:
+        DataclassFieldSpec from Fields where Init == True
+    filter InitDefaultFactoryGuardFields where HasDefaultFactory == True
+
+    computed collection ZeroArgDefaultFactoryActions:
+        DefaultFactoryInitAction from DefaultFactoryInitActions where ActionKind == "zero_arg"
+
+    computed collection ParameterizedDefaultFactoryActions:
+        DefaultFactoryInitAction from DefaultFactoryInitActions where ActionKind == "parameterized"
+}
