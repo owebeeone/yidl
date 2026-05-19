@@ -106,6 +106,22 @@ class YidlCompiledModule:
 
 
 @dataclass(frozen=True, slots=True)
+class _ImportedSymbol:
+    alias: str
+    kind: str
+    name: str
+    module_path: str
+    module: YidlCompiledModule
+    target: object
+
+
+@dataclass(frozen=True, slots=True)
+class _CompiledImports:
+    aliases: Mapping[str, YidlCompiledModule]
+    symbols: Mapping[str, _ImportedSymbol]
+
+
+@dataclass(frozen=True, slots=True)
 class _SnippetSource:
     source: str
     line_number: int
@@ -207,13 +223,49 @@ class _YidlCompiler:
         self,
         path: str,
         tree: Tree,
-    ) -> dict[str, YidlCompiledModule]:
-        imports: dict[str, YidlCompiledModule] = {}
+    ) -> _CompiledImports:
+        aliases: dict[str, YidlCompiledModule] = {}
         for import_tree in _children(tree, "import_alias"):
             imported_path = _resolve_import_path(path, _string_value(import_tree.children[0]))
             alias = _token_text(import_tree.children[1])
-            imports[alias] = self.compile(imported_path)
-        return imports
+            if alias in aliases:
+                raise YidlSymbolError(f"{path}: import alias {alias!r} is already defined")
+            aliases[alias] = self.compile(imported_path)
+
+        symbols: dict[str, _ImportedSymbol] = {}
+        for import_tree in _children(tree, "import_from"):
+            imported_path = _resolve_import_path(path, _string_value(import_tree.children[0]))
+            module = self.compile(imported_path)
+            for item in import_tree.children[1:]:
+                if not isinstance(item, Tree) or item.data != "import_item":
+                    continue
+                kind = _symbol_kind(item.children[0])
+                if kind in {"port", "union"}:
+                    raise YidlSymbolError(
+                        f"{path}: from-import of {kind} is not implemented"
+                    )
+                name = _token_text(item.children[1])
+                alias = _token_text(item.children[2]) if len(item.children) > 2 else name
+                if alias in aliases or alias in symbols:
+                    raise YidlSymbolError(
+                        f"{path}: import alias {alias!r} is already defined"
+                    )
+                target = _find_imported_symbol(
+                    module,
+                    kind=kind,
+                    name=name,
+                    importing_path=path,
+                    imported_path=imported_path,
+                )
+                symbols[alias] = _ImportedSymbol(
+                    alias=alias,
+                    kind=kind,
+                    name=name,
+                    module_path=imported_path,
+                    module=module,
+                    target=target,
+                )
+        return _CompiledImports(aliases=aliases, symbols=symbols)
 
     def _exports(self, tree: Tree) -> tuple[tuple[str, str], ...]:
         exports: list[tuple[str, str]] = []
@@ -234,7 +286,7 @@ class _ConceptCompiler:
         self,
         *,
         module: YidlCompiledModule,
-        imports: Mapping[str, YidlCompiledModule],
+        imports: _CompiledImports,
         prior_concepts: Mapping[str, YidlCompiledConcept],
     ) -> None:
         self._module = module
@@ -273,6 +325,7 @@ class _ConceptCompiler:
             extends=tuple(extension.plan for extension in self._extensions),
         )
         members = _concept_members(tree)
+        self._reject_from_import_local_collisions(members)
         for member in members:
             self._compile_base_member(builder, member)
         self._declare_update_a_members(members)
@@ -402,6 +455,18 @@ class _ConceptCompiler:
                 if name in self._declared_assemblies:
                     raise YidlSymbolError(f"assembly {name!r} is already defined")
                 self._declared_assemblies.add(name)
+
+    def _reject_from_import_local_collisions(self, members: tuple[Tree, ...]) -> None:
+        imported_aliases = self._imports.symbols
+        if not imported_aliases:
+            return
+        for member in members:
+            name = _declared_member_name(member)
+            if name is not None and name in imported_aliases:
+                raise YidlSymbolError(
+                    f"{self._module.path}: local declaration {name!r} conflicts "
+                    "with an import alias already defined"
+                )
 
     def _compile_resource(self, tree: Tree) -> tuple[str, GeneratedValue]:
         name = _token_text(tree.children[0])
@@ -1613,10 +1678,17 @@ class _ConceptCompiler:
     def _resolve_concept(self, name: str) -> YidlCompiledConcept:
         parts = name.split(".")
         if len(parts) == 1:
-            try:
-                return self._prior_concepts[parts[0]]
-            except KeyError as exc:
-                raise YidlSymbolError(f"undefined concept {name!r}") from exc
+            concept = self._prior_concepts.get(parts[0])
+            if concept is not None:
+                return concept
+            imported = self._imported_symbol(parts[0])
+            if imported is not None:
+                if isinstance(imported.target, YidlCompiledConcept):
+                    return imported.target
+                raise YidlSymbolError(
+                    f"{name!r} is a {imported.kind}, not a concept"
+                )
+            raise YidlSymbolError(f"undefined concept {name!r}")
         if len(parts) == 2:
             module = self._import_module(parts[0])
             try:
@@ -1659,6 +1731,13 @@ class _ConceptCompiler:
             record = extension.records.get(name)
             if record is not None:
                 return record
+        imported = self._imported_symbol(name)
+        if imported is not None:
+            if isinstance(imported.target, RecordHandle | SchemaFamilyHandle):
+                return imported.target
+            raise YidlSymbolError(
+                f"{name!r} is a {imported.kind}, not a record or schema family"
+            )
         raise YidlSymbolError(f"undefined record or schema family {name!r}")
 
     def _resolve_collection(self, name: str) -> CollectionHandle:
@@ -1671,6 +1750,13 @@ class _ConceptCompiler:
                 collection = extension.collections.get(parts[0])
                 if collection is not None:
                     return collection
+            imported = self._imported_symbol(parts[0])
+            if imported is not None:
+                if isinstance(imported.target, CollectionHandle):
+                    return imported.target
+                raise YidlSymbolError(
+                    f"{name!r} is a {imported.kind}, not a collection"
+                )
             raise YidlSymbolError(f"undefined collection {name!r}")
         if len(parts) == 2:
             module = self._import_module(parts[0])
@@ -1691,6 +1777,13 @@ class _ConceptCompiler:
                 matcher = extension.matchers.get(parts[0])
                 if matcher is not None:
                     return matcher
+            imported = self._imported_symbol(parts[0])
+            if imported is not None:
+                if isinstance(imported.target, MatcherHandle):
+                    return imported.target
+                raise YidlSymbolError(
+                    f"{name!r} is a {imported.kind}, not a resource matcher"
+                )
             raise YidlSymbolError(f"undefined matcher {name!r}")
         if len(parts) == 2:
             module = self._import_module(parts[0])
@@ -1736,6 +1829,13 @@ class _ConceptCompiler:
                 prop = extension.properties.get(parts[0])
                 if prop is not None:
                     return prop
+            imported = self._imported_symbol(parts[0])
+            if imported is not None:
+                if isinstance(imported.target, PropertyHandle):
+                    return imported.target
+                raise YidlSymbolError(
+                    f"{name!r} is a {imported.kind}, not a property"
+                )
             raise YidlSymbolError(f"undefined property {name!r}")
         if len(parts) == 2:
             module = self._import_module(parts[0])
@@ -1759,6 +1859,13 @@ class _ConceptCompiler:
             kind = self._known_local_non_resource_kind(parts[0])
             if kind is not None:
                 raise YidlSymbolError(f"{name!r} is a {kind}, not a resource")
+            imported = self._imported_symbol(parts[0])
+            if imported is not None:
+                if isinstance(imported.target, GeneratedValue):
+                    return imported.target
+                raise YidlSymbolError(
+                    f"{name!r} is a {imported.kind}, not a resource"
+                )
             raise YidlSymbolError(f"undefined resource {name!r}")
         if len(parts) == 2:
             module = self._import_module(parts[0])
@@ -1830,9 +1937,12 @@ class _ConceptCompiler:
 
     def _import_module(self, alias: str) -> YidlCompiledModule:
         try:
-            return self._imports[alias]
+            return self._imports.aliases[alias]
         except KeyError as exc:
             raise YidlSymbolError(f"unknown import alias {alias!r}") from exc
+
+    def _imported_symbol(self, alias: str) -> _ImportedSymbol | None:
+        return self._imports.symbols.get(alias)
 
     def _type_value(self, tree: Tree) -> type[object]:
         if len(tree.children) == 1 and isinstance(tree.children[0], Tree):
@@ -1910,6 +2020,28 @@ def _concept_members(tree: Tree) -> tuple[Tree, ...]:
         if isinstance(child, Tree) and child.data == "concept_member":
             members.append(child.children[0])
     return tuple(members)
+
+
+def _declared_member_name(tree: Tree) -> str | None:
+    if tree.data in {
+        "property_decl",
+        "record_decl",
+        "collection_decl",
+        "computed_collection_decl",
+        "port_decl",
+        "resource_decl",
+        "matcher_decl",
+        "contribution_decl",
+        "production_decl",
+        "composable_production_decl",
+        "assemble_decl",
+        "assembly_decl",
+        "operation_decl",
+    }:
+        return _token_text(tree.children[0])
+    if tree.data == "family_decl":
+        return _qname(tree.children[0]).split(".")[-1]
+    return None
 
 
 def _wrapped_children(tree: Tree, wrapper_data: str) -> tuple[Tree, ...]:
@@ -2049,6 +2181,99 @@ def _snippet_source(tree: object) -> _SnippetSource:
 
 def _symbol_kind(tree: Tree) -> str:
     return tree.data.removeprefix("symbol_")
+
+
+def _find_imported_symbol(
+    module: YidlCompiledModule,
+    *,
+    kind: str,
+    name: str,
+    importing_path: str,
+    imported_path: str,
+) -> object:
+    targets = _imported_symbol_targets(module, kind=kind, name=name)
+    if not targets:
+        raise YidlSymbolError(
+            f"{importing_path}: missing from-import {kind} {name!r} "
+            f"in {imported_path}"
+        )
+    unique_targets: list[object] = []
+    for target in targets:
+        if not any(target is existing for existing in unique_targets):
+            unique_targets.append(target)
+    if len(unique_targets) > 1:
+        raise YidlSymbolError(
+            f"{importing_path}: ambiguous from-import {kind} {name!r} "
+            f"in {imported_path}"
+        )
+    return unique_targets[0]
+
+
+def _imported_symbol_targets(
+    module: YidlCompiledModule,
+    *,
+    kind: str,
+    name: str,
+) -> tuple[object, ...]:
+    if kind == "concept":
+        concept = module.concepts.get(name)
+        return () if concept is None else (concept,)
+
+    targets: list[object] = []
+    for concept in module.concepts.values():
+        if kind == "property":
+            target = concept.properties.get(name)
+            if target is not None:
+                targets.append(target)
+            continue
+        if kind == "record":
+            target = concept.records.get(name)
+            if target is not None:
+                targets.append(target)
+            continue
+        if kind == "collection":
+            target = concept.collections.get(name)
+            if target is not None:
+                targets.append(target)
+            continue
+        if kind == "resource":
+            target = concept.resources.get(name)
+            if target is not None:
+                targets.append(target)
+            continue
+        if kind == "matcher":
+            matcher = concept.matchers.get(name)
+            contribution_matcher = concept.contribution_matchers.get(name)
+            if matcher is not None:
+                targets.append(matcher)
+            if contribution_matcher is not None:
+                targets.append(contribution_matcher)
+            continue
+        if kind == "production":
+            production = concept.productions.get(name)
+            composable = concept.composable_productions.get(name)
+            if production is not None:
+                targets.append(production)
+            if composable is not None:
+                targets.append(composable)
+            continue
+        if kind == "contribution":
+            target = concept.contributions.get(name)
+            if target is not None:
+                targets.append(target)
+            continue
+        if kind == "assembly":
+            target = concept.assemblies.get(name)
+            if target is not None:
+                targets.append(target)
+            continue
+        if kind == "operation":
+            target = concept.operations.get(name)
+            if target is not None:
+                targets.append(target)
+            continue
+        raise YidlSymbolError(f"from-import of {kind} is not implemented")
+    return tuple(targets)
 
 
 def _resolve_import_path(current_path: str, imported: str) -> str:

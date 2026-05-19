@@ -532,6 +532,205 @@ def test_yidl_lark_template_edge_resolves_imported_resource() -> None:
     assert template.edge_bind.source == '{"value": self.value}'
 
 
+def test_yidl_lark_from_import_concept_extends() -> None:
+    core = """
+    module core
+
+    concept Core {
+        property Name: str
+    }
+    """
+    child = """
+    module child
+    from "core.yidl" import concept Core
+
+    concept Child extends Core {
+        property Count: int
+    }
+    """
+
+    compiled = compile_yidl_files(
+        {"core.yidl": core, "child.yidl": child},
+        "child.yidl",
+    )
+
+    dds = compiled.concepts["Child"].plan.build_data_definition()
+
+    assert [prop.name for prop in dds.properties] == ["Name", "Count"]
+
+
+def test_yidl_lark_from_import_resource_alias_resolves_template_edge() -> None:
+    core = """
+    module core
+
+    concept Core {
+        resource Bind = code `{"value": self.value}`
+    }
+    """
+    child = """
+    module child
+    from "core.yidl" import resource Bind as BaseBind
+
+    concept Child {
+        resource GetterTemplate = template `pass` {
+            edge bind = BaseBind
+        }
+    }
+    """
+
+    compiled = compile_yidl_files(
+        {"core.yidl": core, "child.yidl": child},
+        "child.yidl",
+    )
+
+    template = compiled.concepts["Child"].resources["GetterTemplate"]
+
+    assert isinstance(template, AstichiTemplateValue)
+    assert isinstance(template.edge_bind, MatcherGeneratedValue)
+    assert template.edge_bind.source == '{"value": self.value}'
+
+
+def test_yidl_lark_from_import_missing_symbol_reports_kind_path_and_name() -> None:
+    core = """
+    module core
+
+    concept Core {
+        resource Bind = code `{}`
+    }
+    """
+    child = """
+    module child
+    from "core.yidl" import resource Missing
+
+    concept Child {
+    }
+    """
+
+    with pytest.raises(YidlSymbolError) as exc_info:
+        compile_yidl_files(
+            {"core.yidl": core, "child.yidl": child},
+            "child.yidl",
+        )
+
+    message = str(exc_info.value)
+    assert "core.yidl" in message
+    assert "resource" in message
+    assert "Missing" in message
+    assert "missing" in message
+
+
+def test_yidl_lark_from_import_duplicate_alias_rejects() -> None:
+    left = """
+    module left
+
+    concept Left {
+        resource Root = code `1`
+    }
+    """
+    right = """
+    module right
+
+    concept Right {
+        resource Other = code `2`
+    }
+    """
+    child = """
+    module child
+    from "left.yidl" import resource Root
+    from "right.yidl" import resource Other as Root
+
+    concept Child {
+    }
+    """
+
+    with pytest.raises(YidlSymbolError, match="import.*Root.*already"):
+        compile_yidl_files(
+            {"left.yidl": left, "right.yidl": right, "child.yidl": child},
+            "child.yidl",
+        )
+
+
+def test_yidl_lark_from_import_alias_collides_with_import_alias() -> None:
+    left = """
+    module left
+
+    concept Left {
+    }
+    """
+    right = """
+    module right
+
+    concept Right {
+        resource Root = code `2`
+    }
+    """
+    child = """
+    module child
+    import "left.yidl" as core
+    from "right.yidl" import resource Root as core
+
+    concept Child {
+    }
+    """
+
+    with pytest.raises(YidlSymbolError, match="import.*core.*already"):
+        compile_yidl_files(
+            {"left.yidl": left, "right.yidl": right, "child.yidl": child},
+            "child.yidl",
+        )
+
+
+def test_yidl_lark_from_import_local_shadow_rejects() -> None:
+    core = """
+    module core
+
+    concept Core {
+        resource Root = code `1`
+    }
+    """
+    child = """
+    module child
+    from "core.yidl" import resource Root
+
+    concept Child {
+        resource Root = code `2`
+    }
+    """
+
+    with pytest.raises(YidlSymbolError, match="Root.*import.*already|already.*import.*Root"):
+        compile_yidl_files(
+            {"core.yidl": core, "child.yidl": child},
+            "child.yidl",
+        )
+
+
+def test_yidl_lark_from_import_unsupported_kind_rejects() -> None:
+    core = """
+    module core
+
+    concept Core {
+    }
+    """
+    child = """
+    module child
+    from "core.yidl" import port FieldPort
+
+    concept Child {
+    }
+    """
+
+    with pytest.raises(YidlSymbolError) as exc_info:
+        compile_yidl_files(
+            {"core.yidl": core, "child.yidl": child},
+            "child.yidl",
+        )
+
+    message = str(exc_info.value)
+    assert "from-import" in message
+    assert "port" in message
+    assert "not implemented" in message
+
+
 def test_yidl_lark_resource_expression_reports_wrong_kind() -> None:
     source = """
     module snippets

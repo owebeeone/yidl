@@ -20,6 +20,7 @@ symbol_kind: "concept" -> symbol_concept
            | "contribution" -> symbol_contribution
            | "assembly" -> symbol_assembly
            | "operation" -> symbol_operation
+           | "production" -> symbol_production
 
 top_level_decl: export_decl
               | concept_decl
