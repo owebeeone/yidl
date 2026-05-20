@@ -19,6 +19,9 @@ concept ComputedClassDefaultFactoryParams extends dataclasses.DataclassSubstitut
     property ConsumerEvalOrder: int
     property ProviderFieldId: str
     property ProviderName: str
+    property ProviderInit: bool
+    property ProviderHasDefault: bool
+    property ProviderHasDefaultFactory: bool
     property ParamName: str
     property ParamOrder: int = 0
 
@@ -50,6 +53,9 @@ concept ComputedClassDefaultFactoryParams extends dataclasses.DataclassSubstitut
         ConsumerEvalOrder
         ProviderFieldId
         ProviderName
+        ProviderInit
+        ProviderHasDefault
+        ProviderHasDefaultFactory
         ParamName
         ParamOrder
     }
@@ -241,6 +247,9 @@ concept ComputedClassDefaultFactoryParams extends dataclasses.DataclassSubstitut
                     consumer_eval_order=eval_order_by_id[consumer.field_id],
                     provider_field_id=provider.field_id,
                     provider_name=provider.field_name,
+                    provider_init=provider.init,
+                    provider_has_default=provider.has_default,
+                    provider_has_default_factory=provider.has_default_factory,
                     param_name=param_name,
                     param_order=param_order,
                 ),
@@ -295,14 +304,30 @@ concept ComputedClassDefaultFactoryParams extends dataclasses.DataclassSubstitut
 
     resource DefaultFactoryEval = template $[
         if astichi_pass(field_name, outer_bind=True) is _HAS_DEFAULT_FACTORY:
-            _yidl_factory_args = {}
-            for _yidl_factory_param in astichi_bind_external(factory_param_names):
-                _yidl_factory_args[_yidl_factory_param] = locals()[_yidl_factory_param]
             astichi_pass(field_name, outer_bind=True)._ = _yidl_default_factories[
                 astichi_bind_external(default_key)
-            ](**_yidl_factory_args)
+            ](**astichi_hole(default_factory_args))
     ]$ {
         keep _HAS_DEFAULT_FACTORY, _yidl_default_factories
+    }
+
+    resource DefaultFactoryIdentifierArg = template $[
+        astichi_funcargs(
+            param_name__astichi_arg__=astichi_pass(
+                provider_name__astichi_arg__,
+                outer_bind=True,
+            )
+        )
+    ]$
+
+    resource DefaultFactoryDefaultArg = template $[
+        astichi_funcargs(
+            param_name__astichi_arg__=_yidl_defaults[
+                astichi_bind_external(default_key)
+            ]
+        )
+    ]$ {
+        keep _yidl_defaults
     }
 
     contribution ComputedInitMethodContribution = ComputedInitMethodProduction {
@@ -324,7 +349,32 @@ concept ComputedClassDefaultFactoryParams extends dataclasses.DataclassSubstitut
 
         ident field_name = ActionFieldName
         external default_key = ActionFieldId
-        external factory_param_names = FactoryParamNames
+    }
+
+    contribution DefaultFactoryIdentifierArgContribution = DefaultFactoryIdentifierArg {
+        as DefaultFactoryArg
+        index (ConsumerEvalOrder, ParamOrder)
+        order ParamOrder
+
+        target default_factory_args {
+            build /InitMethod/DefaultFactoryEval[ConsumerEvalOrder]
+        }
+
+        ident param_name = ParamName
+        ident provider_name = ProviderName
+    }
+
+    contribution DefaultFactoryDefaultArgContribution = DefaultFactoryDefaultArg {
+        as DefaultFactoryArg
+        index (ConsumerEvalOrder, ParamOrder)
+        order ParamOrder
+
+        target default_factory_args {
+            build /InitMethod/DefaultFactoryEval[ConsumerEvalOrder]
+        }
+
+        ident param_name = ParamName
+        external default_key = ProviderFieldId
     }
 
     matcher InitMethodContributions(facade: Facades) -> contribution {
@@ -334,6 +384,16 @@ concept ComputedClassDefaultFactoryParams extends dataclasses.DataclassSubstitut
 
     matcher DefaultFactoryEvalContributions(action: DefaultFactoryInitActions, facade: Facades) -> contribution {
         rule owner when ActionOwner == ClassId -> DefaultFactoryEvalContribution
+    }
+
+    matcher DefaultFactoryArgContributions(dep: DefaultFactoryDeps, facade: Facades) -> contribution {
+        rule init_provider when DependencyOwner == ClassId
+                           and ProviderInit == True
+                           -> DefaultFactoryIdentifierArgContribution
+        rule default_provider when DependencyOwner == ClassId
+                              and ProviderInit == False
+                              and ProviderHasDefault == True
+                              -> DefaultFactoryDefaultArgContribution
     }
 
     production ComputedInitMethodProduction(facade: Facades) -> composable {
@@ -350,6 +410,11 @@ concept ComputedClassDefaultFactoryParams extends dataclasses.DataclassSubstitut
             from action: DefaultFactoryInitActions
             where ActionOwner == ClassId
             using DefaultFactoryEvalContributions
+
+        apply default_factory_args
+            from dep: DefaultFactoryDeps
+            where DependencyOwner == ClassId
+            using DefaultFactoryArgContributions
 
         apply assignments
             from field: Fields

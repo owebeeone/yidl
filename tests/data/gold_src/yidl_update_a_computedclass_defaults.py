@@ -30,8 +30,8 @@ def _example_v2_factory(v1: int) -> int:
     return v1 + 2
 
 
-def _example_v3_factory(v2: int, v1: int) -> int:
-    return v1 + v2 + 2
+def _example_v3_factory(v2: int, v1: int, v4: int) -> int:
+    return v1 + v2 + v4 + 2
 
 
 def render_case() -> Mapping[str, str]:
@@ -81,12 +81,14 @@ def validate_case(sources: Mapping[str, str]) -> None:
     exec(output_prettier_source, output_prettier_namespace)
 
     classes = generated_namespace["build_generated_dataclasses"](
+        defaults={"Example.v4": 4},
         default_factories={
             "Example.v2": _example_v2_factory,
             "Example.v3": _example_v3_factory,
         },
     )
     pretty_classes = output_prettier_namespace["build_generated_dataclasses"](
+        defaults={"Example.v4": 4},
         default_factories={
             "Example.v2": _example_v2_factory,
             "Example.v3": _example_v3_factory,
@@ -96,10 +98,13 @@ def validate_case(sources: Mapping[str, str]) -> None:
     example = classes["Example"](10)
     pretty_example = pretty_classes["Example"](10)
     assert example.v2 == 12
-    assert example.v3 == 24
+    assert example.v3 == 28
+    assert example.v4 == 4
     assert pretty_example.v2 == 12
-    assert pretty_example.v3 == 24
-    assert list(classes["Example"].__dataclass_fields__) == ["v1", "v3", "v2"]
+    assert pretty_example.v3 == 28
+    assert pretty_example.v4 == 4
+    assert list(classes["Example"].__dataclass_fields__) == ["v1", "v3", "v4", "v2"]
+    assert "locals()" not in output_source
     assert output_source.index("v2 = _yidl_default_factories['Example.v2']") < (
         output_source.index("v3 = _yidl_default_factories['Example.v3']")
     )
@@ -157,6 +162,20 @@ def _container(namespace: Mapping[str, object]) -> object:
             annotation="int",
             has_default_factory=True,
             default_factory=_example_v3_factory,
+        ),
+    )
+    builder.add(
+        fields,
+        field(
+            field_id="Example.v4",
+            field_owner="Example",
+            field_name="v4",
+            field_order=25,
+            annotation="int",
+            has_default=True,
+            init=False,
+            repr=False,
+            compare=False,
         ),
     )
     builder.add(
@@ -284,13 +303,38 @@ def _assert_refined_view(namespace: Mapping[str, object]) -> None:
             record.consumer_eval_order,
             record.provider_field_id,
             record.provider_name,
+            record.provider_init,
+            record.provider_has_default,
+            record.provider_has_default_factory,
             record.param_name,
             record.param_order,
         )
         for record in container.DefaultFactoryDeps.sequence()
     ] == [
-        ("Widget", "Widget.total", 1, "Widget.count", "count", "count", 0),
-        ("Widget", "Widget.total", 1, "Widget.tags", "tags", "tags", 1),
+        (
+            "Widget",
+            "Widget.total",
+            1,
+            "Widget.count",
+            "count",
+            True,
+            False,
+            False,
+            "count",
+            0,
+        ),
+        (
+            "Widget",
+            "Widget.total",
+            1,
+            "Widget.tags",
+            "tags",
+            True,
+            False,
+            True,
+            "tags",
+            1,
+        ),
     ]
     assert [
         (record.eval_field_id, record.eval_field_name, record.eval_order)

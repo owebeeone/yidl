@@ -158,6 +158,18 @@ _ProviderFieldIdProperty = RuntimeProperty(
 _ProviderNameProperty = RuntimeProperty(
     "ProviderName", str, default=REQUIRED, storage_name="provider_name"
 )
+_ProviderInitProperty = RuntimeProperty(
+    "ProviderInit", bool, default=REQUIRED, storage_name="provider_init"
+)
+_ProviderHasDefaultProperty = RuntimeProperty(
+    "ProviderHasDefault", bool, default=REQUIRED, storage_name="provider_has_default"
+)
+_ProviderHasDefaultFactoryProperty = RuntimeProperty(
+    "ProviderHasDefaultFactory",
+    bool,
+    default=REQUIRED,
+    storage_name="provider_has_default_factory",
+)
 _ParamNameProperty = RuntimeProperty(
     "ParamName", str, default=REQUIRED, storage_name="param_name"
 )
@@ -301,6 +313,9 @@ _DefaultFactoryDepSpec = RuntimeRecord(
         _ConsumerEvalOrderProperty,
         _ProviderFieldIdProperty,
         _ProviderNameProperty,
+        _ProviderInitProperty,
+        _ProviderHasDefaultProperty,
+        _ProviderHasDefaultFactoryProperty,
         _ParamNameProperty,
         _ParamOrderProperty,
     ),
@@ -1088,6 +1103,9 @@ class DefaultFactoryDep:
         "consumer_eval_order",
         "provider_field_id",
         "provider_name",
+        "provider_init",
+        "provider_has_default",
+        "provider_has_default_factory",
         "param_name",
         "param_order",
     )
@@ -1097,6 +1115,9 @@ class DefaultFactoryDep:
     consumer_eval_order: int
     provider_field_id: str
     provider_name: str
+    provider_init: bool
+    provider_has_default: bool
+    provider_has_default_factory: bool
     param_name: str
     param_order: int
 
@@ -1108,6 +1129,9 @@ class DefaultFactoryDep:
         consumer_eval_order: int,
         provider_field_id: str,
         provider_name: str,
+        provider_init: bool,
+        provider_has_default: bool,
+        provider_has_default_factory: bool,
         param_name: str,
         param_order: int = 0,
     ):
@@ -1137,6 +1161,25 @@ class DefaultFactoryDep:
                 "ProviderName must be str, got " + type(provider_name).__name__
             )
         object.__setattr__(self, "provider_name", provider_name)
+        if not isinstance(provider_init, bool):
+            raise TypeError(
+                "ProviderInit must be bool, got " + type(provider_init).__name__
+            )
+        object.__setattr__(self, "provider_init", provider_init)
+        if not isinstance(provider_has_default, bool):
+            raise TypeError(
+                "ProviderHasDefault must be bool, got "
+                + type(provider_has_default).__name__
+            )
+        object.__setattr__(self, "provider_has_default", provider_has_default)
+        if not isinstance(provider_has_default_factory, bool):
+            raise TypeError(
+                "ProviderHasDefaultFactory must be bool, got "
+                + type(provider_has_default_factory).__name__
+            )
+        object.__setattr__(
+            self, "provider_has_default_factory", provider_has_default_factory
+        )
         if not isinstance(param_name, str):
             raise TypeError("ParamName must be str, got " + type(param_name).__name__)
         object.__setattr__(self, "param_name", param_name)
@@ -1151,6 +1194,9 @@ class DefaultFactoryDep:
             "consumer_eval_order",
             "provider_field_id",
             "provider_name",
+            "provider_init",
+            "provider_has_default",
+            "provider_has_default_factory",
             "param_name",
             "param_order",
         ):
@@ -1164,6 +1210,11 @@ class DefaultFactoryDep:
         pieces.append("consumer_eval_order=" + repr(self.consumer_eval_order))
         pieces.append("provider_field_id=" + repr(self.provider_field_id))
         pieces.append("provider_name=" + repr(self.provider_name))
+        pieces.append("provider_init=" + repr(self.provider_init))
+        pieces.append("provider_has_default=" + repr(self.provider_has_default))
+        pieces.append(
+            "provider_has_default_factory=" + repr(self.provider_has_default_factory)
+        )
         pieces.append("param_name=" + repr(self.param_name))
         pieces.append("param_order=" + repr(self.param_order))
         return "DefaultFactoryDep" + "(" + ", ".join(pieces) + ")"
@@ -1504,6 +1555,9 @@ def _operation_0_body_0_default_factory_facts(ctx, facade):
                 consumer_eval_order=eval_order_by_id[consumer.field_id],
                 provider_field_id=provider.field_id,
                 provider_name=provider.field_name,
+                provider_init=provider.init,
+                provider_has_default=provider.has_default,
+                provider_has_default_factory=provider.has_default_factory,
                 param_name=param_name,
                 param_order=param_order,
             ),
@@ -1737,6 +1791,15 @@ ASSEMBLY_PROPERTIES = {
     ),
     "ProviderName": _YidlSimpleNamespace(
         name="ProviderName", storage_name="provider_name"
+    ),
+    "ProviderInit": _YidlSimpleNamespace(
+        name="ProviderInit", storage_name="provider_init"
+    ),
+    "ProviderHasDefault": _YidlSimpleNamespace(
+        name="ProviderHasDefault", storage_name="provider_has_default"
+    ),
+    "ProviderHasDefaultFactory": _YidlSimpleNamespace(
+        name="ProviderHasDefaultFactory", storage_name="provider_has_default_factory"
     ),
     "ParamName": _YidlSimpleNamespace(name="ParamName", storage_name="param_name"),
     "ParamOrder": _YidlSimpleNamespace(name="ParamOrder", storage_name="param_order"),
@@ -2323,6 +2386,9 @@ for consumer, provider, param_name, param_order in deps:
             consumer_eval_order=eval_order_by_id[consumer.field_id],
             provider_field_id=provider.field_id,
             provider_name=provider.field_name,
+            provider_init=provider.init,
+            provider_has_default=provider.has_default,
+            provider_has_default_factory=provider.has_default_factory,
             param_name=param_name,
             param_order=param_order,
         ),
@@ -2346,7 +2412,7 @@ for eval_order, field_id in enumerate(ordered_field_ids):
 for diagnostic in diagnostics:
     ctx.write(DiagnosticsCollection, diagnostic, policy=ReplaceExisting)""",
         file_name="tests/data/yidl/yidl_update_a_computedclass_defaults/computedclass_default_factory_params.yidl",
-        line_number=88,
+        line_number=94,
         keep_names=(
             "ctx",
             "facade",
@@ -2370,22 +2436,45 @@ for diagnostic in diagnostics:
 for diagnostic in ctx.records(DiagnosticsCollection):
     raise AssemblyDiagnosticError(diagnostic.diagnostic_message)""",
         file_name="tests/data/yidl/yidl_update_a_computedclass_defaults/computedclass_default_factory_params.yidl",
-        line_number=285,
+        line_number=294,
         keep_names=("ctx", "DiagnosticsCollection", "AssemblyDiagnosticError"),
     ),
     "DefaultFactoryEval": astichi_template(
         from_astichi_code(
             """\
 if astichi_pass(field_name, outer_bind=True) is _HAS_DEFAULT_FACTORY:
-    _yidl_factory_args = {}
-    for _yidl_factory_param in astichi_bind_external(factory_param_names):
-        _yidl_factory_args[_yidl_factory_param] = locals()[_yidl_factory_param]
     astichi_pass(field_name, outer_bind=True)._ = _yidl_default_factories[
         astichi_bind_external(default_key)
-    ](**_yidl_factory_args)""",
+    ](**astichi_hole(default_factory_args))""",
             file_name="tests/data/yidl/yidl_update_a_computedclass_defaults/computedclass_default_factory_params.yidl",
-            line_number=297,
+            line_number=306,
             keep_names=("_HAS_DEFAULT_FACTORY", "_yidl_default_factories"),
+        )
+    ),
+    "DefaultFactoryIdentifierArg": astichi_template(
+        from_astichi_code(
+            """\
+astichi_funcargs(
+    param_name__astichi_arg__=astichi_pass(
+        provider_name__astichi_arg__,
+        outer_bind=True,
+    )
+)""",
+            file_name="tests/data/yidl/yidl_update_a_computedclass_defaults/computedclass_default_factory_params.yidl",
+            line_number=315,
+        )
+    ),
+    "DefaultFactoryDefaultArg": astichi_template(
+        from_astichi_code(
+            """\
+astichi_funcargs(
+    param_name__astichi_arg__=_yidl_defaults[
+        astichi_bind_external(default_key)
+    ]
+)""",
+            file_name="tests/data/yidl/yidl_update_a_computedclass_defaults/computedclass_default_factory_params.yidl",
+            line_number=324,
+            keep_names=("_yidl_defaults",),
         )
     ),
 }
@@ -4121,10 +4210,69 @@ ASSEMBLY_CONTRIBUTIONS = {
             BindingSpec(
                 kind="external", name="default_key", value=ValueRef("ActionFieldId")
             ),
+        ),
+    ),
+    "DefaultFactoryIdentifierArgContribution": ContributionSpec(
+        name="DefaultFactoryIdentifierArgContribution",
+        source_name="DefaultFactoryIdentifierArg",
+        source_kind="resource",
+        build_name="DefaultFactoryArg",
+        index=TupleValueRef((ValueRef("ConsumerEvalOrder"), ValueRef("ParamOrder"))),
+        order=ValueRef("ParamOrder"),
+        target=TargetSpec(
+            name="default_factory_args",
+            paths=(
+                TargetPathSpec(
+                    kind="build",
+                    path=PathSpec(
+                        segments=(
+                            PathSegmentSpec(kind="name", name="InitMethod", indexes=()),
+                            PathSegmentSpec(
+                                kind="name",
+                                name="DefaultFactoryEval",
+                                indexes=(ValueRef("ConsumerEvalOrder"),),
+                            ),
+                        )
+                    ),
+                ),
+            ),
+        ),
+        bindings=(
+            BindingSpec(kind="ident", name="param_name", value=ValueRef("ParamName")),
             BindingSpec(
-                kind="external",
-                name="factory_param_names",
-                value=ValueRef("FactoryParamNames"),
+                kind="ident", name="provider_name", value=ValueRef("ProviderName")
+            ),
+        ),
+    ),
+    "DefaultFactoryDefaultArgContribution": ContributionSpec(
+        name="DefaultFactoryDefaultArgContribution",
+        source_name="DefaultFactoryDefaultArg",
+        source_kind="resource",
+        build_name="DefaultFactoryArg",
+        index=TupleValueRef((ValueRef("ConsumerEvalOrder"), ValueRef("ParamOrder"))),
+        order=ValueRef("ParamOrder"),
+        target=TargetSpec(
+            name="default_factory_args",
+            paths=(
+                TargetPathSpec(
+                    kind="build",
+                    path=PathSpec(
+                        segments=(
+                            PathSegmentSpec(kind="name", name="InitMethod", indexes=()),
+                            PathSegmentSpec(
+                                kind="name",
+                                name="DefaultFactoryEval",
+                                indexes=(ValueRef("ConsumerEvalOrder"),),
+                            ),
+                        )
+                    ),
+                ),
+            ),
+        ),
+        bindings=(
+            BindingSpec(kind="ident", name="param_name", value=ValueRef("ParamName")),
+            BindingSpec(
+                kind="external", name="default_key", value=ValueRef("ProviderFieldId")
             ),
         ),
     ),
@@ -6320,6 +6468,54 @@ ASSEMBLY_MATCHERS = {
             ),
         ),
     ),
+    "DefaultFactoryArgContributions": ContributionMatcherSpec(
+        name="DefaultFactoryArgContributions",
+        inputs=(
+            AssemblyInputSpec(
+                name="dep", collection_name="DefaultFactoryDeps", collection=None
+            ),
+            AssemblyInputSpec(
+                name="facade", collection_name="Facades", collection=None
+            ),
+        ),
+        default_contribution_name=None,
+        rules=(
+            ContributionRuleSpec(
+                name="init_provider",
+                condition=AndConditionSpec(
+                    items=(
+                        EqConditionSpec(
+                            left=ValueRef("DependencyOwner"), right=ValueRef("ClassId")
+                        ),
+                        EqConditionSpec(
+                            left=ValueRef("ProviderInit"), right=LiteralValueRef(True)
+                        ),
+                    )
+                ),
+                contribution_name="DefaultFactoryIdentifierArgContribution",
+                weight=1.0,
+            ),
+            ContributionRuleSpec(
+                name="default_provider",
+                condition=AndConditionSpec(
+                    items=(
+                        EqConditionSpec(
+                            left=ValueRef("DependencyOwner"), right=ValueRef("ClassId")
+                        ),
+                        EqConditionSpec(
+                            left=ValueRef("ProviderInit"), right=LiteralValueRef(False)
+                        ),
+                        EqConditionSpec(
+                            left=ValueRef("ProviderHasDefault"),
+                            right=LiteralValueRef(True),
+                        ),
+                    )
+                ),
+                contribution_name="DefaultFactoryDefaultArgContribution",
+                weight=1.0,
+            ),
+        ),
+    ),
 }
 ASSEMBLY_EDGES = {
     "ModuleProduction.diagnostics": AssemblyEdgeSpec(
@@ -6856,6 +7052,23 @@ ASSEMBLY_EDGES = {
             left=ValueRef("ActionOwner"), right=ValueRef("ClassId")
         ),
         matcher_name="DefaultFactoryEvalContributions",
+    ),
+    "ComputedInitMethodProduction.default_factory_args": AssemblyEdgeSpec(
+        name="ComputedInitMethodProduction.default_factory_args",
+        context_inputs=(
+            AssemblyInputSpec(
+                name="facade", collection_name="Facades", collection=None
+            ),
+        ),
+        from_inputs=(
+            AssemblyInputSpec(
+                name="dep", collection_name="DefaultFactoryDeps", collection=None
+            ),
+        ),
+        condition=EqConditionSpec(
+            left=ValueRef("DependencyOwner"), right=ValueRef("ClassId")
+        ),
+        matcher_name="DefaultFactoryArgContributions",
     ),
     "ComputedInitMethodProduction.assignments": AssemblyEdgeSpec(
         name="ComputedInitMethodProduction.assignments",
@@ -7712,6 +7925,27 @@ ASSEMBLY_PRODUCTIONS = {
                         left=ValueRef("ActionOwner"), right=ValueRef("ClassId")
                     ),
                     matcher_name="DefaultFactoryEvalContributions",
+                )
+            ),
+            InlineApplySpec(
+                edge=AssemblyEdgeSpec(
+                    name="ComputedInitMethodProduction.default_factory_args",
+                    context_inputs=(
+                        AssemblyInputSpec(
+                            name="facade", collection_name="Facades", collection=None
+                        ),
+                    ),
+                    from_inputs=(
+                        AssemblyInputSpec(
+                            name="dep",
+                            collection_name="DefaultFactoryDeps",
+                            collection=None,
+                        ),
+                    ),
+                    condition=EqConditionSpec(
+                        left=ValueRef("DependencyOwner"), right=ValueRef("ClassId")
+                    ),
+                    matcher_name="DefaultFactoryArgContributions",
                 )
             ),
             InlineApplySpec(
