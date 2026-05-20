@@ -4,10 +4,10 @@ from yidl.runtime.transaction_yidl import DEFAULT_TRANSACTION
 from yidl.runtime.transaction_yidl import TransactionManager
 VOID = object()
 
-def build_lifecycle_class(decorated_cls, *, _Counter_lifecycle_definition, _Counter_annotations, _Counter_tx_groups):
+def build_lifecycle_class(decorated_cls, *, _Counter_lifecycle_definition, _Counter_annotations, _Counter_tx_groups, _Counter_plain_default, _Counter_seed_default, _Counter_KIND_default):
 
     class Counter_State:
-        __slots__ = ('_y_transaction_manager', '_y_default_ref', '_y_current_ref', '_y_working_ref', '_y_working_tx_ids')
+        __slots__ = ('_y_transaction_manager', '_y_default_ref', '_y_current_ref', '_y_working_ref', '_y_plain_value', '_y_working_tx_ids')
         __yidl_tx_index_to_group__ = _Counter_tx_groups
         __yidl_tx_group_to_index__ = {group: index for index, group in enumerate(_Counter_tx_groups)}
 
@@ -68,16 +68,26 @@ def build_lifecycle_class(decorated_cls, *, _Counter_lifecycle_definition, _Coun
         def rollback(self, *tx_groups):
             return self._y_state._y_transaction_manager.rollback(*tx_groups)
 
+        @property
+        def plain(self):
+            return self._y_state._y_plain_value
+
+        @plain.setter
+        def plain(self, value):
+            self._y_state._y_plain_value = value
+
     class Counter(Counter_FacadeBase):
         __slots__ = ()
+        KIND = _Counter_KIND_default
 
-        def __init__(self, *, transaction_manager=None):
+        def __init__(self, plain: 'int'=_Counter_plain_default, seed: 'int'=_Counter_seed_default, *, transaction_manager=None):
             state = object.__new__(Counter_State)
             object.__setattr__(self, '_y_state', state)
             state._y_transaction_manager = transaction_manager or TransactionManager(tx_groups=tuple((group for group in _Counter_tx_groups if group != DEFAULT_TRANSACTION)))
             state._y_default_ref = weakref.ref(self)
             state._y_current_ref = None
             state._y_working_ref = None
+            state._y_plain_value = plain
             state._y_working_tx_ids = [None for _group in _Counter_tx_groups]
 
     class Counter_Current(Counter_FacadeBase):

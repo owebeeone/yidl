@@ -79,6 +79,10 @@ def _container(namespace: Mapping[str, object]) -> object:
     builder = namespace["new_builder"]()
     lifecycle_class = namespace["LifecycleClass"]
     classes = namespace["ClassesCollection"]
+    fields = namespace["FieldsCollection"]
+    plain_field = namespace["PlainField"]
+    initvar_field = namespace["InitVarField"]
+    classvar_field = namespace["ClassVarField"]
 
     builder.add(
         classes,
@@ -96,6 +100,45 @@ def _container(namespace: Mapping[str, object]) -> object:
             tx_groups_param_name="_Counter_tx_groups",
         ),
     )
+    builder.add(
+        fields,
+        plain_field(
+            field_id="Counter.plain",
+            field_owner="Counter",
+            field_name="plain",
+            field_order=10,
+            field_kind="field",
+            annotation="int",
+            has_default=True,
+            default_value_param_name="_Counter_plain_default",
+            value_slot_name="_y_plain_value",
+        ),
+    )
+    builder.add(
+        fields,
+        initvar_field(
+            field_id="Counter.seed",
+            field_owner="Counter",
+            field_name="seed",
+            field_order=20,
+            field_kind="initvar",
+            annotation="int",
+            has_default=True,
+            default_value_param_name="_Counter_seed_default",
+        ),
+    )
+    builder.add(
+        fields,
+        classvar_field(
+            field_id="Counter.KIND",
+            field_owner="Counter",
+            field_name="KIND",
+            field_order=30,
+            field_kind="classvar",
+            has_default=True,
+            default_value_param_name="_Counter_KIND_default",
+        ),
+    )
     return namespace["build_container"](builder)
 
 
@@ -109,6 +152,9 @@ def _assert_generated_class(namespace: Mapping[str, object]) -> None:
         _Counter_lifecycle_definition={"fields": ()},
         _Counter_annotations={},
         _Counter_tx_groups=(DEFAULT_TRANSACTION, "audit"),
+        _Counter_plain_default=3,
+        _Counter_seed_default=2,
+        _Counter_KIND_default="counter",
     )
 
     assert generated.__name__ == "Counter"
@@ -128,6 +174,25 @@ def _assert_generated_class(namespace: Mapping[str, object]) -> None:
     assert working.default is counter
     assert current.current is current
     assert working.working is working
+
+    assert generated.KIND == "counter"
+    assert counter.KIND == "counter"
+    assert counter.plain == 3
+    assert current.plain == 3
+    assert working.plain == 3
+
+    current.plain = 4
+    assert counter.plain == 4
+    assert working.plain == 4
+
+    working.plain = 5
+    assert counter.plain == 5
+    assert current.plain == 5
+
+    explicit = generated(plain=7, seed=9)
+    assert explicit.plain == 7
+    assert not hasattr(explicit, "seed")
+    assert not hasattr(explicit._y_state, "_y_KIND_value")
 
     with counter.begin("audit"):
         pass

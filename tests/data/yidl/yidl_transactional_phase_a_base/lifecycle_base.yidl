@@ -33,6 +33,7 @@ concept LifecycleBase {
     property DefaultFactory: object = None
     property DefaultFactoryParamName: str = ""
     property TxGroupKey: object = None
+    property ValueSlotName: str = ""
 
     record LifecycleClass {
         ClassId
@@ -52,7 +53,7 @@ concept LifecycleBase {
         common FieldId, FieldOwner, FieldName, FieldOrder, FieldKind, Annotation
         common Init, HasDefault, DefaultValue, DefaultValueParamName
         common HasDefaultFactory, DefaultFactory, DefaultFactoryParamName
-        common TxGroupKey
+        common TxGroupKey, ValueSlotName
 
         variant PlainField {
         }
@@ -69,6 +70,9 @@ concept LifecycleBase {
 
     collection Classes: LifecycleClass identity ClassId many
     collection Fields: LifecycleFieldSpec identity FieldId many
+    computed collection PlainFields: LifecycleFieldSpec from Fields where FieldKind == "field"
+    computed collection InitVarFields: LifecycleFieldSpec from Fields where FieldKind == "initvar"
+    computed collection ClassVarFields: LifecycleFieldSpec from Fields where FieldKind == "classvar"
 
     # -------------------------------------------------------------------------
     # Facade facts.
@@ -300,6 +304,52 @@ concept LifecycleBase {
             pass
     ]$
 
+    resource TransactionManagerParam = template $[
+        def astichi_params(*, transaction_manager=None):
+            pass
+    ]$
+
+    resource StateSlotEntry = template $[
+        astichi_bind_external(slot_name)
+    ]$
+
+    resource InitParamRequired = template $[
+        def astichi_params(param_name__astichi_arg__: astichi_bind_external(annotation)):
+            pass
+    ]$
+
+    resource InitParamDefault = template $[
+        def astichi_params(
+            param_name__astichi_arg__: astichi_bind_external(annotation)
+            = default_value_name__astichi_arg__
+        ):
+            pass
+    ]$
+
+    resource PlainStateAssignment = template $[
+        astichi_pass(state, outer_bind=True).astichi_ref(external=state_slot)._ = astichi_pass(
+            init_value_name__astichi_arg__,
+            outer_bind=True,
+        )
+    ]$
+
+    resource PlainProperty = template $[
+        @property
+        def property_getter_name__astichi_arg__(self):
+            return self._y_state.astichi_ref(external=state_slot)
+
+        @property_setter_target_name__astichi_arg__.setter
+        def property_setter_name__astichi_arg__(self, value):
+            self._y_state.astichi_ref(external=state_slot)._ = value
+    ]$
+
+    resource ClassVarDefaultAssignment = template $[
+        classvar_name__astichi_arg__ = astichi_pass(
+            classvar_value_name__astichi_arg__,
+            outer_bind=True,
+        )
+    ]$
+
     resource ClassBundle = template $[
         class state_class_decl_name__astichi_arg__:
             __slots__ = (
@@ -307,6 +357,7 @@ concept LifecycleBase {
                 "_y_default_ref",
                 "_y_current_ref",
                 "_y_working_ref",
+                *astichi_hole(state_slots),
                 "_y_working_tx_ids",
             )
             __yidl_tx_index_to_group__ = astichi_pass(
@@ -379,13 +430,17 @@ concept LifecycleBase {
             def rollback(self, *tx_groups):
                 return self._y_state._y_transaction_manager.rollback(*tx_groups)
 
+            astichi_hole(facade_properties)
+
 
         class default_facade_class_decl_name__astichi_arg__(
             facade_base_default_base_name__astichi_arg__
         ):
             __slots__ = ()
 
-            def __init__(self, *, transaction_manager=None):
+            astichi_hole(default_class_body)
+
+            def __init__(self, init_params__astichi_param_hole__):
                 state = object.__new__(state_class_ref__astichi_arg__)
                 object.__setattr__(self, "_y_state", state)
                 state._y_transaction_manager = transaction_manager or TransactionManager(
@@ -400,6 +455,7 @@ concept LifecycleBase {
                 state._y_default_ref = weakref.ref(self)
                 state._y_current_ref = None
                 state._y_working_ref = None
+                astichi_hole(state_init_body)
                 state._y_working_tx_ids = [
                     None
                     for _group in astichi_pass(
@@ -475,6 +531,18 @@ concept LifecycleBase {
         ident value_name = TxGroupsParamName
     }
 
+    contribution FieldDefaultBuilderParam = BuilderParam {
+        as FieldDefaultBuilderParam
+        index FieldOrder
+        order FieldOrder
+
+        target builder_params {
+            build /Root
+        }
+
+        ident value_name = DefaultValueParamName
+    }
+
     contribution ClassDefinition = ClassProduction {
         as ClassDef
         index ClassOrder
@@ -500,6 +568,123 @@ concept LifecycleBase {
         ident return_class_result_ref = ClassName
     }
 
+    contribution TransactionManagerInitParam = TransactionManagerParam {
+        as TransactionManagerInitParam
+        index ClassOrder
+        order 0
+
+        target init_params {
+            build /ClassDef
+        }
+    }
+
+    contribution PlainStateSlot = StateSlotEntry {
+        as PlainStateSlot
+        index FieldOrder
+        order FieldOrder
+
+        target state_slots {
+            build /ClassDef
+        }
+
+        external slot_name = ValueSlotName
+    }
+
+    contribution PlainInitParamRequired = InitParamRequired {
+        as PlainInitParam
+        index FieldOrder
+        order FieldOrder
+
+        target init_params {
+            build /ClassDef
+        }
+
+        ident param_name = FieldName
+        external annotation = Annotation
+    }
+
+    contribution PlainInitParamDefault = InitParamDefault {
+        as PlainInitParam
+        index FieldOrder
+        order FieldOrder
+
+        target init_params {
+            build /ClassDef
+        }
+
+        ident param_name = FieldName
+        external annotation = Annotation
+        ident default_value_name = DefaultValueParamName
+    }
+
+    contribution InitVarParamRequired = InitParamRequired {
+        as InitVarParam
+        index FieldOrder
+        order FieldOrder
+
+        target init_params {
+            build /ClassDef
+        }
+
+        ident param_name = FieldName
+        external annotation = Annotation
+    }
+
+    contribution InitVarParamDefault = InitParamDefault {
+        as InitVarParam
+        index FieldOrder
+        order FieldOrder
+
+        target init_params {
+            build /ClassDef
+        }
+
+        ident param_name = FieldName
+        external annotation = Annotation
+        ident default_value_name = DefaultValueParamName
+    }
+
+    contribution PlainInitAssignment = PlainStateAssignment {
+        as PlainInitAssignment
+        index FieldOrder
+        order FieldOrder
+
+        target state_init_body {
+            build /ClassDef
+        }
+
+        ident init_value_name = FieldName
+        external state_slot = ValueSlotName
+    }
+
+    contribution PlainFieldProperty = PlainProperty {
+        as PlainFieldProperty
+        index FieldOrder
+        order FieldOrder
+
+        target facade_properties {
+            build /ClassDef
+        }
+
+        ident property_getter_name = FieldName
+        ident property_setter_target_name = FieldName
+        ident property_setter_name = FieldName
+        external state_slot = ValueSlotName
+    }
+
+    contribution ClassVarDefault = ClassVarDefaultAssignment {
+        as ClassVarDefault
+        index FieldOrder
+        order FieldOrder
+
+        target default_class_body {
+            build /ClassDef
+        }
+
+        ident classvar_name = FieldName
+        ident classvar_value_name = DefaultValueParamName
+    }
+
     matcher BuilderParamContributions(lifecycle_class: Classes) -> contribution {
         default -> LifecycleDefinitionBuilderParam
     }
@@ -512,12 +697,54 @@ concept LifecycleBase {
         default -> TxGroupsBuilderParam
     }
 
+    matcher FieldDefaultBuilderParamContributions(field: Fields) -> contribution {
+        rule has_default when HasDefault == True -> FieldDefaultBuilderParam
+    }
+
     matcher ClassDefinitionContributions(lifecycle_class: Classes) -> contribution {
         default -> ClassDefinition
     }
 
     matcher ReturnClassContributions(lifecycle_class: Classes) -> contribution {
         default -> ReturnClassContribution
+    }
+
+    matcher TransactionManagerInitParamContributions(lifecycle_class: Classes) -> contribution {
+        default -> TransactionManagerInitParam
+    }
+
+    matcher PlainStateSlotContributions(field: PlainFields) -> contribution {
+        default -> PlainStateSlot
+    }
+
+    matcher PlainInitParamContributions(field: PlainFields) -> contribution {
+        rule required when Init == True
+                      and HasDefault == False
+                      -> PlainInitParamRequired
+        rule default_value when Init == True
+                           and HasDefault == True
+                           -> PlainInitParamDefault
+    }
+
+    matcher InitVarParamContributions(field: InitVarFields) -> contribution {
+        rule required when Init == True
+                      and HasDefault == False
+                      -> InitVarParamRequired
+        rule default_value when Init == True
+                           and HasDefault == True
+                           -> InitVarParamDefault
+    }
+
+    matcher PlainInitAssignmentContributions(field: PlainFields) -> contribution {
+        rule init_field when Init == True -> PlainInitAssignment
+    }
+
+    matcher PlainPropertyContributions(field: PlainFields) -> contribution {
+        default -> PlainFieldProperty
+    }
+
+    matcher ClassVarDefaultContributions(field: ClassVarFields) -> contribution {
+        rule has_default when HasDefault == True -> ClassVarDefault
     }
 
     production ModuleProduction -> composable {
@@ -534,6 +761,10 @@ concept LifecycleBase {
         apply tx_groups_params
             from lifecycle_class: Classes
             using TxGroupsBuilderParamContributions
+
+        apply field_default_params
+            from field: Fields
+            using FieldDefaultBuilderParamContributions
 
         apply classes
             from lifecycle_class: Classes
@@ -563,6 +794,39 @@ concept LifecycleBase {
             ident tx_groups_for_manager_name = TxGroupsParamName
             ident tx_groups_for_slots_name = TxGroupsParamName
         }
+
+        apply state_slots
+            from field: PlainFields
+            where FieldOwner == ClassId
+            using PlainStateSlotContributions
+
+        apply transaction_manager_param
+            using TransactionManagerInitParamContributions
+
+        apply classvars
+            from field: ClassVarFields
+            where FieldOwner == ClassId
+            using ClassVarDefaultContributions
+
+        apply plain_init_params
+            from field: PlainFields
+            where FieldOwner == ClassId
+            using PlainInitParamContributions
+
+        apply initvar_params
+            from field: InitVarFields
+            where FieldOwner == ClassId
+            using InitVarParamContributions
+
+        apply plain_init_assignments
+            from field: PlainFields
+            where FieldOwner == ClassId
+            using PlainInitAssignmentContributions
+
+        apply plain_properties
+            from field: PlainFields
+            where FieldOwner == ClassId
+            using PlainPropertyContributions
     }
 
     assembly LifecycleModule = ModuleProduction
