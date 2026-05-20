@@ -228,7 +228,18 @@ def test_yidl_transactional_phase_a_tx_facts_are_computed() -> None:
 
     builder.add(
         classes,
-        lifecycle_class(class_id="Counter", class_name="Counter", class_order=10),
+        lifecycle_class(
+            class_id="Counter",
+            class_name="Counter",
+            class_order=10,
+            state_class_name="Counter_State",
+            facade_base_class_name="Counter_FacadeBase",
+            current_facade_class_name="Counter_Current",
+            working_facade_class_name="Counter_Working",
+            lifecycle_definition_param_name="_Counter_lifecycle_definition",
+            annotations_param_name="_Counter_annotations",
+            tx_groups_param_name="_Counter_tx_groups",
+        ),
     )
     builder.add(
         fields,

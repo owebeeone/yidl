@@ -1,0 +1,147 @@
+from __future__ import annotations
+
+from collections.abc import Mapping
+from pathlib import Path
+
+import black
+
+from support.golden_case import run_multi_source_case
+from yidl.concept_parser import compile_yidl_files
+from yidl.generation.data_def_sys import emit_concept_runtime_source
+from yidl.runtime.transaction_yidl import DEFAULT_TRANSACTION
+
+
+YIDL_PATH = Path("tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl")
+
+
+def render_case() -> Mapping[str, str]:
+    concept = _compile_concept()
+    decorator_source = emit_concept_runtime_source(
+        concept.plan.build_data_definition(),
+        resources=concept.resources,
+        assembly_plan=concept,
+    )
+    output_source = _output_source(decorator_source)
+    return {
+        "decorator.py": decorator_source,
+        "decorator_prettier.py": _prettier_source(decorator_source),
+        "generated_output.py": output_source,
+        "generated_output_prettier.py": _prettier_source(output_source),
+    }
+
+
+def validate_case(sources: Mapping[str, str]) -> None:
+    decorator_source = sources["decorator.py"]
+    decorator_prettier_source = sources["decorator_prettier.py"]
+    output_source = sources["generated_output.py"]
+    output_prettier_source = sources["generated_output_prettier.py"]
+
+    decorator_namespace: dict[str, object] = {}
+    exec(decorator_source, decorator_namespace)
+    assert "LifecycleClass" in decorator_namespace
+    assert "ManagedField" in decorator_namespace
+    assert "build_LifecycleModule" in decorator_namespace
+
+    prettier_decorator_namespace: dict[str, object] = {}
+    exec(decorator_prettier_source, prettier_decorator_namespace)
+    assert (
+        prettier_decorator_namespace["build_LifecycleModule"](
+            _container(prettier_decorator_namespace),
+        ).emit_commented()
+        == output_source
+    )
+
+    generated_namespace: dict[str, object] = {}
+    exec(output_source, generated_namespace)
+    output_prettier_namespace: dict[str, object] = {}
+    exec(output_prettier_source, output_prettier_namespace)
+
+    _assert_generated_class(generated_namespace)
+    _assert_generated_class(output_prettier_namespace)
+
+
+def _compile_concept() -> object:
+    return compile_yidl_files(
+        {YIDL_PATH.as_posix(): YIDL_PATH.read_text(encoding="utf-8")},
+        YIDL_PATH.as_posix(),
+    ).concepts["LifecycleBase"]
+
+
+def _output_source(decorator_source: str) -> str:
+    namespace: dict[str, object] = {}
+    exec(decorator_source, namespace)
+    return namespace["build_LifecycleModule"](
+        _container(namespace),
+    ).emit_commented()
+
+
+def _container(namespace: Mapping[str, object]) -> object:
+    builder = namespace["new_builder"]()
+    lifecycle_class = namespace["LifecycleClass"]
+    classes = namespace["ClassesCollection"]
+
+    builder.add(
+        classes,
+        lifecycle_class(
+            class_id="Counter",
+            class_name="Counter",
+            class_order=10,
+            module_name="generated_lifecycle",
+            state_class_name="Counter_State",
+            facade_base_class_name="Counter_FacadeBase",
+            current_facade_class_name="Counter_Current",
+            working_facade_class_name="Counter_Working",
+            lifecycle_definition_param_name="_Counter_lifecycle_definition",
+            annotations_param_name="_Counter_annotations",
+            tx_groups_param_name="_Counter_tx_groups",
+        ),
+    )
+    return namespace["build_container"](builder)
+
+
+def _assert_generated_class(namespace: Mapping[str, object]) -> None:
+    class Counter:
+        def user_method(self) -> str:
+            return "user"
+
+    generated = namespace["build_lifecycle_class"](
+        Counter,
+        _Counter_lifecycle_definition={"fields": ()},
+        _Counter_annotations={},
+        _Counter_tx_groups=(DEFAULT_TRANSACTION, "audit"),
+    )
+
+    assert generated.__name__ == "Counter"
+    assert generated.__qualname__ == Counter.__qualname__
+    assert generated.__module__ == __name__
+
+    counter = generated()
+    assert isinstance(counter, Counter)
+    assert counter.user_method() == "user"
+    assert counter.default is counter
+
+    current = counter.current
+    working = counter.working
+    assert current is counter.current
+    assert working is counter.working
+    assert current.default is counter
+    assert working.default is counter
+    assert current.current is current
+    assert working.working is working
+
+    with counter.begin("audit"):
+        pass
+
+
+def _prettier_source(source: str) -> str:
+    return black.format_str(source, mode=black.FileMode())
+
+
+if __name__ == "__main__":
+    raise SystemExit(
+        run_multi_source_case(
+            "yidl_transactional_phase_a_base.py",
+            render_case,
+            validate_case,
+        )
+    )

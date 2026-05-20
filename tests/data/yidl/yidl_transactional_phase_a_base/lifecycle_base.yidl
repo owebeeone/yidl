@@ -11,6 +11,10 @@ concept LifecycleBase {
     property ClassName: str
     property ClassOrder: int = 0
     property ModuleName: str = "__main__"
+    property StateClassName: str
+    property FacadeBaseClassName: str
+    property CurrentFacadeClassName: str
+    property WorkingFacadeClassName: str
     property LifecycleDefinitionParamName: str = ""
     property AnnotationsParamName: str = ""
     property TxGroupsParamName: str = ""
@@ -35,6 +39,10 @@ concept LifecycleBase {
         ClassName
         ClassOrder
         ModuleName
+        StateClassName
+        FacadeBaseClassName
+        CurrentFacadeClassName
+        WorkingFacadeClassName
         LifecycleDefinitionParamName
         AnnotationsParamName
         TxGroupsParamName
@@ -265,4 +273,297 @@ concept LifecycleBase {
     collection InitParameters: InitParameter identity InitParameterId many
     collection InitAssignments: InitAssignment identity InitAssignmentId many
     collection ClassVarAssignments: ClassVarAssignment identity ClassVarAssignmentId many
+
+    # -------------------------------------------------------------------------
+    # A3 generated module/class skeleton.
+    # -------------------------------------------------------------------------
+
+    resource ModuleRoot = code $[
+        from __future__ import annotations
+
+        import weakref
+
+        from yidl.runtime.transaction_yidl import DEFAULT_TRANSACTION
+        from yidl.runtime.transaction_yidl import TransactionManager
+
+
+        VOID = object()
+
+
+        def build_lifecycle_class(decorated_cls, builder_params__astichi_param_hole__):
+            astichi_hole(function_body)
+            astichi_hole(return_statement)
+    ]$
+
+    resource BuilderParam = template $[
+        def astichi_params(*, value_name__astichi_arg__):
+            pass
+    ]$
+
+    resource ClassBundle = template $[
+        class state_class_decl_name__astichi_arg__:
+            __slots__ = (
+                "_y_transaction_manager",
+                "_y_default_ref",
+                "_y_current_ref",
+                "_y_working_ref",
+                "_y_working_tx_ids",
+            )
+            __yidl_tx_index_to_group__ = astichi_pass(
+                tx_groups_for_index_name__astichi_arg__,
+                outer_bind=True,
+            )
+            __yidl_tx_group_to_index__ = {
+                group: index for index, group in enumerate(
+                    astichi_pass(tx_groups_for_map_name__astichi_arg__, outer_bind=True)
+                )
+            }
+
+            def _y_get_default_facade(self):
+                ref = self._y_default_ref
+                facade = None if ref is None else ref()
+                if facade is None:
+                    facade = object.__new__(default_facade_class_ref__astichi_arg__)
+                    object.__setattr__(facade, "_y_state", self)
+                    self._y_default_ref = weakref.ref(facade)
+                return facade
+
+            def _y_get_current_facade(self):
+                ref = self._y_current_ref
+                facade = None if ref is None else ref()
+                if facade is None:
+                    facade = object.__new__(current_facade_class_ref__astichi_arg__)
+                    object.__setattr__(facade, "_y_state", self)
+                    self._y_current_ref = weakref.ref(facade)
+                return facade
+
+            def _y_get_working_facade(self):
+                ref = self._y_working_ref
+                facade = None if ref is None else ref()
+                if facade is None:
+                    facade = object.__new__(working_facade_class_ref__astichi_arg__)
+                    object.__setattr__(facade, "_y_state", self)
+                    self._y_working_ref = weakref.ref(facade)
+                return facade
+
+
+        class facade_base_decl_name__astichi_arg__(
+            astichi_pass(decorated_cls, outer_bind=True)
+        ):
+            __slots__ = ("_y_state",)
+
+            @property
+            def default(self):
+                return self._y_state._y_get_default_facade()
+
+            @property
+            def current(self):
+                return self._y_state._y_get_current_facade()
+
+            @property
+            def working(self):
+                return self._y_state._y_get_working_facade()
+
+            def begin(self, *tx_groups):
+                return self._y_state._y_transaction_manager.begin(*tx_groups)
+
+            def validate(self, *tx_groups):
+                return self._y_state._y_transaction_manager.validate(*tx_groups)
+
+            def commit_only(self, *tx_groups):
+                return self._y_state._y_transaction_manager.commit_only(*tx_groups)
+
+            def commit(self, *tx_groups):
+                return self._y_state._y_transaction_manager.commit(*tx_groups)
+
+            def rollback(self, *tx_groups):
+                return self._y_state._y_transaction_manager.rollback(*tx_groups)
+
+
+        class default_facade_class_decl_name__astichi_arg__(
+            facade_base_default_base_name__astichi_arg__
+        ):
+            __slots__ = ()
+
+            def __init__(self, *, transaction_manager=None):
+                state = object.__new__(state_class_ref__astichi_arg__)
+                object.__setattr__(self, "_y_state", state)
+                state._y_transaction_manager = transaction_manager or TransactionManager(
+                    tx_groups=tuple(
+                        group for group in astichi_pass(
+                            tx_groups_for_manager_name__astichi_arg__,
+                            outer_bind=True,
+                        )
+                        if group != DEFAULT_TRANSACTION
+                    )
+                )
+                state._y_default_ref = weakref.ref(self)
+                state._y_current_ref = None
+                state._y_working_ref = None
+                state._y_working_tx_ids = [
+                    None
+                    for _group in astichi_pass(
+                        tx_groups_for_slots_name__astichi_arg__,
+                        outer_bind=True,
+                    )
+                ]
+
+
+        class current_facade_class_decl_name__astichi_arg__(
+            facade_base_current_base_name__astichi_arg__
+        ):
+            __slots__ = ()
+
+
+        class working_facade_class_decl_name__astichi_arg__(
+            facade_base_working_base_name__astichi_arg__
+        ):
+            __slots__ = ()
+    ]$ {
+        keep DEFAULT_TRANSACTION, TransactionManager, weakref
+    }
+
+    resource ReturnClass = template $[
+        return_class_name_ref__astichi_arg__.__name__ = astichi_pass(
+            decorated_cls,
+            outer_bind=True,
+        ).__name__
+        return_class_qualname_ref__astichi_arg__.__qualname__ = astichi_pass(
+            decorated_cls,
+            outer_bind=True,
+        ).__qualname__
+        return_class_module_ref__astichi_arg__.__module__ = astichi_pass(
+            decorated_cls,
+            outer_bind=True,
+        ).__module__
+        return return_class_result_ref__astichi_arg__
+    ]$
+
+    contribution LifecycleDefinitionBuilderParam = BuilderParam {
+        as LifecycleDefinitionBuilderParam
+        index ClassOrder
+        order ClassOrder
+
+        target builder_params {
+            build /Root
+        }
+
+        ident value_name = LifecycleDefinitionParamName
+    }
+
+    contribution AnnotationsBuilderParam = BuilderParam {
+        as AnnotationsBuilderParam
+        index ClassOrder
+        order ClassOrder
+
+        target builder_params {
+            build /Root
+        }
+
+        ident value_name = AnnotationsParamName
+    }
+
+    contribution TxGroupsBuilderParam = BuilderParam {
+        as TxGroupsBuilderParam
+        index ClassOrder
+        order ClassOrder
+
+        target builder_params {
+            build /Root
+        }
+
+        ident value_name = TxGroupsParamName
+    }
+
+    contribution ClassDefinition = ClassProduction {
+        as ClassDef
+        index ClassOrder
+        order ClassOrder
+
+        target function_body {
+            build /Root
+        }
+    }
+
+    contribution ReturnClassContribution = ReturnClass {
+        as ReturnClass
+        index ClassOrder
+        order ClassOrder
+
+        target return_statement {
+            build /Root
+        }
+
+        ident return_class_name_ref = ClassName
+        ident return_class_qualname_ref = ClassName
+        ident return_class_module_ref = ClassName
+        ident return_class_result_ref = ClassName
+    }
+
+    matcher BuilderParamContributions(lifecycle_class: Classes) -> contribution {
+        default -> LifecycleDefinitionBuilderParam
+    }
+
+    matcher AnnotationsBuilderParamContributions(lifecycle_class: Classes) -> contribution {
+        default -> AnnotationsBuilderParam
+    }
+
+    matcher TxGroupsBuilderParamContributions(lifecycle_class: Classes) -> contribution {
+        default -> TxGroupsBuilderParam
+    }
+
+    matcher ClassDefinitionContributions(lifecycle_class: Classes) -> contribution {
+        default -> ClassDefinition
+    }
+
+    matcher ReturnClassContributions(lifecycle_class: Classes) -> contribution {
+        default -> ReturnClassContribution
+    }
+
+    production ModuleProduction -> composable {
+        root Root = ModuleRoot
+
+        apply lifecycle_definition_params
+            from lifecycle_class: Classes
+            using BuilderParamContributions
+
+        apply annotations_params
+            from lifecycle_class: Classes
+            using AnnotationsBuilderParamContributions
+
+        apply tx_groups_params
+            from lifecycle_class: Classes
+            using TxGroupsBuilderParamContributions
+
+        apply classes
+            from lifecycle_class: Classes
+            using ClassDefinitionContributions
+
+        apply return_class
+            from lifecycle_class: Classes
+            using ReturnClassContributions
+    }
+
+    production ClassProduction(lifecycle_class: Classes) -> composable {
+        root ClassDef = ClassBundle {
+            ident state_class_decl_name = StateClassName
+            ident state_class_ref = StateClassName
+            ident default_facade_class_decl_name = ClassName
+            ident default_facade_class_ref = ClassName
+            ident facade_base_decl_name = FacadeBaseClassName
+            ident facade_base_default_base_name = FacadeBaseClassName
+            ident facade_base_current_base_name = FacadeBaseClassName
+            ident facade_base_working_base_name = FacadeBaseClassName
+            ident current_facade_class_decl_name = CurrentFacadeClassName
+            ident current_facade_class_ref = CurrentFacadeClassName
+            ident working_facade_class_decl_name = WorkingFacadeClassName
+            ident working_facade_class_ref = WorkingFacadeClassName
+            ident tx_groups_for_index_name = TxGroupsParamName
+            ident tx_groups_for_map_name = TxGroupsParamName
+            ident tx_groups_for_manager_name = TxGroupsParamName
+            ident tx_groups_for_slots_name = TxGroupsParamName
+        }
+    }
+
+    assembly LifecycleModule = ModuleProduction
 }
