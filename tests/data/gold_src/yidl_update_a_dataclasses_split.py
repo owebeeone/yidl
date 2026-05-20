@@ -67,8 +67,7 @@ def validate_case(sources: Mapping[str, str]) -> None:
     )
     _assert_diagnostic(prettier_decorator_namespace)
 
-    generated_namespace: dict[str, object] = {}
-    exec(source, generated_namespace)
+    generated_namespace = _output_namespace_from_ast(decorator_namespace)
     prettier_namespace: dict[str, object] = {}
     exec(prettier_source, prettier_namespace)
 
@@ -156,6 +155,22 @@ def _output_source(decorator_source: str) -> str:
     return namespace["build_DataclassModule"](
         _container(namespace),
     ).emit_commented()
+
+
+def _output_namespace_from_ast(namespace: Mapping[str, object]) -> dict[str, object]:
+    output_tree = namespace["build_DataclassModule"](
+        _container(namespace),
+    ).to_executable_ast()
+    output_namespace: dict[str, object] = {}
+    exec(
+        compile(
+            output_tree,
+            "<yidl_update_a_dataclasses_split.generated_ast>",
+            "exec",
+        ),
+        output_namespace,
+    )
+    return output_namespace
 
 
 def _container(namespace: Mapping[str, object]) -> object:

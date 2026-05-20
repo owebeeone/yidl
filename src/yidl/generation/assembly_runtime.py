@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from collections.abc import Mapping
 from dataclasses import dataclass
 from itertools import product
@@ -248,24 +249,14 @@ def _run_production(
     context_records: Mapping[str, object],
     unroll: bool | str,
 ) -> object:
-    active_context_records: dict[str, object] = {}
-    for input_spec in production.inputs:
-        try:
-            active_context_records[input_spec.name] = context_records[input_spec.name]
-        except KeyError as exc:
-            raise ValueError(
-                f"production {production.name!r} requires input {input_spec.name!r}"
-            ) from exc
-
+    active_context_records = _production_context_records(
+        production,
+        context_records,
+    )
     scope = AssemblyScope(astichi.build())
     root_resource = concept.resources[production.root.resource_name].to_generator()
     scope.add(production.root.build_name, root_resource)
-    root_stack = DataStack(
-        tuple(
-            _record_mapping(concept, record)
-            for record in active_context_records.values()
-        )
-    )
+    root_stack = _records_stack(concept, active_context_records.values())
     _apply_bindings(
         scope,
         production.root.bindings,
@@ -274,6 +265,44 @@ def _run_production(
         context=f"production {production.name!r} root",
     )
 
+    root_mapping = {production.root.build_name: (production.root.build_name,)}
+    _run_production_edges(
+        concept,
+        production,
+        container,
+        scope,
+        context_records=active_context_records,
+        root_mapping=root_mapping,
+        unroll=unroll,
+    )
+    return scope.build(unroll=unroll)
+
+
+def _production_context_records(
+    production: ComposableProductionSpec,
+    context_records: Mapping[str, object],
+) -> dict[str, object]:
+    active_context_records: dict[str, object] = {}
+    for input_spec in production.inputs:
+        try:
+            active_context_records[input_spec.name] = context_records[input_spec.name]
+        except KeyError as exc:
+            raise ValueError(
+                f"production {production.name!r} requires input {input_spec.name!r}"
+            ) from exc
+    return active_context_records
+
+
+def _run_production_edges(
+    concept: object,
+    production: ComposableProductionSpec,
+    container: object,
+    scope: AssemblyScope,
+    *,
+    context_records: Mapping[str, object],
+    root_mapping: Mapping[str, tuple[str, ...]],
+    unroll: bool | str,
+) -> None:
     for apply in production.applies:
         edge = (
             apply.edge
@@ -285,10 +314,10 @@ def _run_production(
             edge,
             container,
             scope,
-            context_records=active_context_records,
+            context_records=context_records,
+            root_mapping=root_mapping,
             unroll=unroll,
         )
-    return scope.build(unroll=unroll)
 
 
 def _run_edge(
@@ -298,6 +327,7 @@ def _run_edge(
     scope: AssemblyScope,
     *,
     context_records: Mapping[str, object],
+    root_mapping: Mapping[str, tuple[str, ...]],
     unroll: bool | str,
 ) -> None:
     context_values: list[Mapping[str, object]] = []
@@ -342,6 +372,7 @@ def _run_edge(
             scope,
             stack,
             context_records={**edge_context_records, **from_records},
+            root_mapping=root_mapping,
             unroll=unroll,
         )
 
@@ -371,12 +402,30 @@ def _apply_contribution(
     stack: DataStack,
     *,
     context_records: Mapping[str, object],
+    root_mapping: Mapping[str, tuple[str, ...]],
     unroll: bool | str,
 ) -> None:
     # Empty resources let a specific matcher rule suppress a broader rule.
     if not contribution.diagnostic and _is_empty_resource_contribution(
         concept, contribution
     ):
+        return
+
+    if (
+        contribution.source_kind == "production"
+        and not contribution.diagnostic
+        and contribution.target is not None
+    ):
+        _apply_production_contribution(
+            concept,
+            contribution,
+            container,
+            scope,
+            stack,
+            context_records=context_records,
+            root_mapping=root_mapping,
+            unroll=unroll,
+        )
         return
 
     composable = _contribution_composable(
@@ -393,28 +442,120 @@ def _apply_contribution(
 
     if contribution.target is None:
         raise ValueError(f"contribution {contribution.name!r} must declare a target")
-    build_index = evaluate_index(contribution.index, stack)
-    order = (
+    resource = as_composable(
+        composable,
+        build_name=contribution.build_name,
+        build_index=evaluate_index(contribution.index, stack),
+        order=_contribution_order(contribution, stack),
+    )
+    concrete_build_paths = _apply_resource_to_target(
+        scope,
+        resource,
+        contribution,
+        stack,
+        root_mapping=root_mapping,
+    )
+
+    for build_path in concrete_build_paths:
+        _apply_bindings(
+            scope,
+            contribution.bindings,
+            stack,
+            build_match=build_path,
+            context=f"contribution {contribution.name!r}",
+        )
+
+
+def _apply_production_contribution(
+    concept: object,
+    contribution: ContributionSpec,
+    container: object,
+    scope: AssemblyScope,
+    stack: DataStack,
+    *,
+    context_records: Mapping[str, object],
+    root_mapping: Mapping[str, tuple[str, ...]],
+    unroll: bool | str,
+) -> None:
+    production = concept.composable_productions[contribution.source_name]
+    active_context_records = _production_context_records(
+        production,
+        context_records,
+    )
+    root_resource = concept.resources[production.root.resource_name].to_generator()
+    resource = as_composable(
+        root_resource,
+        build_name=contribution.build_name,
+        build_index=evaluate_index(contribution.index, stack),
+        order=_contribution_order(contribution, stack),
+    )
+    concrete_build_paths = _apply_resource_to_target(
+        scope,
+        resource,
+        contribution,
+        stack,
+        root_mapping=root_mapping,
+    )
+    root_stack = _records_stack(concept, active_context_records.values())
+    for build_path in concrete_build_paths:
+        _apply_bindings(
+            scope,
+            production.root.bindings,
+            root_stack,
+            build_match=build_path,
+            context=f"production {production.name!r} root",
+        )
+        _apply_bindings(
+            scope,
+            contribution.bindings,
+            stack,
+            build_match=build_path,
+            context=f"contribution {contribution.name!r}",
+        )
+        _run_production_edges(
+            concept,
+            production,
+            container,
+            scope,
+            context_records=active_context_records,
+            root_mapping={
+                **root_mapping,
+                production.root.build_name: build_path,
+            },
+            unroll=unroll,
+        )
+
+
+def _contribution_order(contribution: ContributionSpec, stack: DataStack) -> int:
+    return (
         evaluate_order(contribution.order, stack)
         if contribution.order is not None
         else 0
     )
-    resource = as_composable(
-        composable,
-        build_name=contribution.build_name,
-        build_index=build_index,
-        order=order,
-    )
+
+
+def _apply_resource_to_target(
+    scope: AssemblyScope,
+    resource: object,
+    contribution: ContributionSpec,
+    stack: DataStack,
+    *,
+    root_mapping: Mapping[str, tuple[str, ...]],
+) -> tuple[tuple[str, ...], ...]:
+    if contribution.target is None:
+        raise ValueError(f"contribution {contribution.name!r} must declare a target")
     build_selectors = _target_selectors(
         contribution.target.paths,
         "build",
         stack,
+        root_mapping=root_mapping,
         context=f"contribution {contribution.name!r} build",
     )
     owner_selectors = _target_selectors(
         contribution.target.paths,
         "owner",
         stack,
+        root_mapping=root_mapping,
         context=f"contribution {contribution.name!r} owner",
     )
 
@@ -439,15 +580,7 @@ def _apply_contribution(
             scope.apply(candidate)
             if build_match is not None and not _selector_is_dynamic(build_match):
                 concrete_build_paths.append(build_match + (resource.instance_name,))
-
-    for build_path in concrete_build_paths:
-        _apply_bindings(
-            scope,
-            contribution.bindings,
-            stack,
-            build_match=build_path,
-            context=f"contribution {contribution.name!r}",
-        )
+    return tuple(concrete_build_paths)
 
 
 def _is_empty_resource_contribution(
@@ -572,14 +705,34 @@ def _target_selectors(
     kind: str,
     stack: DataStack,
     *,
+    root_mapping: Mapping[str, tuple[str, ...]],
     context: str,
 ) -> tuple[tuple[str, ...] | None, ...]:
     selectors = tuple(
-        path_selector_tuple(target_path.path, stack, context=context)
+        _remap_root_selector(
+            path_selector_tuple(target_path.path, stack, context=context),
+            root_mapping,
+        )
         for target_path in paths
         if target_path.kind == kind
     )
     return selectors or (None,)
+
+
+def _remap_root_selector(
+    selector: tuple[str, ...],
+    root_mapping: Mapping[str, tuple[str, ...]],
+) -> tuple[str, ...]:
+    if not selector:
+        return selector
+    mapped_root = root_mapping.get(selector[0])
+    if mapped_root is None:
+        return selector
+    return mapped_root + selector[1:]
+
+
+def _records_stack(concept: object, records: Iterable[object]) -> DataStack:
+    return DataStack(tuple(_record_mapping(concept, record) for record in records))
 
 
 def _record_mapping(concept: object, record: object) -> Mapping[str, object]:
