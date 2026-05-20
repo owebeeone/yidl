@@ -12,6 +12,7 @@ from yidl.concept_parser import parse_yidl_source
 from yidl.generation.data_def_sys import emit_concept_runtime_source
 from yidl.generation.data_def_sys import AstichiTemplateValue
 from yidl.generation.data_def_sys import MatcherGeneratedValue
+from yidl.runtime.transaction_yidl import DEFAULT_TRANSACTION
 
 _DATA_YIDL = Path(__file__).resolve().parents[1] / "data" / "yidl"
 
@@ -200,6 +201,82 @@ def test_yidl_transactional_phase_a_schema_compiles() -> None:
         "InitVarField",
         "ClassVarField",
         "ManagedField",
+    ]
+
+
+def test_yidl_transactional_phase_a_tx_facts_are_computed() -> None:
+    path = _DATA_YIDL / "yidl_transactional_phase_a_base" / "lifecycle_base.yidl"
+    compiled = compile_yidl_files(
+        {path.as_posix(): path.read_text(encoding="utf-8")},
+        path.as_posix(),
+    )
+    concept = compiled.concepts["LifecycleBase"]
+    source = emit_concept_runtime_source(
+        concept.plan.build_data_definition(),
+        resources=concept.resources,
+        assembly_plan=concept,
+    )
+    namespace: dict[str, object] = {}
+    exec(source, namespace)
+
+    builder = namespace["new_builder"]()
+    classes = namespace["ClassesCollection"]
+    fields = namespace["FieldsCollection"]
+    lifecycle_class = namespace["LifecycleClass"]
+    plain_field = namespace["PlainField"]
+    managed_field = namespace["ManagedField"]
+
+    builder.add(
+        classes,
+        lifecycle_class(class_id="Counter", class_name="Counter", class_order=10),
+    )
+    builder.add(
+        fields,
+        plain_field(
+            field_id="Counter.plain",
+            field_owner="Counter",
+            field_name="plain",
+            field_order=10,
+            field_kind="field",
+        ),
+    )
+    builder.add(
+        fields,
+        managed_field(
+            field_id="Counter.count",
+            field_owner="Counter",
+            field_name="count",
+            field_order=20,
+            field_kind="managed",
+        ),
+    )
+    builder.add(
+        fields,
+        managed_field(
+            field_id="Counter.audit_count",
+            field_owner="Counter",
+            field_name="audit_count",
+            field_order=30,
+            field_kind="managed",
+            tx_group_key="audit",
+        ),
+    )
+
+    container = namespace["build_container"](builder)
+
+    assert [
+        (record.class_id, record.tx_group_key, record.tx_index, record.tx_group_order)
+        for record in container.TxGroups.sequence()
+    ] == [
+        ("Counter", DEFAULT_TRANSACTION, 0, 0),
+        ("Counter", "audit", 1, 30),
+    ]
+    assert [
+        (record.field_id, record.tx_group_key, record.tx_index)
+        for record in container.IndexedTransactionalFields.sequence()
+    ] == [
+        ("Counter.count", DEFAULT_TRANSACTION, 0),
+        ("Counter.audit_count", "audit", 1),
     ]
 
 

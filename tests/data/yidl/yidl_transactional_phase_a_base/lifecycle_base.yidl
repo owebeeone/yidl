@@ -132,6 +132,90 @@ concept LifecycleBase {
     collection TxGroups: TxGroup identity (ClassId, TxGroupKey) many
     collection IndexedTransactionalFields: IndexedTransactionalField identity FieldId many
 
+    resource BuildTransactionFactsBody = code $[
+        from yidl.runtime.transaction_yidl import DEFAULT_TRANSACTION
+
+        classes = sorted(
+            ctx.records(ClassesCollection),
+            key=lambda item: item.class_order,
+        )
+        fields = sorted(
+            ctx.records(FieldsCollection),
+            key=lambda item: item.field_order,
+        )
+
+        for lifecycle_class in classes:
+            seen = {DEFAULT_TRANSACTION: 0}
+            ctx.write(
+                TxGroupsCollection,
+                TxGroup(
+                    class_id=lifecycle_class.class_id,
+                    tx_group_key=DEFAULT_TRANSACTION,
+                    tx_index=0,
+                    tx_group_order=0,
+                ),
+                policy=RejectDuplicate,
+            )
+
+            for field in fields:
+                if field.field_owner != lifecycle_class.class_id:
+                    continue
+                if field.field_kind != "managed":
+                    continue
+
+                tx_group = field.tx_group_key
+                if tx_group is None:
+                    tx_group = DEFAULT_TRANSACTION
+                if tx_group not in seen:
+                    seen[tx_group] = len(seen)
+                    ctx.write(
+                        TxGroupsCollection,
+                        TxGroup(
+                            class_id=lifecycle_class.class_id,
+                            tx_group_key=tx_group,
+                            tx_index=seen[tx_group],
+                            tx_group_order=field.field_order,
+                        ),
+                        policy=RejectDuplicate,
+                    )
+
+                tx_index = seen[tx_group]
+                ctx.write(
+                    TransactionalFieldsCollection,
+                    TransactionalField(
+                        field_id=field.field_id,
+                        field_owner=field.field_owner,
+                        field_name=field.field_name,
+                        field_order=field.field_order,
+                        tx_group_key=tx_group,
+                    ),
+                    policy=RejectDuplicate,
+                )
+                ctx.write(
+                    IndexedTransactionalFieldsCollection,
+                    IndexedTransactionalField(
+                        field_id=field.field_id,
+                        field_owner=field.field_owner,
+                        field_name=field.field_name,
+                        field_order=field.field_order,
+                        tx_group_key=tx_group,
+                        tx_index=tx_index,
+                    ),
+                    policy=RejectDuplicate,
+                )
+    ]$ {
+        keep ctx, ClassesCollection, FieldsCollection
+        keep TxGroupsCollection, TransactionalFieldsCollection
+        keep IndexedTransactionalFieldsCollection
+        keep TxGroup, TransactionalField, IndexedTransactionalField
+        keep RejectDuplicate
+    }
+
+    operation BuildTransactionFacts
+        inputs(Classes, Fields)
+        outputs(TransactionalFields, TxGroups, IndexedTransactionalFields)
+        using BuildTransactionFactsBody
+
     # -------------------------------------------------------------------------
     # Init and generated assignment facts.
     # -------------------------------------------------------------------------
