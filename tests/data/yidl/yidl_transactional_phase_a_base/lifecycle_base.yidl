@@ -1,0 +1,184 @@
+module tests.lifecycle_base
+
+export concept LifecycleBase
+
+concept LifecycleBase {
+    # -------------------------------------------------------------------------
+    # Decorator/runtime inputs.
+    # -------------------------------------------------------------------------
+
+    property ClassId: str
+    property ClassName: str
+    property ClassOrder: int = 0
+    property ModuleName: str = "__main__"
+    property LifecycleDefinitionParamName: str = ""
+    property AnnotationsParamName: str = ""
+    property TxGroupsParamName: str = ""
+
+    property FieldId: str
+    property FieldOwner: str
+    property FieldName: str
+    property FieldOrder: int
+    property FieldKind: str = "field"
+    property Annotation: object = object
+    property Init: bool = True
+    property HasDefault: bool = False
+    property DefaultValue: object = None
+    property DefaultValueParamName: str = ""
+    property HasDefaultFactory: bool = False
+    property DefaultFactory: object = None
+    property DefaultFactoryParamName: str = ""
+    property TxGroupKey: object = None
+
+    record LifecycleClass {
+        ClassId
+        ClassName
+        ClassOrder
+        ModuleName
+        LifecycleDefinitionParamName
+        AnnotationsParamName
+        TxGroupsParamName
+    }
+
+    family LifecycleFieldSpec {
+        common FieldId, FieldOwner, FieldName, FieldOrder, FieldKind, Annotation
+        common Init, HasDefault, DefaultValue, DefaultValueParamName
+        common HasDefaultFactory, DefaultFactory, DefaultFactoryParamName
+        common TxGroupKey
+
+        variant PlainField {
+        }
+
+        variant InitVarField {
+        }
+
+        variant ClassVarField {
+        }
+
+        variant ManagedField {
+        }
+    }
+
+    collection Classes: LifecycleClass identity ClassId many
+    collection Fields: LifecycleFieldSpec identity FieldId many
+
+    # -------------------------------------------------------------------------
+    # Facade facts.
+    # -------------------------------------------------------------------------
+
+    property FacadeId: str
+    property FacadeOwner: str
+    property FacadeKind: str
+    property FacadeMode: str
+    property FacadeClassName: str
+    property FacadeOrder: int = 0
+
+    property OwnerFacadeId: str
+    property TargetFacadeId: str
+    property ExposureOrder: int = 0
+
+    record FacadeClass {
+        FacadeOwner
+        FacadeId
+        FacadeKind
+        FacadeMode
+        FacadeClassName
+        FacadeOrder
+    }
+
+    record FacadeExposure {
+        FacadeOwner
+        OwnerFacadeId
+        FieldName
+        TargetFacadeId
+        ExposureOrder
+    }
+
+    collection FacadeClasses: FacadeClass identity (FacadeOwner, FacadeId) many
+    collection FacadeExposures: FacadeExposure identity (FacadeOwner, OwnerFacadeId, FieldName) many
+
+    # -------------------------------------------------------------------------
+    # Transaction facts.
+    # -------------------------------------------------------------------------
+
+    property TxGroupOrder: int = 0
+    property TxIndex: int = 0
+
+    record TransactionalField {
+        FieldId
+        FieldOwner
+        FieldName
+        FieldOrder
+        TxGroupKey
+    }
+
+    record TxGroup {
+        ClassId
+        TxGroupKey
+        TxIndex
+        TxGroupOrder
+    }
+
+    record IndexedTransactionalField {
+        FieldId
+        FieldOwner
+        FieldName
+        FieldOrder
+        TxGroupKey
+        TxIndex
+    }
+
+    collection TransactionalFields: TransactionalField identity FieldId many
+    collection TxGroups: TxGroup identity (ClassId, TxGroupKey) many
+    collection IndexedTransactionalFields: IndexedTransactionalField identity FieldId many
+
+    # -------------------------------------------------------------------------
+    # Init and generated assignment facts.
+    # -------------------------------------------------------------------------
+
+    property InitParameterId: str
+    property InitParameterOwner: str
+    property InitParameterName: str
+    property InitParameterOrder: int = 0
+    property InitParameterKind: str = "field"
+
+    property InitAssignmentId: str
+    property InitAssignmentOwner: str
+    property InitAssignmentFieldId: str
+    property InitAssignmentFieldName: str
+    property InitAssignmentOrder: int = 0
+    property InitAssignmentKind: str = "plain"
+
+    property ClassVarAssignmentId: str
+    property ClassVarAssignmentOwner: str
+    property ClassVarAssignmentName: str
+    property ClassVarAssignmentOrder: int = 0
+
+    record InitParameter {
+        InitParameterId
+        InitParameterOwner
+        InitParameterName
+        InitParameterOrder
+        InitParameterKind
+    }
+
+    record InitAssignment {
+        InitAssignmentId
+        InitAssignmentOwner
+        InitAssignmentFieldId
+        InitAssignmentFieldName
+        InitAssignmentOrder
+        InitAssignmentKind
+    }
+
+    record ClassVarAssignment {
+        ClassVarAssignmentId
+        ClassVarAssignmentOwner
+        ClassVarAssignmentName
+        ClassVarAssignmentOrder
+    }
+
+    collection InitParameters: InitParameter identity InitParameterId many
+    collection InitAssignments: InitAssignment identity InitAssignmentId many
+    collection ClassVarAssignments: ClassVarAssignment identity ClassVarAssignmentId many
+}

@@ -160,6 +160,49 @@ def test_yidl_lark_record_decl_and_default_values_lower() -> None:
     ]
 
 
+def test_yidl_transactional_phase_a_schema_compiles() -> None:
+    path = _DATA_YIDL / "yidl_transactional_phase_a_base" / "lifecycle_base.yidl"
+    compiled = compile_yidl_files(
+        {path.as_posix(): path.read_text(encoding="utf-8")},
+        path.as_posix(),
+    )
+    concept = compiled.concepts["LifecycleBase"]
+
+    assert set(concept.collections) >= {
+        "Classes",
+        "Fields",
+        "FacadeClasses",
+        "FacadeExposures",
+        "TransactionalFields",
+        "TxGroups",
+        "IndexedTransactionalFields",
+        "InitParameters",
+        "InitAssignments",
+        "ClassVarAssignments",
+    }
+    assert set(concept.records) >= {
+        "LifecycleClass",
+        "FacadeClass",
+        "FacadeExposure",
+        "TransactionalField",
+        "TxGroup",
+        "IndexedTransactionalField",
+        "InitParameter",
+        "InitAssignment",
+        "ClassVarAssignment",
+    }
+    dds = concept.plan.build_data_definition()
+    field_family = next(
+        union for union in dds.unions if union.name == "LifecycleFieldSpec"
+    )
+    assert [variant.name for variant in field_family.variants] == [
+        "PlainField",
+        "InitVarField",
+        "ClassVarField",
+        "ManagedField",
+    ]
+
+
 def test_yidl_lark_computed_collection_filter_parse() -> None:
     source = """
     module filters
