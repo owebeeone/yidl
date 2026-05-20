@@ -121,6 +121,7 @@ decorator name:
 ```python
 @lifecycle
 class Counter:
+    plain: int = field(default=3)
     count: int = managed(tx_group=DEFAULT_TRANSACTION, default=1)
     audit_count: int = managed(tx_group="audit", default=10)
 ```
@@ -131,8 +132,12 @@ the generated source should have this broad shape:
 def build_lifecycle_class(
     decorated_cls,
     *,
-    defaults,
-    default_factories,
+    _Counter_lifecycle_definition,
+    _Counter_annotations,
+    _Counter_tx_groups,
+    _Counter_plain_default,
+    _Counter_count_default,
+    _Counter_audit_count_default,
 ):
     class Counter_State:
         __slots__ = (
@@ -140,6 +145,7 @@ def build_lifecycle_class(
             "_y_default_ref",
             "_y_current_ref",
             "_y_working_ref",
+            "_y_plain_value",
             "_y_count_current",
             "_y_count_working",
             "_y_audit_count_current",
@@ -180,7 +186,14 @@ def build_lifecycle_class(
     class Counter(Counter_FacadeBase):
         __slots__ = ()
 
-        def __init__(self, *, transaction_manager=None, count=..., audit_count=...):
+        def __init__(
+            self,
+            *,
+            transaction_manager=None,
+            plain=_Counter_plain_default,
+            count=_Counter_count_default,
+            audit_count=_Counter_audit_count_default,
+        ):
             state = object.__new__(Counter_State)
             object.__setattr__(self, "_y_state", state)
             state._y_transaction_manager = transaction_manager or TransactionManager(
@@ -189,6 +202,7 @@ def build_lifecycle_class(
             state._y_default_ref = weakref.ref(self)
             state._y_current_ref = None
             state._y_working_ref = None
+            state._y_plain_value = plain
             state._y_count_current = count
             state._y_count_working = VOID
             state._y_audit_count_current = audit_count
@@ -652,15 +666,23 @@ add full MRO override diagnostics and compatibility rules.
 
 ## Generated Function Boundary
 
-The generated function should receive the decorated class and materialized
-default sources, similar in spirit to the current dataclass-like golden tests:
+The generated function is decorator-private. It is not a user-facing API, so
+its signature should be optimized for generated code size and decorator
+runtime speed rather than generality.
+
+The generated function should receive the decorated class plus materialized
+static metadata and defaults as unpacked keyword-only parameters:
 
 ```python
 def build_lifecycle_class(
     decorated_cls,
     *,
-    defaults=None,
-    default_factories=None,
+    _Counter_lifecycle_definition,
+    _Counter_annotations,
+    _Counter_tx_groups,
+    _Counter_plain_default,
+    _Counter_count_default,
+    _Counter_audit_count_default,
 ):
     ...
     return Counter
@@ -670,14 +692,68 @@ The function may be generated for one resolved class/fact container, so it can
 emit a literal class name such as `Counter`. The decorated class is still
 passed in so the generated facades inherit user methods and attributes.
 
+### Decorator Runtime Performance Notes
+
+The current dataclass-like performance work showed that placing static
+structure construction inside the generator function makes the decorator
+runtime unnecessarily large and slow. Examples of static structure include:
+
+- lifecycle definition metadata
+- field/facade/transaction fact tables
+- annotations and match/class metadata
+- transaction group indexes
+- pre-resolved property/resource names
+- literal defaults and default factories
+
+Phase A should push this work into the generated decorator module wherever
+possible. The decorator can build static values once from harvested facts and
+then call the generated function with explicit keyword arguments. The generated
+function should avoid rebuilding static dictionaries, repeatedly calling helper
+constructors for metadata rows, or indexing generic dictionaries such as
+`defaults["Counter.count"]` in generated method signatures and bodies.
+
+Prefer generated code shaped like:
+
+```python
+Counter = build_lifecycle_class(
+    decorated_cls,
+    _Counter_lifecycle_definition=Counter_lifecycle_definition,
+    _Counter_annotations=Counter_annotations,
+    _Counter_tx_groups=Counter_tx_groups,
+    _Counter_plain_default=plain_default,
+    _Counter_count_default=count_default,
+    _Counter_audit_count_default=audit_count_default,
+)
+```
+
+over a generic dictionary boundary:
+
+```python
+Counter = build_lifecycle_class(
+    decorated_cls,
+    defaults=defaults,
+    default_factories=default_factories,
+)
+```
+
+This matters because YIDL will generate substantially more lifecycle code than
+the current dataclass fixtures. Every static lookup or metadata construction
+left inside `build_lifecycle_class` increases emitted AST size, source size,
+compile time, and decorator runtime. The decorator boundary should therefore
+move stable computation out of the runtime generator and pass already-resolved
+objects directly.
+
 Later decorator runtime can:
 
 1. harvest facts from the decorated class
 2. run the YIDL-generated builder for that class
-3. call `build_lifecycle_class(decorated_cls, defaults=..., default_factories=...)`
-4. return the generated main facade class
+3. build static metadata/default values in the decorator module
+4. call `build_lifecycle_class(decorated_cls, _Counter_...=...)`
+5. return the generated main facade class
 
-Phase A should not require a fully general decorator cache or JIT story.
+Phase A should not require a fully general decorator cache or JIT story, but
+the generated boundary should not preclude later caching of the generated AST
+or decorator module.
 
 ## YIDL Source Shape
 
@@ -780,8 +856,9 @@ Responsibilities:
 
 If Phase A would become too large with parameterized default factories, keep
 the first transactional golden on literal defaults and add factory support as
-the next slice. The generated function boundary should still accept
-`default_factories` so the shape does not churn.
+the next slice. Factory support should add explicit unpacked parameters such as
+`_Counter_<field>_default_factory`; it should not reintroduce a generic
+`default_factories` dictionary boundary.
 
 ## Generated Productions
 
@@ -973,20 +1050,28 @@ State construction is performed by the main facade `__init__`, not by a public
 state constructor:
 
 ```python
-state = object.__new__(Counter_State)
-object.__setattr__(self, "_y_state", state)
-state._y_transaction_manager = transaction_manager or TransactionManager(
-    tx_groups=("audit",)
-)
-state._y_default_ref = weakref.ref(self)
-state._y_current_ref = None
-state._y_working_ref = None
-state._y_plain_value = plain
-state._y_count_current = count
-state._y_count_working = VOID
-state._y_audit_count_current = audit_count
-state._y_audit_count_working = VOID
-state._y_working_tx_ids = [None, None]
+def __init__(
+    self,
+    *,
+    transaction_manager=None,
+    plain=_Counter_plain_default,
+    count=_Counter_count_default,
+    audit_count=_Counter_audit_count_default,
+):
+    state = object.__new__(Counter_State)
+    object.__setattr__(self, "_y_state", state)
+    state._y_transaction_manager = transaction_manager or TransactionManager(
+        tx_groups=("audit",)
+    )
+    state._y_default_ref = weakref.ref(self)
+    state._y_current_ref = None
+    state._y_working_ref = None
+    state._y_plain_value = plain
+    state._y_count_current = count
+    state._y_count_working = VOID
+    state._y_audit_count_current = audit_count
+    state._y_audit_count_working = VOID
+    state._y_working_tx_ids = [None, None]
 ```
 
 `_y_working_tx_ids` is a mutable list indexed by `tx_index`. Slot names are
@@ -1308,12 +1393,17 @@ Deliverables:
   - `__yidl_lifecycle_generated__`
   - `__yidl_lifecycle_user_class__`
   - `__yidl_lifecycle_definition__`
-- source shape that accepts decorated class, defaults, and default factories
+- decorator-private build-function shape that accepts decorated class and
+  unpacked static/default values
+- static lifecycle metadata assembled in the decorator module, not rebuilt in
+  the generated class builder
 - initial semantic-peeling helper or documented stub
 
 Verification:
 
 - generated class preserves public identity
+- generated builder source avoids generic default dictionary lookups in method
+  signatures and bodies
 - inherited generated base smoke check if included
 - no generated class depends on `pyrolyze`
 
