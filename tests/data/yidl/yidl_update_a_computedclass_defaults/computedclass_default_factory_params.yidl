@@ -13,6 +13,7 @@ concept ComputedClassDefaultFactoryParams extends dataclasses.DataclassSubstitut
     property ActionKind: str = "zero_arg"
     property ActionEvalOrder: int = 0
     property FactoryParamNames: object = ()
+    property ActionDefaultFactoryParamName: str
 
     property DependencyOwner: str
     property ConsumerFieldId: str
@@ -22,6 +23,7 @@ concept ComputedClassDefaultFactoryParams extends dataclasses.DataclassSubstitut
     property ProviderInit: bool
     property ProviderHasDefault: bool
     property ProviderHasDefaultFactory: bool
+    property ProviderDefaultValueParamName: str = ""
     property ParamName: str
     property ParamOrder: int = 0
 
@@ -45,6 +47,7 @@ concept ComputedClassDefaultFactoryParams extends dataclasses.DataclassSubstitut
         ActionKind
         ActionEvalOrder
         FactoryParamNames
+        ActionDefaultFactoryParamName
     }
 
     record DefaultFactoryDep {
@@ -56,6 +59,7 @@ concept ComputedClassDefaultFactoryParams extends dataclasses.DataclassSubstitut
         ProviderInit
         ProviderHasDefault
         ProviderHasDefaultFactory
+        ProviderDefaultValueParamName
         ParamName
         ParamOrder
     }
@@ -234,6 +238,7 @@ concept ComputedClassDefaultFactoryParams extends dataclasses.DataclassSubstitut
                     action_kind=action_kind,
                     action_eval_order=eval_order_by_id[field.field_id],
                     factory_param_names=param_names,
+                    action_default_factory_param_name=field.default_factory_param_name,
                 ),
                 policy=RejectDuplicate,
             )
@@ -250,6 +255,7 @@ concept ComputedClassDefaultFactoryParams extends dataclasses.DataclassSubstitut
                     provider_init=provider.init,
                     provider_has_default=provider.has_default,
                     provider_has_default_factory=provider.has_default_factory,
+                    provider_default_value_param_name=provider.default_value_param_name,
                     param_name=param_name,
                     param_order=param_order,
                 ),
@@ -304,11 +310,11 @@ concept ComputedClassDefaultFactoryParams extends dataclasses.DataclassSubstitut
 
     resource DefaultFactoryEval = template $[
         if astichi_pass(field_name, outer_bind=True) is _HAS_DEFAULT_FACTORY:
-            astichi_pass(field_name, outer_bind=True)._ = _yidl_default_factories[
-                astichi_bind_external(default_key)
-            ](**astichi_hole(default_factory_args))
+            astichi_pass(field_name, outer_bind=True)._ = default_factory_name__astichi_arg__(
+                **astichi_hole(default_factory_args)
+            )
     ]$ {
-        keep _HAS_DEFAULT_FACTORY, _yidl_default_factories
+        keep _HAS_DEFAULT_FACTORY
     }
 
     resource DefaultFactoryIdentifierArg = template $[
@@ -322,13 +328,9 @@ concept ComputedClassDefaultFactoryParams extends dataclasses.DataclassSubstitut
 
     resource DefaultFactoryDefaultArg = template $[
         astichi_funcargs(
-            param_name__astichi_arg__=_yidl_defaults[
-                astichi_bind_external(default_key)
-            ]
+            param_name__astichi_arg__=default_value_name__astichi_arg__
         )
-    ]$ {
-        keep _yidl_defaults
-    }
+    ]$
 
     contribution ComputedInitMethodContribution = ComputedInitMethodProduction {
         as InitMethod
@@ -348,7 +350,7 @@ concept ComputedClassDefaultFactoryParams extends dataclasses.DataclassSubstitut
         }
 
         ident field_name = ActionFieldName
-        external default_key = ActionFieldId
+        ident default_factory_name = ActionDefaultFactoryParamName
     }
 
     contribution DefaultFactoryIdentifierArgContribution = DefaultFactoryIdentifierArg {
@@ -374,7 +376,7 @@ concept ComputedClassDefaultFactoryParams extends dataclasses.DataclassSubstitut
         }
 
         ident param_name = ParamName
-        external default_key = ProviderFieldId
+        ident default_value_name = ProviderDefaultValueParamName
     }
 
     matcher InitMethodContributions(facade: Facades) -> contribution {

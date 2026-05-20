@@ -76,6 +76,24 @@ _SlotNamesProperty = RuntimeProperty(
 _MatchArgsProperty = RuntimeProperty(
     "MatchArgs", object, default=(), storage_name="match_args"
 )
+_DataclassParamsParamNameProperty = RuntimeProperty(
+    "DataclassParamsParamName",
+    str,
+    default="",
+    storage_name="dataclass_params_param_name",
+)
+_DataclassFieldsParamNameProperty = RuntimeProperty(
+    "DataclassFieldsParamName",
+    str,
+    default="",
+    storage_name="dataclass_fields_param_name",
+)
+_AnnotationsParamNameProperty = RuntimeProperty(
+    "AnnotationsParamName", str, default="", storage_name="annotations_param_name"
+)
+_MatchArgsParamNameProperty = RuntimeProperty(
+    "MatchArgsParamName", str, default="", storage_name="match_args_param_name"
+)
 _FieldIdProperty = RuntimeProperty(
     "FieldId", str, default=REQUIRED, storage_name="field_id"
 )
@@ -100,11 +118,20 @@ _HasDefaultProperty = RuntimeProperty(
 _DefaultValueProperty = RuntimeProperty(
     "DefaultValue", object, default=None, storage_name="default_value"
 )
+_DefaultValueParamNameProperty = RuntimeProperty(
+    "DefaultValueParamName", str, default="", storage_name="default_value_param_name"
+)
 _HasDefaultFactoryProperty = RuntimeProperty(
     "HasDefaultFactory", bool, default=False, storage_name="has_default_factory"
 )
 _DefaultFactoryProperty = RuntimeProperty(
     "DefaultFactory", object, default=None, storage_name="default_factory"
+)
+_DefaultFactoryParamNameProperty = RuntimeProperty(
+    "DefaultFactoryParamName",
+    str,
+    default="",
+    storage_name="default_factory_param_name",
 )
 _InitProperty = RuntimeProperty("Init", bool, default=True, storage_name="init")
 _ReprProperty = RuntimeProperty("Repr", bool, default=True, storage_name="repr")
@@ -140,6 +167,10 @@ _DataclassFacadeSpec = RuntimeRecord(
         _DataclassParamsProperty,
         _SlotNamesProperty,
         _MatchArgsProperty,
+        _DataclassParamsParamNameProperty,
+        _DataclassFieldsParamNameProperty,
+        _AnnotationsParamNameProperty,
+        _MatchArgsParamNameProperty,
     ),
 )
 _InstanceFieldSpec = RuntimeRecord(
@@ -153,8 +184,10 @@ _InstanceFieldSpec = RuntimeRecord(
         _AnnotationProperty,
         _HasDefaultProperty,
         _DefaultValueProperty,
+        _DefaultValueParamNameProperty,
         _HasDefaultFactoryProperty,
         _DefaultFactoryProperty,
+        _DefaultFactoryParamNameProperty,
         _InitProperty,
         _ReprProperty,
         _CompareProperty,
@@ -174,8 +207,10 @@ _InitVarFieldSpec = RuntimeRecord(
         _AnnotationProperty,
         _HasDefaultProperty,
         _DefaultValueProperty,
+        _DefaultValueParamNameProperty,
         _HasDefaultFactoryProperty,
         _DefaultFactoryProperty,
+        _DefaultFactoryParamNameProperty,
         _InitProperty,
         _ReprProperty,
         _CompareProperty,
@@ -195,8 +230,10 @@ _ClassVarFieldSpec = RuntimeRecord(
         _AnnotationProperty,
         _HasDefaultProperty,
         _DefaultValueProperty,
+        _DefaultValueParamNameProperty,
         _HasDefaultFactoryProperty,
         _DefaultFactoryProperty,
+        _DefaultFactoryParamNameProperty,
         _InitProperty,
         _ReprProperty,
         _CompareProperty,
@@ -233,6 +270,10 @@ class DataclassFacade:
         "dataclass_params",
         "slot_names",
         "match_args",
+        "dataclass_params_param_name",
+        "dataclass_fields_param_name",
+        "annotations_param_name",
+        "match_args_param_name",
     )
     __dds_record_spec__ = _DataclassFacadeSpec
     class_id: str
@@ -256,6 +297,10 @@ class DataclassFacade:
     dataclass_params: object
     slot_names: object
     match_args: object
+    dataclass_params_param_name: str
+    dataclass_fields_param_name: str
+    annotations_param_name: str
+    match_args_param_name: str
 
     def __init__(
         self,
@@ -280,7 +325,11 @@ class DataclassFacade:
         kw_only_fence_order: int = 0,
         dataclass_params: object = None,
         slot_names: object = (),
-        match_args: object = ()
+        match_args: object = (),
+        dataclass_params_param_name: str = "",
+        dataclass_fields_param_name: str = "",
+        annotations_param_name: str = "",
+        match_args_param_name: str = ""
     ):
         if not isinstance(class_id, str):
             raise TypeError("ClassId must be str, got " + type(class_id).__name__)
@@ -368,6 +417,34 @@ class DataclassFacade:
         object.__setattr__(self, "dataclass_params", dataclass_params)
         object.__setattr__(self, "slot_names", slot_names)
         object.__setattr__(self, "match_args", match_args)
+        if not isinstance(dataclass_params_param_name, str):
+            raise TypeError(
+                "DataclassParamsParamName must be str, got "
+                + type(dataclass_params_param_name).__name__
+            )
+        object.__setattr__(
+            self, "dataclass_params_param_name", dataclass_params_param_name
+        )
+        if not isinstance(dataclass_fields_param_name, str):
+            raise TypeError(
+                "DataclassFieldsParamName must be str, got "
+                + type(dataclass_fields_param_name).__name__
+            )
+        object.__setattr__(
+            self, "dataclass_fields_param_name", dataclass_fields_param_name
+        )
+        if not isinstance(annotations_param_name, str):
+            raise TypeError(
+                "AnnotationsParamName must be str, got "
+                + type(annotations_param_name).__name__
+            )
+        object.__setattr__(self, "annotations_param_name", annotations_param_name)
+        if not isinstance(match_args_param_name, str):
+            raise TypeError(
+                "MatchArgsParamName must be str, got "
+                + type(match_args_param_name).__name__
+            )
+        object.__setattr__(self, "match_args_param_name", match_args_param_name)
 
     def __setattr__(self, name, value):
         if name in (
@@ -392,6 +469,10 @@ class DataclassFacade:
             "dataclass_params",
             "slot_names",
             "match_args",
+            "dataclass_params_param_name",
+            "dataclass_fields_param_name",
+            "annotations_param_name",
+            "match_args_param_name",
         ):
             raise AttributeError("DataclassFacade records are immutable")
         object.__setattr__(self, name, value)
@@ -419,6 +500,14 @@ class DataclassFacade:
         pieces.append("dataclass_params=" + repr(self.dataclass_params))
         pieces.append("slot_names=" + repr(self.slot_names))
         pieces.append("match_args=" + repr(self.match_args))
+        pieces.append(
+            "dataclass_params_param_name=" + repr(self.dataclass_params_param_name)
+        )
+        pieces.append(
+            "dataclass_fields_param_name=" + repr(self.dataclass_fields_param_name)
+        )
+        pieces.append("annotations_param_name=" + repr(self.annotations_param_name))
+        pieces.append("match_args_param_name=" + repr(self.match_args_param_name))
         return "DataclassFacade" + "(" + ", ".join(pieces) + ")"
 
 
@@ -435,8 +524,10 @@ class InstanceField:
         "annotation",
         "has_default",
         "default_value",
+        "default_value_param_name",
         "has_default_factory",
         "default_factory",
+        "default_factory_param_name",
         "init",
         "repr",
         "compare",
@@ -453,8 +544,10 @@ class InstanceField:
     annotation: object
     has_default: bool
     default_value: object
+    default_value_param_name: str
     has_default_factory: bool
     default_factory: object
+    default_factory_param_name: str
     init: bool
     repr: bool
     compare: bool
@@ -473,8 +566,10 @@ class InstanceField:
         annotation: object = object,
         has_default: bool = False,
         default_value: object = None,
+        default_value_param_name: str = "",
         has_default_factory: bool = False,
         default_factory: object = None,
+        default_factory_param_name: str = "",
         init: bool = True,
         repr: bool = True,
         compare: bool = True,
@@ -504,6 +599,12 @@ class InstanceField:
             )
         object.__setattr__(self, "has_default", has_default)
         object.__setattr__(self, "default_value", default_value)
+        if not isinstance(default_value_param_name, str):
+            raise TypeError(
+                "DefaultValueParamName must be str, got "
+                + type(default_value_param_name).__name__
+            )
+        object.__setattr__(self, "default_value_param_name", default_value_param_name)
         if not isinstance(has_default_factory, bool):
             raise TypeError(
                 "HasDefaultFactory must be bool, got "
@@ -511,6 +612,14 @@ class InstanceField:
             )
         object.__setattr__(self, "has_default_factory", has_default_factory)
         object.__setattr__(self, "default_factory", default_factory)
+        if not isinstance(default_factory_param_name, str):
+            raise TypeError(
+                "DefaultFactoryParamName must be str, got "
+                + type(default_factory_param_name).__name__
+            )
+        object.__setattr__(
+            self, "default_factory_param_name", default_factory_param_name
+        )
         if not isinstance(init, bool):
             raise TypeError("Init must be bool, got " + type(init).__name__)
         object.__setattr__(self, "init", init)
@@ -536,8 +645,10 @@ class InstanceField:
             "annotation",
             "has_default",
             "default_value",
+            "default_value_param_name",
             "has_default_factory",
             "default_factory",
+            "default_factory_param_name",
             "init",
             "repr",
             "compare",
@@ -558,8 +669,12 @@ class InstanceField:
         pieces.append("annotation=" + repr(self.annotation))
         pieces.append("has_default=" + repr(self.has_default))
         pieces.append("default_value=" + repr(self.default_value))
+        pieces.append("default_value_param_name=" + repr(self.default_value_param_name))
         pieces.append("has_default_factory=" + repr(self.has_default_factory))
         pieces.append("default_factory=" + repr(self.default_factory))
+        pieces.append(
+            "default_factory_param_name=" + repr(self.default_factory_param_name)
+        )
         pieces.append("init=" + repr(self.init))
         pieces.append("repr=" + repr(self.repr))
         pieces.append("compare=" + repr(self.compare))
@@ -582,8 +697,10 @@ class InitVarField:
         "annotation",
         "has_default",
         "default_value",
+        "default_value_param_name",
         "has_default_factory",
         "default_factory",
+        "default_factory_param_name",
         "init",
         "repr",
         "compare",
@@ -600,8 +717,10 @@ class InitVarField:
     annotation: object
     has_default: bool
     default_value: object
+    default_value_param_name: str
     has_default_factory: bool
     default_factory: object
+    default_factory_param_name: str
     init: bool
     repr: bool
     compare: bool
@@ -620,8 +739,10 @@ class InitVarField:
         annotation: object = object,
         has_default: bool = False,
         default_value: object = None,
+        default_value_param_name: str = "",
         has_default_factory: bool = False,
         default_factory: object = None,
+        default_factory_param_name: str = "",
         init: bool = True,
         repr: bool = True,
         compare: bool = True,
@@ -651,6 +772,12 @@ class InitVarField:
             )
         object.__setattr__(self, "has_default", has_default)
         object.__setattr__(self, "default_value", default_value)
+        if not isinstance(default_value_param_name, str):
+            raise TypeError(
+                "DefaultValueParamName must be str, got "
+                + type(default_value_param_name).__name__
+            )
+        object.__setattr__(self, "default_value_param_name", default_value_param_name)
         if not isinstance(has_default_factory, bool):
             raise TypeError(
                 "HasDefaultFactory must be bool, got "
@@ -658,6 +785,14 @@ class InitVarField:
             )
         object.__setattr__(self, "has_default_factory", has_default_factory)
         object.__setattr__(self, "default_factory", default_factory)
+        if not isinstance(default_factory_param_name, str):
+            raise TypeError(
+                "DefaultFactoryParamName must be str, got "
+                + type(default_factory_param_name).__name__
+            )
+        object.__setattr__(
+            self, "default_factory_param_name", default_factory_param_name
+        )
         if not isinstance(init, bool):
             raise TypeError("Init must be bool, got " + type(init).__name__)
         object.__setattr__(self, "init", init)
@@ -683,8 +818,10 @@ class InitVarField:
             "annotation",
             "has_default",
             "default_value",
+            "default_value_param_name",
             "has_default_factory",
             "default_factory",
+            "default_factory_param_name",
             "init",
             "repr",
             "compare",
@@ -705,8 +842,12 @@ class InitVarField:
         pieces.append("annotation=" + repr(self.annotation))
         pieces.append("has_default=" + repr(self.has_default))
         pieces.append("default_value=" + repr(self.default_value))
+        pieces.append("default_value_param_name=" + repr(self.default_value_param_name))
         pieces.append("has_default_factory=" + repr(self.has_default_factory))
         pieces.append("default_factory=" + repr(self.default_factory))
+        pieces.append(
+            "default_factory_param_name=" + repr(self.default_factory_param_name)
+        )
         pieces.append("init=" + repr(self.init))
         pieces.append("repr=" + repr(self.repr))
         pieces.append("compare=" + repr(self.compare))
@@ -729,8 +870,10 @@ class ClassVarField:
         "annotation",
         "has_default",
         "default_value",
+        "default_value_param_name",
         "has_default_factory",
         "default_factory",
+        "default_factory_param_name",
         "init",
         "repr",
         "compare",
@@ -747,8 +890,10 @@ class ClassVarField:
     annotation: object
     has_default: bool
     default_value: object
+    default_value_param_name: str
     has_default_factory: bool
     default_factory: object
+    default_factory_param_name: str
     init: bool
     repr: bool
     compare: bool
@@ -767,8 +912,10 @@ class ClassVarField:
         annotation: object = object,
         has_default: bool = False,
         default_value: object = None,
+        default_value_param_name: str = "",
         has_default_factory: bool = False,
         default_factory: object = None,
+        default_factory_param_name: str = "",
         init: bool = True,
         repr: bool = True,
         compare: bool = True,
@@ -798,6 +945,12 @@ class ClassVarField:
             )
         object.__setattr__(self, "has_default", has_default)
         object.__setattr__(self, "default_value", default_value)
+        if not isinstance(default_value_param_name, str):
+            raise TypeError(
+                "DefaultValueParamName must be str, got "
+                + type(default_value_param_name).__name__
+            )
+        object.__setattr__(self, "default_value_param_name", default_value_param_name)
         if not isinstance(has_default_factory, bool):
             raise TypeError(
                 "HasDefaultFactory must be bool, got "
@@ -805,6 +958,14 @@ class ClassVarField:
             )
         object.__setattr__(self, "has_default_factory", has_default_factory)
         object.__setattr__(self, "default_factory", default_factory)
+        if not isinstance(default_factory_param_name, str):
+            raise TypeError(
+                "DefaultFactoryParamName must be str, got "
+                + type(default_factory_param_name).__name__
+            )
+        object.__setattr__(
+            self, "default_factory_param_name", default_factory_param_name
+        )
         if not isinstance(init, bool):
             raise TypeError("Init must be bool, got " + type(init).__name__)
         object.__setattr__(self, "init", init)
@@ -830,8 +991,10 @@ class ClassVarField:
             "annotation",
             "has_default",
             "default_value",
+            "default_value_param_name",
             "has_default_factory",
             "default_factory",
+            "default_factory_param_name",
             "init",
             "repr",
             "compare",
@@ -852,8 +1015,12 @@ class ClassVarField:
         pieces.append("annotation=" + repr(self.annotation))
         pieces.append("has_default=" + repr(self.has_default))
         pieces.append("default_value=" + repr(self.default_value))
+        pieces.append("default_value_param_name=" + repr(self.default_value_param_name))
         pieces.append("has_default_factory=" + repr(self.has_default_factory))
         pieces.append("default_factory=" + repr(self.default_factory))
+        pieces.append(
+            "default_factory_param_name=" + repr(self.default_factory_param_name)
+        )
         pieces.append("init=" + repr(self.init))
         pieces.append("repr=" + repr(self.repr))
         pieces.append("compare=" + repr(self.compare))
@@ -1001,6 +1168,18 @@ ASSEMBLY_PROPERTIES = {
     ),
     "SlotNames": _YidlSimpleNamespace(name="SlotNames", storage_name="slot_names"),
     "MatchArgs": _YidlSimpleNamespace(name="MatchArgs", storage_name="match_args"),
+    "DataclassParamsParamName": _YidlSimpleNamespace(
+        name="DataclassParamsParamName", storage_name="dataclass_params_param_name"
+    ),
+    "DataclassFieldsParamName": _YidlSimpleNamespace(
+        name="DataclassFieldsParamName", storage_name="dataclass_fields_param_name"
+    ),
+    "AnnotationsParamName": _YidlSimpleNamespace(
+        name="AnnotationsParamName", storage_name="annotations_param_name"
+    ),
+    "MatchArgsParamName": _YidlSimpleNamespace(
+        name="MatchArgsParamName", storage_name="match_args_param_name"
+    ),
     "FieldId": _YidlSimpleNamespace(name="FieldId", storage_name="field_id"),
     "FieldOwner": _YidlSimpleNamespace(name="FieldOwner", storage_name="field_owner"),
     "FieldName": _YidlSimpleNamespace(name="FieldName", storage_name="field_name"),
@@ -1011,11 +1190,17 @@ ASSEMBLY_PROPERTIES = {
     "DefaultValue": _YidlSimpleNamespace(
         name="DefaultValue", storage_name="default_value"
     ),
+    "DefaultValueParamName": _YidlSimpleNamespace(
+        name="DefaultValueParamName", storage_name="default_value_param_name"
+    ),
     "HasDefaultFactory": _YidlSimpleNamespace(
         name="HasDefaultFactory", storage_name="has_default_factory"
     ),
     "DefaultFactory": _YidlSimpleNamespace(
         name="DefaultFactory", storage_name="default_factory"
+    ),
+    "DefaultFactoryParamName": _YidlSimpleNamespace(
+        name="DefaultFactoryParamName", storage_name="default_factory_param_name"
     ),
     "Init": _YidlSimpleNamespace(name="Init", storage_name="init"),
     "Repr": _YidlSimpleNamespace(name="Repr", storage_name="repr"),
@@ -1029,7 +1214,6 @@ ASSEMBLY_RESOURCES = {
         """\
 from __future__ import annotations
 
-_MISSING = object()
 _HAS_DEFAULT_FACTORY = object()
 
 
@@ -1037,31 +1221,30 @@ class FrozenInstanceError(AttributeError):
     pass
 
 
-def _field_info(**kw):
-    return kw
-
-
-def build_generated_dataclasses(*, defaults=None, default_factories=None):
-    _yidl_defaults = {} if defaults is None else defaults
-    _yidl_default_factories = (
-        {} if default_factories is None else default_factories
-    )
-
+def build_generated_dataclasses(factory_params__astichi_param_hole__):
     astichi_hole(module_body)
 
     return {**astichi_hole(class_exports)}""",
         file_name="tests/data/yidl/yidl_update_a_dataclasses_split/dataclasses_base.yidl",
-        line_number=106,
-        keep_names=("_yidl_defaults", "_yidl_default_factories"),
+        line_number=117,
     ),
     "ClassShell": astichi_template(
         from_astichi_code(
             """\
 class class_name__astichi_arg__:
     __module__ = astichi_bind_external(module_name)
-    __dataclass_params__ = astichi_bind_external(dataclass_params)
-    __dataclass_fields__ = {**astichi_hole(field_info_entries)}
-    __annotations__ = {**astichi_hole(annotation_entries)}
+    __dataclass_params__ = astichi_pass(
+        dataclass_params_name__astichi_arg__,
+        outer_bind=True,
+    )
+    __dataclass_fields__ = astichi_pass(
+        dataclass_fields_name__astichi_arg__,
+        outer_bind=True,
+    )
+    __annotations__ = astichi_pass(
+        annotations_name__astichi_arg__,
+        outer_bind=True,
+    )
 
     astichi_hole(slots_decl)
     astichi_hole(field_defaults)
@@ -1073,14 +1256,14 @@ class class_name__astichi_arg__:
     astichi_hole(hash_method)
     astichi_hole(frozen_methods)""",
             file_name="tests/data/yidl/yidl_update_a_dataclasses_split/dataclasses_base.yidl",
-            line_number=134,
+            line_number=133,
         )
     ),
     "EmptyStatement": astichi_template(
         from_astichi_code(
             "pass",
             file_name="tests/data/yidl/yidl_update_a_dataclasses_split/dataclasses_base.yidl",
-            line_number=151,
+            line_number=159,
             offset=40,
         )
     ),
@@ -1088,7 +1271,7 @@ class class_name__astichi_arg__:
         from_astichi_code(
             "",
             file_name="tests/data/yidl/yidl_update_a_dataclasses_split/dataclasses_base.yidl",
-            line_number=152,
+            line_number=160,
             offset=39,
         )
     ),
@@ -1096,28 +1279,41 @@ class class_name__astichi_arg__:
         from_astichi_code(
             "{astichi_bind_external(class_name_text): class_name__astichi_arg__}",
             file_name="tests/data/yidl/yidl_update_a_dataclasses_split/dataclasses_base.yidl",
-            line_number=165,
+            line_number=173,
+        )
+    ),
+    "FactoryParam": astichi_template(
+        from_astichi_code(
+            """\
+def astichi_params(*, value_name__astichi_arg__):
+    pass""",
+            file_name="tests/data/yidl/yidl_update_a_dataclasses_split/dataclasses_base.yidl",
+            line_number=230,
         )
     ),
     "SlotsDecl": astichi_template(
         from_astichi_code(
             "__slots__ = astichi_bind_external(slot_names)",
             file_name="tests/data/yidl/yidl_update_a_dataclasses_split/dataclasses_base.yidl",
-            line_number=194,
+            line_number=235,
         )
     ),
     "MatchArgsDecl": astichi_template(
         from_astichi_code(
-            "__match_args__ = astichi_bind_external(match_args)",
+            """\
+__match_args__ = astichi_pass(
+    match_args_name__astichi_arg__,
+    outer_bind=True,
+)""",
             file_name="tests/data/yidl/yidl_update_a_dataclasses_split/dataclasses_base.yidl",
-            line_number=198,
+            line_number=239,
         )
     ),
     "AnnotationEntry": astichi_template(
         from_astichi_code(
             "{astichi_bind_external(field_name): astichi_bind_external(annotation)}",
             file_name="tests/data/yidl/yidl_update_a_dataclasses_split/dataclasses_base.yidl",
-            line_number=202,
+            line_number=246,
         )
     ),
     "FieldInfoEntry": astichi_template(
@@ -1139,7 +1335,7 @@ class class_name__astichi_arg__:
     )
 }""",
             file_name="tests/data/yidl/yidl_update_a_dataclasses_split/dataclasses_base.yidl",
-            line_number=206,
+            line_number=250,
             keep_names=("_field_info", "_MISSING"),
         )
     ),
@@ -1150,7 +1346,7 @@ class class_name__astichi_arg__:
     astichi_bind_external(field_name): _field_info(
         name=astichi_bind_external(field_name),
         type=astichi_bind_external(annotation),
-        default=_yidl_defaults[astichi_bind_external(default_key)],
+        default=default_value_name__astichi_arg__,
         default_factory=_MISSING,
         init=astichi_bind_external(init),
         repr=astichi_bind_external(repr),
@@ -1162,8 +1358,8 @@ class class_name__astichi_arg__:
     )
 }""",
             file_name="tests/data/yidl/yidl_update_a_dataclasses_split/dataclasses_base.yidl",
-            line_number=226,
-            keep_names=("_field_info", "_MISSING", "_yidl_defaults"),
+            line_number=270,
+            keep_names=("_field_info", "_MISSING"),
         )
     ),
     "FieldInfoDefaultFactoryEntry": astichi_template(
@@ -1174,9 +1370,7 @@ class class_name__astichi_arg__:
         name=astichi_bind_external(field_name),
         type=astichi_bind_external(annotation),
         default=_MISSING,
-        default_factory=_yidl_default_factories[
-            astichi_bind_external(default_key)
-        ],
+        default_factory=default_factory_name__astichi_arg__,
         init=astichi_bind_external(init),
         repr=astichi_bind_external(repr),
         compare=astichi_bind_external(compare),
@@ -1187,23 +1381,26 @@ class class_name__astichi_arg__:
     )
 }""",
             file_name="tests/data/yidl/yidl_update_a_dataclasses_split/dataclasses_base.yidl",
-            line_number=246,
-            keep_names=("_field_info", "_MISSING", "_yidl_default_factories"),
+            line_number=290,
+            keep_names=("_field_info", "_MISSING"),
         )
     ),
     "DefaultValueAssignment": astichi_template(
         from_astichi_code(
-            "field_name__astichi_arg__ = _yidl_defaults[astichi_bind_external(default_key)]",
+            """\
+field_name__astichi_arg__ = astichi_pass(
+    default_value_name__astichi_arg__,
+    outer_bind=True,
+)""",
             file_name="tests/data/yidl/yidl_update_a_dataclasses_split/dataclasses_base.yidl",
-            line_number=268,
-            keep_names=("_yidl_defaults",),
+            line_number=310,
         )
     ),
     "DefaultAndFactoryDiagnosticMessage": astichi_template(
         from_astichi_code(
             'f"field {astichi_bind_external(field_name)} cannot specify both default and default_factory"',
             file_name="tests/data/yidl/yidl_update_a_dataclasses_split/dataclasses_base.yidl",
-            line_number=431,
+            line_number=546,
         )
     ),
     "InitMethodTemplate": astichi_template(
@@ -1214,7 +1411,7 @@ def __init__(self, params__astichi_param_hole__):
     astichi_hole(init_assignments)
     astichi_hole(post_init_call)""",
             file_name="tests/data/yidl/yidl_update_a_dataclasses_split/dataclasses_base.yidl",
-            line_number=450,
+            line_number=565,
         )
     ),
     "RequiredParam": astichi_template(
@@ -1223,7 +1420,7 @@ def __init__(self, params__astichi_param_hole__):
 def astichi_params(field_name__astichi_arg__: astichi_bind_external(annotation)):
     pass""",
             file_name="tests/data/yidl/yidl_update_a_dataclasses_split/dataclasses_base.yidl",
-            line_number=457,
+            line_number=572,
         )
     ),
     "KwOnlyFence": astichi_template(
@@ -1232,7 +1429,7 @@ def astichi_params(field_name__astichi_arg__: astichi_bind_external(annotation))
 def astichi_params():
     pass""",
             file_name="tests/data/yidl/yidl_update_a_dataclasses_split/dataclasses_base.yidl",
-            line_number=462,
+            line_number=577,
         )
     ),
     "DefaultParam": astichi_template(
@@ -1240,12 +1437,11 @@ def astichi_params():
             """\
 def astichi_params(
     field_name__astichi_arg__: astichi_bind_external(annotation) =
-        _yidl_defaults[astichi_bind_external(default_key)]
+        default_value_name__astichi_arg__
 ):
     pass""",
             file_name="tests/data/yidl/yidl_update_a_dataclasses_split/dataclasses_base.yidl",
-            line_number=467,
-            keep_names=("_yidl_defaults",),
+            line_number=582,
         )
     ),
     "DefaultFactoryParam": astichi_template(
@@ -1256,7 +1452,7 @@ def astichi_params(
 ):
     pass""",
             file_name="tests/data/yidl/yidl_update_a_dataclasses_split/dataclasses_base.yidl",
-            line_number=477,
+            line_number=590,
             keep_names=("_HAS_DEFAULT_FACTORY",),
         )
     ),
@@ -1269,7 +1465,7 @@ setattr(
     astichi_pass(field_name__astichi_arg__, outer_bind=True),
 )""",
             file_name="tests/data/yidl/yidl_update_a_dataclasses_split/dataclasses_base.yidl",
-            line_number=486,
+            line_number=599,
         )
     ),
     "FrozenInitAssign": astichi_template(
@@ -1281,47 +1477,45 @@ object.__setattr__(
     astichi_pass(field_name__astichi_arg__, outer_bind=True),
 )""",
             file_name="tests/data/yidl/yidl_update_a_dataclasses_split/dataclasses_base.yidl",
-            line_number=494,
+            line_number=607,
         )
     ),
     "DefaultFactoryGuard": astichi_template(
         from_astichi_code(
             """\
 if astichi_pass(field_name, outer_bind=True) is _HAS_DEFAULT_FACTORY:
-    astichi_pass(field_name, outer_bind=True)._ = _yidl_default_factories[
-        astichi_bind_external(default_key)
-    ]()""",
+    astichi_pass(field_name, outer_bind=True)._ = default_factory_name__astichi_arg__()""",
             file_name="tests/data/yidl/yidl_update_a_dataclasses_split/dataclasses_base.yidl",
-            line_number=502,
-            keep_names=("_HAS_DEFAULT_FACTORY", "_yidl_default_factories"),
+            line_number=615,
+            keep_names=("_HAS_DEFAULT_FACTORY",),
         )
     ),
     "PostInitCall": astichi_template(
         from_astichi_code(
             "self.__post_init__(astichi_hole(post_init_args))",
             file_name="tests/data/yidl/yidl_update_a_dataclasses_split/dataclasses_base.yidl",
-            line_number=511,
+            line_number=622,
         )
     ),
     "PostInitArg": astichi_template(
         from_astichi_code(
             "astichi_funcargs(field_name__astichi_arg__)",
             file_name="tests/data/yidl/yidl_update_a_dataclasses_split/dataclasses_base.yidl",
-            line_number=515,
+            line_number=626,
         )
     ),
     "ReprMethodTemplate": astichi_template(
         from_astichi_code(
             'def __repr__(self):\n    return astichi_bind_external(class_name) + "(" + ", ".join((*astichi_hole(repr_parts),)) + ")"',
             file_name="tests/data/yidl/yidl_update_a_dataclasses_split/dataclasses_base.yidl",
-            line_number=733,
+            line_number=844,
         )
     ),
     "ReprPart": astichi_template(
         from_astichi_code(
             'astichi_bind_external(field_name_text) + "=" + repr(getattr(self, astichi_bind_external(field_name_text)))',
             file_name="tests/data/yidl/yidl_update_a_dataclasses_split/dataclasses_base.yidl",
-            line_number=738,
+            line_number=849,
         )
     ),
     "EqMethodTemplate": astichi_template(
@@ -1332,21 +1526,21 @@ def __eq__(self, other):
         return (*astichi_hole(self_compare_values),) == (*astichi_hole(other_compare_values),)
     return NotImplemented""",
             file_name="tests/data/yidl/yidl_update_a_dataclasses_split/dataclasses_base.yidl",
-            line_number=742,
+            line_number=853,
         )
     ),
     "SelfCompareValue": astichi_template(
         from_astichi_code(
             "getattr(self, astichi_bind_external(field_name_text))",
             file_name="tests/data/yidl/yidl_update_a_dataclasses_split/dataclasses_base.yidl",
-            line_number=749,
+            line_number=860,
         )
     ),
     "OtherCompareValue": astichi_template(
         from_astichi_code(
             "getattr(other, astichi_bind_external(field_name_text))",
             file_name="tests/data/yidl/yidl_update_a_dataclasses_split/dataclasses_base.yidl",
-            line_number=753,
+            line_number=864,
         )
     ),
     "LtMethodTemplate": astichi_template(
@@ -1357,7 +1551,7 @@ def __lt__(self, other):
         return (*astichi_hole(self_order_values),) < (*astichi_hole(other_order_values),)
     return NotImplemented""",
             file_name="tests/data/yidl/yidl_update_a_dataclasses_split/dataclasses_base.yidl",
-            line_number=757,
+            line_number=868,
         )
     ),
     "LeMethodTemplate": astichi_template(
@@ -1368,7 +1562,7 @@ def __le__(self, other):
         return (*astichi_hole(self_order_values),) <= (*astichi_hole(other_order_values),)
     return NotImplemented""",
             file_name="tests/data/yidl/yidl_update_a_dataclasses_split/dataclasses_base.yidl",
-            line_number=764,
+            line_number=875,
         )
     ),
     "GtMethodTemplate": astichi_template(
@@ -1379,7 +1573,7 @@ def __gt__(self, other):
         return (*astichi_hole(self_order_values),) > (*astichi_hole(other_order_values),)
     return NotImplemented""",
             file_name="tests/data/yidl/yidl_update_a_dataclasses_split/dataclasses_base.yidl",
-            line_number=771,
+            line_number=882,
         )
     ),
     "GeMethodTemplate": astichi_template(
@@ -1390,7 +1584,7 @@ def __ge__(self, other):
         return (*astichi_hole(self_order_values),) >= (*astichi_hole(other_order_values),)
     return NotImplemented""",
             file_name="tests/data/yidl/yidl_update_a_dataclasses_split/dataclasses_base.yidl",
-            line_number=778,
+            line_number=889,
         )
     ),
     "HashMethodTemplate": astichi_template(
@@ -1399,14 +1593,14 @@ def __ge__(self, other):
 def __hash__(self):
     return hash((*astichi_hole(hash_values),))""",
             file_name="tests/data/yidl/yidl_update_a_dataclasses_split/dataclasses_base.yidl",
-            line_number=785,
+            line_number=896,
         )
     ),
     "HashNone": astichi_template(
         from_astichi_code(
             "__hash__ = None",
             file_name="tests/data/yidl/yidl_update_a_dataclasses_split/dataclasses_base.yidl",
-            line_number=790,
+            line_number=901,
         )
     ),
     "FrozenSetattr": astichi_template(
@@ -1415,7 +1609,7 @@ def __hash__(self):
 def __setattr__(self, name, value):
     raise FrozenInstanceError(f"cannot assign to field {name!r}")""",
             file_name="tests/data/yidl/yidl_update_a_dataclasses_split/dataclasses_base.yidl",
-            line_number=1306,
+            line_number=1417,
         )
     ),
     "FrozenDelattr": astichi_template(
@@ -1424,7 +1618,7 @@ def __setattr__(self, name, value):
 def __delattr__(self, name):
     raise FrozenInstanceError(f"cannot delete field {name!r}")""",
             file_name="tests/data/yidl/yidl_update_a_dataclasses_split/dataclasses_base.yidl",
-            line_number=1311,
+            line_number=1422,
         )
     ),
 }
@@ -1475,6 +1669,168 @@ ASSEMBLY_CONTRIBUTIONS = {
             BindingSpec(kind="ident", name="class_name", value=ValueRef("ClassName")),
             BindingSpec(
                 kind="external", name="class_name_text", value=ValueRef("ClassName")
+            ),
+        ),
+    ),
+    "DataclassParamsFactoryParam": ContributionSpec(
+        name="DataclassParamsFactoryParam",
+        source_name="FactoryParam",
+        source_kind="resource",
+        build_name="DataclassParamsFactoryParam",
+        index=ValueRef("ClassOrder"),
+        order=ValueRef("ClassOrder"),
+        target=TargetSpec(
+            name="factory_params",
+            paths=(
+                TargetPathSpec(
+                    kind="build",
+                    path=PathSpec(
+                        segments=(
+                            PathSegmentSpec(kind="name", name="Root", indexes=()),
+                        )
+                    ),
+                ),
+            ),
+        ),
+        bindings=(
+            BindingSpec(
+                kind="ident",
+                name="value_name",
+                value=ValueRef("DataclassParamsParamName"),
+            ),
+        ),
+    ),
+    "DataclassFieldsFactoryParam": ContributionSpec(
+        name="DataclassFieldsFactoryParam",
+        source_name="FactoryParam",
+        source_kind="resource",
+        build_name="DataclassFieldsFactoryParam",
+        index=ValueRef("ClassOrder"),
+        order=ValueRef("ClassOrder"),
+        target=TargetSpec(
+            name="factory_params",
+            paths=(
+                TargetPathSpec(
+                    kind="build",
+                    path=PathSpec(
+                        segments=(
+                            PathSegmentSpec(kind="name", name="Root", indexes=()),
+                        )
+                    ),
+                ),
+            ),
+        ),
+        bindings=(
+            BindingSpec(
+                kind="ident",
+                name="value_name",
+                value=ValueRef("DataclassFieldsParamName"),
+            ),
+        ),
+    ),
+    "AnnotationsFactoryParam": ContributionSpec(
+        name="AnnotationsFactoryParam",
+        source_name="FactoryParam",
+        source_kind="resource",
+        build_name="AnnotationsFactoryParam",
+        index=ValueRef("ClassOrder"),
+        order=ValueRef("ClassOrder"),
+        target=TargetSpec(
+            name="factory_params",
+            paths=(
+                TargetPathSpec(
+                    kind="build",
+                    path=PathSpec(
+                        segments=(
+                            PathSegmentSpec(kind="name", name="Root", indexes=()),
+                        )
+                    ),
+                ),
+            ),
+        ),
+        bindings=(
+            BindingSpec(
+                kind="ident", name="value_name", value=ValueRef("AnnotationsParamName")
+            ),
+        ),
+    ),
+    "MatchArgsFactoryParam": ContributionSpec(
+        name="MatchArgsFactoryParam",
+        source_name="FactoryParam",
+        source_kind="resource",
+        build_name="MatchArgsFactoryParam",
+        index=ValueRef("ClassOrder"),
+        order=ValueRef("ClassOrder"),
+        target=TargetSpec(
+            name="factory_params",
+            paths=(
+                TargetPathSpec(
+                    kind="build",
+                    path=PathSpec(
+                        segments=(
+                            PathSegmentSpec(kind="name", name="Root", indexes=()),
+                        )
+                    ),
+                ),
+            ),
+        ),
+        bindings=(
+            BindingSpec(
+                kind="ident", name="value_name", value=ValueRef("MatchArgsParamName")
+            ),
+        ),
+    ),
+    "DefaultValueFactoryParam": ContributionSpec(
+        name="DefaultValueFactoryParam",
+        source_name="FactoryParam",
+        source_kind="resource",
+        build_name="DefaultValueFactoryParam",
+        index=ValueRef("FieldOrder"),
+        order=ValueRef("FieldOrder"),
+        target=TargetSpec(
+            name="factory_params",
+            paths=(
+                TargetPathSpec(
+                    kind="build",
+                    path=PathSpec(
+                        segments=(
+                            PathSegmentSpec(kind="name", name="Root", indexes=()),
+                        )
+                    ),
+                ),
+            ),
+        ),
+        bindings=(
+            BindingSpec(
+                kind="ident", name="value_name", value=ValueRef("DefaultValueParamName")
+            ),
+        ),
+    ),
+    "DefaultFactoryFactoryParam": ContributionSpec(
+        name="DefaultFactoryFactoryParam",
+        source_name="FactoryParam",
+        source_kind="resource",
+        build_name="DefaultFactoryFactoryParam",
+        index=ValueRef("FieldOrder"),
+        order=ValueRef("FieldOrder"),
+        target=TargetSpec(
+            name="factory_params",
+            paths=(
+                TargetPathSpec(
+                    kind="build",
+                    path=PathSpec(
+                        segments=(
+                            PathSegmentSpec(kind="name", name="Root", indexes=()),
+                        )
+                    ),
+                ),
+            ),
+        ),
+        bindings=(
+            BindingSpec(
+                kind="ident",
+                name="value_name",
+                value=ValueRef("DefaultFactoryParamName"),
             ),
         ),
     ),
@@ -1548,7 +1904,9 @@ ASSEMBLY_CONTRIBUTIONS = {
         ),
         bindings=(
             BindingSpec(
-                kind="external", name="match_args", value=ValueRef("MatchArgs")
+                kind="ident",
+                name="match_args_name",
+                value=ValueRef("MatchArgsParamName"),
             ),
         ),
     ),
@@ -1666,7 +2024,11 @@ ASSEMBLY_CONTRIBUTIONS = {
             BindingSpec(
                 kind="external", name="annotation", value=ValueRef("Annotation")
             ),
-            BindingSpec(kind="external", name="default_key", value=ValueRef("FieldId")),
+            BindingSpec(
+                kind="ident",
+                name="default_value_name",
+                value=ValueRef("DefaultValueParamName"),
+            ),
             BindingSpec(kind="external", name="init", value=ValueRef("Init")),
             BindingSpec(kind="external", name="repr", value=ValueRef("Repr")),
             BindingSpec(kind="external", name="compare", value=ValueRef("Compare")),
@@ -1703,7 +2065,11 @@ ASSEMBLY_CONTRIBUTIONS = {
             BindingSpec(
                 kind="external", name="annotation", value=ValueRef("Annotation")
             ),
-            BindingSpec(kind="external", name="default_key", value=ValueRef("FieldId")),
+            BindingSpec(
+                kind="ident",
+                name="default_factory_name",
+                value=ValueRef("DefaultFactoryParamName"),
+            ),
             BindingSpec(kind="external", name="init", value=ValueRef("Init")),
             BindingSpec(kind="external", name="repr", value=ValueRef("Repr")),
             BindingSpec(kind="external", name="compare", value=ValueRef("Compare")),
@@ -1735,7 +2101,11 @@ ASSEMBLY_CONTRIBUTIONS = {
         ),
         bindings=(
             BindingSpec(kind="ident", name="field_name", value=ValueRef("FieldName")),
-            BindingSpec(kind="external", name="default_key", value=ValueRef("FieldId")),
+            BindingSpec(
+                kind="ident",
+                name="default_value_name",
+                value=ValueRef("DefaultValueParamName"),
+            ),
         ),
     ),
     "EmptyDefaultValueContribution": ContributionSpec(
@@ -1871,7 +2241,11 @@ ASSEMBLY_CONTRIBUTIONS = {
             BindingSpec(
                 kind="external", name="annotation", value=ValueRef("Annotation")
             ),
-            BindingSpec(kind="external", name="default_key", value=ValueRef("FieldId")),
+            BindingSpec(
+                kind="ident",
+                name="default_value_name",
+                value=ValueRef("DefaultValueParamName"),
+            ),
         ),
     ),
     "DefaultFactoryParamContribution": ContributionSpec(
@@ -2021,7 +2395,11 @@ ASSEMBLY_CONTRIBUTIONS = {
         ),
         bindings=(
             BindingSpec(kind="ident", name="field_name", value=ValueRef("FieldName")),
-            BindingSpec(kind="external", name="default_key", value=ValueRef("FieldId")),
+            BindingSpec(
+                kind="ident",
+                name="default_factory_name",
+                value=ValueRef("DefaultFactoryParamName"),
+            ),
         ),
     ),
     "EmptyDefaultFactoryGuardContribution": ContributionSpec(
@@ -3132,6 +3510,102 @@ ASSEMBLY_MATCHERS = {
         ),
         default_contribution_name="ClassExport",
         rules=(),
+    ),
+    "DataclassParamsFactoryParamContribution": ContributionMatcherSpec(
+        name="DataclassParamsFactoryParamContribution",
+        inputs=(
+            AssemblyInputSpec(
+                name="facade", collection_name="Facades", collection=None
+            ),
+        ),
+        default_contribution_name="DataclassParamsFactoryParam",
+        rules=(),
+    ),
+    "DataclassFieldsFactoryParamContribution": ContributionMatcherSpec(
+        name="DataclassFieldsFactoryParamContribution",
+        inputs=(
+            AssemblyInputSpec(
+                name="facade", collection_name="Facades", collection=None
+            ),
+        ),
+        default_contribution_name="DataclassFieldsFactoryParam",
+        rules=(),
+    ),
+    "AnnotationsFactoryParamContribution": ContributionMatcherSpec(
+        name="AnnotationsFactoryParamContribution",
+        inputs=(
+            AssemblyInputSpec(
+                name="facade", collection_name="Facades", collection=None
+            ),
+        ),
+        default_contribution_name="AnnotationsFactoryParam",
+        rules=(),
+    ),
+    "MatchArgsFactoryParamContribution": ContributionMatcherSpec(
+        name="MatchArgsFactoryParamContribution",
+        inputs=(
+            AssemblyInputSpec(
+                name="facade", collection_name="Facades", collection=None
+            ),
+        ),
+        default_contribution_name="MatchArgsFactoryParam",
+        rules=(),
+    ),
+    "DefaultValueFactoryParamContribution": ContributionMatcherSpec(
+        name="DefaultValueFactoryParamContribution",
+        inputs=(
+            AssemblyInputSpec(name="field", collection_name="Fields", collection=None),
+            AssemblyInputSpec(
+                name="facade", collection_name="Facades", collection=None
+            ),
+        ),
+        default_contribution_name=None,
+        rules=(
+            ContributionRuleSpec(
+                name="default_value",
+                condition=AndConditionSpec(
+                    items=(
+                        EqConditionSpec(
+                            left=ValueRef("HasDefault"), right=LiteralValueRef(True)
+                        ),
+                        EqConditionSpec(
+                            left=ValueRef("HasDefaultFactory"),
+                            right=LiteralValueRef(False),
+                        ),
+                    )
+                ),
+                contribution_name="DefaultValueFactoryParam",
+                weight=1.0,
+            ),
+        ),
+    ),
+    "DefaultFactoryFactoryParamContribution": ContributionMatcherSpec(
+        name="DefaultFactoryFactoryParamContribution",
+        inputs=(
+            AssemblyInputSpec(name="field", collection_name="Fields", collection=None),
+            AssemblyInputSpec(
+                name="facade", collection_name="Facades", collection=None
+            ),
+        ),
+        default_contribution_name=None,
+        rules=(
+            ContributionRuleSpec(
+                name="default_factory",
+                condition=AndConditionSpec(
+                    items=(
+                        EqConditionSpec(
+                            left=ValueRef("HasDefault"), right=LiteralValueRef(False)
+                        ),
+                        EqConditionSpec(
+                            left=ValueRef("HasDefaultFactory"),
+                            right=LiteralValueRef(True),
+                        ),
+                    )
+                ),
+                contribution_name="DefaultFactoryFactoryParam",
+                weight=1.0,
+            ),
+        ),
     ),
     "SlotsContribution": ContributionMatcherSpec(
         name="SlotsContribution",
@@ -5287,6 +5761,78 @@ ASSEMBLY_EDGES = {
         ),
         matcher_name="FieldDiagnostics",
     ),
+    "ModuleProduction.dataclass_params_factory_params": AssemblyEdgeSpec(
+        name="ModuleProduction.dataclass_params_factory_params",
+        context_inputs=(),
+        from_inputs=(
+            AssemblyInputSpec(
+                name="facade", collection_name="Facades", collection=None
+            ),
+        ),
+        condition=None,
+        matcher_name="DataclassParamsFactoryParamContribution",
+    ),
+    "ModuleProduction.dataclass_fields_factory_params": AssemblyEdgeSpec(
+        name="ModuleProduction.dataclass_fields_factory_params",
+        context_inputs=(),
+        from_inputs=(
+            AssemblyInputSpec(
+                name="facade", collection_name="Facades", collection=None
+            ),
+        ),
+        condition=None,
+        matcher_name="DataclassFieldsFactoryParamContribution",
+    ),
+    "ModuleProduction.annotations_factory_params": AssemblyEdgeSpec(
+        name="ModuleProduction.annotations_factory_params",
+        context_inputs=(),
+        from_inputs=(
+            AssemblyInputSpec(
+                name="facade", collection_name="Facades", collection=None
+            ),
+        ),
+        condition=None,
+        matcher_name="AnnotationsFactoryParamContribution",
+    ),
+    "ModuleProduction.match_args_factory_params": AssemblyEdgeSpec(
+        name="ModuleProduction.match_args_factory_params",
+        context_inputs=(),
+        from_inputs=(
+            AssemblyInputSpec(
+                name="facade", collection_name="Facades", collection=None
+            ),
+        ),
+        condition=None,
+        matcher_name="MatchArgsFactoryParamContribution",
+    ),
+    "ModuleProduction.default_value_factory_params": AssemblyEdgeSpec(
+        name="ModuleProduction.default_value_factory_params",
+        context_inputs=(),
+        from_inputs=(
+            AssemblyInputSpec(
+                name="facade", collection_name="Facades", collection=None
+            ),
+            AssemblyInputSpec(name="field", collection_name="Fields", collection=None),
+        ),
+        condition=EqConditionSpec(
+            left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
+        ),
+        matcher_name="DefaultValueFactoryParamContribution",
+    ),
+    "ModuleProduction.default_factory_factory_params": AssemblyEdgeSpec(
+        name="ModuleProduction.default_factory_factory_params",
+        context_inputs=(),
+        from_inputs=(
+            AssemblyInputSpec(
+                name="facade", collection_name="Facades", collection=None
+            ),
+            AssemblyInputSpec(name="field", collection_name="Fields", collection=None),
+        ),
+        condition=EqConditionSpec(
+            left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
+        ),
+        matcher_name="DefaultFactoryFactoryParamContribution",
+    ),
     "ModuleProduction.classes": AssemblyEdgeSpec(
         name="ModuleProduction.classes",
         context_inputs=(),
@@ -5330,36 +5876,6 @@ ASSEMBLY_EDGES = {
         from_inputs=(),
         condition=None,
         matcher_name="MatchArgsContributions",
-    ),
-    "ClassProduction.annotations": AssemblyEdgeSpec(
-        name="ClassProduction.annotations",
-        context_inputs=(
-            AssemblyInputSpec(
-                name="facade", collection_name="Facades", collection=None
-            ),
-        ),
-        from_inputs=(
-            AssemblyInputSpec(name="field", collection_name="Fields", collection=None),
-        ),
-        condition=EqConditionSpec(
-            left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
-        ),
-        matcher_name="AnnotationContributions",
-    ),
-    "ClassProduction.field_info": AssemblyEdgeSpec(
-        name="ClassProduction.field_info",
-        context_inputs=(
-            AssemblyInputSpec(
-                name="facade", collection_name="Facades", collection=None
-            ),
-        ),
-        from_inputs=(
-            AssemblyInputSpec(name="field", collection_name="Fields", collection=None),
-        ),
-        condition=EqConditionSpec(
-            left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
-        ),
-        matcher_name="FieldInfoContributions",
     ),
     "ClassProduction.field_defaults": AssemblyEdgeSpec(
         name="ClassProduction.field_defaults",
@@ -5790,6 +6306,94 @@ ASSEMBLY_PRODUCTIONS = {
             ),
             InlineApplySpec(
                 edge=AssemblyEdgeSpec(
+                    name="ModuleProduction.dataclass_params_factory_params",
+                    context_inputs=(),
+                    from_inputs=(
+                        AssemblyInputSpec(
+                            name="facade", collection_name="Facades", collection=None
+                        ),
+                    ),
+                    condition=None,
+                    matcher_name="DataclassParamsFactoryParamContribution",
+                )
+            ),
+            InlineApplySpec(
+                edge=AssemblyEdgeSpec(
+                    name="ModuleProduction.dataclass_fields_factory_params",
+                    context_inputs=(),
+                    from_inputs=(
+                        AssemblyInputSpec(
+                            name="facade", collection_name="Facades", collection=None
+                        ),
+                    ),
+                    condition=None,
+                    matcher_name="DataclassFieldsFactoryParamContribution",
+                )
+            ),
+            InlineApplySpec(
+                edge=AssemblyEdgeSpec(
+                    name="ModuleProduction.annotations_factory_params",
+                    context_inputs=(),
+                    from_inputs=(
+                        AssemblyInputSpec(
+                            name="facade", collection_name="Facades", collection=None
+                        ),
+                    ),
+                    condition=None,
+                    matcher_name="AnnotationsFactoryParamContribution",
+                )
+            ),
+            InlineApplySpec(
+                edge=AssemblyEdgeSpec(
+                    name="ModuleProduction.match_args_factory_params",
+                    context_inputs=(),
+                    from_inputs=(
+                        AssemblyInputSpec(
+                            name="facade", collection_name="Facades", collection=None
+                        ),
+                    ),
+                    condition=None,
+                    matcher_name="MatchArgsFactoryParamContribution",
+                )
+            ),
+            InlineApplySpec(
+                edge=AssemblyEdgeSpec(
+                    name="ModuleProduction.default_value_factory_params",
+                    context_inputs=(),
+                    from_inputs=(
+                        AssemblyInputSpec(
+                            name="facade", collection_name="Facades", collection=None
+                        ),
+                        AssemblyInputSpec(
+                            name="field", collection_name="Fields", collection=None
+                        ),
+                    ),
+                    condition=EqConditionSpec(
+                        left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
+                    ),
+                    matcher_name="DefaultValueFactoryParamContribution",
+                )
+            ),
+            InlineApplySpec(
+                edge=AssemblyEdgeSpec(
+                    name="ModuleProduction.default_factory_factory_params",
+                    context_inputs=(),
+                    from_inputs=(
+                        AssemblyInputSpec(
+                            name="facade", collection_name="Facades", collection=None
+                        ),
+                        AssemblyInputSpec(
+                            name="field", collection_name="Fields", collection=None
+                        ),
+                    ),
+                    condition=EqConditionSpec(
+                        left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
+                    ),
+                    matcher_name="DefaultFactoryFactoryParamContribution",
+                )
+            ),
+            InlineApplySpec(
+                edge=AssemblyEdgeSpec(
                     name="ModuleProduction.classes",
                     context_inputs=(),
                     from_inputs=(
@@ -5834,9 +6438,19 @@ ASSEMBLY_PRODUCTIONS = {
                     kind="external", name="module_name", value=ValueRef("ModuleName")
                 ),
                 BindingSpec(
-                    kind="external",
-                    name="dataclass_params",
-                    value=ValueRef("DataclassParams"),
+                    kind="ident",
+                    name="dataclass_params_name",
+                    value=ValueRef("DataclassParamsParamName"),
+                ),
+                BindingSpec(
+                    kind="ident",
+                    name="dataclass_fields_name",
+                    value=ValueRef("DataclassFieldsParamName"),
+                ),
+                BindingSpec(
+                    kind="ident",
+                    name="annotations_name",
+                    value=ValueRef("AnnotationsParamName"),
                 ),
             ),
         ),
@@ -5865,44 +6479,6 @@ ASSEMBLY_PRODUCTIONS = {
                     from_inputs=(),
                     condition=None,
                     matcher_name="MatchArgsContributions",
-                )
-            ),
-            InlineApplySpec(
-                edge=AssemblyEdgeSpec(
-                    name="ClassProduction.annotations",
-                    context_inputs=(
-                        AssemblyInputSpec(
-                            name="facade", collection_name="Facades", collection=None
-                        ),
-                    ),
-                    from_inputs=(
-                        AssemblyInputSpec(
-                            name="field", collection_name="Fields", collection=None
-                        ),
-                    ),
-                    condition=EqConditionSpec(
-                        left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
-                    ),
-                    matcher_name="AnnotationContributions",
-                )
-            ),
-            InlineApplySpec(
-                edge=AssemblyEdgeSpec(
-                    name="ClassProduction.field_info",
-                    context_inputs=(
-                        AssemblyInputSpec(
-                            name="facade", collection_name="Facades", collection=None
-                        ),
-                    ),
-                    from_inputs=(
-                        AssemblyInputSpec(
-                            name="field", collection_name="Fields", collection=None
-                        ),
-                    ),
-                    condition=EqConditionSpec(
-                        left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
-                    ),
-                    matcher_name="FieldInfoContributions",
                 )
             ),
             InlineApplySpec(

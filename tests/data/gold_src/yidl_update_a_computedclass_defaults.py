@@ -80,20 +80,8 @@ def validate_case(sources: Mapping[str, str]) -> None:
     output_prettier_namespace: dict[str, object] = {}
     exec(output_prettier_source, output_prettier_namespace)
 
-    classes = generated_namespace["build_generated_dataclasses"](
-        defaults={"Example.v4": 4},
-        default_factories={
-            "Example.v2": _example_v2_factory,
-            "Example.v3": _example_v3_factory,
-        },
-    )
-    pretty_classes = output_prettier_namespace["build_generated_dataclasses"](
-        defaults={"Example.v4": 4},
-        default_factories={
-            "Example.v2": _example_v2_factory,
-            "Example.v3": _example_v3_factory,
-        },
-    )
+    classes = _build_generated_dataclasses(generated_namespace)
+    pretty_classes = _build_generated_dataclasses(output_prettier_namespace)
 
     example = classes["Example"](10)
     pretty_example = pretty_classes["Example"](10)
@@ -105,8 +93,10 @@ def validate_case(sources: Mapping[str, str]) -> None:
     assert pretty_example.v4 == 4
     assert list(classes["Example"].__dataclass_fields__) == ["v1", "v3", "v4", "v2"]
     assert "locals()" not in output_source
-    assert output_source.index("v2 = _yidl_default_factories['Example.v2']") < (
-        output_source.index("v3 = _yidl_default_factories['Example.v3']")
+    assert "_yidl_defaults" not in output_source
+    assert "_yidl_default_factories" not in output_source
+    assert output_source.index("v2 = _Example_v2_default_factory") < (
+        output_source.index("v3 = _Example_v3_default_factory")
     )
 
 
@@ -125,6 +115,76 @@ def _output_source(decorator_source: str) -> str:
     ).emit_commented()
 
 
+def _build_generated_dataclasses(namespace: Mapping[str, object]) -> object:
+    missing = object()
+
+    def field_info(**kw):
+        return kw
+
+    return namespace["build_generated_dataclasses"](
+        _Example_dataclass_params=None,
+        _Example_dataclass_fields={
+            "v1": field_info(
+                name="v1",
+                type="int",
+                default=missing,
+                default_factory=missing,
+                init=True,
+                repr=True,
+                compare=True,
+                hash=None,
+                kw_only=False,
+                metadata=None,
+                kind="field",
+            ),
+            "v3": field_info(
+                name="v3",
+                type="int",
+                default=missing,
+                default_factory=_example_v3_factory,
+                init=True,
+                repr=True,
+                compare=True,
+                hash=None,
+                kw_only=False,
+                metadata=None,
+                kind="field",
+            ),
+            "v4": field_info(
+                name="v4",
+                type="int",
+                default=4,
+                default_factory=missing,
+                init=False,
+                repr=False,
+                compare=False,
+                hash=None,
+                kw_only=False,
+                metadata=None,
+                kind="field",
+            ),
+            "v2": field_info(
+                name="v2",
+                type="int",
+                default=missing,
+                default_factory=_example_v2_factory,
+                init=True,
+                repr=True,
+                compare=True,
+                hash=None,
+                kw_only=False,
+                metadata=None,
+                kind="field",
+            ),
+        },
+        _Example_annotations={"v1": "int", "v3": "int", "v4": "int", "v2": "int"},
+        _Example_match_args=("v1", "v3", "v2"),
+        _Example_v3_default_factory=_example_v3_factory,
+        _Example_v4_default=4,
+        _Example_v2_default_factory=_example_v2_factory,
+    )
+
+
 def _container(namespace: Mapping[str, object]) -> object:
     builder = namespace["new_builder"]()
     facade = namespace["DataclassFacade"]
@@ -140,6 +200,10 @@ def _container(namespace: Mapping[str, object]) -> object:
             class_order=20,
             module_name="generated_dataclasses",
             match_args=("v1", "v3", "v2"),
+            dataclass_params_param_name="_Example_dataclass_params",
+            dataclass_fields_param_name="_Example_dataclass_fields",
+            annotations_param_name="_Example_annotations",
+            match_args_param_name="_Example_match_args",
         ),
     )
     builder.add(
@@ -162,6 +226,7 @@ def _container(namespace: Mapping[str, object]) -> object:
             annotation="int",
             has_default_factory=True,
             default_factory=_example_v3_factory,
+            default_factory_param_name="_Example_v3_default_factory",
         ),
     )
     builder.add(
@@ -173,6 +238,7 @@ def _container(namespace: Mapping[str, object]) -> object:
             field_order=25,
             annotation="int",
             has_default=True,
+            default_value_param_name="_Example_v4_default",
             init=False,
             repr=False,
             compare=False,
@@ -188,6 +254,7 @@ def _container(namespace: Mapping[str, object]) -> object:
             annotation="int",
             has_default_factory=True,
             default_factory=_example_v2_factory,
+            default_factory_param_name="_Example_v2_default_factory",
         ),
     )
     return namespace["build_container"](builder)

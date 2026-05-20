@@ -1,36 +1,30 @@
 from __future__ import annotations
-_MISSING = object()
 _HAS_DEFAULT_FACTORY = object()
 
 class FrozenInstanceError(AttributeError):
     pass
 
-def _field_info(**kw):
-    return kw
-
-def build_generated_dataclasses(*, defaults=None, default_factories=None):
-    _yidl_defaults = {} if defaults is None else defaults
-    _yidl_default_factories = {} if default_factories is None else default_factories
+def build_generated_dataclasses(*, _Widget_dataclass_params, _Widget_dataclass_fields, _Widget_annotations, _Widget_match_args, _Widget_level_default, _Widget_tags_default_factory, _Widget_scale_default, _Widget_hidden_default, _Widget_kind_default):
 
     class Widget:
         __module__ = 'generated_dataclasses'
-        __dataclass_params__ = {'frozen': True}
-        __dataclass_fields__ = {'count': _field_info(name='count', type='int', default=_MISSING, default_factory=_MISSING, init=True, repr=True, compare=True, hash=None, kw_only=False, metadata=None, kind='field'), 'level': _field_info(name='level', type='int', default=_yidl_defaults['Widget.level'], default_factory=_MISSING, init=True, repr=True, compare=True, hash=None, kw_only=False, metadata=None, kind='field'), 'tags': _field_info(name='tags', type='list[str]', default=_MISSING, default_factory=_yidl_default_factories['Widget.tags'], init=True, repr=True, compare=False, hash=None, kw_only=False, metadata=None, kind='field'), 'scale': _field_info(name='scale', type='int', default=_yidl_defaults['Widget.scale'], default_factory=_MISSING, init=True, repr=True, compare=False, hash=None, kw_only=False, metadata=None, kind='initvar'), 'hidden': _field_info(name='hidden', type='str', default=_yidl_defaults['Widget.hidden'], default_factory=_MISSING, init=False, repr=False, compare=False, hash=None, kw_only=False, metadata=None, kind='field'), 'kind': _field_info(name='kind', type='str', default=_yidl_defaults['Widget.kind'], default_factory=_MISSING, init=False, repr=False, compare=False, hash=None, kw_only=False, metadata=None, kind='classvar')}
-        __annotations__ = {'count': 'int', 'level': 'int', 'tags': 'list[str]', 'scale': 'int', 'hidden': 'str', 'kind': 'str'}
+        __dataclass_params__ = _Widget_dataclass_params
+        __dataclass_fields__ = _Widget_dataclass_fields
+        __annotations__ = _Widget_annotations
         pass
         pass
-        level = _yidl_defaults['Widget.level']
+        level = _Widget_level_default
         pass
         pass
-        hidden = _yidl_defaults['Widget.hidden']
-        kind = _yidl_defaults['Widget.kind']
-        __match_args__ = ('count', 'level', 'tags', 'scale')
+        hidden = _Widget_hidden_default
+        kind = _Widget_kind_default
+        __match_args__ = _Widget_match_args
 
-        def __init__(self, count: 'int', level: 'int'=_yidl_defaults['Widget.level'], tags: 'list[str]'=_HAS_DEFAULT_FACTORY, scale: 'int'=_yidl_defaults['Widget.scale']):
+        def __init__(self, count: 'int', level: 'int'=_Widget_level_default, tags: 'list[str]'=_HAS_DEFAULT_FACTORY, scale: 'int'=_Widget_scale_default):
             pass
             pass
             if tags is _HAS_DEFAULT_FACTORY:
-                tags = _yidl_default_factories['Widget.tags']()
+                tags = _Widget_tags_default_factory()
             pass
             pass
             pass

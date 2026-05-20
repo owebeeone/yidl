@@ -33,6 +33,10 @@ concept DataclassesBase {
     property DataclassParams: object = None
     property SlotNames: object = ()
     property MatchArgs: object = ()
+    property DataclassParamsParamName: str = ""
+    property DataclassFieldsParamName: str = ""
+    property AnnotationsParamName: str = ""
+    property MatchArgsParamName: str = ""
 
     property FieldId: str
     property FieldOwner: str
@@ -42,8 +46,10 @@ concept DataclassesBase {
     property Annotation: object = object
     property HasDefault: bool = False
     property DefaultValue: object = None
+    property DefaultValueParamName: str = ""
     property HasDefaultFactory: bool = False
     property DefaultFactory: object = None
+    property DefaultFactoryParamName: str = ""
     property Init: bool = True
     property Repr: bool = True
     property Compare: bool = True
@@ -73,11 +79,16 @@ concept DataclassesBase {
         DataclassParams
         SlotNames
         MatchArgs
+        DataclassParamsParamName
+        DataclassFieldsParamName
+        AnnotationsParamName
+        MatchArgsParamName
     }
 
     family DataclassFieldSpec {
         common FieldId, FieldOwner, FieldName, FieldOrder, FieldKind, Annotation
-        common HasDefault, DefaultValue, HasDefaultFactory, DefaultFactory
+        common HasDefault, DefaultValue, DefaultValueParamName
+        common HasDefaultFactory, DefaultFactory, DefaultFactoryParamName
         common Init, Repr, Compare, Hash, KwOnly, Metadata
 
         variant InstanceField {
@@ -105,7 +116,6 @@ concept DataclassesBase {
     resource ModuleRoot = code $[
         from __future__ import annotations
 
-        _MISSING = object()
         _HAS_DEFAULT_FACTORY = object()
 
 
@@ -113,29 +123,27 @@ concept DataclassesBase {
             pass
 
 
-        def _field_info(**kw):
-            return kw
-
-
-        def build_generated_dataclasses(*, defaults=None, default_factories=None):
-            _yidl_defaults = {} if defaults is None else defaults
-            _yidl_default_factories = (
-                {} if default_factories is None else default_factories
-            )
-
+        def build_generated_dataclasses(factory_params__astichi_param_hole__):
             astichi_hole(module_body)
 
             return {**astichi_hole(class_exports)}
-    ]$ {
-        keep _yidl_defaults, _yidl_default_factories
-    }
+    ]$
 
     resource ClassShell = template $[
         class class_name__astichi_arg__:
             __module__ = astichi_bind_external(module_name)
-            __dataclass_params__ = astichi_bind_external(dataclass_params)
-            __dataclass_fields__ = {**astichi_hole(field_info_entries)}
-            __annotations__ = {**astichi_hole(annotation_entries)}
+            __dataclass_params__ = astichi_pass(
+                dataclass_params_name__astichi_arg__,
+                outer_bind=True,
+            )
+            __dataclass_fields__ = astichi_pass(
+                dataclass_fields_name__astichi_arg__,
+                outer_bind=True,
+            )
+            __annotations__ = astichi_pass(
+                annotations_name__astichi_arg__,
+                outer_bind=True,
+            )
 
             astichi_hole(slots_decl)
             astichi_hole(field_defaults)
@@ -186,16 +194,52 @@ concept DataclassesBase {
         default -> ClassExport
     }
 
+    matcher DataclassParamsFactoryParamContribution(facade: Facades) -> contribution {
+        default -> DataclassParamsFactoryParam
+    }
+
+    matcher DataclassFieldsFactoryParamContribution(facade: Facades) -> contribution {
+        default -> DataclassFieldsFactoryParam
+    }
+
+    matcher AnnotationsFactoryParamContribution(facade: Facades) -> contribution {
+        default -> AnnotationsFactoryParam
+    }
+
+    matcher MatchArgsFactoryParamContribution(facade: Facades) -> contribution {
+        default -> MatchArgsFactoryParam
+    }
+
+    matcher DefaultValueFactoryParamContribution(field: Fields, facade: Facades) -> contribution {
+        rule default_value when HasDefault == True
+                           and HasDefaultFactory == False
+                           -> DefaultValueFactoryParam
+    }
+
+    matcher DefaultFactoryFactoryParamContribution(field: Fields, facade: Facades) -> contribution {
+        rule default_factory when HasDefault == False
+                             and HasDefaultFactory == True
+                             -> DefaultFactoryFactoryParam
+    }
+
     # -------------------------------------------------------------------------
     # Class body metadata.
     # -------------------------------------------------------------------------
+
+    resource FactoryParam = template $[
+        def astichi_params(*, value_name__astichi_arg__):
+            pass
+    ]$
 
     resource SlotsDecl = template $[
         __slots__ = astichi_bind_external(slot_names)
     ]$
 
     resource MatchArgsDecl = template $[
-        __match_args__ = astichi_bind_external(match_args)
+        __match_args__ = astichi_pass(
+            match_args_name__astichi_arg__,
+            outer_bind=True,
+        )
     ]$
 
     resource AnnotationEntry = template $[
@@ -227,7 +271,7 @@ concept DataclassesBase {
             astichi_bind_external(field_name): _field_info(
                 name=astichi_bind_external(field_name),
                 type=astichi_bind_external(annotation),
-                default=_yidl_defaults[astichi_bind_external(default_key)],
+                default=default_value_name__astichi_arg__,
                 default_factory=_MISSING,
                 init=astichi_bind_external(init),
                 repr=astichi_bind_external(repr),
@@ -239,7 +283,7 @@ concept DataclassesBase {
             )
         }
     ]$ {
-        keep _field_info, _MISSING, _yidl_defaults
+        keep _field_info, _MISSING
     }
 
     resource FieldInfoDefaultFactoryEntry = template $[
@@ -248,9 +292,7 @@ concept DataclassesBase {
                 name=astichi_bind_external(field_name),
                 type=astichi_bind_external(annotation),
                 default=_MISSING,
-                default_factory=_yidl_default_factories[
-                    astichi_bind_external(default_key)
-                ],
+                default_factory=default_factory_name__astichi_arg__,
                 init=astichi_bind_external(init),
                 repr=astichi_bind_external(repr),
                 compare=astichi_bind_external(compare),
@@ -261,13 +303,86 @@ concept DataclassesBase {
             )
         }
     ]$ {
-        keep _field_info, _MISSING, _yidl_default_factories
+        keep _field_info, _MISSING
     }
 
     resource DefaultValueAssignment = template $[
-        field_name__astichi_arg__ = _yidl_defaults[astichi_bind_external(default_key)]
-    ]$ {
-        keep _yidl_defaults
+        field_name__astichi_arg__ = astichi_pass(
+            default_value_name__astichi_arg__,
+            outer_bind=True,
+        )
+    ]$
+
+    contribution DataclassParamsFactoryParam = FactoryParam {
+        as DataclassParamsFactoryParam
+        index ClassOrder
+        order ClassOrder
+
+        target factory_params {
+            build /Root
+        }
+
+        ident value_name = DataclassParamsParamName
+    }
+
+    contribution DataclassFieldsFactoryParam = FactoryParam {
+        as DataclassFieldsFactoryParam
+        index ClassOrder
+        order ClassOrder
+
+        target factory_params {
+            build /Root
+        }
+
+        ident value_name = DataclassFieldsParamName
+    }
+
+    contribution AnnotationsFactoryParam = FactoryParam {
+        as AnnotationsFactoryParam
+        index ClassOrder
+        order ClassOrder
+
+        target factory_params {
+            build /Root
+        }
+
+        ident value_name = AnnotationsParamName
+    }
+
+    contribution MatchArgsFactoryParam = FactoryParam {
+        as MatchArgsFactoryParam
+        index ClassOrder
+        order ClassOrder
+
+        target factory_params {
+            build /Root
+        }
+
+        ident value_name = MatchArgsParamName
+    }
+
+    contribution DefaultValueFactoryParam = FactoryParam {
+        as DefaultValueFactoryParam
+        index FieldOrder
+        order FieldOrder
+
+        target factory_params {
+            build /Root
+        }
+
+        ident value_name = DefaultValueParamName
+    }
+
+    contribution DefaultFactoryFactoryParam = FactoryParam {
+        as DefaultFactoryFactoryParam
+        index FieldOrder
+        order FieldOrder
+
+        target factory_params {
+            build /Root
+        }
+
+        ident value_name = DefaultFactoryParamName
     }
 
     contribution SlotsDeclContribution = SlotsDecl {
@@ -289,7 +404,7 @@ concept DataclassesBase {
             build /ClassDef
         }
 
-        external match_args = MatchArgs
+        ident match_args_name = MatchArgsParamName
     }
 
     contribution EmptyMatchArgsContribution = EmptyStatement {
@@ -342,7 +457,7 @@ concept DataclassesBase {
 
         external field_name = FieldName
         external annotation = Annotation
-        external default_key = FieldId
+        ident default_value_name = DefaultValueParamName
         external init = Init
         external repr = Repr
         external compare = Compare
@@ -363,7 +478,7 @@ concept DataclassesBase {
 
         external field_name = FieldName
         external annotation = Annotation
-        external default_key = FieldId
+        ident default_factory_name = DefaultFactoryParamName
         external init = Init
         external repr = Repr
         external compare = Compare
@@ -383,7 +498,7 @@ concept DataclassesBase {
         }
 
         ident field_name = FieldName
-        external default_key = FieldId
+        ident default_value_name = DefaultValueParamName
     }
 
     contribution EmptyDefaultValueContribution = EmptyStatement {
@@ -466,12 +581,10 @@ concept DataclassesBase {
     resource DefaultParam = template $[
         def astichi_params(
             field_name__astichi_arg__: astichi_bind_external(annotation) =
-                _yidl_defaults[astichi_bind_external(default_key)]
+                default_value_name__astichi_arg__
         ):
             pass
-    ]$ {
-        keep _yidl_defaults
-    }
+    ]$
 
     resource DefaultFactoryParam = template $[
         def astichi_params(
@@ -500,11 +613,9 @@ concept DataclassesBase {
 
     resource DefaultFactoryGuard = template $[
         if astichi_pass(field_name, outer_bind=True) is _HAS_DEFAULT_FACTORY:
-            astichi_pass(field_name, outer_bind=True)._ = _yidl_default_factories[
-                astichi_bind_external(default_key)
-            ]()
+            astichi_pass(field_name, outer_bind=True)._ = default_factory_name__astichi_arg__()
     ]$ {
-        keep _HAS_DEFAULT_FACTORY, _yidl_default_factories
+        keep _HAS_DEFAULT_FACTORY
     }
 
     resource PostInitCall = template $[
@@ -557,7 +668,7 @@ concept DataclassesBase {
 
         ident field_name = FieldName
         external annotation = Annotation
-        external default_key = FieldId
+        ident default_value_name = DefaultValueParamName
     }
 
     contribution DefaultFactoryParamContribution = DefaultFactoryParam {
@@ -629,7 +740,7 @@ concept DataclassesBase {
         }
 
         ident field_name = FieldName
-        external default_key = FieldId
+        ident default_factory_name = DefaultFactoryParamName
     }
 
     contribution EmptyDefaultFactoryGuardContribution = EmptyStatement {
@@ -1375,6 +1486,32 @@ concept DataclassesBase {
             where FieldOwner == ClassId
             using FieldDiagnostics
 
+        apply dataclass_params_factory_params
+            from facade: Facades
+            using DataclassParamsFactoryParamContribution
+
+        apply dataclass_fields_factory_params
+            from facade: Facades
+            using DataclassFieldsFactoryParamContribution
+
+        apply annotations_factory_params
+            from facade: Facades
+            using AnnotationsFactoryParamContribution
+
+        apply match_args_factory_params
+            from facade: Facades
+            using MatchArgsFactoryParamContribution
+
+        apply default_value_factory_params
+            from facade: Facades, field: Fields
+            where FieldOwner == ClassId
+            using DefaultValueFactoryParamContribution
+
+        apply default_factory_factory_params
+            from facade: Facades, field: Fields
+            where FieldOwner == ClassId
+            using DefaultFactoryFactoryParamContribution
+
         apply classes
             from facade: Facades
             using ClassDefinitionContribution
@@ -1388,21 +1525,13 @@ concept DataclassesBase {
         root ClassDef = ClassShell {
             ident class_name = ClassName
             external module_name = ModuleName
-            external dataclass_params = DataclassParams
+            ident dataclass_params_name = DataclassParamsParamName
+            ident dataclass_fields_name = DataclassFieldsParamName
+            ident annotations_name = AnnotationsParamName
         }
 
         apply slots using SlotsContribution
         apply match_args using MatchArgsContributions
-
-        apply annotations
-            from field: Fields
-            where FieldOwner == ClassId
-            using AnnotationContributions
-
-        apply field_info
-            from field: Fields
-            where FieldOwner == ClassId
-            using FieldInfoContributions
 
         apply field_defaults
             from field: Fields

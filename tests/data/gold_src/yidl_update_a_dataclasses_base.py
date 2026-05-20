@@ -65,20 +65,8 @@ def validate_case(sources: Mapping[str, str]) -> None:
     prettier_namespace: dict[str, object] = {}
     exec(prettier_source, prettier_namespace)
 
-    defaults = {
-        "Widget.level": 7,
-        "Widget.hidden": "secret",
-    }
-    default_factories = {"Widget.tags": list}
-
-    classes = generated_namespace["build_generated_dataclasses"](
-        defaults=defaults,
-        default_factories=default_factories,
-    )
-    pretty_classes = prettier_namespace["build_generated_dataclasses"](
-        defaults=defaults,
-        default_factories=default_factories,
-    )
+    classes = _build_generated_dataclasses(generated_namespace)
+    pretty_classes = _build_generated_dataclasses(prettier_namespace)
     widget_class = classes["Widget"]
     pretty_widget_class = pretty_classes["Widget"]
     first = widget_class(3)
@@ -137,6 +125,81 @@ def _output_source(decorator_source: str) -> str:
     ).emit_commented()
 
 
+def _build_generated_dataclasses(namespace: Mapping[str, object]) -> object:
+    missing = object()
+
+    def field_info(**kw):
+        return kw
+
+    return namespace["build_generated_dataclasses"](
+        _Widget_dataclass_params={"frozen": True},
+        _Widget_dataclass_fields={
+            "count": field_info(
+                name="count",
+                type="int",
+                default=missing,
+                default_factory=missing,
+                init=True,
+                repr=True,
+                compare=True,
+                hash=None,
+                kw_only=False,
+                metadata=None,
+                kind="field",
+            ),
+            "level": field_info(
+                name="level",
+                type="int",
+                default=7,
+                default_factory=missing,
+                init=True,
+                repr=True,
+                compare=True,
+                hash=None,
+                kw_only=False,
+                metadata=None,
+                kind="field",
+            ),
+            "tags": field_info(
+                name="tags",
+                type="list[str]",
+                default=missing,
+                default_factory=list,
+                init=True,
+                repr=True,
+                compare=False,
+                hash=None,
+                kw_only=False,
+                metadata=None,
+                kind="field",
+            ),
+            "hidden": field_info(
+                name="hidden",
+                type="str",
+                default="secret",
+                default_factory=missing,
+                init=False,
+                repr=False,
+                compare=False,
+                hash=None,
+                kw_only=False,
+                metadata=None,
+                kind="field",
+            ),
+        },
+        _Widget_annotations={
+            "count": "int",
+            "level": "int",
+            "tags": "list[str]",
+            "hidden": "str",
+        },
+        _Widget_match_args=("count", "level", "tags"),
+        _Widget_level_default=7,
+        _Widget_tags_default_factory=list,
+        _Widget_hidden_default="secret",
+    )
+
+
 def _container(namespace: Mapping[str, object]) -> object:
     builder = namespace["new_builder"]()
     facade = namespace["DataclassFacade"]
@@ -153,6 +216,10 @@ def _container(namespace: Mapping[str, object]) -> object:
             decorator_frozen=True,
             dataclass_params={"frozen": True},
             match_args=("count", "level", "tags"),
+            dataclass_params_param_name="_Widget_dataclass_params",
+            dataclass_fields_param_name="_Widget_dataclass_fields",
+            annotations_param_name="_Widget_annotations",
+            match_args_param_name="_Widget_match_args",
         ),
     )
     builder.add(
@@ -174,6 +241,7 @@ def _container(namespace: Mapping[str, object]) -> object:
             field_order=20,
             annotation="int",
             has_default=True,
+            default_value_param_name="_Widget_level_default",
         ),
     )
     builder.add(
@@ -185,6 +253,7 @@ def _container(namespace: Mapping[str, object]) -> object:
             field_order=30,
             annotation="list[str]",
             has_default_factory=True,
+            default_factory_param_name="_Widget_tags_default_factory",
             compare=False,
         ),
     )
@@ -197,6 +266,7 @@ def _container(namespace: Mapping[str, object]) -> object:
             field_order=40,
             annotation="str",
             has_default=True,
+            default_value_param_name="_Widget_hidden_default",
             init=False,
             repr=False,
             compare=False,
