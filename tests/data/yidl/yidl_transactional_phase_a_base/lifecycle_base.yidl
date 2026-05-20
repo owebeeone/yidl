@@ -34,6 +34,8 @@ concept LifecycleBase {
     property DefaultFactoryParamName: str = ""
     property TxGroupKey: object = None
     property ValueSlotName: str = ""
+    property CurrentSlotName: str = ""
+    property WorkingSlotName: str = ""
 
     record LifecycleClass {
         ClassId
@@ -53,7 +55,7 @@ concept LifecycleBase {
         common FieldId, FieldOwner, FieldName, FieldOrder, FieldKind, Annotation
         common Init, HasDefault, DefaultValue, DefaultValueParamName
         common HasDefaultFactory, DefaultFactory, DefaultFactoryParamName
-        common TxGroupKey, ValueSlotName
+        common TxGroupKey, ValueSlotName, CurrentSlotName, WorkingSlotName
 
         variant PlainField {
         }
@@ -73,6 +75,7 @@ concept LifecycleBase {
     computed collection PlainFields: LifecycleFieldSpec from Fields where FieldKind == "field"
     computed collection InitVarFields: LifecycleFieldSpec from Fields where FieldKind == "initvar"
     computed collection ClassVarFields: LifecycleFieldSpec from Fields where FieldKind == "classvar"
+    computed collection ManagedFields: LifecycleFieldSpec from Fields where FieldKind == "managed"
 
     # -------------------------------------------------------------------------
     # Facade facts.
@@ -138,6 +141,8 @@ concept LifecycleBase {
         FieldOrder
         TxGroupKey
         TxIndex
+        CurrentSlotName
+        WorkingSlotName
     }
 
     collection TransactionalFields: TransactionalField identity FieldId many
@@ -212,6 +217,8 @@ concept LifecycleBase {
                         field_order=field.field_order,
                         tx_group_key=tx_group,
                         tx_index=tx_index,
+                        current_slot_name=field.current_slot_name,
+                        working_slot_name=field.working_slot_name,
                     ),
                     policy=RejectDuplicate,
                 )
@@ -350,6 +357,85 @@ concept LifecycleBase {
         )
     ]$
 
+    resource ManagedCurrentStateAssignment = template $[
+        astichi_pass(state, outer_bind=True).astichi_ref(external=current_slot)._ = astichi_pass(
+            init_value_name__astichi_arg__,
+            outer_bind=True,
+        )
+    ]$
+
+    resource ManagedWorkingStateAssignment = template $[
+        astichi_pass(state, outer_bind=True).astichi_ref(external=working_slot)._ = VOID
+    ]$ {
+        keep VOID
+    }
+
+    resource ManagedDefaultProperty = template $[
+        @property
+        def property_getter_name__astichi_arg__(self):
+            state = self._y_state
+            if state.astichi_ref(external=working_slot) is not VOID:
+                return state.astichi_ref(external=working_slot)
+            return state.astichi_ref(external=current_slot)
+
+        @property_setter_target_name__astichi_arg__.setter
+        def property_setter_name__astichi_arg__(self, value):
+            state = self._y_state
+            state._y_ensure_working_transaction(astichi_bind_external(tx_index))
+            state.astichi_ref(external=working_slot)._ = value
+    ]$ {
+        keep VOID
+    }
+
+    resource ManagedCurrentProperty = template $[
+        @property
+        def property_getter_name__astichi_arg__(self):
+            return self._y_state.astichi_ref(external=current_slot)
+
+        @property_setter_target_name__astichi_arg__.setter
+        def property_setter_name__astichi_arg__(self, value):
+            del value
+            raise AttributeError(
+                "current facade is read-only for transactional field "
+                + astichi_bind_external(field_name)
+            )
+    ]$
+
+    resource ManagedWorkingProperty = template $[
+        @property
+        def property_getter_name__astichi_arg__(self):
+            state = self._y_state
+            if state.astichi_ref(external=working_slot) is not VOID:
+                return state.astichi_ref(external=working_slot)
+            return state.astichi_ref(external=current_slot)
+
+        @property_setter_target_name__astichi_arg__.setter
+        def property_setter_name__astichi_arg__(self, value):
+            state = self._y_state
+            state._y_ensure_working_transaction(astichi_bind_external(tx_index))
+            state.astichi_ref(external=working_slot)._ = value
+    ]$ {
+        keep VOID
+    }
+
+    resource ManagedCommitBranch = template $[
+        if astichi_pass(tx_index, outer_bind=True) == astichi_bind_external(tx_index_value):
+            if astichi_pass(self, outer_bind=True).astichi_ref(external=working_slot) is not VOID:
+                astichi_pass(self, outer_bind=True).astichi_ref(external=current_slot)._ = (
+                    astichi_pass(self, outer_bind=True).astichi_ref(external=working_slot)
+                )
+                astichi_pass(self, outer_bind=True).astichi_ref(external=working_slot)._ = VOID
+    ]$ {
+        keep VOID
+    }
+
+    resource ManagedRollbackBranch = template $[
+        if astichi_pass(tx_index, outer_bind=True) == astichi_bind_external(tx_index_value):
+            astichi_pass(self, outer_bind=True).astichi_ref(external=working_slot)._ = VOID
+    ]$ {
+        keep VOID
+    }
+
     resource ClassBundle = template $[
         class state_class_decl_name__astichi_arg__:
             __slots__ = (
@@ -397,6 +483,59 @@ concept LifecycleBase {
                     self._y_working_ref = weakref.ref(facade)
                 return facade
 
+            def _y_require_active_transaction(self, tx_index):
+                tx_group = self.__yidl_tx_index_to_group__[tx_index]
+                transaction = self._y_transaction_manager.active_transaction_for(tx_group)
+                if transaction is None:
+                    if self._y_working_tx_ids[tx_index] is not None:
+                        raise RuntimeError(
+                            "stale yidl working value without an active transaction"
+                        )
+                    raise RuntimeError("writes require an active yidl transaction")
+                existing_tx_id = self._y_working_tx_ids[tx_index]
+                if existing_tx_id is not None and existing_tx_id != transaction.tx_id:
+                    raise RuntimeError(
+                        "working value belongs to a different yidl transaction"
+                    )
+                return transaction
+
+            def _y_ensure_working_transaction(self, tx_index):
+                transaction = self._y_require_active_transaction(tx_index)
+                if self._y_working_tx_ids[tx_index] is None:
+                    tx_group = self.__yidl_tx_index_to_group__[tx_index]
+                    self._y_working_tx_ids[tx_index] = (
+                        self._y_transaction_manager.enlist(self, tx_group)
+                    )
+                return transaction
+
+            def commit_order_key_for(self, tx_group=DEFAULT_TRANSACTION):
+                del tx_group
+                return ()
+
+            def requires_validation_for(self, tx_group=DEFAULT_TRANSACTION):
+                del tx_group
+                return False
+
+            def validate_commit_for(self, tx_group=DEFAULT_TRANSACTION):
+                del tx_group
+                return True
+
+            def _commit_transaction(self, tx_id, tx_group=DEFAULT_TRANSACTION):
+                tx_index = self.__yidl_tx_group_to_index__[tx_group]
+                if self._y_working_tx_ids[tx_index] != tx_id:
+                    return self._y_get_default_facade()
+                astichi_hole(commit_transaction_body)
+                self._y_working_tx_ids[tx_index] = None
+                return self._y_get_default_facade()
+
+            def _rollback_transaction(self, tx_id, tx_group=DEFAULT_TRANSACTION):
+                tx_index = self.__yidl_tx_group_to_index__[tx_group]
+                if self._y_working_tx_ids[tx_index] != tx_id:
+                    return self._y_get_default_facade()
+                astichi_hole(rollback_transaction_body)
+                self._y_working_tx_ids[tx_index] = None
+                return self._y_get_default_facade()
+
 
         class facade_base_decl_name__astichi_arg__(
             astichi_pass(decorated_cls, outer_bind=True)
@@ -439,6 +578,7 @@ concept LifecycleBase {
             __slots__ = ()
 
             astichi_hole(default_class_body)
+            astichi_hole(default_facade_properties)
 
             def __init__(self, init_params__astichi_param_hole__):
                 state = object.__new__(state_class_ref__astichi_arg__)
@@ -469,14 +609,16 @@ concept LifecycleBase {
             facade_base_current_base_name__astichi_arg__
         ):
             __slots__ = ()
+            astichi_hole(current_facade_properties)
 
 
         class working_facade_class_decl_name__astichi_arg__(
             facade_base_working_base_name__astichi_arg__
         ):
             __slots__ = ()
+            astichi_hole(working_facade_properties)
     ]$ {
-        keep DEFAULT_TRANSACTION, TransactionManager, weakref
+        keep DEFAULT_TRANSACTION, TransactionManager, VOID, weakref
     }
 
     resource ReturnClass = template $[
@@ -685,6 +827,146 @@ concept LifecycleBase {
         ident classvar_value_name = DefaultValueParamName
     }
 
+    contribution ManagedCurrentStateSlot = StateSlotEntry {
+        as ManagedCurrentStateSlot
+        index FieldOrder
+        order FieldOrder
+
+        target state_slots {
+            build /ClassDef
+        }
+
+        external slot_name = CurrentSlotName
+    }
+
+    contribution ManagedWorkingStateSlot = StateSlotEntry {
+        as ManagedWorkingStateSlot
+        index FieldOrder
+        order FieldOrder
+
+        target state_slots {
+            build /ClassDef
+        }
+
+        external slot_name = WorkingSlotName
+    }
+
+    contribution ManagedInitParamDefault = InitParamDefault {
+        as ManagedInitParam
+        index FieldOrder
+        order FieldOrder
+
+        target init_params {
+            build /ClassDef
+        }
+
+        ident param_name = FieldName
+        external annotation = Annotation
+        ident default_value_name = DefaultValueParamName
+    }
+
+    contribution ManagedCurrentInitAssignment = ManagedCurrentStateAssignment {
+        as ManagedCurrentInitAssignment
+        index FieldOrder
+        order FieldOrder
+
+        target state_init_body {
+            build /ClassDef
+        }
+
+        ident init_value_name = FieldName
+        external current_slot = CurrentSlotName
+    }
+
+    contribution ManagedWorkingInitAssignment = ManagedWorkingStateAssignment {
+        as ManagedWorkingInitAssignment
+        index FieldOrder
+        order FieldOrder
+
+        target state_init_body {
+            build /ClassDef
+        }
+
+        external working_slot = WorkingSlotName
+    }
+
+    contribution ManagedDefaultFacadeProperty = ManagedDefaultProperty {
+        as ManagedDefaultFacadeProperty
+        index FieldOrder
+        order FieldOrder
+
+        target default_facade_properties {
+            build /ClassDef
+        }
+
+        ident property_getter_name = FieldName
+        ident property_setter_target_name = FieldName
+        ident property_setter_name = FieldName
+        external current_slot = CurrentSlotName
+        external working_slot = WorkingSlotName
+        external tx_index = TxIndex
+    }
+
+    contribution ManagedCurrentFacadeProperty = ManagedCurrentProperty {
+        as ManagedCurrentFacadeProperty
+        index FieldOrder
+        order FieldOrder
+
+        target current_facade_properties {
+            build /ClassDef
+        }
+
+        ident property_getter_name = FieldName
+        ident property_setter_target_name = FieldName
+        ident property_setter_name = FieldName
+        external current_slot = CurrentSlotName
+        external field_name = FieldName
+    }
+
+    contribution ManagedWorkingFacadeProperty = ManagedWorkingProperty {
+        as ManagedWorkingFacadeProperty
+        index FieldOrder
+        order FieldOrder
+
+        target working_facade_properties {
+            build /ClassDef
+        }
+
+        ident property_getter_name = FieldName
+        ident property_setter_target_name = FieldName
+        ident property_setter_name = FieldName
+        external current_slot = CurrentSlotName
+        external working_slot = WorkingSlotName
+        external tx_index = TxIndex
+    }
+
+    contribution ManagedCommit = ManagedCommitBranch {
+        as ManagedCommit
+        index FieldOrder
+        order FieldOrder
+
+        target commit_transaction_body {
+            build /ClassDef
+        }
+
+        external current_slot = CurrentSlotName
+        external working_slot = WorkingSlotName
+        external tx_index_value = TxIndex
+    }
+
+    contribution ManagedRollback = ManagedRollbackBranch {
+        as ManagedRollback
+        index FieldOrder
+        order FieldOrder
+
+        target rollback_transaction_body {
+            build /ClassDef
+        }
+
+        external working_slot = WorkingSlotName
+        external tx_index_value = TxIndex
+    }
+
     matcher BuilderParamContributions(lifecycle_class: Classes) -> contribution {
         default -> LifecycleDefinitionBuilderParam
     }
@@ -747,6 +1029,48 @@ concept LifecycleBase {
         rule has_default when HasDefault == True -> ClassVarDefault
     }
 
+    matcher ManagedCurrentStateSlotContributions(field: ManagedFields) -> contribution {
+        default -> ManagedCurrentStateSlot
+    }
+
+    matcher ManagedWorkingStateSlotContributions(field: ManagedFields) -> contribution {
+        default -> ManagedWorkingStateSlot
+    }
+
+    matcher ManagedInitParamContributions(field: ManagedFields) -> contribution {
+        rule default_value when Init == True
+                           and HasDefault == True
+                           -> ManagedInitParamDefault
+    }
+
+    matcher ManagedCurrentInitAssignmentContributions(field: ManagedFields) -> contribution {
+        rule init_field when Init == True -> ManagedCurrentInitAssignment
+    }
+
+    matcher ManagedWorkingInitAssignmentContributions(field: ManagedFields) -> contribution {
+        default -> ManagedWorkingInitAssignment
+    }
+
+    matcher ManagedDefaultFacadePropertyContributions(field: IndexedTransactionalFields) -> contribution {
+        default -> ManagedDefaultFacadeProperty
+    }
+
+    matcher ManagedCurrentFacadePropertyContributions(field: IndexedTransactionalFields) -> contribution {
+        default -> ManagedCurrentFacadeProperty
+    }
+
+    matcher ManagedWorkingFacadePropertyContributions(field: IndexedTransactionalFields) -> contribution {
+        default -> ManagedWorkingFacadeProperty
+    }
+
+    matcher ManagedCommitContributions(field: IndexedTransactionalFields) -> contribution {
+        default -> ManagedCommit
+    }
+
+    matcher ManagedRollbackContributions(field: IndexedTransactionalFields) -> contribution {
+        default -> ManagedRollback
+    }
+
     production ModuleProduction -> composable {
         root Root = ModuleRoot
 
@@ -800,6 +1124,16 @@ concept LifecycleBase {
             where FieldOwner == ClassId
             using PlainStateSlotContributions
 
+        apply managed_current_state_slots
+            from field: ManagedFields
+            where FieldOwner == ClassId
+            using ManagedCurrentStateSlotContributions
+
+        apply managed_working_state_slots
+            from field: ManagedFields
+            where FieldOwner == ClassId
+            using ManagedWorkingStateSlotContributions
+
         apply transaction_manager_param
             using TransactionManagerInitParamContributions
 
@@ -818,15 +1152,55 @@ concept LifecycleBase {
             where FieldOwner == ClassId
             using InitVarParamContributions
 
+        apply managed_init_params
+            from field: ManagedFields
+            where FieldOwner == ClassId
+            using ManagedInitParamContributions
+
         apply plain_init_assignments
             from field: PlainFields
             where FieldOwner == ClassId
             using PlainInitAssignmentContributions
 
+        apply managed_current_init_assignments
+            from field: ManagedFields
+            where FieldOwner == ClassId
+            using ManagedCurrentInitAssignmentContributions
+
+        apply managed_working_init_assignments
+            from field: ManagedFields
+            where FieldOwner == ClassId
+            using ManagedWorkingInitAssignmentContributions
+
         apply plain_properties
             from field: PlainFields
             where FieldOwner == ClassId
             using PlainPropertyContributions
+
+        apply managed_default_properties
+            from field: IndexedTransactionalFields
+            where FieldOwner == ClassId
+            using ManagedDefaultFacadePropertyContributions
+
+        apply managed_current_properties
+            from field: IndexedTransactionalFields
+            where FieldOwner == ClassId
+            using ManagedCurrentFacadePropertyContributions
+
+        apply managed_working_properties
+            from field: IndexedTransactionalFields
+            where FieldOwner == ClassId
+            using ManagedWorkingFacadePropertyContributions
+
+        apply managed_commit
+            from field: IndexedTransactionalFields
+            where FieldOwner == ClassId
+            using ManagedCommitContributions
+
+        apply managed_rollback
+            from field: IndexedTransactionalFields
+            where FieldOwner == ClassId
+            using ManagedRollbackContributions
     }
 
     assembly LifecycleModule = ModuleProduction

@@ -104,6 +104,12 @@ _TxGroupKeyProperty = RuntimeProperty(
 _ValueSlotNameProperty = RuntimeProperty(
     "ValueSlotName", str, default="", storage_name="value_slot_name"
 )
+_CurrentSlotNameProperty = RuntimeProperty(
+    "CurrentSlotName", str, default="", storage_name="current_slot_name"
+)
+_WorkingSlotNameProperty = RuntimeProperty(
+    "WorkingSlotName", str, default="", storage_name="working_slot_name"
+)
 _FacadeIdProperty = RuntimeProperty(
     "FacadeId", str, default=REQUIRED, storage_name="facade_id"
 )
@@ -255,6 +261,8 @@ _IndexedTransactionalFieldSpec = RuntimeRecord(
         _FieldOrderProperty,
         _TxGroupKeyProperty,
         _TxIndexProperty,
+        _CurrentSlotNameProperty,
+        _WorkingSlotNameProperty,
     ),
 )
 _InitParameterSpec = RuntimeRecord(
@@ -305,6 +313,8 @@ _PlainFieldSpec = RuntimeRecord(
         _DefaultFactoryParamNameProperty,
         _TxGroupKeyProperty,
         _ValueSlotNameProperty,
+        _CurrentSlotNameProperty,
+        _WorkingSlotNameProperty,
     ),
 )
 _InitVarFieldSpec = RuntimeRecord(
@@ -325,6 +335,8 @@ _InitVarFieldSpec = RuntimeRecord(
         _DefaultFactoryParamNameProperty,
         _TxGroupKeyProperty,
         _ValueSlotNameProperty,
+        _CurrentSlotNameProperty,
+        _WorkingSlotNameProperty,
     ),
 )
 _ClassVarFieldSpec = RuntimeRecord(
@@ -345,6 +357,8 @@ _ClassVarFieldSpec = RuntimeRecord(
         _DefaultFactoryParamNameProperty,
         _TxGroupKeyProperty,
         _ValueSlotNameProperty,
+        _CurrentSlotNameProperty,
+        _WorkingSlotNameProperty,
     ),
 )
 _ManagedFieldSpec = RuntimeRecord(
@@ -365,6 +379,8 @@ _ManagedFieldSpec = RuntimeRecord(
         _DefaultFactoryParamNameProperty,
         _TxGroupKeyProperty,
         _ValueSlotNameProperty,
+        _CurrentSlotNameProperty,
+        _WorkingSlotNameProperty,
     ),
 )
 _LifecycleFieldSpecUnion = RuntimeUnion(
@@ -774,6 +790,8 @@ class IndexedTransactionalField:
         "field_order",
         "tx_group_key",
         "tx_index",
+        "current_slot_name",
+        "working_slot_name",
     )
     __dds_record_spec__ = _IndexedTransactionalFieldSpec
     field_id: str
@@ -782,6 +800,8 @@ class IndexedTransactionalField:
     field_order: int
     tx_group_key: object
     tx_index: int
+    current_slot_name: str
+    working_slot_name: str
 
     def __init__(
         self,
@@ -791,7 +811,9 @@ class IndexedTransactionalField:
         field_name: str,
         field_order: int,
         tx_group_key: object = None,
-        tx_index: int = 0
+        tx_index: int = 0,
+        current_slot_name: str = "",
+        working_slot_name: str = ""
     ):
         if not isinstance(field_id, str):
             raise TypeError("FieldId must be str, got " + type(field_id).__name__)
@@ -809,6 +831,16 @@ class IndexedTransactionalField:
         if not isinstance(tx_index, int):
             raise TypeError("TxIndex must be int, got " + type(tx_index).__name__)
         object.__setattr__(self, "tx_index", tx_index)
+        if not isinstance(current_slot_name, str):
+            raise TypeError(
+                "CurrentSlotName must be str, got " + type(current_slot_name).__name__
+            )
+        object.__setattr__(self, "current_slot_name", current_slot_name)
+        if not isinstance(working_slot_name, str):
+            raise TypeError(
+                "WorkingSlotName must be str, got " + type(working_slot_name).__name__
+            )
+        object.__setattr__(self, "working_slot_name", working_slot_name)
 
     def __setattr__(self, name, value):
         if name in (
@@ -818,6 +850,8 @@ class IndexedTransactionalField:
             "field_order",
             "tx_group_key",
             "tx_index",
+            "current_slot_name",
+            "working_slot_name",
         ):
             raise AttributeError("IndexedTransactionalField records are immutable")
         object.__setattr__(self, name, value)
@@ -830,6 +864,8 @@ class IndexedTransactionalField:
         pieces.append("field_order=" + repr(self.field_order))
         pieces.append("tx_group_key=" + repr(self.tx_group_key))
         pieces.append("tx_index=" + repr(self.tx_index))
+        pieces.append("current_slot_name=" + repr(self.current_slot_name))
+        pieces.append("working_slot_name=" + repr(self.working_slot_name))
         return "IndexedTransactionalField" + "(" + ", ".join(pieces) + ")"
 
 
@@ -1102,6 +1138,8 @@ class PlainField:
         "default_factory_param_name",
         "tx_group_key",
         "value_slot_name",
+        "current_slot_name",
+        "working_slot_name",
     )
     __dds_record_spec__ = _PlainFieldSpec
     field_id: str
@@ -1119,6 +1157,8 @@ class PlainField:
     default_factory_param_name: str
     tx_group_key: object
     value_slot_name: str
+    current_slot_name: str
+    working_slot_name: str
 
     def __init__(
         self,
@@ -1137,7 +1177,9 @@ class PlainField:
         default_factory: object = None,
         default_factory_param_name: str = "",
         tx_group_key: object = None,
-        value_slot_name: str = ""
+        value_slot_name: str = "",
+        current_slot_name: str = "",
+        working_slot_name: str = ""
     ):
         if not isinstance(field_id, str):
             raise TypeError("FieldId must be str, got " + type(field_id).__name__)
@@ -1191,6 +1233,16 @@ class PlainField:
                 "ValueSlotName must be str, got " + type(value_slot_name).__name__
             )
         object.__setattr__(self, "value_slot_name", value_slot_name)
+        if not isinstance(current_slot_name, str):
+            raise TypeError(
+                "CurrentSlotName must be str, got " + type(current_slot_name).__name__
+            )
+        object.__setattr__(self, "current_slot_name", current_slot_name)
+        if not isinstance(working_slot_name, str):
+            raise TypeError(
+                "WorkingSlotName must be str, got " + type(working_slot_name).__name__
+            )
+        object.__setattr__(self, "working_slot_name", working_slot_name)
 
     def __setattr__(self, name, value):
         if name in (
@@ -1209,6 +1261,8 @@ class PlainField:
             "default_factory_param_name",
             "tx_group_key",
             "value_slot_name",
+            "current_slot_name",
+            "working_slot_name",
         ):
             raise AttributeError("PlainField records are immutable")
         object.__setattr__(self, name, value)
@@ -1232,6 +1286,8 @@ class PlainField:
         )
         pieces.append("tx_group_key=" + repr(self.tx_group_key))
         pieces.append("value_slot_name=" + repr(self.value_slot_name))
+        pieces.append("current_slot_name=" + repr(self.current_slot_name))
+        pieces.append("working_slot_name=" + repr(self.working_slot_name))
         return "PlainField" + "(" + ", ".join(pieces) + ")"
 
 
@@ -1255,6 +1311,8 @@ class InitVarField:
         "default_factory_param_name",
         "tx_group_key",
         "value_slot_name",
+        "current_slot_name",
+        "working_slot_name",
     )
     __dds_record_spec__ = _InitVarFieldSpec
     field_id: str
@@ -1272,6 +1330,8 @@ class InitVarField:
     default_factory_param_name: str
     tx_group_key: object
     value_slot_name: str
+    current_slot_name: str
+    working_slot_name: str
 
     def __init__(
         self,
@@ -1290,7 +1350,9 @@ class InitVarField:
         default_factory: object = None,
         default_factory_param_name: str = "",
         tx_group_key: object = None,
-        value_slot_name: str = ""
+        value_slot_name: str = "",
+        current_slot_name: str = "",
+        working_slot_name: str = ""
     ):
         if not isinstance(field_id, str):
             raise TypeError("FieldId must be str, got " + type(field_id).__name__)
@@ -1344,6 +1406,16 @@ class InitVarField:
                 "ValueSlotName must be str, got " + type(value_slot_name).__name__
             )
         object.__setattr__(self, "value_slot_name", value_slot_name)
+        if not isinstance(current_slot_name, str):
+            raise TypeError(
+                "CurrentSlotName must be str, got " + type(current_slot_name).__name__
+            )
+        object.__setattr__(self, "current_slot_name", current_slot_name)
+        if not isinstance(working_slot_name, str):
+            raise TypeError(
+                "WorkingSlotName must be str, got " + type(working_slot_name).__name__
+            )
+        object.__setattr__(self, "working_slot_name", working_slot_name)
 
     def __setattr__(self, name, value):
         if name in (
@@ -1362,6 +1434,8 @@ class InitVarField:
             "default_factory_param_name",
             "tx_group_key",
             "value_slot_name",
+            "current_slot_name",
+            "working_slot_name",
         ):
             raise AttributeError("InitVarField records are immutable")
         object.__setattr__(self, name, value)
@@ -1385,6 +1459,8 @@ class InitVarField:
         )
         pieces.append("tx_group_key=" + repr(self.tx_group_key))
         pieces.append("value_slot_name=" + repr(self.value_slot_name))
+        pieces.append("current_slot_name=" + repr(self.current_slot_name))
+        pieces.append("working_slot_name=" + repr(self.working_slot_name))
         return "InitVarField" + "(" + ", ".join(pieces) + ")"
 
 
@@ -1408,6 +1484,8 @@ class ClassVarField:
         "default_factory_param_name",
         "tx_group_key",
         "value_slot_name",
+        "current_slot_name",
+        "working_slot_name",
     )
     __dds_record_spec__ = _ClassVarFieldSpec
     field_id: str
@@ -1425,6 +1503,8 @@ class ClassVarField:
     default_factory_param_name: str
     tx_group_key: object
     value_slot_name: str
+    current_slot_name: str
+    working_slot_name: str
 
     def __init__(
         self,
@@ -1443,7 +1523,9 @@ class ClassVarField:
         default_factory: object = None,
         default_factory_param_name: str = "",
         tx_group_key: object = None,
-        value_slot_name: str = ""
+        value_slot_name: str = "",
+        current_slot_name: str = "",
+        working_slot_name: str = ""
     ):
         if not isinstance(field_id, str):
             raise TypeError("FieldId must be str, got " + type(field_id).__name__)
@@ -1497,6 +1579,16 @@ class ClassVarField:
                 "ValueSlotName must be str, got " + type(value_slot_name).__name__
             )
         object.__setattr__(self, "value_slot_name", value_slot_name)
+        if not isinstance(current_slot_name, str):
+            raise TypeError(
+                "CurrentSlotName must be str, got " + type(current_slot_name).__name__
+            )
+        object.__setattr__(self, "current_slot_name", current_slot_name)
+        if not isinstance(working_slot_name, str):
+            raise TypeError(
+                "WorkingSlotName must be str, got " + type(working_slot_name).__name__
+            )
+        object.__setattr__(self, "working_slot_name", working_slot_name)
 
     def __setattr__(self, name, value):
         if name in (
@@ -1515,6 +1607,8 @@ class ClassVarField:
             "default_factory_param_name",
             "tx_group_key",
             "value_slot_name",
+            "current_slot_name",
+            "working_slot_name",
         ):
             raise AttributeError("ClassVarField records are immutable")
         object.__setattr__(self, name, value)
@@ -1538,6 +1632,8 @@ class ClassVarField:
         )
         pieces.append("tx_group_key=" + repr(self.tx_group_key))
         pieces.append("value_slot_name=" + repr(self.value_slot_name))
+        pieces.append("current_slot_name=" + repr(self.current_slot_name))
+        pieces.append("working_slot_name=" + repr(self.working_slot_name))
         return "ClassVarField" + "(" + ", ".join(pieces) + ")"
 
 
@@ -1561,6 +1657,8 @@ class ManagedField:
         "default_factory_param_name",
         "tx_group_key",
         "value_slot_name",
+        "current_slot_name",
+        "working_slot_name",
     )
     __dds_record_spec__ = _ManagedFieldSpec
     field_id: str
@@ -1578,6 +1676,8 @@ class ManagedField:
     default_factory_param_name: str
     tx_group_key: object
     value_slot_name: str
+    current_slot_name: str
+    working_slot_name: str
 
     def __init__(
         self,
@@ -1596,7 +1696,9 @@ class ManagedField:
         default_factory: object = None,
         default_factory_param_name: str = "",
         tx_group_key: object = None,
-        value_slot_name: str = ""
+        value_slot_name: str = "",
+        current_slot_name: str = "",
+        working_slot_name: str = ""
     ):
         if not isinstance(field_id, str):
             raise TypeError("FieldId must be str, got " + type(field_id).__name__)
@@ -1650,6 +1752,16 @@ class ManagedField:
                 "ValueSlotName must be str, got " + type(value_slot_name).__name__
             )
         object.__setattr__(self, "value_slot_name", value_slot_name)
+        if not isinstance(current_slot_name, str):
+            raise TypeError(
+                "CurrentSlotName must be str, got " + type(current_slot_name).__name__
+            )
+        object.__setattr__(self, "current_slot_name", current_slot_name)
+        if not isinstance(working_slot_name, str):
+            raise TypeError(
+                "WorkingSlotName must be str, got " + type(working_slot_name).__name__
+            )
+        object.__setattr__(self, "working_slot_name", working_slot_name)
 
     def __setattr__(self, name, value):
         if name in (
@@ -1668,6 +1780,8 @@ class ManagedField:
             "default_factory_param_name",
             "tx_group_key",
             "value_slot_name",
+            "current_slot_name",
+            "working_slot_name",
         ):
             raise AttributeError("ManagedField records are immutable")
         object.__setattr__(self, name, value)
@@ -1691,6 +1805,8 @@ class ManagedField:
         )
         pieces.append("tx_group_key=" + repr(self.tx_group_key))
         pieces.append("value_slot_name=" + repr(self.value_slot_name))
+        pieces.append("current_slot_name=" + repr(self.current_slot_name))
+        pieces.append("working_slot_name=" + repr(self.working_slot_name))
         return "ManagedField" + "(" + ", ".join(pieces) + ")"
 
 
@@ -1758,6 +1874,9 @@ InitVarFieldsCollection = RuntimeComputedCollection(
 ClassVarFieldsCollection = RuntimeComputedCollection(
     "ClassVarFields", source=FieldsCollection, when=(_FieldKindProperty.eq("classvar"),)
 )
+ManagedFieldsCollection = RuntimeComputedCollection(
+    "ManagedFields", source=FieldsCollection, when=(_FieldKindProperty.eq("managed"),)
+)
 _RUNTIME_SPEC = RuntimeContainerSpec(
     collections=(
         ClassesCollection,
@@ -1775,6 +1894,7 @@ _RUNTIME_SPEC = RuntimeContainerSpec(
         PlainFieldsCollection,
         InitVarFieldsCollection,
         ClassVarFieldsCollection,
+        ManagedFieldsCollection,
     ),
     ports=(),
     port_index=None,
@@ -1840,6 +1960,8 @@ def run_build_transaction_facts(builder):
                     field_order=field.field_order,
                     tx_group_key=tx_group,
                     tx_index=tx_index,
+                    current_slot_name=field.current_slot_name,
+                    working_slot_name=field.working_slot_name,
                 ),
                 policy=RejectDuplicate,
             )
@@ -1982,6 +2104,12 @@ ASSEMBLY_PROPERTIES = {
     "ValueSlotName": _YidlSimpleNamespace(
         name="ValueSlotName", storage_name="value_slot_name"
     ),
+    "CurrentSlotName": _YidlSimpleNamespace(
+        name="CurrentSlotName", storage_name="current_slot_name"
+    ),
+    "WorkingSlotName": _YidlSimpleNamespace(
+        name="WorkingSlotName", storage_name="working_slot_name"
+    ),
     "FacadeId": _YidlSimpleNamespace(name="FacadeId", storage_name="facade_id"),
     "FacadeOwner": _YidlSimpleNamespace(
         name="FacadeOwner", storage_name="facade_owner"
@@ -2123,11 +2251,13 @@ for lifecycle_class in classes:
                 field_order=field.field_order,
                 tx_group_key=tx_group,
                 tx_index=tx_index,
+                current_slot_name=field.current_slot_name,
+                working_slot_name=field.working_slot_name,
             ),
             policy=RejectDuplicate,
         )""",
         file_name="tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl",
-        line_number=148,
+        line_number=153,
         keep_names=(
             "ctx",
             "ClassesCollection",
@@ -2158,7 +2288,7 @@ def build_lifecycle_class(decorated_cls, builder_params__astichi_param_hole__):
     astichi_hole(function_body)
     astichi_hole(return_statement)""",
         file_name="tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl",
-        line_number=286,
+        line_number=293,
     ),
     "BuilderParam": astichi_template(
         from_astichi_code(
@@ -2166,7 +2296,7 @@ def build_lifecycle_class(decorated_cls, builder_params__astichi_param_hole__):
 def astichi_params(*, value_name__astichi_arg__):
     pass""",
             file_name="tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl",
-            line_number=303,
+            line_number=310,
         )
     ),
     "TransactionManagerParam": astichi_template(
@@ -2175,14 +2305,14 @@ def astichi_params(*, value_name__astichi_arg__):
 def astichi_params(*, transaction_manager=None):
     pass""",
             file_name="tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl",
-            line_number=308,
+            line_number=315,
         )
     ),
     "StateSlotEntry": astichi_template(
         from_astichi_code(
             "astichi_bind_external(slot_name)",
             file_name="tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl",
-            line_number=313,
+            line_number=320,
         )
     ),
     "InitParamRequired": astichi_template(
@@ -2191,7 +2321,7 @@ def astichi_params(*, transaction_manager=None):
 def astichi_params(param_name__astichi_arg__: astichi_bind_external(annotation)):
     pass""",
             file_name="tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl",
-            line_number=317,
+            line_number=324,
         )
     ),
     "InitParamDefault": astichi_template(
@@ -2203,7 +2333,7 @@ def astichi_params(
 ):
     pass""",
             file_name="tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl",
-            line_number=322,
+            line_number=329,
         )
     ),
     "PlainStateAssignment": astichi_template(
@@ -2214,7 +2344,7 @@ astichi_pass(state, outer_bind=True).astichi_ref(external=state_slot)._ = astich
     outer_bind=True,
 )""",
             file_name="tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl",
-            line_number=330,
+            line_number=337,
         )
     ),
     "PlainProperty": astichi_template(
@@ -2228,7 +2358,7 @@ def property_getter_name__astichi_arg__(self):
 def property_setter_name__astichi_arg__(self, value):
     self._y_state.astichi_ref(external=state_slot)._ = value""",
             file_name="tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl",
-            line_number=337,
+            line_number=344,
         )
     ),
     "ClassVarDefaultAssignment": astichi_template(
@@ -2239,7 +2369,108 @@ classvar_name__astichi_arg__ = astichi_pass(
     outer_bind=True,
 )""",
             file_name="tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl",
-            line_number=347,
+            line_number=354,
+        )
+    ),
+    "ManagedCurrentStateAssignment": astichi_template(
+        from_astichi_code(
+            """\
+astichi_pass(state, outer_bind=True).astichi_ref(external=current_slot)._ = astichi_pass(
+    init_value_name__astichi_arg__,
+    outer_bind=True,
+)""",
+            file_name="tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl",
+            line_number=361,
+        )
+    ),
+    "ManagedWorkingStateAssignment": astichi_template(
+        from_astichi_code(
+            "astichi_pass(state, outer_bind=True).astichi_ref(external=working_slot)._ = VOID",
+            file_name="tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl",
+            line_number=368,
+            keep_names=("VOID",),
+        )
+    ),
+    "ManagedDefaultProperty": astichi_template(
+        from_astichi_code(
+            """\
+@property
+def property_getter_name__astichi_arg__(self):
+    state = self._y_state
+    if state.astichi_ref(external=working_slot) is not VOID:
+        return state.astichi_ref(external=working_slot)
+    return state.astichi_ref(external=current_slot)
+
+@property_setter_target_name__astichi_arg__.setter
+def property_setter_name__astichi_arg__(self, value):
+    state = self._y_state
+    state._y_ensure_working_transaction(astichi_bind_external(tx_index))
+    state.astichi_ref(external=working_slot)._ = value""",
+            file_name="tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl",
+            line_number=374,
+            keep_names=("VOID",),
+        )
+    ),
+    "ManagedCurrentProperty": astichi_template(
+        from_astichi_code(
+            """\
+@property
+def property_getter_name__astichi_arg__(self):
+    return self._y_state.astichi_ref(external=current_slot)
+
+@property_setter_target_name__astichi_arg__.setter
+def property_setter_name__astichi_arg__(self, value):
+    del value
+    raise AttributeError(
+        "current facade is read-only for transactional field "
+        + astichi_bind_external(field_name)
+    )""",
+            file_name="tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl",
+            line_number=391,
+        )
+    ),
+    "ManagedWorkingProperty": astichi_template(
+        from_astichi_code(
+            """\
+@property
+def property_getter_name__astichi_arg__(self):
+    state = self._y_state
+    if state.astichi_ref(external=working_slot) is not VOID:
+        return state.astichi_ref(external=working_slot)
+    return state.astichi_ref(external=current_slot)
+
+@property_setter_target_name__astichi_arg__.setter
+def property_setter_name__astichi_arg__(self, value):
+    state = self._y_state
+    state._y_ensure_working_transaction(astichi_bind_external(tx_index))
+    state.astichi_ref(external=working_slot)._ = value""",
+            file_name="tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl",
+            line_number=405,
+            keep_names=("VOID",),
+        )
+    ),
+    "ManagedCommitBranch": astichi_template(
+        from_astichi_code(
+            """\
+if astichi_pass(tx_index, outer_bind=True) == astichi_bind_external(tx_index_value):
+    if astichi_pass(self, outer_bind=True).astichi_ref(external=working_slot) is not VOID:
+        astichi_pass(self, outer_bind=True).astichi_ref(external=current_slot)._ = (
+            astichi_pass(self, outer_bind=True).astichi_ref(external=working_slot)
+        )
+        astichi_pass(self, outer_bind=True).astichi_ref(external=working_slot)._ = VOID""",
+            file_name="tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl",
+            line_number=422,
+            keep_names=("VOID",),
+        )
+    ),
+    "ManagedRollbackBranch": astichi_template(
+        from_astichi_code(
+            """\
+if astichi_pass(tx_index, outer_bind=True) == astichi_bind_external(tx_index_value):
+    astichi_pass(self, outer_bind=True).astichi_ref(external=working_slot)._ = VOID""",
+            file_name="tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl",
+            line_number=433,
+            keep_names=("VOID",),
         )
     ),
     "ClassBundle": astichi_template(
@@ -2291,6 +2522,59 @@ class state_class_decl_name__astichi_arg__:
             self._y_working_ref = weakref.ref(facade)
         return facade
 
+    def _y_require_active_transaction(self, tx_index):
+        tx_group = self.__yidl_tx_index_to_group__[tx_index]
+        transaction = self._y_transaction_manager.active_transaction_for(tx_group)
+        if transaction is None:
+            if self._y_working_tx_ids[tx_index] is not None:
+                raise RuntimeError(
+                    "stale yidl working value without an active transaction"
+                )
+            raise RuntimeError("writes require an active yidl transaction")
+        existing_tx_id = self._y_working_tx_ids[tx_index]
+        if existing_tx_id is not None and existing_tx_id != transaction.tx_id:
+            raise RuntimeError(
+                "working value belongs to a different yidl transaction"
+            )
+        return transaction
+
+    def _y_ensure_working_transaction(self, tx_index):
+        transaction = self._y_require_active_transaction(tx_index)
+        if self._y_working_tx_ids[tx_index] is None:
+            tx_group = self.__yidl_tx_index_to_group__[tx_index]
+            self._y_working_tx_ids[tx_index] = (
+                self._y_transaction_manager.enlist(self, tx_group)
+            )
+        return transaction
+
+    def commit_order_key_for(self, tx_group=DEFAULT_TRANSACTION):
+        del tx_group
+        return ()
+
+    def requires_validation_for(self, tx_group=DEFAULT_TRANSACTION):
+        del tx_group
+        return False
+
+    def validate_commit_for(self, tx_group=DEFAULT_TRANSACTION):
+        del tx_group
+        return True
+
+    def _commit_transaction(self, tx_id, tx_group=DEFAULT_TRANSACTION):
+        tx_index = self.__yidl_tx_group_to_index__[tx_group]
+        if self._y_working_tx_ids[tx_index] != tx_id:
+            return self._y_get_default_facade()
+        astichi_hole(commit_transaction_body)
+        self._y_working_tx_ids[tx_index] = None
+        return self._y_get_default_facade()
+
+    def _rollback_transaction(self, tx_id, tx_group=DEFAULT_TRANSACTION):
+        tx_index = self.__yidl_tx_group_to_index__[tx_group]
+        if self._y_working_tx_ids[tx_index] != tx_id:
+            return self._y_get_default_facade()
+        astichi_hole(rollback_transaction_body)
+        self._y_working_tx_ids[tx_index] = None
+        return self._y_get_default_facade()
+
 
 class facade_base_decl_name__astichi_arg__(
     astichi_pass(decorated_cls, outer_bind=True)
@@ -2333,6 +2617,7 @@ class default_facade_class_decl_name__astichi_arg__(
     __slots__ = ()
 
     astichi_hole(default_class_body)
+    astichi_hole(default_facade_properties)
 
     def __init__(self, init_params__astichi_param_hole__):
         state = object.__new__(state_class_ref__astichi_arg__)
@@ -2363,15 +2648,17 @@ class current_facade_class_decl_name__astichi_arg__(
     facade_base_current_base_name__astichi_arg__
 ):
     __slots__ = ()
+    astichi_hole(current_facade_properties)
 
 
 class working_facade_class_decl_name__astichi_arg__(
     facade_base_working_base_name__astichi_arg__
 ):
-    __slots__ = ()""",
+    __slots__ = ()
+    astichi_hole(working_facade_properties)""",
             file_name="tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl",
-            line_number=354,
-            keep_names=("DEFAULT_TRANSACTION", "TransactionManager", "weakref"),
+            line_number=440,
+            keep_names=("DEFAULT_TRANSACTION", "TransactionManager", "VOID", "weakref"),
         )
     ),
     "ReturnClass": astichi_template(
@@ -2391,7 +2678,7 @@ return_class_module_ref__astichi_arg__.__module__ = astichi_pass(
 ).__module__
 return return_class_result_ref__astichi_arg__""",
             file_name="tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl",
-            line_number=483,
+            line_number=625,
         )
     ),
 }
@@ -2828,6 +3115,328 @@ ASSEMBLY_CONTRIBUTIONS = {
             ),
         ),
     ),
+    "ManagedCurrentStateSlot": ContributionSpec(
+        name="ManagedCurrentStateSlot",
+        source_name="StateSlotEntry",
+        source_kind="resource",
+        build_name="ManagedCurrentStateSlot",
+        index=ValueRef("FieldOrder"),
+        order=ValueRef("FieldOrder"),
+        target=TargetSpec(
+            name="state_slots",
+            paths=(
+                TargetPathSpec(
+                    kind="build",
+                    path=PathSpec(
+                        segments=(
+                            PathSegmentSpec(kind="name", name="ClassDef", indexes=()),
+                        )
+                    ),
+                ),
+            ),
+        ),
+        bindings=(
+            BindingSpec(
+                kind="external", name="slot_name", value=ValueRef("CurrentSlotName")
+            ),
+        ),
+    ),
+    "ManagedWorkingStateSlot": ContributionSpec(
+        name="ManagedWorkingStateSlot",
+        source_name="StateSlotEntry",
+        source_kind="resource",
+        build_name="ManagedWorkingStateSlot",
+        index=ValueRef("FieldOrder"),
+        order=ValueRef("FieldOrder"),
+        target=TargetSpec(
+            name="state_slots",
+            paths=(
+                TargetPathSpec(
+                    kind="build",
+                    path=PathSpec(
+                        segments=(
+                            PathSegmentSpec(kind="name", name="ClassDef", indexes=()),
+                        )
+                    ),
+                ),
+            ),
+        ),
+        bindings=(
+            BindingSpec(
+                kind="external", name="slot_name", value=ValueRef("WorkingSlotName")
+            ),
+        ),
+    ),
+    "ManagedInitParamDefault": ContributionSpec(
+        name="ManagedInitParamDefault",
+        source_name="InitParamDefault",
+        source_kind="resource",
+        build_name="ManagedInitParam",
+        index=ValueRef("FieldOrder"),
+        order=ValueRef("FieldOrder"),
+        target=TargetSpec(
+            name="init_params",
+            paths=(
+                TargetPathSpec(
+                    kind="build",
+                    path=PathSpec(
+                        segments=(
+                            PathSegmentSpec(kind="name", name="ClassDef", indexes=()),
+                        )
+                    ),
+                ),
+            ),
+        ),
+        bindings=(
+            BindingSpec(kind="ident", name="param_name", value=ValueRef("FieldName")),
+            BindingSpec(
+                kind="external", name="annotation", value=ValueRef("Annotation")
+            ),
+            BindingSpec(
+                kind="ident",
+                name="default_value_name",
+                value=ValueRef("DefaultValueParamName"),
+            ),
+        ),
+    ),
+    "ManagedCurrentInitAssignment": ContributionSpec(
+        name="ManagedCurrentInitAssignment",
+        source_name="ManagedCurrentStateAssignment",
+        source_kind="resource",
+        build_name="ManagedCurrentInitAssignment",
+        index=ValueRef("FieldOrder"),
+        order=ValueRef("FieldOrder"),
+        target=TargetSpec(
+            name="state_init_body",
+            paths=(
+                TargetPathSpec(
+                    kind="build",
+                    path=PathSpec(
+                        segments=(
+                            PathSegmentSpec(kind="name", name="ClassDef", indexes=()),
+                        )
+                    ),
+                ),
+            ),
+        ),
+        bindings=(
+            BindingSpec(
+                kind="ident", name="init_value_name", value=ValueRef("FieldName")
+            ),
+            BindingSpec(
+                kind="external", name="current_slot", value=ValueRef("CurrentSlotName")
+            ),
+        ),
+    ),
+    "ManagedWorkingInitAssignment": ContributionSpec(
+        name="ManagedWorkingInitAssignment",
+        source_name="ManagedWorkingStateAssignment",
+        source_kind="resource",
+        build_name="ManagedWorkingInitAssignment",
+        index=ValueRef("FieldOrder"),
+        order=ValueRef("FieldOrder"),
+        target=TargetSpec(
+            name="state_init_body",
+            paths=(
+                TargetPathSpec(
+                    kind="build",
+                    path=PathSpec(
+                        segments=(
+                            PathSegmentSpec(kind="name", name="ClassDef", indexes=()),
+                        )
+                    ),
+                ),
+            ),
+        ),
+        bindings=(
+            BindingSpec(
+                kind="external", name="working_slot", value=ValueRef("WorkingSlotName")
+            ),
+        ),
+    ),
+    "ManagedDefaultFacadeProperty": ContributionSpec(
+        name="ManagedDefaultFacadeProperty",
+        source_name="ManagedDefaultProperty",
+        source_kind="resource",
+        build_name="ManagedDefaultFacadeProperty",
+        index=ValueRef("FieldOrder"),
+        order=ValueRef("FieldOrder"),
+        target=TargetSpec(
+            name="default_facade_properties",
+            paths=(
+                TargetPathSpec(
+                    kind="build",
+                    path=PathSpec(
+                        segments=(
+                            PathSegmentSpec(kind="name", name="ClassDef", indexes=()),
+                        )
+                    ),
+                ),
+            ),
+        ),
+        bindings=(
+            BindingSpec(
+                kind="ident", name="property_getter_name", value=ValueRef("FieldName")
+            ),
+            BindingSpec(
+                kind="ident",
+                name="property_setter_target_name",
+                value=ValueRef("FieldName"),
+            ),
+            BindingSpec(
+                kind="ident", name="property_setter_name", value=ValueRef("FieldName")
+            ),
+            BindingSpec(
+                kind="external", name="current_slot", value=ValueRef("CurrentSlotName")
+            ),
+            BindingSpec(
+                kind="external", name="working_slot", value=ValueRef("WorkingSlotName")
+            ),
+            BindingSpec(kind="external", name="tx_index", value=ValueRef("TxIndex")),
+        ),
+    ),
+    "ManagedCurrentFacadeProperty": ContributionSpec(
+        name="ManagedCurrentFacadeProperty",
+        source_name="ManagedCurrentProperty",
+        source_kind="resource",
+        build_name="ManagedCurrentFacadeProperty",
+        index=ValueRef("FieldOrder"),
+        order=ValueRef("FieldOrder"),
+        target=TargetSpec(
+            name="current_facade_properties",
+            paths=(
+                TargetPathSpec(
+                    kind="build",
+                    path=PathSpec(
+                        segments=(
+                            PathSegmentSpec(kind="name", name="ClassDef", indexes=()),
+                        )
+                    ),
+                ),
+            ),
+        ),
+        bindings=(
+            BindingSpec(
+                kind="ident", name="property_getter_name", value=ValueRef("FieldName")
+            ),
+            BindingSpec(
+                kind="ident",
+                name="property_setter_target_name",
+                value=ValueRef("FieldName"),
+            ),
+            BindingSpec(
+                kind="ident", name="property_setter_name", value=ValueRef("FieldName")
+            ),
+            BindingSpec(
+                kind="external", name="current_slot", value=ValueRef("CurrentSlotName")
+            ),
+            BindingSpec(
+                kind="external", name="field_name", value=ValueRef("FieldName")
+            ),
+        ),
+    ),
+    "ManagedWorkingFacadeProperty": ContributionSpec(
+        name="ManagedWorkingFacadeProperty",
+        source_name="ManagedWorkingProperty",
+        source_kind="resource",
+        build_name="ManagedWorkingFacadeProperty",
+        index=ValueRef("FieldOrder"),
+        order=ValueRef("FieldOrder"),
+        target=TargetSpec(
+            name="working_facade_properties",
+            paths=(
+                TargetPathSpec(
+                    kind="build",
+                    path=PathSpec(
+                        segments=(
+                            PathSegmentSpec(kind="name", name="ClassDef", indexes=()),
+                        )
+                    ),
+                ),
+            ),
+        ),
+        bindings=(
+            BindingSpec(
+                kind="ident", name="property_getter_name", value=ValueRef("FieldName")
+            ),
+            BindingSpec(
+                kind="ident",
+                name="property_setter_target_name",
+                value=ValueRef("FieldName"),
+            ),
+            BindingSpec(
+                kind="ident", name="property_setter_name", value=ValueRef("FieldName")
+            ),
+            BindingSpec(
+                kind="external", name="current_slot", value=ValueRef("CurrentSlotName")
+            ),
+            BindingSpec(
+                kind="external", name="working_slot", value=ValueRef("WorkingSlotName")
+            ),
+            BindingSpec(kind="external", name="tx_index", value=ValueRef("TxIndex")),
+        ),
+    ),
+    "ManagedCommit": ContributionSpec(
+        name="ManagedCommit",
+        source_name="ManagedCommitBranch",
+        source_kind="resource",
+        build_name="ManagedCommit",
+        index=ValueRef("FieldOrder"),
+        order=ValueRef("FieldOrder"),
+        target=TargetSpec(
+            name="commit_transaction_body",
+            paths=(
+                TargetPathSpec(
+                    kind="build",
+                    path=PathSpec(
+                        segments=(
+                            PathSegmentSpec(kind="name", name="ClassDef", indexes=()),
+                        )
+                    ),
+                ),
+            ),
+        ),
+        bindings=(
+            BindingSpec(
+                kind="external", name="current_slot", value=ValueRef("CurrentSlotName")
+            ),
+            BindingSpec(
+                kind="external", name="working_slot", value=ValueRef("WorkingSlotName")
+            ),
+            BindingSpec(
+                kind="external", name="tx_index_value", value=ValueRef("TxIndex")
+            ),
+        ),
+    ),
+    "ManagedRollback": ContributionSpec(
+        name="ManagedRollback",
+        source_name="ManagedRollbackBranch",
+        source_kind="resource",
+        build_name="ManagedRollback",
+        index=ValueRef("FieldOrder"),
+        order=ValueRef("FieldOrder"),
+        target=TargetSpec(
+            name="rollback_transaction_body",
+            paths=(
+                TargetPathSpec(
+                    kind="build",
+                    path=PathSpec(
+                        segments=(
+                            PathSegmentSpec(kind="name", name="ClassDef", indexes=()),
+                        )
+                    ),
+                ),
+            ),
+        ),
+        bindings=(
+            BindingSpec(
+                kind="external", name="working_slot", value=ValueRef("WorkingSlotName")
+            ),
+            BindingSpec(
+                kind="external", name="tx_index_value", value=ValueRef("TxIndex")
+            ),
+        ),
+    ),
 }
 ASSEMBLY_MATCHERS = {
     "BuilderParamContributions": ContributionMatcherSpec(
@@ -3047,6 +3656,141 @@ ASSEMBLY_MATCHERS = {
             ),
         ),
     ),
+    "ManagedCurrentStateSlotContributions": ContributionMatcherSpec(
+        name="ManagedCurrentStateSlotContributions",
+        inputs=(
+            AssemblyInputSpec(
+                name="field", collection_name="ManagedFields", collection=None
+            ),
+        ),
+        default_contribution_name="ManagedCurrentStateSlot",
+        rules=(),
+    ),
+    "ManagedWorkingStateSlotContributions": ContributionMatcherSpec(
+        name="ManagedWorkingStateSlotContributions",
+        inputs=(
+            AssemblyInputSpec(
+                name="field", collection_name="ManagedFields", collection=None
+            ),
+        ),
+        default_contribution_name="ManagedWorkingStateSlot",
+        rules=(),
+    ),
+    "ManagedInitParamContributions": ContributionMatcherSpec(
+        name="ManagedInitParamContributions",
+        inputs=(
+            AssemblyInputSpec(
+                name="field", collection_name="ManagedFields", collection=None
+            ),
+        ),
+        default_contribution_name=None,
+        rules=(
+            ContributionRuleSpec(
+                name="default_value",
+                condition=AndConditionSpec(
+                    items=(
+                        EqConditionSpec(
+                            left=ValueRef("Init"), right=LiteralValueRef(True)
+                        ),
+                        EqConditionSpec(
+                            left=ValueRef("HasDefault"), right=LiteralValueRef(True)
+                        ),
+                    )
+                ),
+                contribution_name="ManagedInitParamDefault",
+                weight=1.0,
+            ),
+        ),
+    ),
+    "ManagedCurrentInitAssignmentContributions": ContributionMatcherSpec(
+        name="ManagedCurrentInitAssignmentContributions",
+        inputs=(
+            AssemblyInputSpec(
+                name="field", collection_name="ManagedFields", collection=None
+            ),
+        ),
+        default_contribution_name=None,
+        rules=(
+            ContributionRuleSpec(
+                name="init_field",
+                condition=EqConditionSpec(
+                    left=ValueRef("Init"), right=LiteralValueRef(True)
+                ),
+                contribution_name="ManagedCurrentInitAssignment",
+                weight=1.0,
+            ),
+        ),
+    ),
+    "ManagedWorkingInitAssignmentContributions": ContributionMatcherSpec(
+        name="ManagedWorkingInitAssignmentContributions",
+        inputs=(
+            AssemblyInputSpec(
+                name="field", collection_name="ManagedFields", collection=None
+            ),
+        ),
+        default_contribution_name="ManagedWorkingInitAssignment",
+        rules=(),
+    ),
+    "ManagedDefaultFacadePropertyContributions": ContributionMatcherSpec(
+        name="ManagedDefaultFacadePropertyContributions",
+        inputs=(
+            AssemblyInputSpec(
+                name="field",
+                collection_name="IndexedTransactionalFields",
+                collection=None,
+            ),
+        ),
+        default_contribution_name="ManagedDefaultFacadeProperty",
+        rules=(),
+    ),
+    "ManagedCurrentFacadePropertyContributions": ContributionMatcherSpec(
+        name="ManagedCurrentFacadePropertyContributions",
+        inputs=(
+            AssemblyInputSpec(
+                name="field",
+                collection_name="IndexedTransactionalFields",
+                collection=None,
+            ),
+        ),
+        default_contribution_name="ManagedCurrentFacadeProperty",
+        rules=(),
+    ),
+    "ManagedWorkingFacadePropertyContributions": ContributionMatcherSpec(
+        name="ManagedWorkingFacadePropertyContributions",
+        inputs=(
+            AssemblyInputSpec(
+                name="field",
+                collection_name="IndexedTransactionalFields",
+                collection=None,
+            ),
+        ),
+        default_contribution_name="ManagedWorkingFacadeProperty",
+        rules=(),
+    ),
+    "ManagedCommitContributions": ContributionMatcherSpec(
+        name="ManagedCommitContributions",
+        inputs=(
+            AssemblyInputSpec(
+                name="field",
+                collection_name="IndexedTransactionalFields",
+                collection=None,
+            ),
+        ),
+        default_contribution_name="ManagedCommit",
+        rules=(),
+    ),
+    "ManagedRollbackContributions": ContributionMatcherSpec(
+        name="ManagedRollbackContributions",
+        inputs=(
+            AssemblyInputSpec(
+                name="field",
+                collection_name="IndexedTransactionalFields",
+                collection=None,
+            ),
+        ),
+        default_contribution_name="ManagedRollback",
+        rules=(),
+    ),
 }
 ASSEMBLY_EDGES = {
     "ModuleProduction.lifecycle_definition_params": AssemblyEdgeSpec(
@@ -3130,6 +3874,40 @@ ASSEMBLY_EDGES = {
         ),
         matcher_name="PlainStateSlotContributions",
     ),
+    "ClassProduction.managed_current_state_slots": AssemblyEdgeSpec(
+        name="ClassProduction.managed_current_state_slots",
+        context_inputs=(
+            AssemblyInputSpec(
+                name="lifecycle_class", collection_name="Classes", collection=None
+            ),
+        ),
+        from_inputs=(
+            AssemblyInputSpec(
+                name="field", collection_name="ManagedFields", collection=None
+            ),
+        ),
+        condition=EqConditionSpec(
+            left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
+        ),
+        matcher_name="ManagedCurrentStateSlotContributions",
+    ),
+    "ClassProduction.managed_working_state_slots": AssemblyEdgeSpec(
+        name="ClassProduction.managed_working_state_slots",
+        context_inputs=(
+            AssemblyInputSpec(
+                name="lifecycle_class", collection_name="Classes", collection=None
+            ),
+        ),
+        from_inputs=(
+            AssemblyInputSpec(
+                name="field", collection_name="ManagedFields", collection=None
+            ),
+        ),
+        condition=EqConditionSpec(
+            left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
+        ),
+        matcher_name="ManagedWorkingStateSlotContributions",
+    ),
     "ClassProduction.transaction_manager_param": AssemblyEdgeSpec(
         name="ClassProduction.transaction_manager_param",
         context_inputs=(
@@ -3192,6 +3970,23 @@ ASSEMBLY_EDGES = {
         ),
         matcher_name="InitVarParamContributions",
     ),
+    "ClassProduction.managed_init_params": AssemblyEdgeSpec(
+        name="ClassProduction.managed_init_params",
+        context_inputs=(
+            AssemblyInputSpec(
+                name="lifecycle_class", collection_name="Classes", collection=None
+            ),
+        ),
+        from_inputs=(
+            AssemblyInputSpec(
+                name="field", collection_name="ManagedFields", collection=None
+            ),
+        ),
+        condition=EqConditionSpec(
+            left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
+        ),
+        matcher_name="ManagedInitParamContributions",
+    ),
     "ClassProduction.plain_init_assignments": AssemblyEdgeSpec(
         name="ClassProduction.plain_init_assignments",
         context_inputs=(
@@ -3209,6 +4004,40 @@ ASSEMBLY_EDGES = {
         ),
         matcher_name="PlainInitAssignmentContributions",
     ),
+    "ClassProduction.managed_current_init_assignments": AssemblyEdgeSpec(
+        name="ClassProduction.managed_current_init_assignments",
+        context_inputs=(
+            AssemblyInputSpec(
+                name="lifecycle_class", collection_name="Classes", collection=None
+            ),
+        ),
+        from_inputs=(
+            AssemblyInputSpec(
+                name="field", collection_name="ManagedFields", collection=None
+            ),
+        ),
+        condition=EqConditionSpec(
+            left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
+        ),
+        matcher_name="ManagedCurrentInitAssignmentContributions",
+    ),
+    "ClassProduction.managed_working_init_assignments": AssemblyEdgeSpec(
+        name="ClassProduction.managed_working_init_assignments",
+        context_inputs=(
+            AssemblyInputSpec(
+                name="lifecycle_class", collection_name="Classes", collection=None
+            ),
+        ),
+        from_inputs=(
+            AssemblyInputSpec(
+                name="field", collection_name="ManagedFields", collection=None
+            ),
+        ),
+        condition=EqConditionSpec(
+            left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
+        ),
+        matcher_name="ManagedWorkingInitAssignmentContributions",
+    ),
     "ClassProduction.plain_properties": AssemblyEdgeSpec(
         name="ClassProduction.plain_properties",
         context_inputs=(
@@ -3225,6 +4054,101 @@ ASSEMBLY_EDGES = {
             left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
         ),
         matcher_name="PlainPropertyContributions",
+    ),
+    "ClassProduction.managed_default_properties": AssemblyEdgeSpec(
+        name="ClassProduction.managed_default_properties",
+        context_inputs=(
+            AssemblyInputSpec(
+                name="lifecycle_class", collection_name="Classes", collection=None
+            ),
+        ),
+        from_inputs=(
+            AssemblyInputSpec(
+                name="field",
+                collection_name="IndexedTransactionalFields",
+                collection=None,
+            ),
+        ),
+        condition=EqConditionSpec(
+            left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
+        ),
+        matcher_name="ManagedDefaultFacadePropertyContributions",
+    ),
+    "ClassProduction.managed_current_properties": AssemblyEdgeSpec(
+        name="ClassProduction.managed_current_properties",
+        context_inputs=(
+            AssemblyInputSpec(
+                name="lifecycle_class", collection_name="Classes", collection=None
+            ),
+        ),
+        from_inputs=(
+            AssemblyInputSpec(
+                name="field",
+                collection_name="IndexedTransactionalFields",
+                collection=None,
+            ),
+        ),
+        condition=EqConditionSpec(
+            left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
+        ),
+        matcher_name="ManagedCurrentFacadePropertyContributions",
+    ),
+    "ClassProduction.managed_working_properties": AssemblyEdgeSpec(
+        name="ClassProduction.managed_working_properties",
+        context_inputs=(
+            AssemblyInputSpec(
+                name="lifecycle_class", collection_name="Classes", collection=None
+            ),
+        ),
+        from_inputs=(
+            AssemblyInputSpec(
+                name="field",
+                collection_name="IndexedTransactionalFields",
+                collection=None,
+            ),
+        ),
+        condition=EqConditionSpec(
+            left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
+        ),
+        matcher_name="ManagedWorkingFacadePropertyContributions",
+    ),
+    "ClassProduction.managed_commit": AssemblyEdgeSpec(
+        name="ClassProduction.managed_commit",
+        context_inputs=(
+            AssemblyInputSpec(
+                name="lifecycle_class", collection_name="Classes", collection=None
+            ),
+        ),
+        from_inputs=(
+            AssemblyInputSpec(
+                name="field",
+                collection_name="IndexedTransactionalFields",
+                collection=None,
+            ),
+        ),
+        condition=EqConditionSpec(
+            left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
+        ),
+        matcher_name="ManagedCommitContributions",
+    ),
+    "ClassProduction.managed_rollback": AssemblyEdgeSpec(
+        name="ClassProduction.managed_rollback",
+        context_inputs=(
+            AssemblyInputSpec(
+                name="lifecycle_class", collection_name="Classes", collection=None
+            ),
+        ),
+        from_inputs=(
+            AssemblyInputSpec(
+                name="field",
+                collection_name="IndexedTransactionalFields",
+                collection=None,
+            ),
+        ),
+        condition=EqConditionSpec(
+            left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
+        ),
+        matcher_name="ManagedRollbackContributions",
     ),
 }
 ASSEMBLY_PRODUCTIONS = {
@@ -3440,6 +4364,52 @@ ASSEMBLY_PRODUCTIONS = {
             ),
             InlineApplySpec(
                 edge=AssemblyEdgeSpec(
+                    name="ClassProduction.managed_current_state_slots",
+                    context_inputs=(
+                        AssemblyInputSpec(
+                            name="lifecycle_class",
+                            collection_name="Classes",
+                            collection=None,
+                        ),
+                    ),
+                    from_inputs=(
+                        AssemblyInputSpec(
+                            name="field",
+                            collection_name="ManagedFields",
+                            collection=None,
+                        ),
+                    ),
+                    condition=EqConditionSpec(
+                        left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
+                    ),
+                    matcher_name="ManagedCurrentStateSlotContributions",
+                )
+            ),
+            InlineApplySpec(
+                edge=AssemblyEdgeSpec(
+                    name="ClassProduction.managed_working_state_slots",
+                    context_inputs=(
+                        AssemblyInputSpec(
+                            name="lifecycle_class",
+                            collection_name="Classes",
+                            collection=None,
+                        ),
+                    ),
+                    from_inputs=(
+                        AssemblyInputSpec(
+                            name="field",
+                            collection_name="ManagedFields",
+                            collection=None,
+                        ),
+                    ),
+                    condition=EqConditionSpec(
+                        left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
+                    ),
+                    matcher_name="ManagedWorkingStateSlotContributions",
+                )
+            ),
+            InlineApplySpec(
+                edge=AssemblyEdgeSpec(
                     name="ClassProduction.transaction_manager_param",
                     context_inputs=(
                         AssemblyInputSpec(
@@ -3522,6 +4492,29 @@ ASSEMBLY_PRODUCTIONS = {
             ),
             InlineApplySpec(
                 edge=AssemblyEdgeSpec(
+                    name="ClassProduction.managed_init_params",
+                    context_inputs=(
+                        AssemblyInputSpec(
+                            name="lifecycle_class",
+                            collection_name="Classes",
+                            collection=None,
+                        ),
+                    ),
+                    from_inputs=(
+                        AssemblyInputSpec(
+                            name="field",
+                            collection_name="ManagedFields",
+                            collection=None,
+                        ),
+                    ),
+                    condition=EqConditionSpec(
+                        left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
+                    ),
+                    matcher_name="ManagedInitParamContributions",
+                )
+            ),
+            InlineApplySpec(
+                edge=AssemblyEdgeSpec(
                     name="ClassProduction.plain_init_assignments",
                     context_inputs=(
                         AssemblyInputSpec(
@@ -3543,6 +4536,52 @@ ASSEMBLY_PRODUCTIONS = {
             ),
             InlineApplySpec(
                 edge=AssemblyEdgeSpec(
+                    name="ClassProduction.managed_current_init_assignments",
+                    context_inputs=(
+                        AssemblyInputSpec(
+                            name="lifecycle_class",
+                            collection_name="Classes",
+                            collection=None,
+                        ),
+                    ),
+                    from_inputs=(
+                        AssemblyInputSpec(
+                            name="field",
+                            collection_name="ManagedFields",
+                            collection=None,
+                        ),
+                    ),
+                    condition=EqConditionSpec(
+                        left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
+                    ),
+                    matcher_name="ManagedCurrentInitAssignmentContributions",
+                )
+            ),
+            InlineApplySpec(
+                edge=AssemblyEdgeSpec(
+                    name="ClassProduction.managed_working_init_assignments",
+                    context_inputs=(
+                        AssemblyInputSpec(
+                            name="lifecycle_class",
+                            collection_name="Classes",
+                            collection=None,
+                        ),
+                    ),
+                    from_inputs=(
+                        AssemblyInputSpec(
+                            name="field",
+                            collection_name="ManagedFields",
+                            collection=None,
+                        ),
+                    ),
+                    condition=EqConditionSpec(
+                        left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
+                    ),
+                    matcher_name="ManagedWorkingInitAssignmentContributions",
+                )
+            ),
+            InlineApplySpec(
+                edge=AssemblyEdgeSpec(
                     name="ClassProduction.plain_properties",
                     context_inputs=(
                         AssemblyInputSpec(
@@ -3560,6 +4599,121 @@ ASSEMBLY_PRODUCTIONS = {
                         left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
                     ),
                     matcher_name="PlainPropertyContributions",
+                )
+            ),
+            InlineApplySpec(
+                edge=AssemblyEdgeSpec(
+                    name="ClassProduction.managed_default_properties",
+                    context_inputs=(
+                        AssemblyInputSpec(
+                            name="lifecycle_class",
+                            collection_name="Classes",
+                            collection=None,
+                        ),
+                    ),
+                    from_inputs=(
+                        AssemblyInputSpec(
+                            name="field",
+                            collection_name="IndexedTransactionalFields",
+                            collection=None,
+                        ),
+                    ),
+                    condition=EqConditionSpec(
+                        left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
+                    ),
+                    matcher_name="ManagedDefaultFacadePropertyContributions",
+                )
+            ),
+            InlineApplySpec(
+                edge=AssemblyEdgeSpec(
+                    name="ClassProduction.managed_current_properties",
+                    context_inputs=(
+                        AssemblyInputSpec(
+                            name="lifecycle_class",
+                            collection_name="Classes",
+                            collection=None,
+                        ),
+                    ),
+                    from_inputs=(
+                        AssemblyInputSpec(
+                            name="field",
+                            collection_name="IndexedTransactionalFields",
+                            collection=None,
+                        ),
+                    ),
+                    condition=EqConditionSpec(
+                        left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
+                    ),
+                    matcher_name="ManagedCurrentFacadePropertyContributions",
+                )
+            ),
+            InlineApplySpec(
+                edge=AssemblyEdgeSpec(
+                    name="ClassProduction.managed_working_properties",
+                    context_inputs=(
+                        AssemblyInputSpec(
+                            name="lifecycle_class",
+                            collection_name="Classes",
+                            collection=None,
+                        ),
+                    ),
+                    from_inputs=(
+                        AssemblyInputSpec(
+                            name="field",
+                            collection_name="IndexedTransactionalFields",
+                            collection=None,
+                        ),
+                    ),
+                    condition=EqConditionSpec(
+                        left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
+                    ),
+                    matcher_name="ManagedWorkingFacadePropertyContributions",
+                )
+            ),
+            InlineApplySpec(
+                edge=AssemblyEdgeSpec(
+                    name="ClassProduction.managed_commit",
+                    context_inputs=(
+                        AssemblyInputSpec(
+                            name="lifecycle_class",
+                            collection_name="Classes",
+                            collection=None,
+                        ),
+                    ),
+                    from_inputs=(
+                        AssemblyInputSpec(
+                            name="field",
+                            collection_name="IndexedTransactionalFields",
+                            collection=None,
+                        ),
+                    ),
+                    condition=EqConditionSpec(
+                        left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
+                    ),
+                    matcher_name="ManagedCommitContributions",
+                )
+            ),
+            InlineApplySpec(
+                edge=AssemblyEdgeSpec(
+                    name="ClassProduction.managed_rollback",
+                    context_inputs=(
+                        AssemblyInputSpec(
+                            name="lifecycle_class",
+                            collection_name="Classes",
+                            collection=None,
+                        ),
+                    ),
+                    from_inputs=(
+                        AssemblyInputSpec(
+                            name="field",
+                            collection_name="IndexedTransactionalFields",
+                            collection=None,
+                        ),
+                    ),
+                    condition=EqConditionSpec(
+                        left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
+                    ),
+                    matcher_name="ManagedRollbackContributions",
                 )
             ),
         ),

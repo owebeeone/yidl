@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Callable
 from collections.abc import Mapping
 from pathlib import Path
 
@@ -83,6 +84,7 @@ def _container(namespace: Mapping[str, object]) -> object:
     plain_field = namespace["PlainField"]
     initvar_field = namespace["InitVarField"]
     classvar_field = namespace["ClassVarField"]
+    managed_field = namespace["ManagedField"]
 
     builder.add(
         classes,
@@ -139,6 +141,37 @@ def _container(namespace: Mapping[str, object]) -> object:
             default_value_param_name="_Counter_KIND_default",
         ),
     )
+    builder.add(
+        fields,
+        managed_field(
+            field_id="Counter.count",
+            field_owner="Counter",
+            field_name="count",
+            field_order=40,
+            field_kind="managed",
+            annotation="int",
+            has_default=True,
+            default_value_param_name="_Counter_count_default",
+            current_slot_name="_y_count_current",
+            working_slot_name="_y_count_working",
+        ),
+    )
+    builder.add(
+        fields,
+        managed_field(
+            field_id="Counter.audit_count",
+            field_owner="Counter",
+            field_name="audit_count",
+            field_order=50,
+            field_kind="managed",
+            annotation="int",
+            has_default=True,
+            default_value_param_name="_Counter_audit_count_default",
+            tx_group_key="audit",
+            current_slot_name="_y_audit_count_current",
+            working_slot_name="_y_audit_count_working",
+        ),
+    )
     return namespace["build_container"](builder)
 
 
@@ -155,6 +188,8 @@ def _assert_generated_class(namespace: Mapping[str, object]) -> None:
         _Counter_plain_default=3,
         _Counter_seed_default=2,
         _Counter_KIND_default="counter",
+        _Counter_count_default=1,
+        _Counter_audit_count_default=10,
     )
 
     assert generated.__name__ == "Counter"
@@ -194,8 +229,59 @@ def _assert_generated_class(namespace: Mapping[str, object]) -> None:
     assert not hasattr(explicit, "seed")
     assert not hasattr(explicit._y_state, "_y_KIND_value")
 
+    assert counter.count == 1
+    assert current.count == 1
+    assert working.count == 1
+    assert counter.audit_count == 10
+    assert current.audit_count == 10
+    assert working.audit_count == 10
+
+    _assert_raises(RuntimeError, lambda: setattr(counter, "count", 99))
+    _assert_raises(AttributeError, lambda: setattr(current, "count", 99))
+
+    with counter.begin(DEFAULT_TRANSACTION):
+        counter.count = 11
+        assert counter.count == 11
+        assert working.count == 11
+        assert current.count == 1
+        assert counter.audit_count == 10
+    assert counter.count == 11
+    assert current.count == 11
+    assert working.count == 11
+
+    try:
+        with counter.begin(DEFAULT_TRANSACTION):
+            working.count = 12
+            assert counter.count == 12
+            raise ValueError("rollback")
+    except ValueError:
+        pass
+    assert counter.count == 11
+    assert current.count == 11
+
+    with counter.begin("audit"):
+        counter.audit_count = 20
+        assert counter.audit_count == 20
+        assert working.audit_count == 20
+        assert current.audit_count == 10
+        assert counter.count == 11
+    assert counter.audit_count == 20
+    assert current.audit_count == 20
+    assert counter.count == 11
+
     with counter.begin("audit"):
         pass
+
+
+def _assert_raises(
+    exception_type: type[BaseException],
+    func: Callable[[], object],
+) -> None:
+    try:
+        func()
+    except exception_type:
+        return
+    raise AssertionError(f"expected {exception_type.__name__}")
 
 
 def _prettier_source(source: str) -> str:
