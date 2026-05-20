@@ -2615,6 +2615,31 @@ class default_facade_class_decl_name__astichi_arg__(
     facade_base_default_base_name__astichi_arg__
 ):
     __slots__ = ()
+    __annotations__ = astichi_pass(
+        annotations_name__astichi_arg__,
+        outer_bind=True,
+    )
+    __yidl_lifecycle_generated__ = True
+    __yidl_lifecycle_user_class__ = astichi_pass(
+        decorated_cls,
+        outer_bind=True,
+    )
+    __yidl_lifecycle_definition__ = astichi_pass(
+        lifecycle_definition_name__astichi_arg__,
+        outer_bind=True,
+    )
+    __yidl_tx_index_to_group__ = astichi_pass(
+        tx_groups_for_class_index_name__astichi_arg__,
+        outer_bind=True,
+    )
+    __yidl_tx_group_to_index__ = {
+        group: index for index, group in enumerate(
+            astichi_pass(
+                tx_groups_for_class_map_name__astichi_arg__,
+                outer_bind=True,
+            )
+        )
+    }
 
     astichi_hole(default_class_body)
     astichi_hole(default_facade_properties)
@@ -2678,7 +2703,7 @@ return_class_module_ref__astichi_arg__.__module__ = astichi_pass(
 ).__module__
 return return_class_result_ref__astichi_arg__""",
             file_name="tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl",
-            line_number=625,
+            line_number=650,
         )
     ),
 }
@@ -4330,6 +4355,16 @@ ASSEMBLY_PRODUCTIONS = {
                 ),
                 BindingSpec(
                     kind="ident",
+                    name="tx_groups_for_class_index_name",
+                    value=ValueRef("TxGroupsParamName"),
+                ),
+                BindingSpec(
+                    kind="ident",
+                    name="tx_groups_for_class_map_name",
+                    value=ValueRef("TxGroupsParamName"),
+                ),
+                BindingSpec(
+                    kind="ident",
                     name="tx_groups_for_manager_name",
                     value=ValueRef("TxGroupsParamName"),
                 ),
@@ -4337,6 +4372,16 @@ ASSEMBLY_PRODUCTIONS = {
                     kind="ident",
                     name="tx_groups_for_slots_name",
                     value=ValueRef("TxGroupsParamName"),
+                ),
+                BindingSpec(
+                    kind="ident",
+                    name="lifecycle_definition_name",
+                    value=ValueRef("LifecycleDefinitionParamName"),
+                ),
+                BindingSpec(
+                    kind="ident",
+                    name="annotations_name",
+                    value=ValueRef("AnnotationsParamName"),
                 ),
             ),
         ),

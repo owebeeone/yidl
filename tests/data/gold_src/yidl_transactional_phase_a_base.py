@@ -180,10 +180,12 @@ def _assert_generated_class(namespace: Mapping[str, object]) -> None:
         def user_method(self) -> str:
             return "user"
 
+    lifecycle_definition = {"fields": ("plain", "count", "audit_count")}
+    annotations = {"plain": "int", "seed": "int", "count": "int"}
     generated = namespace["build_lifecycle_class"](
         Counter,
-        _Counter_lifecycle_definition={"fields": ()},
-        _Counter_annotations={},
+        _Counter_lifecycle_definition=lifecycle_definition,
+        _Counter_annotations=annotations,
         _Counter_tx_groups=(DEFAULT_TRANSACTION, "audit"),
         _Counter_plain_default=3,
         _Counter_seed_default=2,
@@ -195,6 +197,15 @@ def _assert_generated_class(namespace: Mapping[str, object]) -> None:
     assert generated.__name__ == "Counter"
     assert generated.__qualname__ == Counter.__qualname__
     assert generated.__module__ == __name__
+    assert generated.__annotations__ is annotations
+    assert generated.__yidl_lifecycle_generated__ is True
+    assert generated.__yidl_lifecycle_user_class__ is Counter
+    assert generated.__yidl_lifecycle_definition__ is lifecycle_definition
+    assert generated.__yidl_tx_index_to_group__ == (DEFAULT_TRANSACTION, "audit")
+    assert generated.__yidl_tx_group_to_index__ == {
+        DEFAULT_TRANSACTION: 0,
+        "audit": 1,
+    }
 
     counter = generated()
     assert isinstance(counter, Counter)

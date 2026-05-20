@@ -135,6 +135,12 @@ def build_lifecycle_class(decorated_cls, *, _Counter_lifecycle_definition, _Coun
 
     class Counter(Counter_FacadeBase):
         __slots__ = ()
+        __annotations__ = _Counter_annotations
+        __yidl_lifecycle_generated__ = True
+        __yidl_lifecycle_user_class__ = decorated_cls
+        __yidl_lifecycle_definition__ = _Counter_lifecycle_definition
+        __yidl_tx_index_to_group__ = _Counter_tx_groups
+        __yidl_tx_group_to_index__ = {group: index for index, group in enumerate(_Counter_tx_groups)}
         KIND = _Counter_KIND_default
 
         @property
