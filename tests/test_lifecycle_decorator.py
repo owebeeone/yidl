@@ -10,6 +10,9 @@ import pytest
 
 from yidl.runtime.lifecycle import _generate_lifecycle_source
 from yidl.runtime.lifecycle import LifecycleDefinitionError
+from yidl.runtime.lifecycle import after_commit
+from yidl.runtime.lifecycle import after_rollback
+from yidl.runtime.lifecycle import before_commit
 from yidl.runtime.lifecycle import commit_order_key
 from yidl.runtime.lifecycle import classvar
 from yidl.runtime.lifecycle import field
@@ -340,6 +343,124 @@ def test_lifecycle_decorator_validation_failure_rolls_back_working_value() -> No
     assert item.count == 1
     assert item.current.count == 1
     assert item.working.count == 1
+
+
+def test_lifecycle_decorator_runs_transaction_hooks_by_group() -> None:
+    events: list[tuple[str, str, int]] = []
+
+    class Counter:
+        count: int = managed(default=1)
+        audit_count: int = managed("audit", default=10)
+
+        @before_commit(DEFAULT_TRANSACTION)
+        def _before_default_first(self) -> None:
+            events.append(("before-1", "default", self.count))
+
+        @before_commit(DEFAULT_TRANSACTION)
+        def _before_default_second(self) -> None:
+            events.append(("before-2", "default", self.count))
+
+        @after_commit(DEFAULT_TRANSACTION)
+        def _after_default(self) -> None:
+            events.append(("after", "default", self.count))
+
+        @after_rollback("audit")
+        def _after_audit_rollback(self) -> None:
+            events.append(("rollback", "audit", self.audit_count))
+
+    item = lifecycle(Counter)()
+
+    with item.begin(DEFAULT_TRANSACTION):
+        item.count = 2
+
+    assert events == [
+        ("before-1", "default", 2),
+        ("before-2", "default", 2),
+        ("after", "default", 2),
+    ]
+
+    events.clear()
+    with pytest.raises(RuntimeError, match="abort audit"):
+        with item.begin("audit"):
+            item.audit_count = 20
+            raise RuntimeError("abort audit")
+
+    assert item.audit_count == 10
+    assert events == [("rollback", "audit", 10)]
+
+
+def test_lifecycle_decorator_before_commit_failure_rolls_back() -> None:
+    events: list[tuple[str, int]] = []
+
+    class Counter:
+        count: int = managed(default=1)
+
+        @before_commit(DEFAULT_TRANSACTION)
+        def _before_default(self) -> None:
+            events.append(("before", self.count))
+            raise ValueError("before failed")
+
+        @after_commit(DEFAULT_TRANSACTION)
+        def _after_default(self) -> None:
+            events.append(("after", self.count))
+
+    item = lifecycle(Counter)()
+
+    with pytest.raises(ValueError, match="before failed"):
+        with item.begin(DEFAULT_TRANSACTION):
+            item.count = 2
+
+    assert item.count == 1
+    assert item.current.count == 1
+    assert item.working.count == 1
+    assert events == [("before", 2)]
+
+
+def test_lifecycle_decorator_after_commit_failure_keeps_commit() -> None:
+    events: list[tuple[str, int]] = []
+
+    class Counter:
+        count: int = managed(default=1)
+
+        @after_commit(DEFAULT_TRANSACTION)
+        def _after_default(self) -> None:
+            events.append(("after", self.count))
+            raise ValueError("after failed")
+
+    item = lifecycle(Counter)()
+
+    with pytest.raises(ValueError, match="after failed"):
+        with item.begin(DEFAULT_TRANSACTION):
+            item.count = 2
+
+    assert item.count == 2
+    assert item.current.count == 2
+    assert item.working.count == 2
+    assert events == [("after", 2)]
+
+
+def test_lifecycle_decorator_after_rollback_failure_keeps_rollback() -> None:
+    events: list[tuple[str, int]] = []
+
+    class Counter:
+        count: int = managed(default=1)
+
+        @after_rollback(DEFAULT_TRANSACTION)
+        def _after_default_rollback(self) -> None:
+            events.append(("rollback", self.count))
+            raise ValueError("rollback failed")
+
+    item = lifecycle(Counter)()
+
+    item.begin(DEFAULT_TRANSACTION)
+    item.count = 2
+    with pytest.raises(ValueError, match="rollback failed"):
+        item.rollback(DEFAULT_TRANSACTION)
+
+    assert item.count == 1
+    assert item.current.count == 1
+    assert item.working.count == 1
+    assert events == [("rollback", 1)]
 
 
 @pytest.mark.skipif(

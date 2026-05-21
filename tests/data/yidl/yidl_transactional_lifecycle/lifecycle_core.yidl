@@ -95,6 +95,9 @@ concept LifecycleCore {
     computed collection ClassVarFields: LifecycleFieldSpec from Fields where FieldKind == "classvar"
     computed collection CommitOrderKeyProviders: TransactionMethod from TransactionMethods where MethodKind == "commit_order_key"
     computed collection CommitValidators: TransactionMethod from TransactionMethods where MethodKind == "validate_commit"
+    computed collection BeforeCommitHooks: TransactionMethod from TransactionMethods where MethodKind == "before_commit"
+    computed collection AfterCommitHooks: TransactionMethod from TransactionMethods where MethodKind == "after_commit"
+    computed collection AfterRollbackHooks: TransactionMethod from TransactionMethods where MethodKind == "after_rollback"
 
     # -------------------------------------------------------------------------
     # Facade facts.
@@ -284,6 +287,14 @@ concept LifecycleCore {
                 return False
     ]$
 
+    resource TransactionHookCall = template $[
+        if astichi_pass(tx_group, outer_bind=True) == astichi_bind_external(tx_group_key):
+            getattr(
+                astichi_pass(self, outer_bind=True)._y_get_default_facade(),
+                astichi_bind_external(method_name),
+            )()
+    ]$
+
     resource ClassBundle = template $[
         class state_class_decl_name__astichi_arg__:
             __slots__ = (
@@ -372,8 +383,10 @@ concept LifecycleCore {
                 tx_index = self.__yidl_tx_group_to_index__[tx_group]
                 if self._y_working_tx_ids[tx_index] != tx_id:
                     return self._y_get_default_facade()
+                astichi_hole(before_commit_body)
                 astichi_hole(commit_transaction_body)
                 self._y_working_tx_ids[tx_index] = None
+                astichi_hole(after_commit_body)
                 return self._y_get_default_facade()
 
             def _rollback_transaction(self, tx_id, tx_group=DEFAULT_TRANSACTION):
@@ -382,6 +395,7 @@ concept LifecycleCore {
                     return self._y_get_default_facade()
                 astichi_hole(rollback_transaction_body)
                 self._y_working_tx_ids[tx_index] = None
+                astichi_hole(after_rollback_body)
                 return self._y_get_default_facade()
 
 
@@ -700,6 +714,36 @@ concept LifecycleCore {
         }
     }
 
+    contribution BeforeCommitBodyPass = PassStatement {
+        as BeforeCommitBodyPass
+        index 0
+        order 0
+
+        target before_commit_body {
+            build /ClassDef
+        }
+    }
+
+    contribution AfterCommitBodyPass = PassStatement {
+        as AfterCommitBodyPass
+        index 0
+        order 0
+
+        target after_commit_body {
+            build /ClassDef
+        }
+    }
+
+    contribution AfterRollbackBodyPass = PassStatement {
+        as AfterRollbackBodyPass
+        index 0
+        order 0
+
+        target after_rollback_body {
+            build /ClassDef
+        }
+    }
+
     contribution ReturnClassContribution = ReturnClass {
         as ReturnClass
         index ClassOrder
@@ -896,6 +940,45 @@ concept LifecycleCore {
         external tx_group_key = TxGroupKey
     }
 
+    contribution BeforeCommitHookContribution = TransactionHookCall {
+        as BeforeCommitHook
+        index DeclarationOrder
+        order DeclarationOrder
+
+        target before_commit_body {
+            build /ClassDef
+        }
+
+        external method_name = MethodName
+        external tx_group_key = TxGroupKey
+    }
+
+    contribution AfterCommitHookContribution = TransactionHookCall {
+        as AfterCommitHook
+        index DeclarationOrder
+        order DeclarationOrder
+
+        target after_commit_body {
+            build /ClassDef
+        }
+
+        external method_name = MethodName
+        external tx_group_key = TxGroupKey
+    }
+
+    contribution AfterRollbackHookContribution = TransactionHookCall {
+        as AfterRollbackHook
+        index DeclarationOrder
+        order DeclarationOrder
+
+        target after_rollback_body {
+            build /ClassDef
+        }
+
+        external method_name = MethodName
+        external tx_group_key = TxGroupKey
+    }
+
     contribution CoreClassDefinition = CoreClassProduction {
         as ClassDef
         index ClassOrder
@@ -970,6 +1053,18 @@ concept LifecycleCore {
         default -> ValidateCommitBodyPass
     }
 
+    matcher BeforeCommitBodyPassContributions(lifecycle_class: Classes) -> contribution {
+        default -> BeforeCommitBodyPass
+    }
+
+    matcher AfterCommitBodyPassContributions(lifecycle_class: Classes) -> contribution {
+        default -> AfterCommitBodyPass
+    }
+
+    matcher AfterRollbackBodyPassContributions(lifecycle_class: Classes) -> contribution {
+        default -> AfterRollbackBodyPass
+    }
+
     matcher PlainStateSlotContributions(field: PlainFields) -> contribution {
         default -> PlainStateSlot
     }
@@ -1009,6 +1104,18 @@ concept LifecycleCore {
 
     matcher ValidateCommitContributions(method: CommitValidators) -> contribution {
         default -> ValidateCommitBranchContribution
+    }
+
+    matcher BeforeCommitHookContributions(method: BeforeCommitHooks) -> contribution {
+        default -> BeforeCommitHookContribution
+    }
+
+    matcher AfterCommitHookContributions(method: AfterCommitHooks) -> contribution {
+        default -> AfterCommitHookContribution
+    }
+
+    matcher AfterRollbackHookContributions(method: AfterRollbackHooks) -> contribution {
+        default -> AfterRollbackHookContribution
     }
 
     matcher FieldDefaultBuilderParamContributions(field: Fields) -> contribution {
@@ -1135,6 +1242,15 @@ concept LifecycleCore {
         apply validate_commit_body_pass
             using ValidateCommitBodyPassContributions
 
+        apply before_commit_body_pass
+            using BeforeCommitBodyPassContributions
+
+        apply after_commit_body_pass
+            using AfterCommitBodyPassContributions
+
+        apply after_rollback_body_pass
+            using AfterRollbackBodyPassContributions
+
         apply classvars
             from field: ClassVarFields
             where FieldOwner == ClassId
@@ -1154,6 +1270,21 @@ concept LifecycleCore {
             from method: CommitValidators
             where MethodOwner == ClassId
             using ValidateCommitContributions
+
+        apply before_commit_hooks
+            from method: BeforeCommitHooks
+            where MethodOwner == ClassId
+            using BeforeCommitHookContributions
+
+        apply after_commit_hooks
+            from method: AfterCommitHooks
+            where MethodOwner == ClassId
+            using AfterCommitHookContributions
+
+        apply after_rollback_hooks
+            from method: AfterRollbackHooks
+            where MethodOwner == ClassId
+            using AfterRollbackHookContributions
 
         apply plain_init_params
             from field: PlainFields

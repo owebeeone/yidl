@@ -128,6 +128,15 @@ concept LifecycleBase extends default_factories.LifecycleDefaultFactories {
         apply validate_commit_body_pass
             using ValidateCommitBodyPassContributions
 
+        apply before_commit_body_pass
+            using BeforeCommitBodyPassContributions
+
+        apply after_commit_body_pass
+            using AfterCommitBodyPassContributions
+
+        apply after_rollback_body_pass
+            using AfterRollbackBodyPassContributions
+
         apply classvars
             from field: ClassVarFields
             where FieldOwner == ClassId
@@ -147,6 +156,21 @@ concept LifecycleBase extends default_factories.LifecycleDefaultFactories {
             from method: CommitValidators
             where MethodOwner == ClassId
             using ValidateCommitContributions
+
+        apply before_commit_hooks
+            from method: BeforeCommitHooks
+            where MethodOwner == ClassId
+            using BeforeCommitHookContributions
+
+        apply after_commit_hooks
+            from method: AfterCommitHooks
+            where MethodOwner == ClassId
+            using AfterCommitHookContributions
+
+        apply after_rollback_hooks
+            from method: AfterRollbackHooks
+            where MethodOwner == ClassId
+            using AfterRollbackHookContributions
 
         apply plain_init_params
             from field: PlainFields
