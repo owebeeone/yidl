@@ -146,6 +146,29 @@ def test_lifecycle_source_uses_direct_default_factory_calls() -> None:
     assert "_Example_v5_default_factory(SCALE=self.SCALE, v4=self.v4)" in source
 
 
+def test_lifecycle_decorator_rejects_unknown_default_factory_provider() -> None:
+    class Example:
+        v1: int = managed(default_factory=lambda missing: missing)
+
+    with pytest.raises(
+        LifecycleDefinitionError,
+        match=r"Example\.v1: default_factory references unknown name 'missing'",
+    ):
+        lifecycle(Example)
+
+
+def test_lifecycle_decorator_rejects_default_factory_dependency_cycle() -> None:
+    class Example:
+        v1: int = managed(default_factory=lambda v2: v2)
+        v2: int = managed(default_factory=lambda v1: v1)
+
+    with pytest.raises(
+        LifecycleDefinitionError,
+        match="Example: default_factory dependency cycle: v1 -> v2 -> v1",
+    ):
+        lifecycle(Example)
+
+
 def test_lifecycle_decorator_merges_generated_base_facts() -> None:
     @lifecycle
     class A:

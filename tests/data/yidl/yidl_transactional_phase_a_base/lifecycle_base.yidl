@@ -547,6 +547,18 @@ concept LifecycleBase {
         outputs(DefaultFactoryDependencies, DefaultFactoryEvaluationSteps, DefaultFactoryDiagnostics)
         using BuildDefaultFactoryFactsBody
 
+    resource RaiseDefaultFactoryDiagnosticsBody = code $[
+        for diagnostic in ctx.records(DefaultFactoryDiagnosticsCollection):
+            raise AssemblyDiagnosticError(diagnostic.diagnostic_message)
+    ]$ {
+        keep ctx, DefaultFactoryDiagnosticsCollection, AssemblyDiagnosticError
+    }
+
+    operation RaiseDefaultFactoryDiagnostics
+        inputs(DefaultFactoryDiagnostics)
+        outputs()
+        using RaiseDefaultFactoryDiagnosticsBody
+
     # -------------------------------------------------------------------------
     # A3 generated module/class skeleton.
     # -------------------------------------------------------------------------

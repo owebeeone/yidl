@@ -275,6 +275,20 @@ Verification:
 - decorator-path golden with `v1`, `v2`, `v3` dependency chain
 - generated source assertions: direct keyword calls, no `locals()`
 
+### C4: Decorator-Time Diagnostic Gate
+
+Deliverables:
+
+- direct operation that reads `DefaultFactoryDiagnostics` and raises
+  `AssemblyDiagnosticError`
+- generated runtime import support for `AssemblyDiagnosticError` in direct
+  operation bodies
+
+Verification:
+
+- decorator rejects unknown provider diagnostics
+- decorator rejects dependency-cycle diagnostics
+
 ## Golden Shape
 
 Suggested fixture:
@@ -340,6 +354,7 @@ Recommended slices:
    - full regression
    - confirm no generic `defaults` / `default_factories` dictionaries
    - confirm `_HAS_DEFAULT_FACTORY` is runtime-imported and shared
+   - confirm generated default-factory diagnostics fail at decorator time
 
 Stop if the computed-operation model needs new YIDL grammar.
 

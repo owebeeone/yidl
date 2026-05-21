@@ -1,4 +1,4 @@
-from yidl.generation.data_def_sys import AddIfAbsent, DDSContainerBuilder, DDSOperationContext, NOT_PROVIDED, REQUIRED, RejectDuplicate, ReplaceExisting, RuntimeCollection, RuntimeComputedCollection, RuntimeContainerSpec, RuntimePort, RuntimePortIndex, RuntimeProperty, RuntimeRecord, RuntimeUnion
+from yidl.generation.data_def_sys import AddIfAbsent, AssemblyDiagnosticError, DDSContainerBuilder, DDSOperationContext, NOT_PROVIDED, REQUIRED, RejectDuplicate, ReplaceExisting, RuntimeCollection, RuntimeComputedCollection, RuntimeContainerSpec, RuntimePort, RuntimePortIndex, RuntimeProperty, RuntimeRecord, RuntimeUnion
 _NameProperty = RuntimeProperty('Name', str, default=REQUIRED, storage_name='name')
 _SourceLabelProperty = RuntimeProperty('SourceLabel', str, default='', storage_name='source_label')
 _SeverityProperty = RuntimeProperty('Severity', str, default=REQUIRED, storage_name='severity')

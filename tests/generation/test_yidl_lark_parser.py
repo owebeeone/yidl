@@ -498,7 +498,9 @@ def _default_factory_diagnostic_container(
             default_factory_param_names=v3_params,
         ),
     )
-    return namespace["build_container"](builder)
+    namespace["run_build_transaction_facts"](builder)
+    namespace["run_build_default_factory_facts"](builder)
+    return builder.freeze()
 
 
 def test_yidl_lark_computed_collection_filter_parse() -> None:

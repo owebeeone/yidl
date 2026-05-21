@@ -1387,8 +1387,8 @@ def _runtime_import_names(
         names.append("astichi_template")
     if uses_operations:
         names.append("DDSOperationContext")
-    if uses_operation_dispatch:
         names.append("AssemblyDiagnosticError")
+    if uses_operation_dispatch:
         names.append("OperationExecutionError")
     return tuple(dict.fromkeys(names))
 
