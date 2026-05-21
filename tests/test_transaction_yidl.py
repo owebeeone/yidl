@@ -21,6 +21,8 @@ class FakeContext:
     committed: list[tuple[int, object]] | None = None
     rolled_back: list[tuple[int, object]] | None = None
     validations: list[object] | None = None
+    commit_error: BaseException | None = None
+    rollback_error: BaseException | None = None
 
     def __post_init__(self) -> None:
         if self.committed is None:
@@ -44,11 +46,15 @@ class FakeContext:
         return self.validate_ok
 
     def _commit_transaction(self, tx_id: int, tx_group: object = DEFAULT_TRANSACTION) -> object:
+        if self.commit_error is not None:
+            raise self.commit_error
         assert self.committed is not None
         self.committed.append((tx_id, tx_group))
         return None
 
     def _rollback_transaction(self, tx_id: int, tx_group: object = DEFAULT_TRANSACTION) -> object:
+        if self.rollback_error is not None:
+            raise self.rollback_error
         assert self.rolled_back is not None
         self.rolled_back.append((tx_id, tx_group))
         return None
@@ -107,6 +113,39 @@ def test_transaction_manager_validation_failure_rolls_back_and_resets_manager() 
     assert isinstance(failure.value.exceptions[0], YidlValidatorReturnedFalse)
     assert context.validations == [DEFAULT_TRANSACTION]
     assert context.rolled_back == [(1, DEFAULT_TRANSACTION)]
+    assert manager.active_transaction is None
+    assert manager.begin_count == 0
+
+    tx2 = manager.begin()
+    assert tx2.tx_id == 2
+
+
+def test_transaction_manager_commit_failure_rolls_back_and_resets_manager() -> None:
+    manager = TransactionManager()
+    context = FakeContext(name="bad", commit_error=RuntimeError("commit boom"))
+
+    manager.begin()
+    manager.enlist(context)
+    with pytest.raises(RuntimeError, match="commit boom"):
+        manager.commit_only()
+
+    assert context.rolled_back == [(1, DEFAULT_TRANSACTION)]
+    assert manager.active_transaction is None
+    assert manager.begin_count == 0
+
+    tx2 = manager.begin()
+    assert tx2.tx_id == 2
+
+
+def test_transaction_manager_rollback_failure_resets_manager() -> None:
+    manager = TransactionManager()
+    context = FakeContext(name="bad", rollback_error=RuntimeError("rollback boom"))
+
+    manager.begin()
+    manager.enlist(context)
+    with pytest.raises(RuntimeError, match="rollback boom"):
+        manager.rollback()
+
     assert manager.active_transaction is None
     assert manager.begin_count == 0
 

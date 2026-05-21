@@ -154,7 +154,11 @@ class GroupTransactionManager:
             raise RuntimeError("yidl transaction manager state is corrupted")
         tx_id = transaction.tx_id
         try:
-            transaction.apply_commits()
+            try:
+                transaction.apply_commits()
+            except BaseException:
+                transaction.rollback_dirty()
+                raise
         finally:
             self.active_transaction = None
             self.begin_count = 0
@@ -181,10 +185,12 @@ class GroupTransactionManager:
         if self.begin_count <= 0 or self.active_transaction is None:
             raise RuntimeError("no active yidl transaction")
         transaction = self.active_transaction
-        transaction.rollback_dirty()
         tx_id = transaction.tx_id
-        self.active_transaction = None
-        self.begin_count = 0
+        try:
+            transaction.rollback_dirty()
+        finally:
+            self.active_transaction = None
+            self.begin_count = 0
         return tx_id
 
     def enlist(self, context: TransactionContext, tx_group: Hashable = DEFAULT_TRANSACTION) -> int:
