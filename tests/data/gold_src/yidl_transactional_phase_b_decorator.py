@@ -15,7 +15,6 @@ from yidl.runtime.lifecycle import lifecycle
 from yidl.runtime.lifecycle import managed
 from yidl.runtime.transaction_yidl import DEFAULT_TRANSACTION
 
-
 DECORATOR_PATH = Path("src/yidl/runtime/_generated_lifecycle_base.py")
 
 

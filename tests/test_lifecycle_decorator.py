@@ -3,6 +3,7 @@ from __future__ import annotations
 import pytest
 
 from yidl.runtime.lifecycle import _generate_lifecycle_source
+from yidl.runtime.lifecycle import LifecycleDefinitionError
 from yidl.runtime.lifecycle import classvar
 from yidl.runtime.lifecycle import field
 from yidl.runtime.lifecycle import harvest_lifecycle_definition
@@ -86,6 +87,7 @@ def test_lifecycle_source_uses_unpacked_builder_parameters() -> None:
     assert "_Counter_plain_default" in source
     assert "default_factories" not in source
     assert "defaults" not in source
+    assert "\n        pass\n" not in source
 
 
 def test_lifecycle_decorator_merges_generated_base_facts() -> None:
@@ -134,3 +136,56 @@ def test_lifecycle_decorator_merges_generated_base_facts() -> None:
     assert child.v1 == 1
     assert child.v2 == 2
     assert child.v3 == 5
+
+
+def test_lifecycle_wraps_generation_failure_with_class_context(monkeypatch) -> None:
+    class Counter:
+        value: int = field(default=1)
+
+    def fail_generate(_harvested: object) -> str:
+        raise ValueError("boom")
+
+    monkeypatch.setattr(
+        "yidl.runtime.lifecycle._generate_lifecycle_source", fail_generate
+    )
+
+    with pytest.raises(
+        LifecycleDefinitionError,
+        match="Counter: lifecycle source generation failed: boom",
+    ):
+        lifecycle(Counter)
+
+
+def test_lifecycle_wraps_exec_failure_with_class_context(monkeypatch) -> None:
+    class Counter:
+        value: int = field(default=1)
+
+    monkeypatch.setattr(
+        "yidl.runtime.lifecycle._generate_lifecycle_source",
+        lambda _harvested: "not valid python",
+    )
+
+    with pytest.raises(
+        LifecycleDefinitionError,
+        match="Counter: lifecycle source execution failed:",
+    ):
+        lifecycle(Counter)
+
+
+def test_lifecycle_wraps_build_failure_with_class_context(monkeypatch) -> None:
+    class Counter:
+        value: int = field(default=1)
+
+    monkeypatch.setattr(
+        "yidl.runtime.lifecycle._generate_lifecycle_source",
+        lambda _harvested: (
+            "def build_lifecycle_class(decorated_cls, **kwargs):\n"
+            "    raise RuntimeError('boom')\n"
+        ),
+    )
+
+    with pytest.raises(
+        LifecycleDefinitionError,
+        match="Counter: lifecycle class build failed: boom",
+    ):
+        lifecycle(Counter)

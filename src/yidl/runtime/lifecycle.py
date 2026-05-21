@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import ast
+from collections.abc import Iterable
 from types import ModuleType
 
 from yidl.runtime.lifecycle_markers import FieldDecl
@@ -21,23 +23,35 @@ def lifecycle(cls: type[object]) -> type[object]:
     if not isinstance(cls, type):
         raise TypeError("@lifecycle can only decorate classes")
     harvested = harvest_lifecycle_definition(cls)
-    source = _generate_lifecycle_source(harvested)
+    try:
+        source = _generate_lifecycle_source(harvested)
+    except Exception as exc:
+        _raise_lifecycle_step_error(cls, "source generation", exc)
     namespace: dict[str, object] = {"__name__": cls.__module__}
-    exec(source, namespace)
-    generated = namespace["build_lifecycle_class"](
-        cls,
-        **dict(harvested.build_kwargs),
-    )
-    if not isinstance(generated, type):
-        raise TypeError("generated lifecycle builder did not return a class")
+    try:
+        exec(source, namespace)
+    except Exception as exc:
+        _raise_lifecycle_step_error(cls, "source execution", exc)
+    try:
+        generated = namespace["build_lifecycle_class"](
+            cls,
+            **dict(harvested.build_kwargs),
+        )
+        if not isinstance(generated, type):
+            raise TypeError("generated lifecycle builder did not return a class")
+    except Exception as exc:
+        _raise_lifecycle_step_error(cls, "class build", exc)
     return generated
 
 
 def _generate_lifecycle_source(harvested: HarvestedLifecycle) -> str:
     generated = _generated_lifecycle_base_module()
-    return generated.build_LifecycleModule(
+    source = generated.build_LifecycleModule(
         _build_lifecycle_container(generated, harvested),
     ).emit_commented()
+    # TODO: Emit/import the generated lifecycle class as a Python module instead
+    # of executing generated source directly at decorator time.
+    return _strip_redundant_pass_statements(source)
 
 
 def _build_lifecycle_container(
@@ -73,6 +87,89 @@ def _generated_lifecycle_base_module() -> ModuleType:
     from yidl.runtime import _generated_lifecycle_base
 
     return _generated_lifecycle_base
+
+
+def _raise_lifecycle_step_error(
+    cls: type[object],
+    step: str,
+    exc: BaseException,
+) -> None:
+    raise LifecycleDefinitionError(
+        f"{cls.__qualname__}: lifecycle {step} failed: {exc}",
+    ) from exc
+
+
+def _strip_redundant_pass_statements(source: str) -> str:
+    """Remove generated ``pass`` placeholders from non-empty blocks."""
+
+    tree = ast.parse(source)
+    remover = _RedundantPassLineCollector()
+    remover.visit(tree)
+    if not remover.line_numbers:
+        return source
+    lines = source.splitlines(keepends=True)
+    filtered = [
+        line
+        for index, line in enumerate(lines, start=1)
+        if index not in remover.line_numbers
+    ]
+    return "".join(filtered)
+
+
+class _RedundantPassLineCollector(ast.NodeVisitor):
+    def __init__(self) -> None:
+        self.line_numbers: set[int] = set()
+
+    def visit_Module(self, node: ast.Module) -> None:
+        self._visit_body(node.body)
+
+    def visit_ClassDef(self, node: ast.ClassDef) -> None:
+        self._visit_body(node.body)
+
+    def visit_FunctionDef(self, node: ast.FunctionDef) -> None:
+        self._visit_body(node.body)
+
+    def visit_AsyncFunctionDef(self, node: ast.AsyncFunctionDef) -> None:
+        self._visit_body(node.body)
+
+    def visit_If(self, node: ast.If) -> None:
+        self._visit_body(node.body)
+        self._visit_body(node.orelse)
+
+    def visit_For(self, node: ast.For) -> None:
+        self._visit_body(node.body)
+        self._visit_body(node.orelse)
+
+    def visit_AsyncFor(self, node: ast.AsyncFor) -> None:
+        self._visit_body(node.body)
+        self._visit_body(node.orelse)
+
+    def visit_While(self, node: ast.While) -> None:
+        self._visit_body(node.body)
+        self._visit_body(node.orelse)
+
+    def visit_With(self, node: ast.With) -> None:
+        self._visit_body(node.body)
+
+    def visit_AsyncWith(self, node: ast.AsyncWith) -> None:
+        self._visit_body(node.body)
+
+    def visit_Try(self, node: ast.Try) -> None:
+        self._visit_body(node.body)
+        self._visit_body(node.orelse)
+        self._visit_body(node.finalbody)
+        for handler in node.handlers:
+            self._visit_body(handler.body)
+
+    def _visit_body(self, body: Iterable[ast.stmt]) -> None:
+        statements = tuple(body)
+        if len(statements) > 1:
+            for statement in statements:
+                if isinstance(statement, ast.Pass):
+                    end_lineno = statement.end_lineno or statement.lineno
+                    self.line_numbers.update(range(statement.lineno, end_lineno + 1))
+        for statement in statements:
+            self.visit(statement)
 
 
 __all__ = [

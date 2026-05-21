@@ -73,7 +73,6 @@ def build_lifecycle_class(decorated_cls, *, _Counter_lifecycle_definition, _Coun
             tx_index = self.__yidl_tx_group_to_index__[tx_group]
             if self._y_working_tx_ids[tx_index] != tx_id:
                 return self._y_get_default_facade()
-            pass
             if tx_index == 0:
                 if self._y_count_working is not VOID:
                     self._y_count_current = self._y_count_working
@@ -89,7 +88,6 @@ def build_lifecycle_class(decorated_cls, *, _Counter_lifecycle_definition, _Coun
             tx_index = self.__yidl_tx_group_to_index__[tx_group]
             if self._y_working_tx_ids[tx_index] != tx_id:
                 return self._y_get_default_facade()
-            pass
             if tx_index == 0:
                 self._y_count_working = VOID
             if tx_index == 1:
@@ -126,9 +124,7 @@ def build_lifecycle_class(decorated_cls, *, _Counter_lifecycle_definition, _Coun
 
         def rollback(self, *tx_groups):
             return self._y_state._y_transaction_manager.rollback(*tx_groups)
-        pass
         KIND = _Counter_KIND_default
-        pass
 
         @property
         def plain(self):
@@ -146,7 +142,6 @@ def build_lifecycle_class(decorated_cls, *, _Counter_lifecycle_definition, _Coun
         __yidl_lifecycle_definition__ = _Counter_lifecycle_definition
         __yidl_tx_index_to_group__ = _Counter_tx_groups
         __yidl_tx_group_to_index__ = {group: index for index, group in enumerate(_Counter_tx_groups)}
-        pass
 
         @property
         def count(self):
@@ -181,7 +176,6 @@ def build_lifecycle_class(decorated_cls, *, _Counter_lifecycle_definition, _Coun
             state._y_default_ref = weakref.ref(self)
             state._y_current_ref = None
             state._y_working_ref = None
-            pass
             state._y_plain_value = plain
             state._y_count_current = count
             state._y_count_working = VOID
@@ -191,7 +185,6 @@ def build_lifecycle_class(decorated_cls, *, _Counter_lifecycle_definition, _Coun
 
     class Counter_Current(Counter_FacadeBase):
         __slots__ = ()
-        pass
 
         @property
         def count(self):
@@ -213,7 +206,6 @@ def build_lifecycle_class(decorated_cls, *, _Counter_lifecycle_definition, _Coun
 
     class Counter_Working(Counter_FacadeBase):
         __slots__ = ()
-        pass
 
         @property
         def count(self):

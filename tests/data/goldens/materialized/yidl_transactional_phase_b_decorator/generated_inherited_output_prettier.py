@@ -106,7 +106,6 @@ def build_lifecycle_class(
             tx_index = self.__yidl_tx_group_to_index__[tx_group]
             if self._y_working_tx_ids[tx_index] != tx_id:
                 return self._y_get_default_facade()
-            pass
             if tx_index == 0:
                 if self._y_plain_working is not VOID:
                     self._y_plain_current = self._y_plain_working
@@ -126,7 +125,6 @@ def build_lifecycle_class(
             tx_index = self.__yidl_tx_group_to_index__[tx_group]
             if self._y_working_tx_ids[tx_index] != tx_id:
                 return self._y_get_default_facade()
-            pass
             if tx_index == 0:
                 self._y_plain_working = VOID
             if tx_index == 0:
@@ -166,9 +164,7 @@ def build_lifecycle_class(
         def rollback(self, *tx_groups):
             return self._y_state._y_transaction_manager.rollback(*tx_groups)
 
-        pass
         KIND = _B_KIND_default
-        pass
 
     class B(B_FacadeBase):
         __slots__ = ()
@@ -180,7 +176,6 @@ def build_lifecycle_class(
         __yidl_tx_group_to_index__ = {
             group: index for index, group in enumerate(_B_tx_groups)
         }
-        pass
 
         @property
         def plain(self):
@@ -240,7 +235,6 @@ def build_lifecycle_class(
             state._y_default_ref = weakref.ref(self)
             state._y_current_ref = None
             state._y_working_ref = None
-            pass
             state._y_plain_current = plain
             state._y_plain_working = VOID
             state._y_v1_current = v1
@@ -251,7 +245,6 @@ def build_lifecycle_class(
 
     class B_Current(B_FacadeBase):
         __slots__ = ()
-        pass
 
         @property
         def plain(self):
@@ -288,7 +281,6 @@ def build_lifecycle_class(
 
     class B_Working(B_FacadeBase):
         __slots__ = ()
-        pass
 
         @property
         def plain(self):

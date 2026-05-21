@@ -480,6 +480,19 @@ Counter.count: managed field cannot change transaction group from 'audit' to 'de
 
 over generic failures.
 
+## Known Limitations
+
+Phase B deliberately keeps the decorator frontend narrow:
+
+- user-defined `__slots__` on decorated classes are not supported
+- custom `__init_subclass__` and descriptor `__set_name__` interactions are not
+  modeled
+- generic class specialization such as `Generic[T]` is outside this slice
+- annotation-only `ClassVar[...]` and `InitVar[...]` forms are not recognized;
+  users must use explicit `classvar()` and `initvar()` markers
+- non-generated mixins may remain in the MRO, but Phase B does not harvest
+  lifecycle facts from them unless they were produced by the lifecycle decorator
+
 ## Golden Test Shape
 
 Add a decorator-path golden separate from the explicit-fact Phase A golden.

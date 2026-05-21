@@ -12,7 +12,6 @@ from yidl.runtime.lifecycle_markers import field
 from yidl.runtime.lifecycle_markers import normalize_marker
 from yidl.runtime.transaction_yidl import DEFAULT_TRANSACTION
 
-
 LIFECYCLE_METADATA_VERSION = 1
 ORDER_STEP = 10
 
@@ -75,7 +74,12 @@ def harvest_lifecycle_definition(cls: type[object]) -> HarvestedLifecycle:
         if decl.kind == "managed":
             tx_groups.add(decl.tx_group)
 
-    field_facts = tuple(field_facts_by_name.values())
+    field_facts = tuple(
+        sorted(
+            field_facts_by_name.values(),
+            key=lambda fact: int(fact["field_order"]),
+        ),
+    )
     for fact in field_facts:
         if fact["field_kind"] == "managed":
             tx_groups.add(fact["tx_group_key"])
@@ -152,9 +156,7 @@ def _field_fact(
         "has_default_factory": decl.has_default_factory,
         "default_factory": decl.default_factory,
         "default_factory_param_name": (
-            f"_{class_name}_{name}_default_factory"
-            if decl.has_default_factory
-            else ""
+            f"_{class_name}_{name}_default_factory" if decl.has_default_factory else ""
         ),
         "tx_group_key": None,
         "value_slot_name": "",
@@ -188,9 +190,7 @@ def _remap_inherited_field_fact(
                 f"_{class_name}_{name}_default" if has_default else ""
             ),
             "default_factory_param_name": (
-                f"_{class_name}_{name}_default_factory"
-                if has_default_factory
-                else ""
+                f"_{class_name}_{name}_default_factory" if has_default_factory else ""
             ),
             "value_slot_name": "",
             "current_slot_name": "",

@@ -181,6 +181,34 @@ def test_harvester_merges_inherited_generated_lifecycle_facts() -> None:
     assert harvested.build_kwargs["_Derived_v1_default"] == 2
 
 
+def test_harvester_sorts_inherited_facts_by_field_order() -> None:
+    class BaseOriginal:
+        first: int = field(default=1)
+        second: int = field(default=2)
+
+    base_harvested = harvest_lifecycle_definition(BaseOriginal)
+    reversed_definition = {
+        "version": 1,
+        "fields": tuple(reversed(base_harvested.field_facts)),
+        "tx_groups": base_harvested.tx_groups,
+    }
+
+    class GeneratedBase:
+        __yidl_lifecycle_generated__ = True
+        __yidl_lifecycle_definition__ = reversed_definition
+
+    class Derived(GeneratedBase):
+        third: int = field(default=3)
+
+    harvested = harvest_lifecycle_definition(Derived)
+
+    assert [fact["field_name"] for fact in harvested.field_facts] == [
+        "first",
+        "second",
+        "third",
+    ]
+
+
 def test_harvester_rejects_managed_to_unmanaged_override() -> None:
     class BaseOriginal:
         value: int = managed(default=1)
