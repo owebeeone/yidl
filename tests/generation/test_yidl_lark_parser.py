@@ -214,19 +214,7 @@ def test_yidl_transactional_phase_a_schema_compiles() -> None:
 
 
 def test_yidl_transactional_phase_a_tx_facts_are_computed() -> None:
-    path = _DATA_YIDL / "yidl_transactional_phase_a_base" / "lifecycle_base.yidl"
-    compiled = compile_yidl_files(
-        {path.as_posix(): path.read_text(encoding="utf-8")},
-        path.as_posix(),
-    )
-    concept = compiled.concepts["LifecycleBase"]
-    source = emit_concept_runtime_source(
-        concept.plan.build_data_definition(),
-        resources=concept.resources,
-        assembly_plan=concept,
-    )
-    namespace: dict[str, object] = {}
-    exec(source, namespace)
+    namespace = _lifecycle_base_namespace()
 
     builder = namespace["new_builder"]()
     classes = namespace["ClassesCollection"]
@@ -298,6 +286,219 @@ def test_yidl_transactional_phase_a_tx_facts_are_computed() -> None:
         ("Counter.count", DEFAULT_TRANSACTION, 0),
         ("Counter.audit_count", "audit", 1),
     ]
+
+
+def test_yidl_transactional_default_factory_facts_are_computed() -> None:
+    namespace = _lifecycle_base_namespace()
+    builder = namespace["new_builder"]()
+    classes = namespace["ClassesCollection"]
+    fields = namespace["FieldsCollection"]
+    lifecycle_class = namespace["LifecycleClass"]
+    plain_field = namespace["PlainField"]
+    initvar_field = namespace["InitVarField"]
+    managed_field = namespace["ManagedField"]
+
+    builder.add(
+        classes,
+        lifecycle_class(
+            class_id="Example",
+            class_name="Example",
+            class_order=10,
+            state_class_name="Example_State",
+            facade_base_class_name="Example_FacadeBase",
+            current_facade_class_name="Example_Current",
+            working_facade_class_name="Example_Working",
+            lifecycle_definition_param_name="_Example_lifecycle_definition",
+            annotations_param_name="_Example_annotations",
+            tx_groups_param_name="_Example_tx_groups",
+        ),
+    )
+    builder.add(
+        fields,
+        plain_field(
+            field_id="Example.v1",
+            field_owner="Example",
+            field_name="v1",
+            field_order=10,
+            field_kind="field",
+        ),
+    )
+    builder.add(
+        fields,
+        initvar_field(
+            field_id="Example.seed",
+            field_owner="Example",
+            field_name="seed",
+            field_order=20,
+            field_kind="initvar",
+            init=False,
+            has_default=True,
+            default_value_param_name="_Example_seed_default",
+        ),
+    )
+    builder.add(
+        fields,
+        initvar_field(
+            field_id="Example.temp",
+            field_owner="Example",
+            field_name="temp",
+            field_order=30,
+            field_kind="initvar",
+            init=False,
+            has_default_factory=True,
+            default_factory_param_name="_Example_temp_default_factory",
+            default_factory_param_names=("seed", "v1"),
+        ),
+    )
+    builder.add(
+        fields,
+        managed_field(
+            field_id="Example.v2",
+            field_owner="Example",
+            field_name="v2",
+            field_order=40,
+            field_kind="managed",
+            has_default_factory=True,
+            default_factory_param_name="_Example_v2_default_factory",
+            default_factory_param_names=("v1",),
+        ),
+    )
+    builder.add(
+        fields,
+        managed_field(
+            field_id="Example.v3",
+            field_owner="Example",
+            field_name="v3",
+            field_order=50,
+            field_kind="managed",
+            has_default_factory=True,
+            default_factory_param_name="_Example_v3_default_factory",
+            default_factory_param_names=("v2", "v1"),
+        ),
+    )
+
+    container = namespace["build_container"](builder)
+
+    assert [
+        (record.eval_field_name, record.eval_order)
+        for record in container.DefaultFactoryEvaluationSteps.sequence()
+    ] == [
+        ("temp", 0),
+        ("v2", 1),
+        ("v3", 2),
+    ]
+    assert [
+        (
+            record.consumer_field_name,
+            record.param_name,
+            record.provider_name,
+            record.provider_field_kind,
+            record.provider_init,
+            record.param_order,
+        )
+        for record in container.DefaultFactoryDependencies.sequence()
+    ] == [
+        ("temp", "seed", "seed", "initvar", False, 0),
+        ("temp", "v1", "v1", "field", True, 1),
+        ("v2", "v1", "v1", "field", True, 0),
+        ("v3", "v2", "v2", "managed", True, 0),
+        ("v3", "v1", "v1", "field", True, 1),
+    ]
+    assert list(container.DefaultFactoryDiagnostics.sequence()) == []
+
+
+def test_yidl_transactional_default_factory_unknown_provider_diagnostic() -> None:
+    container = _default_factory_diagnostic_container(("missing",), ())
+
+    assert [
+        record.diagnostic_message
+        for record in container.DefaultFactoryDiagnostics.sequence()
+    ] == [
+        "Example.v2: default_factory references unknown name 'missing'",
+    ]
+
+
+def test_yidl_transactional_default_factory_cycle_diagnostic() -> None:
+    container = _default_factory_diagnostic_container(("v3",), ("v2",))
+
+    assert [
+        record.diagnostic_message
+        for record in container.DefaultFactoryDiagnostics.sequence()
+    ] == [
+        "Example: default_factory dependency cycle: v2 -> v3 -> v2",
+    ]
+
+
+def _lifecycle_base_namespace() -> dict[str, object]:
+    path = _DATA_YIDL / "yidl_transactional_phase_a_base" / "lifecycle_base.yidl"
+    compiled = compile_yidl_files(
+        {path.as_posix(): path.read_text(encoding="utf-8")},
+        path.as_posix(),
+    )
+    concept = compiled.concepts["LifecycleBase"]
+    source = emit_concept_runtime_source(
+        concept.plan.build_data_definition(),
+        resources=concept.resources,
+        assembly_plan=concept,
+    )
+    namespace: dict[str, object] = {}
+    exec(source, namespace)
+    return namespace
+
+
+def _default_factory_diagnostic_container(
+    v2_params: tuple[str, ...],
+    v3_params: tuple[str, ...],
+) -> object:
+    namespace = _lifecycle_base_namespace()
+    builder = namespace["new_builder"]()
+    classes = namespace["ClassesCollection"]
+    fields = namespace["FieldsCollection"]
+    lifecycle_class = namespace["LifecycleClass"]
+    managed_field = namespace["ManagedField"]
+
+    builder.add(
+        classes,
+        lifecycle_class(
+            class_id="Example",
+            class_name="Example",
+            class_order=10,
+            state_class_name="Example_State",
+            facade_base_class_name="Example_FacadeBase",
+            current_facade_class_name="Example_Current",
+            working_facade_class_name="Example_Working",
+            lifecycle_definition_param_name="_Example_lifecycle_definition",
+            annotations_param_name="_Example_annotations",
+            tx_groups_param_name="_Example_tx_groups",
+        ),
+    )
+    builder.add(
+        fields,
+        managed_field(
+            field_id="Example.v2",
+            field_owner="Example",
+            field_name="v2",
+            field_order=20,
+            field_kind="managed",
+            has_default_factory=True,
+            default_factory_param_name="_Example_v2_default_factory",
+            default_factory_param_names=v2_params,
+        ),
+    )
+    builder.add(
+        fields,
+        managed_field(
+            field_id="Example.v3",
+            field_owner="Example",
+            field_name="v3",
+            field_order=30,
+            field_kind="managed",
+            has_default_factory=True,
+            default_factory_param_name="_Example_v3_default_factory",
+            default_factory_param_names=v3_params,
+        ),
+    )
+    return namespace["build_container"](builder)
 
 
 def test_yidl_lark_computed_collection_filter_parse() -> None:

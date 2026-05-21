@@ -350,6 +350,178 @@ concept LifecycleBase {
     collection DefaultFactoryDiagnostics:
         DefaultFactoryDiagnostic identity DiagnosticId many
 
+    resource BuildDefaultFactoryFactsBody = code $[
+        classes = sorted(
+            ctx.records(ClassesCollection),
+            key=lambda item: item.class_order,
+        )
+        fields = sorted(
+            ctx.records(FieldsCollection),
+            key=lambda item: item.field_order,
+        )
+
+        for lifecycle_class in classes:
+            class_fields = [
+                field for field in fields
+                if field.field_owner == lifecycle_class.class_id
+            ]
+            by_name = {field.field_name: field for field in class_fields}
+            by_id = {field.field_id: field for field in class_fields}
+            factory_fields = [
+                field for field in class_fields
+                if field.has_default_factory
+            ]
+            graph = {field.field_id: set() for field in factory_fields}
+            deps = []
+            diagnostic_count = 0
+
+            def add_diagnostic(field, suffix, message):
+                nonlocal diagnostic_count
+                diagnostic_count += 1
+                ctx.write(
+                    DefaultFactoryDiagnosticsCollection,
+                    DefaultFactoryDiagnostic(
+                        diagnostic_id=(
+                            f"{field.field_id}.{suffix}.{diagnostic_count}"
+                        ),
+                        diagnostic_owner=lifecycle_class.class_id,
+                        diagnostic_field_id=field.field_id,
+                        diagnostic_message=message,
+                    ),
+                    policy=ReplaceExisting,
+                )
+
+            def provider_is_available(provider):
+                if provider.init:
+                    return True
+                return provider.has_default or provider.has_default_factory
+
+            for consumer in factory_fields:
+                for param_order, param_name in enumerate(
+                    consumer.default_factory_param_names
+                ):
+                    provider = by_name.get(param_name)
+                    if provider is None:
+                        add_diagnostic(
+                            consumer,
+                            f"unknown.{param_name}",
+                            (
+                                f"{lifecycle_class.class_name}."
+                                f"{consumer.field_name}: default_factory "
+                                f"references unknown name {param_name!r}"
+                            ),
+                        )
+                        continue
+                    if not provider_is_available(provider):
+                        add_diagnostic(
+                            consumer,
+                            f"unavailable.{param_name}",
+                            (
+                                f"{lifecycle_class.class_name}."
+                                f"{consumer.field_name}: default_factory "
+                                f"cannot reference {param_name!r} "
+                                "(value is unavailable before factory evaluation)"
+                            ),
+                        )
+                        continue
+                    deps.append((consumer, provider, param_name, param_order))
+                    if provider.field_id in graph:
+                        graph[consumer.field_id].add(provider.field_id)
+
+            field_order = {
+                field.field_id: field.field_order for field in class_fields
+            }
+            visiting = set()
+            visited = set()
+            ordered_field_ids = []
+            cycle_found = False
+
+            def visit(field_id, path):
+                nonlocal cycle_found
+                if cycle_found or field_id in visited:
+                    return
+                if field_id in visiting:
+                    cycle = path[path.index(field_id):]
+                    names = " -> ".join(by_id[item].field_name for item in cycle)
+                    add_diagnostic(
+                        by_id[field_id],
+                        "cycle",
+                        (
+                            f"{lifecycle_class.class_name}: default_factory "
+                            f"dependency cycle: {names}"
+                        ),
+                    )
+                    cycle_found = True
+                    return
+                visiting.add(field_id)
+                for provider_id in sorted(
+                    graph.get(field_id, ()),
+                    key=lambda item: field_order[item],
+                ):
+                    visit(provider_id, [*path, provider_id])
+                visiting.remove(field_id)
+                visited.add(field_id)
+                ordered_field_ids.append(field_id)
+
+            for field in factory_fields:
+                visit(field.field_id, [field.field_id])
+                if cycle_found:
+                    break
+
+            if diagnostic_count:
+                continue
+
+            eval_order_by_id = {
+                field_id: eval_order
+                for eval_order, field_id in enumerate(ordered_field_ids)
+            }
+
+            for consumer, provider, param_name, param_order in deps:
+                ctx.write(
+                    DefaultFactoryDependenciesCollection,
+                    DefaultFactoryDependency(
+                        dependency_owner=lifecycle_class.class_id,
+                        consumer_field_id=consumer.field_id,
+                        consumer_field_name=consumer.field_name,
+                        provider_name=provider.field_name,
+                        provider_field_id=provider.field_id,
+                        provider_field_kind=provider.field_kind,
+                        provider_init=provider.init,
+                        provider_has_default=provider.has_default,
+                        provider_has_default_factory=provider.has_default_factory,
+                        param_name=param_name,
+                        param_order=param_order,
+                    ),
+                    policy=RejectDuplicate,
+                )
+
+            for eval_order, field_id in enumerate(ordered_field_ids):
+                field = by_id[field_id]
+                ctx.write(
+                    DefaultFactoryEvaluationStepsCollection,
+                    DefaultFactoryEvaluationStep(
+                        eval_step_id=field.field_id,
+                        eval_owner=lifecycle_class.class_id,
+                        eval_field_id=field.field_id,
+                        eval_field_name=field.field_name,
+                        eval_order=eval_order,
+                    ),
+                    policy=RejectDuplicate,
+                )
+    ]$ {
+        keep ctx, ClassesCollection, FieldsCollection
+        keep DefaultFactoryDependenciesCollection
+        keep DefaultFactoryEvaluationStepsCollection
+        keep DefaultFactoryDiagnosticsCollection
+        keep DefaultFactoryDependency, DefaultFactoryEvaluationStep
+        keep DefaultFactoryDiagnostic, RejectDuplicate, ReplaceExisting
+    }
+
+    operation BuildDefaultFactoryFacts
+        inputs(Classes, Fields)
+        outputs(DefaultFactoryDependencies, DefaultFactoryEvaluationSteps, DefaultFactoryDiagnostics)
+        using BuildDefaultFactoryFactsBody
+
     # -------------------------------------------------------------------------
     # A3 generated module/class skeleton.
     # -------------------------------------------------------------------------

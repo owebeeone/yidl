@@ -537,7 +537,7 @@ class LifecycleClass:
         working_facade_class_name: str,
         lifecycle_definition_param_name: str = "",
         annotations_param_name: str = "",
-        tx_groups_param_name: str = ""
+        tx_groups_param_name: str = "",
     ):
         if not isinstance(class_id, str):
             raise TypeError("ClassId must be str, got " + type(class_id).__name__)
@@ -663,7 +663,7 @@ class FacadeClass:
         facade_kind: str,
         facade_mode: str,
         facade_class_name: str,
-        facade_order: int = 0
+        facade_order: int = 0,
     ):
         if not isinstance(facade_owner, str):
             raise TypeError(
@@ -738,7 +738,7 @@ class FacadeExposure:
         owner_facade_id: str,
         field_name: str,
         target_facade_id: str,
-        exposure_order: int = 0
+        exposure_order: int = 0,
     ):
         if not isinstance(facade_owner, str):
             raise TypeError(
@@ -804,7 +804,7 @@ class TransactionalField:
         field_owner: str,
         field_name: str,
         field_order: int,
-        tx_group_key: object = None
+        tx_group_key: object = None,
     ):
         if not isinstance(field_id, str):
             raise TypeError("FieldId must be str, got " + type(field_id).__name__)
@@ -858,7 +858,7 @@ class TxGroup:
         class_id: str,
         tx_group_key: object = None,
         tx_index: int = 0,
-        tx_group_order: int = 0
+        tx_group_order: int = 0,
     ):
         if not isinstance(class_id, str):
             raise TypeError("ClassId must be str, got " + type(class_id).__name__)
@@ -921,7 +921,7 @@ class IndexedTransactionalField:
         tx_group_key: object = None,
         tx_index: int = 0,
         current_slot_name: str = "",
-        working_slot_name: str = ""
+        working_slot_name: str = "",
     ):
         if not isinstance(field_id, str):
             raise TypeError("FieldId must be str, got " + type(field_id).__name__)
@@ -1002,7 +1002,7 @@ class InitParameter:
         init_parameter_owner: str,
         init_parameter_name: str,
         init_parameter_order: int = 0,
-        init_parameter_kind: str = "field"
+        init_parameter_kind: str = "field",
     ):
         if not isinstance(init_parameter_id, str):
             raise TypeError(
@@ -1083,7 +1083,7 @@ class InitAssignment:
         init_assignment_field_id: str,
         init_assignment_field_name: str,
         init_assignment_order: int = 0,
-        init_assignment_kind: str = "plain"
+        init_assignment_kind: str = "plain",
     ):
         if not isinstance(init_assignment_id, str):
             raise TypeError(
@@ -1170,7 +1170,7 @@ class ClassVarAssignment:
         class_var_assignment_id: str,
         class_var_assignment_owner: str,
         class_var_assignment_name: str,
-        class_var_assignment_order: int = 0
+        class_var_assignment_order: int = 0,
     ):
         if not isinstance(class_var_assignment_id, str):
             raise TypeError(
@@ -1269,7 +1269,7 @@ class DefaultFactoryDependency:
         provider_has_default: bool = False,
         provider_has_default_factory: bool = False,
         param_name: str,
-        param_order: int = 0
+        param_order: int = 0,
     ):
         if not isinstance(dependency_owner, str):
             raise TypeError(
@@ -1389,7 +1389,7 @@ class DefaultFactoryEvaluationStep:
         eval_owner: str,
         eval_field_id: str,
         eval_field_name: str,
-        eval_order: int = 0
+        eval_order: int = 0,
     ):
         if not isinstance(eval_step_id, str):
             raise TypeError(
@@ -1456,7 +1456,7 @@ class DefaultFactoryDiagnostic:
         diagnostic_id: str,
         diagnostic_owner: str,
         diagnostic_field_id: str = "",
-        diagnostic_message: str
+        diagnostic_message: str,
     ):
         if not isinstance(diagnostic_id, str):
             raise TypeError(
@@ -1564,7 +1564,7 @@ class PlainField:
         tx_group_key: object = None,
         value_slot_name: str = "",
         current_slot_name: str = "",
-        working_slot_name: str = ""
+        working_slot_name: str = "",
     ):
         if not isinstance(field_id, str):
             raise TypeError("FieldId must be str, got " + type(field_id).__name__)
@@ -1747,7 +1747,7 @@ class InitVarField:
         tx_group_key: object = None,
         value_slot_name: str = "",
         current_slot_name: str = "",
-        working_slot_name: str = ""
+        working_slot_name: str = "",
     ):
         if not isinstance(field_id, str):
             raise TypeError("FieldId must be str, got " + type(field_id).__name__)
@@ -1930,7 +1930,7 @@ class ClassVarField:
         tx_group_key: object = None,
         value_slot_name: str = "",
         current_slot_name: str = "",
-        working_slot_name: str = ""
+        working_slot_name: str = "",
     ):
         if not isinstance(field_id, str):
             raise TypeError("FieldId must be str, got " + type(field_id).__name__)
@@ -2113,7 +2113,7 @@ class ManagedField:
         tx_group_key: object = None,
         value_slot_name: str = "",
         current_slot_name: str = "",
-        working_slot_name: str = ""
+        working_slot_name: str = "",
     ):
         if not isinstance(field_id, str):
             raise TypeError("FieldId must be str, got " + type(field_id).__name__)
@@ -2410,8 +2410,137 @@ def run_build_transaction_facts(builder):
             )
 
 
+def run_build_default_factory_facts(builder):
+    ctx = DDSOperationContext(builder, "BuildDefaultFactoryFacts", ordered_inputs={})
+    classes = sorted(ctx.records(ClassesCollection), key=lambda item: item.class_order)
+    fields = sorted(ctx.records(FieldsCollection), key=lambda item: item.field_order)
+    for lifecycle_class in classes:
+        class_fields = [
+            field for field in fields if field.field_owner == lifecycle_class.class_id
+        ]
+        by_name = {field.field_name: field for field in class_fields}
+        by_id = {field.field_id: field for field in class_fields}
+        factory_fields = [field for field in class_fields if field.has_default_factory]
+        graph = {field.field_id: set() for field in factory_fields}
+        deps = []
+        diagnostic_count = 0
+
+        def add_diagnostic(field, suffix, message):
+            nonlocal diagnostic_count
+            diagnostic_count += 1
+            ctx.write(
+                DefaultFactoryDiagnosticsCollection,
+                DefaultFactoryDiagnostic(
+                    diagnostic_id=f"{field.field_id}.{suffix}.{diagnostic_count}",
+                    diagnostic_owner=lifecycle_class.class_id,
+                    diagnostic_field_id=field.field_id,
+                    diagnostic_message=message,
+                ),
+                policy=ReplaceExisting,
+            )
+
+        def provider_is_available(provider):
+            if provider.init:
+                return True
+            return provider.has_default or provider.has_default_factory
+
+        for consumer in factory_fields:
+            for param_order, param_name in enumerate(
+                consumer.default_factory_param_names
+            ):
+                provider = by_name.get(param_name)
+                if provider is None:
+                    add_diagnostic(
+                        consumer,
+                        f"unknown.{param_name}",
+                        f"{lifecycle_class.class_name}.{consumer.field_name}: default_factory references unknown name {param_name!r}",
+                    )
+                    continue
+                if not provider_is_available(provider):
+                    add_diagnostic(
+                        consumer,
+                        f"unavailable.{param_name}",
+                        f"{lifecycle_class.class_name}.{consumer.field_name}: default_factory cannot reference {param_name!r} (value is unavailable before factory evaluation)",
+                    )
+                    continue
+                deps.append((consumer, provider, param_name, param_order))
+                if provider.field_id in graph:
+                    graph[consumer.field_id].add(provider.field_id)
+        field_order = {field.field_id: field.field_order for field in class_fields}
+        visiting = set()
+        visited = set()
+        ordered_field_ids = []
+        cycle_found = False
+
+        def visit(field_id, path):
+            nonlocal cycle_found
+            if cycle_found or field_id in visited:
+                return
+            if field_id in visiting:
+                cycle = path[path.index(field_id) :]
+                names = " -> ".join((by_id[item].field_name for item in cycle))
+                add_diagnostic(
+                    by_id[field_id],
+                    "cycle",
+                    f"{lifecycle_class.class_name}: default_factory dependency cycle: {names}",
+                )
+                cycle_found = True
+                return
+            visiting.add(field_id)
+            for provider_id in sorted(
+                graph.get(field_id, ()), key=lambda item: field_order[item]
+            ):
+                visit(provider_id, [*path, provider_id])
+            visiting.remove(field_id)
+            visited.add(field_id)
+            ordered_field_ids.append(field_id)
+
+        for field in factory_fields:
+            visit(field.field_id, [field.field_id])
+            if cycle_found:
+                break
+        if diagnostic_count:
+            continue
+        eval_order_by_id = {
+            field_id: eval_order
+            for eval_order, field_id in enumerate(ordered_field_ids)
+        }
+        for consumer, provider, param_name, param_order in deps:
+            ctx.write(
+                DefaultFactoryDependenciesCollection,
+                DefaultFactoryDependency(
+                    dependency_owner=lifecycle_class.class_id,
+                    consumer_field_id=consumer.field_id,
+                    consumer_field_name=consumer.field_name,
+                    provider_name=provider.field_name,
+                    provider_field_id=provider.field_id,
+                    provider_field_kind=provider.field_kind,
+                    provider_init=provider.init,
+                    provider_has_default=provider.has_default,
+                    provider_has_default_factory=provider.has_default_factory,
+                    param_name=param_name,
+                    param_order=param_order,
+                ),
+                policy=RejectDuplicate,
+            )
+        for eval_order, field_id in enumerate(ordered_field_ids):
+            field = by_id[field_id]
+            ctx.write(
+                DefaultFactoryEvaluationStepsCollection,
+                DefaultFactoryEvaluationStep(
+                    eval_step_id=field.field_id,
+                    eval_owner=lifecycle_class.class_id,
+                    eval_field_id=field.field_id,
+                    eval_field_name=field.field_name,
+                    eval_order=eval_order,
+                ),
+                policy=RejectDuplicate,
+            )
+
+
 def run_operations(builder):
     run_build_transaction_facts(builder)
+    run_build_default_factory_facts(builder)
     return builder
 
 
@@ -2767,6 +2896,181 @@ for lifecycle_class in classes:
             "RejectDuplicate",
         ),
     ),
+    "BuildDefaultFactoryFactsBody": from_astichi_code(
+        """\
+classes = sorted(
+    ctx.records(ClassesCollection),
+    key=lambda item: item.class_order,
+)
+fields = sorted(
+    ctx.records(FieldsCollection),
+    key=lambda item: item.field_order,
+)
+
+for lifecycle_class in classes:
+    class_fields = [
+        field for field in fields
+        if field.field_owner == lifecycle_class.class_id
+    ]
+    by_name = {field.field_name: field for field in class_fields}
+    by_id = {field.field_id: field for field in class_fields}
+    factory_fields = [
+        field for field in class_fields
+        if field.has_default_factory
+    ]
+    graph = {field.field_id: set() for field in factory_fields}
+    deps = []
+    diagnostic_count = 0
+
+    def add_diagnostic(field, suffix, message):
+        nonlocal diagnostic_count
+        diagnostic_count += 1
+        ctx.write(
+            DefaultFactoryDiagnosticsCollection,
+            DefaultFactoryDiagnostic(
+                diagnostic_id=(
+                    f"{field.field_id}.{suffix}.{diagnostic_count}"
+                ),
+                diagnostic_owner=lifecycle_class.class_id,
+                diagnostic_field_id=field.field_id,
+                diagnostic_message=message,
+            ),
+            policy=ReplaceExisting,
+        )
+
+    def provider_is_available(provider):
+        if provider.init:
+            return True
+        return provider.has_default or provider.has_default_factory
+
+    for consumer in factory_fields:
+        for param_order, param_name in enumerate(
+            consumer.default_factory_param_names
+        ):
+            provider = by_name.get(param_name)
+            if provider is None:
+                add_diagnostic(
+                    consumer,
+                    f"unknown.{param_name}",
+                    (
+                        f"{lifecycle_class.class_name}."
+                        f"{consumer.field_name}: default_factory "
+                        f"references unknown name {param_name!r}"
+                    ),
+                )
+                continue
+            if not provider_is_available(provider):
+                add_diagnostic(
+                    consumer,
+                    f"unavailable.{param_name}",
+                    (
+                        f"{lifecycle_class.class_name}."
+                        f"{consumer.field_name}: default_factory "
+                        f"cannot reference {param_name!r} "
+                        "(value is unavailable before factory evaluation)"
+                    ),
+                )
+                continue
+            deps.append((consumer, provider, param_name, param_order))
+            if provider.field_id in graph:
+                graph[consumer.field_id].add(provider.field_id)
+
+    field_order = {
+        field.field_id: field.field_order for field in class_fields
+    }
+    visiting = set()
+    visited = set()
+    ordered_field_ids = []
+    cycle_found = False
+
+    def visit(field_id, path):
+        nonlocal cycle_found
+        if cycle_found or field_id in visited:
+            return
+        if field_id in visiting:
+            cycle = path[path.index(field_id):]
+            names = " -> ".join(by_id[item].field_name for item in cycle)
+            add_diagnostic(
+                by_id[field_id],
+                "cycle",
+                (
+                    f"{lifecycle_class.class_name}: default_factory "
+                    f"dependency cycle: {names}"
+                ),
+            )
+            cycle_found = True
+            return
+        visiting.add(field_id)
+        for provider_id in sorted(
+            graph.get(field_id, ()),
+            key=lambda item: field_order[item],
+        ):
+            visit(provider_id, [*path, provider_id])
+        visiting.remove(field_id)
+        visited.add(field_id)
+        ordered_field_ids.append(field_id)
+
+    for field in factory_fields:
+        visit(field.field_id, [field.field_id])
+        if cycle_found:
+            break
+
+    if diagnostic_count:
+        continue
+
+    eval_order_by_id = {
+        field_id: eval_order
+        for eval_order, field_id in enumerate(ordered_field_ids)
+    }
+
+    for consumer, provider, param_name, param_order in deps:
+        ctx.write(
+            DefaultFactoryDependenciesCollection,
+            DefaultFactoryDependency(
+                dependency_owner=lifecycle_class.class_id,
+                consumer_field_id=consumer.field_id,
+                consumer_field_name=consumer.field_name,
+                provider_name=provider.field_name,
+                provider_field_id=provider.field_id,
+                provider_field_kind=provider.field_kind,
+                provider_init=provider.init,
+                provider_has_default=provider.has_default,
+                provider_has_default_factory=provider.has_default_factory,
+                param_name=param_name,
+                param_order=param_order,
+            ),
+            policy=RejectDuplicate,
+        )
+
+    for eval_order, field_id in enumerate(ordered_field_ids):
+        field = by_id[field_id]
+        ctx.write(
+            DefaultFactoryEvaluationStepsCollection,
+            DefaultFactoryEvaluationStep(
+                eval_step_id=field.field_id,
+                eval_owner=lifecycle_class.class_id,
+                eval_field_id=field.field_id,
+                eval_field_name=field.field_name,
+                eval_order=eval_order,
+            ),
+            policy=RejectDuplicate,
+        )""",
+        file_name="tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl",
+        line_number=354,
+        keep_names=(
+            "ctx",
+            "ClassesCollection",
+            "FieldsCollection",
+            "DefaultFactoryDependenciesCollection",
+            "DefaultFactoryEvaluationStepsCollection",
+            "DefaultFactoryDiagnosticsCollection",
+            "DefaultFactoryDependency",
+            "DefaultFactoryEvaluationStep",
+            "DefaultFactoryDiagnostic",
+            "RejectDuplicate",
+            "ReplaceExisting",
+        ),
+    ),
     "ModuleRoot": from_astichi_code(
         """\
 from __future__ import annotations
@@ -2784,7 +3088,7 @@ def build_lifecycle_class(decorated_cls, builder_params__astichi_param_hole__):
     astichi_hole(function_body)
     astichi_hole(return_statement)""",
         file_name="tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl",
-        line_number=358,
+        line_number=530,
     ),
     "BuilderParam": astichi_template(
         from_astichi_code(
@@ -2792,7 +3096,7 @@ def build_lifecycle_class(decorated_cls, builder_params__astichi_param_hole__):
 def astichi_params(*, value_name__astichi_arg__):
     pass""",
             file_name="tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl",
-            line_number=375,
+            line_number=547,
         )
     ),
     "TransactionManagerParam": astichi_template(
@@ -2801,14 +3105,14 @@ def astichi_params(*, value_name__astichi_arg__):
 def astichi_params(*, transaction_manager=None):
     pass""",
             file_name="tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl",
-            line_number=380,
+            line_number=552,
         )
     ),
     "StateSlotEntry": astichi_template(
         from_astichi_code(
             "astichi_bind_external(slot_name)",
             file_name="tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl",
-            line_number=385,
+            line_number=557,
         )
     ),
     "InitParamRequired": astichi_template(
@@ -2817,7 +3121,7 @@ def astichi_params(*, transaction_manager=None):
 def astichi_params(param_name__astichi_arg__: astichi_bind_external(annotation)):
     pass""",
             file_name="tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl",
-            line_number=389,
+            line_number=561,
         )
     ),
     "InitParamDefault": astichi_template(
@@ -2829,7 +3133,7 @@ def astichi_params(
 ):
     pass""",
             file_name="tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl",
-            line_number=394,
+            line_number=566,
         )
     ),
     "PlainStateAssignment": astichi_template(
@@ -2840,7 +3144,7 @@ astichi_pass(state, outer_bind=True).astichi_ref(external=state_slot)._ = astich
     outer_bind=True,
 )""",
             file_name="tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl",
-            line_number=402,
+            line_number=574,
         )
     ),
     "PlainProperty": astichi_template(
@@ -2854,7 +3158,7 @@ def property_getter_name__astichi_arg__(self):
 def property_setter_name__astichi_arg__(self, value):
     self._y_state.astichi_ref(external=state_slot)._ = value""",
             file_name="tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl",
-            line_number=409,
+            line_number=581,
         )
     ),
     "ClassVarDefaultAssignment": astichi_template(
@@ -2865,7 +3169,7 @@ classvar_name__astichi_arg__ = astichi_pass(
     outer_bind=True,
 )""",
             file_name="tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl",
-            line_number=419,
+            line_number=591,
         )
     ),
     "ManagedCurrentStateAssignment": astichi_template(
@@ -2876,14 +3180,14 @@ astichi_pass(state, outer_bind=True).astichi_ref(external=current_slot)._ = asti
     outer_bind=True,
 )""",
             file_name="tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl",
-            line_number=426,
+            line_number=598,
         )
     ),
     "ManagedWorkingStateAssignment": astichi_template(
         from_astichi_code(
             "astichi_pass(state, outer_bind=True).astichi_ref(external=working_slot)._ = VOID",
             file_name="tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl",
-            line_number=433,
+            line_number=605,
             keep_names=("VOID",),
         )
     ),
@@ -2903,7 +3207,7 @@ def property_setter_name__astichi_arg__(self, value):
     state._y_ensure_working_transaction(astichi_bind_external(tx_index))
     state.astichi_ref(external=working_slot)._ = value""",
             file_name="tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl",
-            line_number=439,
+            line_number=611,
             keep_names=("VOID",),
         )
     ),
@@ -2922,7 +3226,7 @@ def property_setter_name__astichi_arg__(self, value):
         + astichi_bind_external(field_name)
     )""",
             file_name="tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl",
-            line_number=456,
+            line_number=628,
         )
     ),
     "ManagedWorkingProperty": astichi_template(
@@ -2941,7 +3245,7 @@ def property_setter_name__astichi_arg__(self, value):
     state._y_ensure_working_transaction(astichi_bind_external(tx_index))
     state.astichi_ref(external=working_slot)._ = value""",
             file_name="tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl",
-            line_number=470,
+            line_number=642,
             keep_names=("VOID",),
         )
     ),
@@ -2955,7 +3259,7 @@ if astichi_pass(tx_index, outer_bind=True) == astichi_bind_external(tx_index_val
         )
         astichi_pass(self, outer_bind=True).astichi_ref(external=working_slot)._ = VOID""",
             file_name="tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl",
-            line_number=487,
+            line_number=659,
             keep_names=("VOID",),
         )
     ),
@@ -2965,7 +3269,7 @@ if astichi_pass(tx_index, outer_bind=True) == astichi_bind_external(tx_index_val
 if astichi_pass(tx_index, outer_bind=True) == astichi_bind_external(tx_index_value):
     astichi_pass(self, outer_bind=True).astichi_ref(external=working_slot)._ = VOID""",
             file_name="tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl",
-            line_number=498,
+            line_number=670,
             keep_names=("VOID",),
         )
     ),
@@ -3178,7 +3482,7 @@ class working_facade_class_decl_name__astichi_arg__(
     __slots__ = ()
     astichi_hole(working_facade_properties)""",
             file_name="tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl",
-            line_number=505,
+            line_number=677,
             keep_names=("DEFAULT_TRANSACTION", "TransactionManager", "VOID", "weakref"),
         )
     ),
@@ -3199,14 +3503,14 @@ return_class_module_ref__astichi_arg__.__module__ = astichi_pass(
 ).__module__
 return return_class_result_ref__astichi_arg__""",
             file_name="tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl",
-            line_number=715,
+            line_number=887,
         )
     ),
     "PassStatement": astichi_template(
         from_astichi_code(
             "pass",
             file_name="tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl",
-            line_number=731,
+            line_number=903,
         )
     ),
 }

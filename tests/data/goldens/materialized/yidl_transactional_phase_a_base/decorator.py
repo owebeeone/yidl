@@ -1073,8 +1073,78 @@ def run_build_transaction_facts(builder):
             ctx.write(TransactionalFieldsCollection, TransactionalField(field_id=field.field_id, field_owner=field.field_owner, field_name=field.field_name, field_order=field.field_order, tx_group_key=tx_group), policy=RejectDuplicate)
             ctx.write(IndexedTransactionalFieldsCollection, IndexedTransactionalField(field_id=field.field_id, field_owner=field.field_owner, field_name=field.field_name, field_order=field.field_order, tx_group_key=tx_group, tx_index=tx_index, current_slot_name=field.current_slot_name, working_slot_name=field.working_slot_name), policy=RejectDuplicate)
 
+def run_build_default_factory_facts(builder):
+    ctx = DDSOperationContext(builder, 'BuildDefaultFactoryFacts', ordered_inputs={})
+    classes = sorted(ctx.records(ClassesCollection), key=lambda item: item.class_order)
+    fields = sorted(ctx.records(FieldsCollection), key=lambda item: item.field_order)
+    for lifecycle_class in classes:
+        class_fields = [field for field in fields if field.field_owner == lifecycle_class.class_id]
+        by_name = {field.field_name: field for field in class_fields}
+        by_id = {field.field_id: field for field in class_fields}
+        factory_fields = [field for field in class_fields if field.has_default_factory]
+        graph = {field.field_id: set() for field in factory_fields}
+        deps = []
+        diagnostic_count = 0
+
+        def add_diagnostic(field, suffix, message):
+            nonlocal diagnostic_count
+            diagnostic_count += 1
+            ctx.write(DefaultFactoryDiagnosticsCollection, DefaultFactoryDiagnostic(diagnostic_id=f'{field.field_id}.{suffix}.{diagnostic_count}', diagnostic_owner=lifecycle_class.class_id, diagnostic_field_id=field.field_id, diagnostic_message=message), policy=ReplaceExisting)
+
+        def provider_is_available(provider):
+            if provider.init:
+                return True
+            return provider.has_default or provider.has_default_factory
+        for consumer in factory_fields:
+            for param_order, param_name in enumerate(consumer.default_factory_param_names):
+                provider = by_name.get(param_name)
+                if provider is None:
+                    add_diagnostic(consumer, f'unknown.{param_name}', f'{lifecycle_class.class_name}.{consumer.field_name}: default_factory references unknown name {param_name!r}')
+                    continue
+                if not provider_is_available(provider):
+                    add_diagnostic(consumer, f'unavailable.{param_name}', f'{lifecycle_class.class_name}.{consumer.field_name}: default_factory cannot reference {param_name!r} (value is unavailable before factory evaluation)')
+                    continue
+                deps.append((consumer, provider, param_name, param_order))
+                if provider.field_id in graph:
+                    graph[consumer.field_id].add(provider.field_id)
+        field_order = {field.field_id: field.field_order for field in class_fields}
+        visiting = set()
+        visited = set()
+        ordered_field_ids = []
+        cycle_found = False
+
+        def visit(field_id, path):
+            nonlocal cycle_found
+            if cycle_found or field_id in visited:
+                return
+            if field_id in visiting:
+                cycle = path[path.index(field_id):]
+                names = ' -> '.join((by_id[item].field_name for item in cycle))
+                add_diagnostic(by_id[field_id], 'cycle', f'{lifecycle_class.class_name}: default_factory dependency cycle: {names}')
+                cycle_found = True
+                return
+            visiting.add(field_id)
+            for provider_id in sorted(graph.get(field_id, ()), key=lambda item: field_order[item]):
+                visit(provider_id, [*path, provider_id])
+            visiting.remove(field_id)
+            visited.add(field_id)
+            ordered_field_ids.append(field_id)
+        for field in factory_fields:
+            visit(field.field_id, [field.field_id])
+            if cycle_found:
+                break
+        if diagnostic_count:
+            continue
+        eval_order_by_id = {field_id: eval_order for eval_order, field_id in enumerate(ordered_field_ids)}
+        for consumer, provider, param_name, param_order in deps:
+            ctx.write(DefaultFactoryDependenciesCollection, DefaultFactoryDependency(dependency_owner=lifecycle_class.class_id, consumer_field_id=consumer.field_id, consumer_field_name=consumer.field_name, provider_name=provider.field_name, provider_field_id=provider.field_id, provider_field_kind=provider.field_kind, provider_init=provider.init, provider_has_default=provider.has_default, provider_has_default_factory=provider.has_default_factory, param_name=param_name, param_order=param_order), policy=RejectDuplicate)
+        for eval_order, field_id in enumerate(ordered_field_ids):
+            field = by_id[field_id]
+            ctx.write(DefaultFactoryEvaluationStepsCollection, DefaultFactoryEvaluationStep(eval_step_id=field.field_id, eval_owner=lifecycle_class.class_id, eval_field_id=field.field_id, eval_field_name=field.field_name, eval_order=eval_order), policy=RejectDuplicate)
+
 def run_operations(builder):
     run_build_transaction_facts(builder)
+    run_build_default_factory_facts(builder)
     return builder
 
 def build_container(builder):
@@ -1200,7 +1270,164 @@ for lifecycle_class in classes:
                 working_slot_name=field.working_slot_name,
             ),
             policy=RejectDuplicate,
-        )""", file_name='tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl', line_number=155, keep_names=('ctx', 'ClassesCollection', 'FieldsCollection', 'TxGroupsCollection', 'TransactionalFieldsCollection', 'IndexedTransactionalFieldsCollection', 'TxGroup', 'TransactionalField', 'IndexedTransactionalField', 'RejectDuplicate')), 'ModuleRoot': from_astichi_code("""\
+        )""", file_name='tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl', line_number=155, keep_names=('ctx', 'ClassesCollection', 'FieldsCollection', 'TxGroupsCollection', 'TransactionalFieldsCollection', 'IndexedTransactionalFieldsCollection', 'TxGroup', 'TransactionalField', 'IndexedTransactionalField', 'RejectDuplicate')), 'BuildDefaultFactoryFactsBody': from_astichi_code("""\
+classes = sorted(
+    ctx.records(ClassesCollection),
+    key=lambda item: item.class_order,
+)
+fields = sorted(
+    ctx.records(FieldsCollection),
+    key=lambda item: item.field_order,
+)
+
+for lifecycle_class in classes:
+    class_fields = [
+        field for field in fields
+        if field.field_owner == lifecycle_class.class_id
+    ]
+    by_name = {field.field_name: field for field in class_fields}
+    by_id = {field.field_id: field for field in class_fields}
+    factory_fields = [
+        field for field in class_fields
+        if field.has_default_factory
+    ]
+    graph = {field.field_id: set() for field in factory_fields}
+    deps = []
+    diagnostic_count = 0
+
+    def add_diagnostic(field, suffix, message):
+        nonlocal diagnostic_count
+        diagnostic_count += 1
+        ctx.write(
+            DefaultFactoryDiagnosticsCollection,
+            DefaultFactoryDiagnostic(
+                diagnostic_id=(
+                    f"{field.field_id}.{suffix}.{diagnostic_count}"
+                ),
+                diagnostic_owner=lifecycle_class.class_id,
+                diagnostic_field_id=field.field_id,
+                diagnostic_message=message,
+            ),
+            policy=ReplaceExisting,
+        )
+
+    def provider_is_available(provider):
+        if provider.init:
+            return True
+        return provider.has_default or provider.has_default_factory
+
+    for consumer in factory_fields:
+        for param_order, param_name in enumerate(
+            consumer.default_factory_param_names
+        ):
+            provider = by_name.get(param_name)
+            if provider is None:
+                add_diagnostic(
+                    consumer,
+                    f"unknown.{param_name}",
+                    (
+                        f"{lifecycle_class.class_name}."
+                        f"{consumer.field_name}: default_factory "
+                        f"references unknown name {param_name!r}"
+                    ),
+                )
+                continue
+            if not provider_is_available(provider):
+                add_diagnostic(
+                    consumer,
+                    f"unavailable.{param_name}",
+                    (
+                        f"{lifecycle_class.class_name}."
+                        f"{consumer.field_name}: default_factory "
+                        f"cannot reference {param_name!r} "
+                        "(value is unavailable before factory evaluation)"
+                    ),
+                )
+                continue
+            deps.append((consumer, provider, param_name, param_order))
+            if provider.field_id in graph:
+                graph[consumer.field_id].add(provider.field_id)
+
+    field_order = {
+        field.field_id: field.field_order for field in class_fields
+    }
+    visiting = set()
+    visited = set()
+    ordered_field_ids = []
+    cycle_found = False
+
+    def visit(field_id, path):
+        nonlocal cycle_found
+        if cycle_found or field_id in visited:
+            return
+        if field_id in visiting:
+            cycle = path[path.index(field_id):]
+            names = " -> ".join(by_id[item].field_name for item in cycle)
+            add_diagnostic(
+                by_id[field_id],
+                "cycle",
+                (
+                    f"{lifecycle_class.class_name}: default_factory "
+                    f"dependency cycle: {names}"
+                ),
+            )
+            cycle_found = True
+            return
+        visiting.add(field_id)
+        for provider_id in sorted(
+            graph.get(field_id, ()),
+            key=lambda item: field_order[item],
+        ):
+            visit(provider_id, [*path, provider_id])
+        visiting.remove(field_id)
+        visited.add(field_id)
+        ordered_field_ids.append(field_id)
+
+    for field in factory_fields:
+        visit(field.field_id, [field.field_id])
+        if cycle_found:
+            break
+
+    if diagnostic_count:
+        continue
+
+    eval_order_by_id = {
+        field_id: eval_order
+        for eval_order, field_id in enumerate(ordered_field_ids)
+    }
+
+    for consumer, provider, param_name, param_order in deps:
+        ctx.write(
+            DefaultFactoryDependenciesCollection,
+            DefaultFactoryDependency(
+                dependency_owner=lifecycle_class.class_id,
+                consumer_field_id=consumer.field_id,
+                consumer_field_name=consumer.field_name,
+                provider_name=provider.field_name,
+                provider_field_id=provider.field_id,
+                provider_field_kind=provider.field_kind,
+                provider_init=provider.init,
+                provider_has_default=provider.has_default,
+                provider_has_default_factory=provider.has_default_factory,
+                param_name=param_name,
+                param_order=param_order,
+            ),
+            policy=RejectDuplicate,
+        )
+
+    for eval_order, field_id in enumerate(ordered_field_ids):
+        field = by_id[field_id]
+        ctx.write(
+            DefaultFactoryEvaluationStepsCollection,
+            DefaultFactoryEvaluationStep(
+                eval_step_id=field.field_id,
+                eval_owner=lifecycle_class.class_id,
+                eval_field_id=field.field_id,
+                eval_field_name=field.field_name,
+                eval_order=eval_order,
+            ),
+            policy=RejectDuplicate,
+        )""", file_name='tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl', line_number=354, keep_names=('ctx', 'ClassesCollection', 'FieldsCollection', 'DefaultFactoryDependenciesCollection', 'DefaultFactoryEvaluationStepsCollection', 'DefaultFactoryDiagnosticsCollection', 'DefaultFactoryDependency', 'DefaultFactoryEvaluationStep', 'DefaultFactoryDiagnostic', 'RejectDuplicate', 'ReplaceExisting')), 'ModuleRoot': from_astichi_code("""\
 from __future__ import annotations
 
 import weakref
@@ -1214,37 +1441,37 @@ VOID = object()
 
 def build_lifecycle_class(decorated_cls, builder_params__astichi_param_hole__):
     astichi_hole(function_body)
-    astichi_hole(return_statement)""", file_name='tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl', line_number=358), 'BuilderParam': astichi_template(from_astichi_code("""\
+    astichi_hole(return_statement)""", file_name='tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl', line_number=530), 'BuilderParam': astichi_template(from_astichi_code("""\
 def astichi_params(*, value_name__astichi_arg__):
-    pass""", file_name='tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl', line_number=375)), 'TransactionManagerParam': astichi_template(from_astichi_code("""\
+    pass""", file_name='tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl', line_number=547)), 'TransactionManagerParam': astichi_template(from_astichi_code("""\
 def astichi_params(*, transaction_manager=None):
-    pass""", file_name='tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl', line_number=380)), 'StateSlotEntry': astichi_template(from_astichi_code('astichi_bind_external(slot_name)', file_name='tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl', line_number=385)), 'InitParamRequired': astichi_template(from_astichi_code("""\
+    pass""", file_name='tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl', line_number=552)), 'StateSlotEntry': astichi_template(from_astichi_code('astichi_bind_external(slot_name)', file_name='tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl', line_number=557)), 'InitParamRequired': astichi_template(from_astichi_code("""\
 def astichi_params(param_name__astichi_arg__: astichi_bind_external(annotation)):
-    pass""", file_name='tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl', line_number=389)), 'InitParamDefault': astichi_template(from_astichi_code("""\
+    pass""", file_name='tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl', line_number=561)), 'InitParamDefault': astichi_template(from_astichi_code("""\
 def astichi_params(
     param_name__astichi_arg__: astichi_bind_external(annotation)
     = default_value_name__astichi_arg__
 ):
-    pass""", file_name='tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl', line_number=394)), 'PlainStateAssignment': astichi_template(from_astichi_code("""\
+    pass""", file_name='tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl', line_number=566)), 'PlainStateAssignment': astichi_template(from_astichi_code("""\
 astichi_pass(state, outer_bind=True).astichi_ref(external=state_slot)._ = astichi_pass(
     init_value_name__astichi_arg__,
     outer_bind=True,
-)""", file_name='tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl', line_number=402)), 'PlainProperty': astichi_template(from_astichi_code("""\
+)""", file_name='tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl', line_number=574)), 'PlainProperty': astichi_template(from_astichi_code("""\
 @property
 def property_getter_name__astichi_arg__(self):
     return self._y_state.astichi_ref(external=state_slot)
 
 @property_setter_target_name__astichi_arg__.setter
 def property_setter_name__astichi_arg__(self, value):
-    self._y_state.astichi_ref(external=state_slot)._ = value""", file_name='tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl', line_number=409)), 'ClassVarDefaultAssignment': astichi_template(from_astichi_code("""\
+    self._y_state.astichi_ref(external=state_slot)._ = value""", file_name='tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl', line_number=581)), 'ClassVarDefaultAssignment': astichi_template(from_astichi_code("""\
 classvar_name__astichi_arg__ = astichi_pass(
     classvar_value_name__astichi_arg__,
     outer_bind=True,
-)""", file_name='tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl', line_number=419)), 'ManagedCurrentStateAssignment': astichi_template(from_astichi_code("""\
+)""", file_name='tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl', line_number=591)), 'ManagedCurrentStateAssignment': astichi_template(from_astichi_code("""\
 astichi_pass(state, outer_bind=True).astichi_ref(external=current_slot)._ = astichi_pass(
     init_value_name__astichi_arg__,
     outer_bind=True,
-)""", file_name='tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl', line_number=426)), 'ManagedWorkingStateAssignment': astichi_template(from_astichi_code('astichi_pass(state, outer_bind=True).astichi_ref(external=working_slot)._ = VOID', file_name='tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl', line_number=433, keep_names=('VOID',))), 'ManagedDefaultProperty': astichi_template(from_astichi_code("""\
+)""", file_name='tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl', line_number=598)), 'ManagedWorkingStateAssignment': astichi_template(from_astichi_code('astichi_pass(state, outer_bind=True).astichi_ref(external=working_slot)._ = VOID', file_name='tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl', line_number=605, keep_names=('VOID',))), 'ManagedDefaultProperty': astichi_template(from_astichi_code("""\
 @property
 def property_getter_name__astichi_arg__(self):
     state = self._y_state
@@ -1256,7 +1483,7 @@ def property_getter_name__astichi_arg__(self):
 def property_setter_name__astichi_arg__(self, value):
     state = self._y_state
     state._y_ensure_working_transaction(astichi_bind_external(tx_index))
-    state.astichi_ref(external=working_slot)._ = value""", file_name='tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl', line_number=439, keep_names=('VOID',))), 'ManagedCurrentProperty': astichi_template(from_astichi_code("""\
+    state.astichi_ref(external=working_slot)._ = value""", file_name='tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl', line_number=611, keep_names=('VOID',))), 'ManagedCurrentProperty': astichi_template(from_astichi_code("""\
 @property
 def property_getter_name__astichi_arg__(self):
     return self._y_state.astichi_ref(external=current_slot)
@@ -1267,7 +1494,7 @@ def property_setter_name__astichi_arg__(self, value):
     raise AttributeError(
         "current facade is read-only for transactional field "
         + astichi_bind_external(field_name)
-    )""", file_name='tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl', line_number=456)), 'ManagedWorkingProperty': astichi_template(from_astichi_code("""\
+    )""", file_name='tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl', line_number=628)), 'ManagedWorkingProperty': astichi_template(from_astichi_code("""\
 @property
 def property_getter_name__astichi_arg__(self):
     state = self._y_state
@@ -1279,15 +1506,15 @@ def property_getter_name__astichi_arg__(self):
 def property_setter_name__astichi_arg__(self, value):
     state = self._y_state
     state._y_ensure_working_transaction(astichi_bind_external(tx_index))
-    state.astichi_ref(external=working_slot)._ = value""", file_name='tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl', line_number=470, keep_names=('VOID',))), 'ManagedCommitBranch': astichi_template(from_astichi_code("""\
+    state.astichi_ref(external=working_slot)._ = value""", file_name='tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl', line_number=642, keep_names=('VOID',))), 'ManagedCommitBranch': astichi_template(from_astichi_code("""\
 if astichi_pass(tx_index, outer_bind=True) == astichi_bind_external(tx_index_value):
     if astichi_pass(self, outer_bind=True).astichi_ref(external=working_slot) is not VOID:
         astichi_pass(self, outer_bind=True).astichi_ref(external=current_slot)._ = (
             astichi_pass(self, outer_bind=True).astichi_ref(external=working_slot)
         )
-        astichi_pass(self, outer_bind=True).astichi_ref(external=working_slot)._ = VOID""", file_name='tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl', line_number=487, keep_names=('VOID',))), 'ManagedRollbackBranch': astichi_template(from_astichi_code("""\
+        astichi_pass(self, outer_bind=True).astichi_ref(external=working_slot)._ = VOID""", file_name='tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl', line_number=659, keep_names=('VOID',))), 'ManagedRollbackBranch': astichi_template(from_astichi_code("""\
 if astichi_pass(tx_index, outer_bind=True) == astichi_bind_external(tx_index_value):
-    astichi_pass(self, outer_bind=True).astichi_ref(external=working_slot)._ = VOID""", file_name='tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl', line_number=498, keep_names=('VOID',))), 'ClassBundle': astichi_template(from_astichi_code("""\
+    astichi_pass(self, outer_bind=True).astichi_ref(external=working_slot)._ = VOID""", file_name='tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl', line_number=670, keep_names=('VOID',))), 'ClassBundle': astichi_template(from_astichi_code("""\
 class state_class_decl_name__astichi_arg__:
     __slots__ = (
         "_y_transaction_manager",
@@ -1492,7 +1719,7 @@ class working_facade_class_decl_name__astichi_arg__(
     facade_base_working_base_name__astichi_arg__
 ):
     __slots__ = ()
-    astichi_hole(working_facade_properties)""", file_name='tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl', line_number=505, keep_names=('DEFAULT_TRANSACTION', 'TransactionManager', 'VOID', 'weakref'))), 'ReturnClass': astichi_template(from_astichi_code("""\
+    astichi_hole(working_facade_properties)""", file_name='tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl', line_number=677, keep_names=('DEFAULT_TRANSACTION', 'TransactionManager', 'VOID', 'weakref'))), 'ReturnClass': astichi_template(from_astichi_code("""\
 return_class_name_ref__astichi_arg__.__name__ = astichi_pass(
     decorated_cls,
     outer_bind=True,
@@ -1505,7 +1732,7 @@ return_class_module_ref__astichi_arg__.__module__ = astichi_pass(
     decorated_cls,
     outer_bind=True,
 ).__module__
-return return_class_result_ref__astichi_arg__""", file_name='tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl', line_number=715)), 'PassStatement': astichi_template(from_astichi_code('pass', file_name='tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl', line_number=731))}
+return return_class_result_ref__astichi_arg__""", file_name='tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl', line_number=887)), 'PassStatement': astichi_template(from_astichi_code('pass', file_name='tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl', line_number=903))}
 ASSEMBLY_CONTRIBUTIONS = {'LifecycleDefinitionBuilderParam': ContributionSpec(name='LifecycleDefinitionBuilderParam', source_name='BuilderParam', source_kind='resource', build_name='LifecycleDefinitionBuilderParam', index=ValueRef('ClassOrder'), order=ValueRef('ClassOrder'), target=TargetSpec(name='builder_params', paths=(TargetPathSpec(kind='build', path=PathSpec(segments=(PathSegmentSpec(kind='name', name='Root', indexes=()),))),)), bindings=(BindingSpec(kind='ident', name='value_name', value=ValueRef('LifecycleDefinitionParamName')),)), 'AnnotationsBuilderParam': ContributionSpec(name='AnnotationsBuilderParam', source_name='BuilderParam', source_kind='resource', build_name='AnnotationsBuilderParam', index=ValueRef('ClassOrder'), order=ValueRef('ClassOrder'), target=TargetSpec(name='builder_params', paths=(TargetPathSpec(kind='build', path=PathSpec(segments=(PathSegmentSpec(kind='name', name='Root', indexes=()),))),)), bindings=(BindingSpec(kind='ident', name='value_name', value=ValueRef('AnnotationsParamName')),)), 'TxGroupsBuilderParam': ContributionSpec(name='TxGroupsBuilderParam', source_name='BuilderParam', source_kind='resource', build_name='TxGroupsBuilderParam', index=ValueRef('ClassOrder'), order=ValueRef('ClassOrder'), target=TargetSpec(name='builder_params', paths=(TargetPathSpec(kind='build', path=PathSpec(segments=(PathSegmentSpec(kind='name', name='Root', indexes=()),))),)), bindings=(BindingSpec(kind='ident', name='value_name', value=ValueRef('TxGroupsParamName')),)), 'FieldDefaultBuilderParam': ContributionSpec(name='FieldDefaultBuilderParam', source_name='BuilderParam', source_kind='resource', build_name='FieldDefaultBuilderParam', index=ValueRef('FieldOrder'), order=ValueRef('FieldOrder'), target=TargetSpec(name='builder_params', paths=(TargetPathSpec(kind='build', path=PathSpec(segments=(PathSegmentSpec(kind='name', name='Root', indexes=()),))),)), bindings=(BindingSpec(kind='ident', name='value_name', value=ValueRef('DefaultValueParamName')),)), 'ClassDefinition': ContributionSpec(name='ClassDefinition', source_name='ClassProduction', source_kind='production', build_name='ClassDef', index=ValueRef('ClassOrder'), order=ValueRef('ClassOrder'), target=TargetSpec(name='function_body', paths=(TargetPathSpec(kind='build', path=PathSpec(segments=(PathSegmentSpec(kind='name', name='Root', indexes=()),))),)), bindings=()), 'FacadeBaseBodyPass': ContributionSpec(name='FacadeBaseBodyPass', source_name='PassStatement', source_kind='resource', build_name='FacadeBaseBodyPass', index=LiteralValueRef(0), order=LiteralValueRef(0), target=TargetSpec(name='facade_base_body', paths=(TargetPathSpec(kind='build', path=PathSpec(segments=(PathSegmentSpec(kind='name', name='ClassDef', indexes=()),))),)), bindings=()), 'FacadePropertiesPass': ContributionSpec(name='FacadePropertiesPass', source_name='PassStatement', source_kind='resource', build_name='FacadePropertiesPass', index=LiteralValueRef(0), order=LiteralValueRef(0), target=TargetSpec(name='facade_properties', paths=(TargetPathSpec(kind='build', path=PathSpec(segments=(PathSegmentSpec(kind='name', name='ClassDef', indexes=()),))),)), bindings=()), 'DefaultFacadePropertiesPass': ContributionSpec(name='DefaultFacadePropertiesPass', source_name='PassStatement', source_kind='resource', build_name='DefaultFacadePropertiesPass', index=LiteralValueRef(0), order=LiteralValueRef(0), target=TargetSpec(name='default_facade_properties', paths=(TargetPathSpec(kind='build', path=PathSpec(segments=(PathSegmentSpec(kind='name', name='ClassDef', indexes=()),))),)), bindings=()), 'CurrentFacadePropertiesPass': ContributionSpec(name='CurrentFacadePropertiesPass', source_name='PassStatement', source_kind='resource', build_name='CurrentFacadePropertiesPass', index=LiteralValueRef(0), order=LiteralValueRef(0), target=TargetSpec(name='current_facade_properties', paths=(TargetPathSpec(kind='build', path=PathSpec(segments=(PathSegmentSpec(kind='name', name='ClassDef', indexes=()),))),)), bindings=()), 'WorkingFacadePropertiesPass': ContributionSpec(name='WorkingFacadePropertiesPass', source_name='PassStatement', source_kind='resource', build_name='WorkingFacadePropertiesPass', index=LiteralValueRef(0), order=LiteralValueRef(0), target=TargetSpec(name='working_facade_properties', paths=(TargetPathSpec(kind='build', path=PathSpec(segments=(PathSegmentSpec(kind='name', name='ClassDef', indexes=()),))),)), bindings=()), 'StateInitBodyPass': ContributionSpec(name='StateInitBodyPass', source_name='PassStatement', source_kind='resource', build_name='StateInitBodyPass', index=LiteralValueRef(0), order=LiteralValueRef(0), target=TargetSpec(name='state_init_body', paths=(TargetPathSpec(kind='build', path=PathSpec(segments=(PathSegmentSpec(kind='name', name='ClassDef', indexes=()),))),)), bindings=()), 'CommitTransactionBodyPass': ContributionSpec(name='CommitTransactionBodyPass', source_name='PassStatement', source_kind='resource', build_name='CommitTransactionBodyPass', index=LiteralValueRef(0), order=LiteralValueRef(0), target=TargetSpec(name='commit_transaction_body', paths=(TargetPathSpec(kind='build', path=PathSpec(segments=(PathSegmentSpec(kind='name', name='ClassDef', indexes=()),))),)), bindings=()), 'RollbackTransactionBodyPass': ContributionSpec(name='RollbackTransactionBodyPass', source_name='PassStatement', source_kind='resource', build_name='RollbackTransactionBodyPass', index=LiteralValueRef(0), order=LiteralValueRef(0), target=TargetSpec(name='rollback_transaction_body', paths=(TargetPathSpec(kind='build', path=PathSpec(segments=(PathSegmentSpec(kind='name', name='ClassDef', indexes=()),))),)), bindings=()), 'ReturnClassContribution': ContributionSpec(name='ReturnClassContribution', source_name='ReturnClass', source_kind='resource', build_name='ReturnClass', index=ValueRef('ClassOrder'), order=ValueRef('ClassOrder'), target=TargetSpec(name='return_statement', paths=(TargetPathSpec(kind='build', path=PathSpec(segments=(PathSegmentSpec(kind='name', name='Root', indexes=()),))),)), bindings=(BindingSpec(kind='ident', name='return_class_name_ref', value=ValueRef('ClassName')), BindingSpec(kind='ident', name='return_class_qualname_ref', value=ValueRef('ClassName')), BindingSpec(kind='ident', name='return_class_module_ref', value=ValueRef('ClassName')), BindingSpec(kind='ident', name='return_class_result_ref', value=ValueRef('ClassName')))), 'TransactionManagerInitParam': ContributionSpec(name='TransactionManagerInitParam', source_name='TransactionManagerParam', source_kind='resource', build_name='TransactionManagerInitParam', index=ValueRef('ClassOrder'), order=LiteralValueRef(0), target=TargetSpec(name='init_params', paths=(TargetPathSpec(kind='build', path=PathSpec(segments=(PathSegmentSpec(kind='name', name='ClassDef', indexes=()),))),)), bindings=()), 'PlainStateSlot': ContributionSpec(name='PlainStateSlot', source_name='StateSlotEntry', source_kind='resource', build_name='PlainStateSlot', index=ValueRef('FieldOrder'), order=ValueRef('FieldOrder'), target=TargetSpec(name='state_slots', paths=(TargetPathSpec(kind='build', path=PathSpec(segments=(PathSegmentSpec(kind='name', name='ClassDef', indexes=()),))),)), bindings=(BindingSpec(kind='external', name='slot_name', value=ValueRef('ValueSlotName')),)), 'PlainInitParamRequired': ContributionSpec(name='PlainInitParamRequired', source_name='InitParamRequired', source_kind='resource', build_name='PlainInitParam', index=ValueRef('FieldOrder'), order=ValueRef('FieldOrder'), target=TargetSpec(name='init_params', paths=(TargetPathSpec(kind='build', path=PathSpec(segments=(PathSegmentSpec(kind='name', name='ClassDef', indexes=()),))),)), bindings=(BindingSpec(kind='ident', name='param_name', value=ValueRef('FieldName')), BindingSpec(kind='external', name='annotation', value=ValueRef('Annotation')))), 'PlainInitParamDefault': ContributionSpec(name='PlainInitParamDefault', source_name='InitParamDefault', source_kind='resource', build_name='PlainInitParam', index=ValueRef('FieldOrder'), order=ValueRef('FieldOrder'), target=TargetSpec(name='init_params', paths=(TargetPathSpec(kind='build', path=PathSpec(segments=(PathSegmentSpec(kind='name', name='ClassDef', indexes=()),))),)), bindings=(BindingSpec(kind='ident', name='param_name', value=ValueRef('FieldName')), BindingSpec(kind='external', name='annotation', value=ValueRef('Annotation')), BindingSpec(kind='ident', name='default_value_name', value=ValueRef('DefaultValueParamName')))), 'InitVarParamRequired': ContributionSpec(name='InitVarParamRequired', source_name='InitParamRequired', source_kind='resource', build_name='InitVarParam', index=ValueRef('FieldOrder'), order=ValueRef('FieldOrder'), target=TargetSpec(name='init_params', paths=(TargetPathSpec(kind='build', path=PathSpec(segments=(PathSegmentSpec(kind='name', name='ClassDef', indexes=()),))),)), bindings=(BindingSpec(kind='ident', name='param_name', value=ValueRef('FieldName')), BindingSpec(kind='external', name='annotation', value=ValueRef('Annotation')))), 'InitVarParamDefault': ContributionSpec(name='InitVarParamDefault', source_name='InitParamDefault', source_kind='resource', build_name='InitVarParam', index=ValueRef('FieldOrder'), order=ValueRef('FieldOrder'), target=TargetSpec(name='init_params', paths=(TargetPathSpec(kind='build', path=PathSpec(segments=(PathSegmentSpec(kind='name', name='ClassDef', indexes=()),))),)), bindings=(BindingSpec(kind='ident', name='param_name', value=ValueRef('FieldName')), BindingSpec(kind='external', name='annotation', value=ValueRef('Annotation')), BindingSpec(kind='ident', name='default_value_name', value=ValueRef('DefaultValueParamName')))), 'PlainInitAssignment': ContributionSpec(name='PlainInitAssignment', source_name='PlainStateAssignment', source_kind='resource', build_name='PlainInitAssignment', index=ValueRef('FieldOrder'), order=ValueRef('FieldOrder'), target=TargetSpec(name='state_init_body', paths=(TargetPathSpec(kind='build', path=PathSpec(segments=(PathSegmentSpec(kind='name', name='ClassDef', indexes=()),))),)), bindings=(BindingSpec(kind='ident', name='init_value_name', value=ValueRef('FieldName')), BindingSpec(kind='external', name='state_slot', value=ValueRef('ValueSlotName')))), 'PlainFieldProperty': ContributionSpec(name='PlainFieldProperty', source_name='PlainProperty', source_kind='resource', build_name='PlainFieldProperty', index=ValueRef('FieldOrder'), order=ValueRef('FieldOrder'), target=TargetSpec(name='facade_properties', paths=(TargetPathSpec(kind='build', path=PathSpec(segments=(PathSegmentSpec(kind='name', name='ClassDef', indexes=()),))),)), bindings=(BindingSpec(kind='ident', name='property_getter_name', value=ValueRef('FieldName')), BindingSpec(kind='ident', name='property_setter_target_name', value=ValueRef('FieldName')), BindingSpec(kind='ident', name='property_setter_name', value=ValueRef('FieldName')), BindingSpec(kind='external', name='state_slot', value=ValueRef('ValueSlotName')))), 'ClassVarDefault': ContributionSpec(name='ClassVarDefault', source_name='ClassVarDefaultAssignment', source_kind='resource', build_name='ClassVarDefault', index=ValueRef('FieldOrder'), order=ValueRef('FieldOrder'), target=TargetSpec(name='facade_base_body', paths=(TargetPathSpec(kind='build', path=PathSpec(segments=(PathSegmentSpec(kind='name', name='ClassDef', indexes=()),))),)), bindings=(BindingSpec(kind='ident', name='classvar_name', value=ValueRef('FieldName')), BindingSpec(kind='ident', name='classvar_value_name', value=ValueRef('DefaultValueParamName')))), 'ManagedCurrentStateSlot': ContributionSpec(name='ManagedCurrentStateSlot', source_name='StateSlotEntry', source_kind='resource', build_name='ManagedCurrentStateSlot', index=ValueRef('FieldOrder'), order=ValueRef('FieldOrder'), target=TargetSpec(name='state_slots', paths=(TargetPathSpec(kind='build', path=PathSpec(segments=(PathSegmentSpec(kind='name', name='ClassDef', indexes=()),))),)), bindings=(BindingSpec(kind='external', name='slot_name', value=ValueRef('CurrentSlotName')),)), 'ManagedWorkingStateSlot': ContributionSpec(name='ManagedWorkingStateSlot', source_name='StateSlotEntry', source_kind='resource', build_name='ManagedWorkingStateSlot', index=ValueRef('FieldOrder'), order=ValueRef('FieldOrder'), target=TargetSpec(name='state_slots', paths=(TargetPathSpec(kind='build', path=PathSpec(segments=(PathSegmentSpec(kind='name', name='ClassDef', indexes=()),))),)), bindings=(BindingSpec(kind='external', name='slot_name', value=ValueRef('WorkingSlotName')),)), 'ManagedInitParamDefault': ContributionSpec(name='ManagedInitParamDefault', source_name='InitParamDefault', source_kind='resource', build_name='ManagedInitParam', index=ValueRef('FieldOrder'), order=ValueRef('FieldOrder'), target=TargetSpec(name='init_params', paths=(TargetPathSpec(kind='build', path=PathSpec(segments=(PathSegmentSpec(kind='name', name='ClassDef', indexes=()),))),)), bindings=(BindingSpec(kind='ident', name='param_name', value=ValueRef('FieldName')), BindingSpec(kind='external', name='annotation', value=ValueRef('Annotation')), BindingSpec(kind='ident', name='default_value_name', value=ValueRef('DefaultValueParamName')))), 'ManagedCurrentInitAssignment': ContributionSpec(name='ManagedCurrentInitAssignment', source_name='ManagedCurrentStateAssignment', source_kind='resource', build_name='ManagedCurrentInitAssignment', index=ValueRef('FieldOrder'), order=ValueRef('FieldOrder'), target=TargetSpec(name='state_init_body', paths=(TargetPathSpec(kind='build', path=PathSpec(segments=(PathSegmentSpec(kind='name', name='ClassDef', indexes=()),))),)), bindings=(BindingSpec(kind='ident', name='init_value_name', value=ValueRef('FieldName')), BindingSpec(kind='external', name='current_slot', value=ValueRef('CurrentSlotName')))), 'ManagedWorkingInitAssignment': ContributionSpec(name='ManagedWorkingInitAssignment', source_name='ManagedWorkingStateAssignment', source_kind='resource', build_name='ManagedWorkingInitAssignment', index=ValueRef('FieldOrder'), order=ValueRef('FieldOrder'), target=TargetSpec(name='state_init_body', paths=(TargetPathSpec(kind='build', path=PathSpec(segments=(PathSegmentSpec(kind='name', name='ClassDef', indexes=()),))),)), bindings=(BindingSpec(kind='external', name='working_slot', value=ValueRef('WorkingSlotName')),)), 'ManagedDefaultFacadeProperty': ContributionSpec(name='ManagedDefaultFacadeProperty', source_name='ManagedDefaultProperty', source_kind='resource', build_name='ManagedDefaultFacadeProperty', index=ValueRef('FieldOrder'), order=ValueRef('FieldOrder'), target=TargetSpec(name='default_facade_properties', paths=(TargetPathSpec(kind='build', path=PathSpec(segments=(PathSegmentSpec(kind='name', name='ClassDef', indexes=()),))),)), bindings=(BindingSpec(kind='ident', name='property_getter_name', value=ValueRef('FieldName')), BindingSpec(kind='ident', name='property_setter_target_name', value=ValueRef('FieldName')), BindingSpec(kind='ident', name='property_setter_name', value=ValueRef('FieldName')), BindingSpec(kind='external', name='current_slot', value=ValueRef('CurrentSlotName')), BindingSpec(kind='external', name='working_slot', value=ValueRef('WorkingSlotName')), BindingSpec(kind='external', name='tx_index', value=ValueRef('TxIndex')))), 'ManagedCurrentFacadeProperty': ContributionSpec(name='ManagedCurrentFacadeProperty', source_name='ManagedCurrentProperty', source_kind='resource', build_name='ManagedCurrentFacadeProperty', index=ValueRef('FieldOrder'), order=ValueRef('FieldOrder'), target=TargetSpec(name='current_facade_properties', paths=(TargetPathSpec(kind='build', path=PathSpec(segments=(PathSegmentSpec(kind='name', name='ClassDef', indexes=()),))),)), bindings=(BindingSpec(kind='ident', name='property_getter_name', value=ValueRef('FieldName')), BindingSpec(kind='ident', name='property_setter_target_name', value=ValueRef('FieldName')), BindingSpec(kind='ident', name='property_setter_name', value=ValueRef('FieldName')), BindingSpec(kind='external', name='current_slot', value=ValueRef('CurrentSlotName')), BindingSpec(kind='external', name='field_name', value=ValueRef('FieldName')))), 'ManagedWorkingFacadeProperty': ContributionSpec(name='ManagedWorkingFacadeProperty', source_name='ManagedWorkingProperty', source_kind='resource', build_name='ManagedWorkingFacadeProperty', index=ValueRef('FieldOrder'), order=ValueRef('FieldOrder'), target=TargetSpec(name='working_facade_properties', paths=(TargetPathSpec(kind='build', path=PathSpec(segments=(PathSegmentSpec(kind='name', name='ClassDef', indexes=()),))),)), bindings=(BindingSpec(kind='ident', name='property_getter_name', value=ValueRef('FieldName')), BindingSpec(kind='ident', name='property_setter_target_name', value=ValueRef('FieldName')), BindingSpec(kind='ident', name='property_setter_name', value=ValueRef('FieldName')), BindingSpec(kind='external', name='current_slot', value=ValueRef('CurrentSlotName')), BindingSpec(kind='external', name='working_slot', value=ValueRef('WorkingSlotName')), BindingSpec(kind='external', name='tx_index', value=ValueRef('TxIndex')))), 'ManagedCommit': ContributionSpec(name='ManagedCommit', source_name='ManagedCommitBranch', source_kind='resource', build_name='ManagedCommit', index=ValueRef('FieldOrder'), order=ValueRef('FieldOrder'), target=TargetSpec(name='commit_transaction_body', paths=(TargetPathSpec(kind='build', path=PathSpec(segments=(PathSegmentSpec(kind='name', name='ClassDef', indexes=()),))),)), bindings=(BindingSpec(kind='external', name='current_slot', value=ValueRef('CurrentSlotName')), BindingSpec(kind='external', name='working_slot', value=ValueRef('WorkingSlotName')), BindingSpec(kind='external', name='tx_index_value', value=ValueRef('TxIndex')))), 'ManagedRollback': ContributionSpec(name='ManagedRollback', source_name='ManagedRollbackBranch', source_kind='resource', build_name='ManagedRollback', index=ValueRef('FieldOrder'), order=ValueRef('FieldOrder'), target=TargetSpec(name='rollback_transaction_body', paths=(TargetPathSpec(kind='build', path=PathSpec(segments=(PathSegmentSpec(kind='name', name='ClassDef', indexes=()),))),)), bindings=(BindingSpec(kind='external', name='working_slot', value=ValueRef('WorkingSlotName')), BindingSpec(kind='external', name='tx_index_value', value=ValueRef('TxIndex'))))}
 ASSEMBLY_MATCHERS = {'BuilderParamContributions': ContributionMatcherSpec(name='BuilderParamContributions', inputs=(AssemblyInputSpec(name='lifecycle_class', collection_name='Classes', collection=None),), default_contribution_name='LifecycleDefinitionBuilderParam', rules=()), 'AnnotationsBuilderParamContributions': ContributionMatcherSpec(name='AnnotationsBuilderParamContributions', inputs=(AssemblyInputSpec(name='lifecycle_class', collection_name='Classes', collection=None),), default_contribution_name='AnnotationsBuilderParam', rules=()), 'TxGroupsBuilderParamContributions': ContributionMatcherSpec(name='TxGroupsBuilderParamContributions', inputs=(AssemblyInputSpec(name='lifecycle_class', collection_name='Classes', collection=None),), default_contribution_name='TxGroupsBuilderParam', rules=()), 'FieldDefaultBuilderParamContributions': ContributionMatcherSpec(name='FieldDefaultBuilderParamContributions', inputs=(AssemblyInputSpec(name='field', collection_name='Fields', collection=None),), default_contribution_name=None, rules=(ContributionRuleSpec(name='has_default', condition=EqConditionSpec(left=ValueRef('HasDefault'), right=LiteralValueRef(True)), contribution_name='FieldDefaultBuilderParam', weight=1.0),)), 'ClassDefinitionContributions': ContributionMatcherSpec(name='ClassDefinitionContributions', inputs=(AssemblyInputSpec(name='lifecycle_class', collection_name='Classes', collection=None),), default_contribution_name='ClassDefinition', rules=()), 'ReturnClassContributions': ContributionMatcherSpec(name='ReturnClassContributions', inputs=(AssemblyInputSpec(name='lifecycle_class', collection_name='Classes', collection=None),), default_contribution_name='ReturnClassContribution', rules=()), 'TransactionManagerInitParamContributions': ContributionMatcherSpec(name='TransactionManagerInitParamContributions', inputs=(AssemblyInputSpec(name='lifecycle_class', collection_name='Classes', collection=None),), default_contribution_name='TransactionManagerInitParam', rules=()), 'FacadeBaseBodyPassContributions': ContributionMatcherSpec(name='FacadeBaseBodyPassContributions', inputs=(AssemblyInputSpec(name='lifecycle_class', collection_name='Classes', collection=None),), default_contribution_name='FacadeBaseBodyPass', rules=()), 'FacadePropertiesPassContributions': ContributionMatcherSpec(name='FacadePropertiesPassContributions', inputs=(AssemblyInputSpec(name='lifecycle_class', collection_name='Classes', collection=None),), default_contribution_name='FacadePropertiesPass', rules=()), 'DefaultFacadePropertiesPassContributions': ContributionMatcherSpec(name='DefaultFacadePropertiesPassContributions', inputs=(AssemblyInputSpec(name='lifecycle_class', collection_name='Classes', collection=None),), default_contribution_name='DefaultFacadePropertiesPass', rules=()), 'CurrentFacadePropertiesPassContributions': ContributionMatcherSpec(name='CurrentFacadePropertiesPassContributions', inputs=(AssemblyInputSpec(name='lifecycle_class', collection_name='Classes', collection=None),), default_contribution_name='CurrentFacadePropertiesPass', rules=()), 'WorkingFacadePropertiesPassContributions': ContributionMatcherSpec(name='WorkingFacadePropertiesPassContributions', inputs=(AssemblyInputSpec(name='lifecycle_class', collection_name='Classes', collection=None),), default_contribution_name='WorkingFacadePropertiesPass', rules=()), 'StateInitBodyPassContributions': ContributionMatcherSpec(name='StateInitBodyPassContributions', inputs=(AssemblyInputSpec(name='lifecycle_class', collection_name='Classes', collection=None),), default_contribution_name='StateInitBodyPass', rules=()), 'CommitTransactionBodyPassContributions': ContributionMatcherSpec(name='CommitTransactionBodyPassContributions', inputs=(AssemblyInputSpec(name='lifecycle_class', collection_name='Classes', collection=None),), default_contribution_name='CommitTransactionBodyPass', rules=()), 'RollbackTransactionBodyPassContributions': ContributionMatcherSpec(name='RollbackTransactionBodyPassContributions', inputs=(AssemblyInputSpec(name='lifecycle_class', collection_name='Classes', collection=None),), default_contribution_name='RollbackTransactionBodyPass', rules=()), 'PlainStateSlotContributions': ContributionMatcherSpec(name='PlainStateSlotContributions', inputs=(AssemblyInputSpec(name='field', collection_name='PlainFields', collection=None),), default_contribution_name='PlainStateSlot', rules=()), 'PlainInitParamContributions': ContributionMatcherSpec(name='PlainInitParamContributions', inputs=(AssemblyInputSpec(name='field', collection_name='PlainFields', collection=None),), default_contribution_name=None, rules=(ContributionRuleSpec(name='required', condition=AndConditionSpec(items=(EqConditionSpec(left=ValueRef('Init'), right=LiteralValueRef(True)), EqConditionSpec(left=ValueRef('HasDefault'), right=LiteralValueRef(False)))), contribution_name='PlainInitParamRequired', weight=1.0), ContributionRuleSpec(name='default_value', condition=AndConditionSpec(items=(EqConditionSpec(left=ValueRef('Init'), right=LiteralValueRef(True)), EqConditionSpec(left=ValueRef('HasDefault'), right=LiteralValueRef(True)))), contribution_name='PlainInitParamDefault', weight=1.0))), 'InitVarParamContributions': ContributionMatcherSpec(name='InitVarParamContributions', inputs=(AssemblyInputSpec(name='field', collection_name='InitVarFields', collection=None),), default_contribution_name=None, rules=(ContributionRuleSpec(name='required', condition=AndConditionSpec(items=(EqConditionSpec(left=ValueRef('Init'), right=LiteralValueRef(True)), EqConditionSpec(left=ValueRef('HasDefault'), right=LiteralValueRef(False)))), contribution_name='InitVarParamRequired', weight=1.0), ContributionRuleSpec(name='default_value', condition=AndConditionSpec(items=(EqConditionSpec(left=ValueRef('Init'), right=LiteralValueRef(True)), EqConditionSpec(left=ValueRef('HasDefault'), right=LiteralValueRef(True)))), contribution_name='InitVarParamDefault', weight=1.0))), 'PlainInitAssignmentContributions': ContributionMatcherSpec(name='PlainInitAssignmentContributions', inputs=(AssemblyInputSpec(name='field', collection_name='PlainFields', collection=None),), default_contribution_name=None, rules=(ContributionRuleSpec(name='init_field', condition=EqConditionSpec(left=ValueRef('Init'), right=LiteralValueRef(True)), contribution_name='PlainInitAssignment', weight=1.0),)), 'PlainPropertyContributions': ContributionMatcherSpec(name='PlainPropertyContributions', inputs=(AssemblyInputSpec(name='field', collection_name='PlainFields', collection=None),), default_contribution_name='PlainFieldProperty', rules=()), 'ClassVarDefaultContributions': ContributionMatcherSpec(name='ClassVarDefaultContributions', inputs=(AssemblyInputSpec(name='field', collection_name='ClassVarFields', collection=None),), default_contribution_name=None, rules=(ContributionRuleSpec(name='has_default', condition=EqConditionSpec(left=ValueRef('HasDefault'), right=LiteralValueRef(True)), contribution_name='ClassVarDefault', weight=1.0),)), 'ManagedCurrentStateSlotContributions': ContributionMatcherSpec(name='ManagedCurrentStateSlotContributions', inputs=(AssemblyInputSpec(name='field', collection_name='ManagedFields', collection=None),), default_contribution_name='ManagedCurrentStateSlot', rules=()), 'ManagedWorkingStateSlotContributions': ContributionMatcherSpec(name='ManagedWorkingStateSlotContributions', inputs=(AssemblyInputSpec(name='field', collection_name='ManagedFields', collection=None),), default_contribution_name='ManagedWorkingStateSlot', rules=()), 'ManagedInitParamContributions': ContributionMatcherSpec(name='ManagedInitParamContributions', inputs=(AssemblyInputSpec(name='field', collection_name='ManagedFields', collection=None),), default_contribution_name=None, rules=(ContributionRuleSpec(name='default_value', condition=AndConditionSpec(items=(EqConditionSpec(left=ValueRef('Init'), right=LiteralValueRef(True)), EqConditionSpec(left=ValueRef('HasDefault'), right=LiteralValueRef(True)))), contribution_name='ManagedInitParamDefault', weight=1.0),)), 'ManagedCurrentInitAssignmentContributions': ContributionMatcherSpec(name='ManagedCurrentInitAssignmentContributions', inputs=(AssemblyInputSpec(name='field', collection_name='ManagedFields', collection=None),), default_contribution_name=None, rules=(ContributionRuleSpec(name='init_field', condition=EqConditionSpec(left=ValueRef('Init'), right=LiteralValueRef(True)), contribution_name='ManagedCurrentInitAssignment', weight=1.0),)), 'ManagedWorkingInitAssignmentContributions': ContributionMatcherSpec(name='ManagedWorkingInitAssignmentContributions', inputs=(AssemblyInputSpec(name='field', collection_name='ManagedFields', collection=None),), default_contribution_name='ManagedWorkingInitAssignment', rules=()), 'ManagedDefaultFacadePropertyContributions': ContributionMatcherSpec(name='ManagedDefaultFacadePropertyContributions', inputs=(AssemblyInputSpec(name='field', collection_name='IndexedTransactionalFields', collection=None),), default_contribution_name='ManagedDefaultFacadeProperty', rules=()), 'ManagedCurrentFacadePropertyContributions': ContributionMatcherSpec(name='ManagedCurrentFacadePropertyContributions', inputs=(AssemblyInputSpec(name='field', collection_name='IndexedTransactionalFields', collection=None),), default_contribution_name='ManagedCurrentFacadeProperty', rules=()), 'ManagedWorkingFacadePropertyContributions': ContributionMatcherSpec(name='ManagedWorkingFacadePropertyContributions', inputs=(AssemblyInputSpec(name='field', collection_name='IndexedTransactionalFields', collection=None),), default_contribution_name='ManagedWorkingFacadeProperty', rules=()), 'ManagedCommitContributions': ContributionMatcherSpec(name='ManagedCommitContributions', inputs=(AssemblyInputSpec(name='field', collection_name='IndexedTransactionalFields', collection=None),), default_contribution_name='ManagedCommit', rules=()), 'ManagedRollbackContributions': ContributionMatcherSpec(name='ManagedRollbackContributions', inputs=(AssemblyInputSpec(name='field', collection_name='IndexedTransactionalFields', collection=None),), default_contribution_name='ManagedRollback', rules=())}
 ASSEMBLY_EDGES = {'ModuleProduction.lifecycle_definition_params': AssemblyEdgeSpec(name='ModuleProduction.lifecycle_definition_params', context_inputs=(), from_inputs=(AssemblyInputSpec(name='lifecycle_class', collection_name='Classes', collection=None),), condition=None, matcher_name='BuilderParamContributions'), 'ModuleProduction.annotations_params': AssemblyEdgeSpec(name='ModuleProduction.annotations_params', context_inputs=(), from_inputs=(AssemblyInputSpec(name='lifecycle_class', collection_name='Classes', collection=None),), condition=None, matcher_name='AnnotationsBuilderParamContributions'), 'ModuleProduction.tx_groups_params': AssemblyEdgeSpec(name='ModuleProduction.tx_groups_params', context_inputs=(), from_inputs=(AssemblyInputSpec(name='lifecycle_class', collection_name='Classes', collection=None),), condition=None, matcher_name='TxGroupsBuilderParamContributions'), 'ModuleProduction.field_default_params': AssemblyEdgeSpec(name='ModuleProduction.field_default_params', context_inputs=(), from_inputs=(AssemblyInputSpec(name='field', collection_name='Fields', collection=None),), condition=None, matcher_name='FieldDefaultBuilderParamContributions'), 'ModuleProduction.classes': AssemblyEdgeSpec(name='ModuleProduction.classes', context_inputs=(), from_inputs=(AssemblyInputSpec(name='lifecycle_class', collection_name='Classes', collection=None),), condition=None, matcher_name='ClassDefinitionContributions'), 'ModuleProduction.return_class': AssemblyEdgeSpec(name='ModuleProduction.return_class', context_inputs=(), from_inputs=(AssemblyInputSpec(name='lifecycle_class', collection_name='Classes', collection=None),), condition=None, matcher_name='ReturnClassContributions'), 'ClassProduction.state_slots': AssemblyEdgeSpec(name='ClassProduction.state_slots', context_inputs=(AssemblyInputSpec(name='lifecycle_class', collection_name='Classes', collection=None),), from_inputs=(AssemblyInputSpec(name='field', collection_name='PlainFields', collection=None),), condition=EqConditionSpec(left=ValueRef('FieldOwner'), right=ValueRef('ClassId')), matcher_name='PlainStateSlotContributions'), 'ClassProduction.managed_current_state_slots': AssemblyEdgeSpec(name='ClassProduction.managed_current_state_slots', context_inputs=(AssemblyInputSpec(name='lifecycle_class', collection_name='Classes', collection=None),), from_inputs=(AssemblyInputSpec(name='field', collection_name='ManagedFields', collection=None),), condition=EqConditionSpec(left=ValueRef('FieldOwner'), right=ValueRef('ClassId')), matcher_name='ManagedCurrentStateSlotContributions'), 'ClassProduction.managed_working_state_slots': AssemblyEdgeSpec(name='ClassProduction.managed_working_state_slots', context_inputs=(AssemblyInputSpec(name='lifecycle_class', collection_name='Classes', collection=None),), from_inputs=(AssemblyInputSpec(name='field', collection_name='ManagedFields', collection=None),), condition=EqConditionSpec(left=ValueRef('FieldOwner'), right=ValueRef('ClassId')), matcher_name='ManagedWorkingStateSlotContributions'), 'ClassProduction.transaction_manager_param': AssemblyEdgeSpec(name='ClassProduction.transaction_manager_param', context_inputs=(AssemblyInputSpec(name='lifecycle_class', collection_name='Classes', collection=None),), from_inputs=(), condition=None, matcher_name='TransactionManagerInitParamContributions'), 'ClassProduction.facade_base_body_pass': AssemblyEdgeSpec(name='ClassProduction.facade_base_body_pass', context_inputs=(AssemblyInputSpec(name='lifecycle_class', collection_name='Classes', collection=None),), from_inputs=(), condition=None, matcher_name='FacadeBaseBodyPassContributions'), 'ClassProduction.facade_properties_pass': AssemblyEdgeSpec(name='ClassProduction.facade_properties_pass', context_inputs=(AssemblyInputSpec(name='lifecycle_class', collection_name='Classes', collection=None),), from_inputs=(), condition=None, matcher_name='FacadePropertiesPassContributions'), 'ClassProduction.default_facade_properties_pass': AssemblyEdgeSpec(name='ClassProduction.default_facade_properties_pass', context_inputs=(AssemblyInputSpec(name='lifecycle_class', collection_name='Classes', collection=None),), from_inputs=(), condition=None, matcher_name='DefaultFacadePropertiesPassContributions'), 'ClassProduction.current_facade_properties_pass': AssemblyEdgeSpec(name='ClassProduction.current_facade_properties_pass', context_inputs=(AssemblyInputSpec(name='lifecycle_class', collection_name='Classes', collection=None),), from_inputs=(), condition=None, matcher_name='CurrentFacadePropertiesPassContributions'), 'ClassProduction.working_facade_properties_pass': AssemblyEdgeSpec(name='ClassProduction.working_facade_properties_pass', context_inputs=(AssemblyInputSpec(name='lifecycle_class', collection_name='Classes', collection=None),), from_inputs=(), condition=None, matcher_name='WorkingFacadePropertiesPassContributions'), 'ClassProduction.state_init_body_pass': AssemblyEdgeSpec(name='ClassProduction.state_init_body_pass', context_inputs=(AssemblyInputSpec(name='lifecycle_class', collection_name='Classes', collection=None),), from_inputs=(), condition=None, matcher_name='StateInitBodyPassContributions'), 'ClassProduction.commit_transaction_body_pass': AssemblyEdgeSpec(name='ClassProduction.commit_transaction_body_pass', context_inputs=(AssemblyInputSpec(name='lifecycle_class', collection_name='Classes', collection=None),), from_inputs=(), condition=None, matcher_name='CommitTransactionBodyPassContributions'), 'ClassProduction.rollback_transaction_body_pass': AssemblyEdgeSpec(name='ClassProduction.rollback_transaction_body_pass', context_inputs=(AssemblyInputSpec(name='lifecycle_class', collection_name='Classes', collection=None),), from_inputs=(), condition=None, matcher_name='RollbackTransactionBodyPassContributions'), 'ClassProduction.classvars': AssemblyEdgeSpec(name='ClassProduction.classvars', context_inputs=(AssemblyInputSpec(name='lifecycle_class', collection_name='Classes', collection=None),), from_inputs=(AssemblyInputSpec(name='field', collection_name='ClassVarFields', collection=None),), condition=EqConditionSpec(left=ValueRef('FieldOwner'), right=ValueRef('ClassId')), matcher_name='ClassVarDefaultContributions'), 'ClassProduction.plain_init_params': AssemblyEdgeSpec(name='ClassProduction.plain_init_params', context_inputs=(AssemblyInputSpec(name='lifecycle_class', collection_name='Classes', collection=None),), from_inputs=(AssemblyInputSpec(name='field', collection_name='PlainFields', collection=None),), condition=EqConditionSpec(left=ValueRef('FieldOwner'), right=ValueRef('ClassId')), matcher_name='PlainInitParamContributions'), 'ClassProduction.initvar_params': AssemblyEdgeSpec(name='ClassProduction.initvar_params', context_inputs=(AssemblyInputSpec(name='lifecycle_class', collection_name='Classes', collection=None),), from_inputs=(AssemblyInputSpec(name='field', collection_name='InitVarFields', collection=None),), condition=EqConditionSpec(left=ValueRef('FieldOwner'), right=ValueRef('ClassId')), matcher_name='InitVarParamContributions'), 'ClassProduction.managed_init_params': AssemblyEdgeSpec(name='ClassProduction.managed_init_params', context_inputs=(AssemblyInputSpec(name='lifecycle_class', collection_name='Classes', collection=None),), from_inputs=(AssemblyInputSpec(name='field', collection_name='ManagedFields', collection=None),), condition=EqConditionSpec(left=ValueRef('FieldOwner'), right=ValueRef('ClassId')), matcher_name='ManagedInitParamContributions'), 'ClassProduction.plain_init_assignments': AssemblyEdgeSpec(name='ClassProduction.plain_init_assignments', context_inputs=(AssemblyInputSpec(name='lifecycle_class', collection_name='Classes', collection=None),), from_inputs=(AssemblyInputSpec(name='field', collection_name='PlainFields', collection=None),), condition=EqConditionSpec(left=ValueRef('FieldOwner'), right=ValueRef('ClassId')), matcher_name='PlainInitAssignmentContributions'), 'ClassProduction.managed_current_init_assignments': AssemblyEdgeSpec(name='ClassProduction.managed_current_init_assignments', context_inputs=(AssemblyInputSpec(name='lifecycle_class', collection_name='Classes', collection=None),), from_inputs=(AssemblyInputSpec(name='field', collection_name='ManagedFields', collection=None),), condition=EqConditionSpec(left=ValueRef('FieldOwner'), right=ValueRef('ClassId')), matcher_name='ManagedCurrentInitAssignmentContributions'), 'ClassProduction.managed_working_init_assignments': AssemblyEdgeSpec(name='ClassProduction.managed_working_init_assignments', context_inputs=(AssemblyInputSpec(name='lifecycle_class', collection_name='Classes', collection=None),), from_inputs=(AssemblyInputSpec(name='field', collection_name='ManagedFields', collection=None),), condition=EqConditionSpec(left=ValueRef('FieldOwner'), right=ValueRef('ClassId')), matcher_name='ManagedWorkingInitAssignmentContributions'), 'ClassProduction.plain_properties': AssemblyEdgeSpec(name='ClassProduction.plain_properties', context_inputs=(AssemblyInputSpec(name='lifecycle_class', collection_name='Classes', collection=None),), from_inputs=(AssemblyInputSpec(name='field', collection_name='PlainFields', collection=None),), condition=EqConditionSpec(left=ValueRef('FieldOwner'), right=ValueRef('ClassId')), matcher_name='PlainPropertyContributions'), 'ClassProduction.managed_default_properties': AssemblyEdgeSpec(name='ClassProduction.managed_default_properties', context_inputs=(AssemblyInputSpec(name='lifecycle_class', collection_name='Classes', collection=None),), from_inputs=(AssemblyInputSpec(name='field', collection_name='IndexedTransactionalFields', collection=None),), condition=EqConditionSpec(left=ValueRef('FieldOwner'), right=ValueRef('ClassId')), matcher_name='ManagedDefaultFacadePropertyContributions'), 'ClassProduction.managed_current_properties': AssemblyEdgeSpec(name='ClassProduction.managed_current_properties', context_inputs=(AssemblyInputSpec(name='lifecycle_class', collection_name='Classes', collection=None),), from_inputs=(AssemblyInputSpec(name='field', collection_name='IndexedTransactionalFields', collection=None),), condition=EqConditionSpec(left=ValueRef('FieldOwner'), right=ValueRef('ClassId')), matcher_name='ManagedCurrentFacadePropertyContributions'), 'ClassProduction.managed_working_properties': AssemblyEdgeSpec(name='ClassProduction.managed_working_properties', context_inputs=(AssemblyInputSpec(name='lifecycle_class', collection_name='Classes', collection=None),), from_inputs=(AssemblyInputSpec(name='field', collection_name='IndexedTransactionalFields', collection=None),), condition=EqConditionSpec(left=ValueRef('FieldOwner'), right=ValueRef('ClassId')), matcher_name='ManagedWorkingFacadePropertyContributions'), 'ClassProduction.managed_commit': AssemblyEdgeSpec(name='ClassProduction.managed_commit', context_inputs=(AssemblyInputSpec(name='lifecycle_class', collection_name='Classes', collection=None),), from_inputs=(AssemblyInputSpec(name='field', collection_name='IndexedTransactionalFields', collection=None),), condition=EqConditionSpec(left=ValueRef('FieldOwner'), right=ValueRef('ClassId')), matcher_name='ManagedCommitContributions'), 'ClassProduction.managed_rollback': AssemblyEdgeSpec(name='ClassProduction.managed_rollback', context_inputs=(AssemblyInputSpec(name='lifecycle_class', collection_name='Classes', collection=None),), from_inputs=(AssemblyInputSpec(name='field', collection_name='IndexedTransactionalFields', collection=None),), condition=EqConditionSpec(left=ValueRef('FieldOwner'), right=ValueRef('ClassId')), matcher_name='ManagedRollbackContributions')}
