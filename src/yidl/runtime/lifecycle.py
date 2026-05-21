@@ -87,14 +87,28 @@ def _filter_record_kwargs(
 
 def _field_record_type(generated: ModuleType, kind: str) -> type[object]:
     if kind == "field":
-        return generated.PlainField
+        return _required_record_type(generated, "PlainField", kind)
     if kind == "initvar":
-        return generated.InitVarField
+        return _required_record_type(generated, "InitVarField", kind)
     if kind == "classvar":
-        return generated.ClassVarField
+        return _required_record_type(generated, "ClassVarField", kind)
     if kind == "managed":
-        return generated.ManagedField
+        return _required_record_type(generated, "ManagedField", kind)
     raise LifecycleDefinitionError(f"unsupported lifecycle field kind: {kind!r}")
+
+
+def _required_record_type(
+    generated: ModuleType,
+    name: str,
+    kind: str,
+) -> type[object]:
+    try:
+        return getattr(generated, name)
+    except AttributeError as exc:
+        raise LifecycleDefinitionError(
+            f"{kind} lifecycle field requires generated record {name}; "
+            "include the matching lifecycle YIDL layer",
+        ) from exc
 
 
 def _generated_lifecycle_base_module() -> ModuleType:

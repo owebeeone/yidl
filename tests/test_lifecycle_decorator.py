@@ -212,6 +212,7 @@ def test_lifecycle_decorator_merges_generated_base_facts() -> None:
 
     child = C()
     assert isinstance(child, A)
+    assert isinstance(child, B)
     assert child.v1 == 1
     assert child.v2 == 2
     assert child.v3 == 5
