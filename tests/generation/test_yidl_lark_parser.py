@@ -180,6 +180,9 @@ def test_yidl_transactional_phase_a_schema_compiles() -> None:
         "InitParameters",
         "InitAssignments",
         "ClassVarAssignments",
+        "DefaultFactoryDependencies",
+        "DefaultFactoryEvaluationSteps",
+        "DefaultFactoryDiagnostics",
     }
     assert set(concept.records) >= {
         "LifecycleClass",
@@ -191,11 +194,17 @@ def test_yidl_transactional_phase_a_schema_compiles() -> None:
         "InitParameter",
         "InitAssignment",
         "ClassVarAssignment",
+        "DefaultFactoryDependency",
+        "DefaultFactoryEvaluationStep",
+        "DefaultFactoryDiagnostic",
     }
     dds = concept.plan.build_data_definition()
     field_family = next(
         union for union in dds.unions if union.name == "LifecycleFieldSpec"
     )
+    assert "DefaultFactoryParamNames" in {
+        prop.name for prop in field_family.variants[0].properties
+    }
     assert [variant.name for variant in field_family.variants] == [
         "PlainField",
         "InitVarField",

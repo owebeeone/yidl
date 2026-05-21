@@ -98,6 +98,12 @@ _DefaultFactoryParamNameProperty = RuntimeProperty(
     default="",
     storage_name="default_factory_param_name",
 )
+_DefaultFactoryParamNamesProperty = RuntimeProperty(
+    "DefaultFactoryParamNames",
+    object,
+    default=(),
+    storage_name="default_factory_param_names",
+)
 _TxGroupKeyProperty = RuntimeProperty(
     "TxGroupKey", object, default=None, storage_name="tx_group_key"
 )
@@ -201,6 +207,69 @@ _ClassVarAssignmentNameProperty = RuntimeProperty(
 _ClassVarAssignmentOrderProperty = RuntimeProperty(
     "ClassVarAssignmentOrder", int, default=0, storage_name="class_var_assignment_order"
 )
+_DependencyOwnerProperty = RuntimeProperty(
+    "DependencyOwner", str, default=REQUIRED, storage_name="dependency_owner"
+)
+_ConsumerFieldIdProperty = RuntimeProperty(
+    "ConsumerFieldId", str, default=REQUIRED, storage_name="consumer_field_id"
+)
+_ConsumerFieldNameProperty = RuntimeProperty(
+    "ConsumerFieldName", str, default="", storage_name="consumer_field_name"
+)
+_ProviderNameProperty = RuntimeProperty(
+    "ProviderName", str, default=REQUIRED, storage_name="provider_name"
+)
+_ProviderFieldIdProperty = RuntimeProperty(
+    "ProviderFieldId", str, default="", storage_name="provider_field_id"
+)
+_ProviderFieldKindProperty = RuntimeProperty(
+    "ProviderFieldKind", str, default="", storage_name="provider_field_kind"
+)
+_ProviderInitProperty = RuntimeProperty(
+    "ProviderInit", bool, default=True, storage_name="provider_init"
+)
+_ProviderHasDefaultProperty = RuntimeProperty(
+    "ProviderHasDefault", bool, default=False, storage_name="provider_has_default"
+)
+_ProviderHasDefaultFactoryProperty = RuntimeProperty(
+    "ProviderHasDefaultFactory",
+    bool,
+    default=False,
+    storage_name="provider_has_default_factory",
+)
+_ParamNameProperty = RuntimeProperty(
+    "ParamName", str, default=REQUIRED, storage_name="param_name"
+)
+_ParamOrderProperty = RuntimeProperty(
+    "ParamOrder", int, default=0, storage_name="param_order"
+)
+_EvalStepIdProperty = RuntimeProperty(
+    "EvalStepId", str, default=REQUIRED, storage_name="eval_step_id"
+)
+_EvalOwnerProperty = RuntimeProperty(
+    "EvalOwner", str, default=REQUIRED, storage_name="eval_owner"
+)
+_EvalFieldIdProperty = RuntimeProperty(
+    "EvalFieldId", str, default=REQUIRED, storage_name="eval_field_id"
+)
+_EvalFieldNameProperty = RuntimeProperty(
+    "EvalFieldName", str, default=REQUIRED, storage_name="eval_field_name"
+)
+_EvalOrderProperty = RuntimeProperty(
+    "EvalOrder", int, default=0, storage_name="eval_order"
+)
+_DiagnosticIdProperty = RuntimeProperty(
+    "DiagnosticId", str, default=REQUIRED, storage_name="diagnostic_id"
+)
+_DiagnosticOwnerProperty = RuntimeProperty(
+    "DiagnosticOwner", str, default=REQUIRED, storage_name="diagnostic_owner"
+)
+_DiagnosticFieldIdProperty = RuntimeProperty(
+    "DiagnosticFieldId", str, default="", storage_name="diagnostic_field_id"
+)
+_DiagnosticMessageProperty = RuntimeProperty(
+    "DiagnosticMessage", str, default=REQUIRED, storage_name="diagnostic_message"
+)
 _LifecycleClassSpec = RuntimeRecord(
     "LifecycleClass",
     (
@@ -295,6 +364,41 @@ _ClassVarAssignmentSpec = RuntimeRecord(
         _ClassVarAssignmentOrderProperty,
     ),
 )
+_DefaultFactoryDependencySpec = RuntimeRecord(
+    "DefaultFactoryDependency",
+    (
+        _DependencyOwnerProperty,
+        _ConsumerFieldIdProperty,
+        _ConsumerFieldNameProperty,
+        _ProviderNameProperty,
+        _ProviderFieldIdProperty,
+        _ProviderFieldKindProperty,
+        _ProviderInitProperty,
+        _ProviderHasDefaultProperty,
+        _ProviderHasDefaultFactoryProperty,
+        _ParamNameProperty,
+        _ParamOrderProperty,
+    ),
+)
+_DefaultFactoryEvaluationStepSpec = RuntimeRecord(
+    "DefaultFactoryEvaluationStep",
+    (
+        _EvalStepIdProperty,
+        _EvalOwnerProperty,
+        _EvalFieldIdProperty,
+        _EvalFieldNameProperty,
+        _EvalOrderProperty,
+    ),
+)
+_DefaultFactoryDiagnosticSpec = RuntimeRecord(
+    "DefaultFactoryDiagnostic",
+    (
+        _DiagnosticIdProperty,
+        _DiagnosticOwnerProperty,
+        _DiagnosticFieldIdProperty,
+        _DiagnosticMessageProperty,
+    ),
+)
 _PlainFieldSpec = RuntimeRecord(
     "PlainField",
     (
@@ -311,6 +415,7 @@ _PlainFieldSpec = RuntimeRecord(
         _HasDefaultFactoryProperty,
         _DefaultFactoryProperty,
         _DefaultFactoryParamNameProperty,
+        _DefaultFactoryParamNamesProperty,
         _TxGroupKeyProperty,
         _ValueSlotNameProperty,
         _CurrentSlotNameProperty,
@@ -333,6 +438,7 @@ _InitVarFieldSpec = RuntimeRecord(
         _HasDefaultFactoryProperty,
         _DefaultFactoryProperty,
         _DefaultFactoryParamNameProperty,
+        _DefaultFactoryParamNamesProperty,
         _TxGroupKeyProperty,
         _ValueSlotNameProperty,
         _CurrentSlotNameProperty,
@@ -355,6 +461,7 @@ _ClassVarFieldSpec = RuntimeRecord(
         _HasDefaultFactoryProperty,
         _DefaultFactoryProperty,
         _DefaultFactoryParamNameProperty,
+        _DefaultFactoryParamNamesProperty,
         _TxGroupKeyProperty,
         _ValueSlotNameProperty,
         _CurrentSlotNameProperty,
@@ -377,6 +484,7 @@ _ManagedFieldSpec = RuntimeRecord(
         _HasDefaultFactoryProperty,
         _DefaultFactoryProperty,
         _DefaultFactoryParamNameProperty,
+        _DefaultFactoryParamNamesProperty,
         _TxGroupKeyProperty,
         _ValueSlotNameProperty,
         _CurrentSlotNameProperty,
@@ -1121,6 +1229,280 @@ class ClassVarAssignment:
 _ClassVarAssignmentSpec.bind_record_class(ClassVarAssignment)
 
 
+class DefaultFactoryDependency:
+    __slots__ = (
+        "dependency_owner",
+        "consumer_field_id",
+        "consumer_field_name",
+        "provider_name",
+        "provider_field_id",
+        "provider_field_kind",
+        "provider_init",
+        "provider_has_default",
+        "provider_has_default_factory",
+        "param_name",
+        "param_order",
+    )
+    __dds_record_spec__ = _DefaultFactoryDependencySpec
+    dependency_owner: str
+    consumer_field_id: str
+    consumer_field_name: str
+    provider_name: str
+    provider_field_id: str
+    provider_field_kind: str
+    provider_init: bool
+    provider_has_default: bool
+    provider_has_default_factory: bool
+    param_name: str
+    param_order: int
+
+    def __init__(
+        self,
+        *,
+        dependency_owner: str,
+        consumer_field_id: str,
+        consumer_field_name: str = "",
+        provider_name: str,
+        provider_field_id: str = "",
+        provider_field_kind: str = "",
+        provider_init: bool = True,
+        provider_has_default: bool = False,
+        provider_has_default_factory: bool = False,
+        param_name: str,
+        param_order: int = 0
+    ):
+        if not isinstance(dependency_owner, str):
+            raise TypeError(
+                "DependencyOwner must be str, got " + type(dependency_owner).__name__
+            )
+        object.__setattr__(self, "dependency_owner", dependency_owner)
+        if not isinstance(consumer_field_id, str):
+            raise TypeError(
+                "ConsumerFieldId must be str, got " + type(consumer_field_id).__name__
+            )
+        object.__setattr__(self, "consumer_field_id", consumer_field_id)
+        if not isinstance(consumer_field_name, str):
+            raise TypeError(
+                "ConsumerFieldName must be str, got "
+                + type(consumer_field_name).__name__
+            )
+        object.__setattr__(self, "consumer_field_name", consumer_field_name)
+        if not isinstance(provider_name, str):
+            raise TypeError(
+                "ProviderName must be str, got " + type(provider_name).__name__
+            )
+        object.__setattr__(self, "provider_name", provider_name)
+        if not isinstance(provider_field_id, str):
+            raise TypeError(
+                "ProviderFieldId must be str, got " + type(provider_field_id).__name__
+            )
+        object.__setattr__(self, "provider_field_id", provider_field_id)
+        if not isinstance(provider_field_kind, str):
+            raise TypeError(
+                "ProviderFieldKind must be str, got "
+                + type(provider_field_kind).__name__
+            )
+        object.__setattr__(self, "provider_field_kind", provider_field_kind)
+        if not isinstance(provider_init, bool):
+            raise TypeError(
+                "ProviderInit must be bool, got " + type(provider_init).__name__
+            )
+        object.__setattr__(self, "provider_init", provider_init)
+        if not isinstance(provider_has_default, bool):
+            raise TypeError(
+                "ProviderHasDefault must be bool, got "
+                + type(provider_has_default).__name__
+            )
+        object.__setattr__(self, "provider_has_default", provider_has_default)
+        if not isinstance(provider_has_default_factory, bool):
+            raise TypeError(
+                "ProviderHasDefaultFactory must be bool, got "
+                + type(provider_has_default_factory).__name__
+            )
+        object.__setattr__(
+            self, "provider_has_default_factory", provider_has_default_factory
+        )
+        if not isinstance(param_name, str):
+            raise TypeError("ParamName must be str, got " + type(param_name).__name__)
+        object.__setattr__(self, "param_name", param_name)
+        if not isinstance(param_order, int):
+            raise TypeError("ParamOrder must be int, got " + type(param_order).__name__)
+        object.__setattr__(self, "param_order", param_order)
+
+    def __setattr__(self, name, value):
+        if name in (
+            "dependency_owner",
+            "consumer_field_id",
+            "consumer_field_name",
+            "provider_name",
+            "provider_field_id",
+            "provider_field_kind",
+            "provider_init",
+            "provider_has_default",
+            "provider_has_default_factory",
+            "param_name",
+            "param_order",
+        ):
+            raise AttributeError("DefaultFactoryDependency records are immutable")
+        object.__setattr__(self, name, value)
+
+    def __repr__(self):
+        pieces = []
+        pieces.append("dependency_owner=" + repr(self.dependency_owner))
+        pieces.append("consumer_field_id=" + repr(self.consumer_field_id))
+        pieces.append("consumer_field_name=" + repr(self.consumer_field_name))
+        pieces.append("provider_name=" + repr(self.provider_name))
+        pieces.append("provider_field_id=" + repr(self.provider_field_id))
+        pieces.append("provider_field_kind=" + repr(self.provider_field_kind))
+        pieces.append("provider_init=" + repr(self.provider_init))
+        pieces.append("provider_has_default=" + repr(self.provider_has_default))
+        pieces.append(
+            "provider_has_default_factory=" + repr(self.provider_has_default_factory)
+        )
+        pieces.append("param_name=" + repr(self.param_name))
+        pieces.append("param_order=" + repr(self.param_order))
+        return "DefaultFactoryDependency" + "(" + ", ".join(pieces) + ")"
+
+
+_DefaultFactoryDependencySpec.bind_record_class(DefaultFactoryDependency)
+
+
+class DefaultFactoryEvaluationStep:
+    __slots__ = (
+        "eval_step_id",
+        "eval_owner",
+        "eval_field_id",
+        "eval_field_name",
+        "eval_order",
+    )
+    __dds_record_spec__ = _DefaultFactoryEvaluationStepSpec
+    eval_step_id: str
+    eval_owner: str
+    eval_field_id: str
+    eval_field_name: str
+    eval_order: int
+
+    def __init__(
+        self,
+        *,
+        eval_step_id: str,
+        eval_owner: str,
+        eval_field_id: str,
+        eval_field_name: str,
+        eval_order: int = 0
+    ):
+        if not isinstance(eval_step_id, str):
+            raise TypeError(
+                "EvalStepId must be str, got " + type(eval_step_id).__name__
+            )
+        object.__setattr__(self, "eval_step_id", eval_step_id)
+        if not isinstance(eval_owner, str):
+            raise TypeError("EvalOwner must be str, got " + type(eval_owner).__name__)
+        object.__setattr__(self, "eval_owner", eval_owner)
+        if not isinstance(eval_field_id, str):
+            raise TypeError(
+                "EvalFieldId must be str, got " + type(eval_field_id).__name__
+            )
+        object.__setattr__(self, "eval_field_id", eval_field_id)
+        if not isinstance(eval_field_name, str):
+            raise TypeError(
+                "EvalFieldName must be str, got " + type(eval_field_name).__name__
+            )
+        object.__setattr__(self, "eval_field_name", eval_field_name)
+        if not isinstance(eval_order, int):
+            raise TypeError("EvalOrder must be int, got " + type(eval_order).__name__)
+        object.__setattr__(self, "eval_order", eval_order)
+
+    def __setattr__(self, name, value):
+        if name in (
+            "eval_step_id",
+            "eval_owner",
+            "eval_field_id",
+            "eval_field_name",
+            "eval_order",
+        ):
+            raise AttributeError("DefaultFactoryEvaluationStep records are immutable")
+        object.__setattr__(self, name, value)
+
+    def __repr__(self):
+        pieces = []
+        pieces.append("eval_step_id=" + repr(self.eval_step_id))
+        pieces.append("eval_owner=" + repr(self.eval_owner))
+        pieces.append("eval_field_id=" + repr(self.eval_field_id))
+        pieces.append("eval_field_name=" + repr(self.eval_field_name))
+        pieces.append("eval_order=" + repr(self.eval_order))
+        return "DefaultFactoryEvaluationStep" + "(" + ", ".join(pieces) + ")"
+
+
+_DefaultFactoryEvaluationStepSpec.bind_record_class(DefaultFactoryEvaluationStep)
+
+
+class DefaultFactoryDiagnostic:
+    __slots__ = (
+        "diagnostic_id",
+        "diagnostic_owner",
+        "diagnostic_field_id",
+        "diagnostic_message",
+    )
+    __dds_record_spec__ = _DefaultFactoryDiagnosticSpec
+    diagnostic_id: str
+    diagnostic_owner: str
+    diagnostic_field_id: str
+    diagnostic_message: str
+
+    def __init__(
+        self,
+        *,
+        diagnostic_id: str,
+        diagnostic_owner: str,
+        diagnostic_field_id: str = "",
+        diagnostic_message: str
+    ):
+        if not isinstance(diagnostic_id, str):
+            raise TypeError(
+                "DiagnosticId must be str, got " + type(diagnostic_id).__name__
+            )
+        object.__setattr__(self, "diagnostic_id", diagnostic_id)
+        if not isinstance(diagnostic_owner, str):
+            raise TypeError(
+                "DiagnosticOwner must be str, got " + type(diagnostic_owner).__name__
+            )
+        object.__setattr__(self, "diagnostic_owner", diagnostic_owner)
+        if not isinstance(diagnostic_field_id, str):
+            raise TypeError(
+                "DiagnosticFieldId must be str, got "
+                + type(diagnostic_field_id).__name__
+            )
+        object.__setattr__(self, "diagnostic_field_id", diagnostic_field_id)
+        if not isinstance(diagnostic_message, str):
+            raise TypeError(
+                "DiagnosticMessage must be str, got "
+                + type(diagnostic_message).__name__
+            )
+        object.__setattr__(self, "diagnostic_message", diagnostic_message)
+
+    def __setattr__(self, name, value):
+        if name in (
+            "diagnostic_id",
+            "diagnostic_owner",
+            "diagnostic_field_id",
+            "diagnostic_message",
+        ):
+            raise AttributeError("DefaultFactoryDiagnostic records are immutable")
+        object.__setattr__(self, name, value)
+
+    def __repr__(self):
+        pieces = []
+        pieces.append("diagnostic_id=" + repr(self.diagnostic_id))
+        pieces.append("diagnostic_owner=" + repr(self.diagnostic_owner))
+        pieces.append("diagnostic_field_id=" + repr(self.diagnostic_field_id))
+        pieces.append("diagnostic_message=" + repr(self.diagnostic_message))
+        return "DefaultFactoryDiagnostic" + "(" + ", ".join(pieces) + ")"
+
+
+_DefaultFactoryDiagnosticSpec.bind_record_class(DefaultFactoryDiagnostic)
+
+
 class PlainField:
     __slots__ = (
         "field_id",
@@ -1136,6 +1518,7 @@ class PlainField:
         "has_default_factory",
         "default_factory",
         "default_factory_param_name",
+        "default_factory_param_names",
         "tx_group_key",
         "value_slot_name",
         "current_slot_name",
@@ -1155,6 +1538,7 @@ class PlainField:
     has_default_factory: bool
     default_factory: object
     default_factory_param_name: str
+    default_factory_param_names: object
     tx_group_key: object
     value_slot_name: str
     current_slot_name: str
@@ -1176,6 +1560,7 @@ class PlainField:
         has_default_factory: bool = False,
         default_factory: object = None,
         default_factory_param_name: str = "",
+        default_factory_param_names: object = (),
         tx_group_key: object = None,
         value_slot_name: str = "",
         current_slot_name: str = "",
@@ -1227,6 +1612,9 @@ class PlainField:
         object.__setattr__(
             self, "default_factory_param_name", default_factory_param_name
         )
+        object.__setattr__(
+            self, "default_factory_param_names", default_factory_param_names
+        )
         object.__setattr__(self, "tx_group_key", tx_group_key)
         if not isinstance(value_slot_name, str):
             raise TypeError(
@@ -1259,6 +1647,7 @@ class PlainField:
             "has_default_factory",
             "default_factory",
             "default_factory_param_name",
+            "default_factory_param_names",
             "tx_group_key",
             "value_slot_name",
             "current_slot_name",
@@ -1283,6 +1672,9 @@ class PlainField:
         pieces.append("default_factory=" + repr(self.default_factory))
         pieces.append(
             "default_factory_param_name=" + repr(self.default_factory_param_name)
+        )
+        pieces.append(
+            "default_factory_param_names=" + repr(self.default_factory_param_names)
         )
         pieces.append("tx_group_key=" + repr(self.tx_group_key))
         pieces.append("value_slot_name=" + repr(self.value_slot_name))
@@ -1309,6 +1701,7 @@ class InitVarField:
         "has_default_factory",
         "default_factory",
         "default_factory_param_name",
+        "default_factory_param_names",
         "tx_group_key",
         "value_slot_name",
         "current_slot_name",
@@ -1328,6 +1721,7 @@ class InitVarField:
     has_default_factory: bool
     default_factory: object
     default_factory_param_name: str
+    default_factory_param_names: object
     tx_group_key: object
     value_slot_name: str
     current_slot_name: str
@@ -1349,6 +1743,7 @@ class InitVarField:
         has_default_factory: bool = False,
         default_factory: object = None,
         default_factory_param_name: str = "",
+        default_factory_param_names: object = (),
         tx_group_key: object = None,
         value_slot_name: str = "",
         current_slot_name: str = "",
@@ -1400,6 +1795,9 @@ class InitVarField:
         object.__setattr__(
             self, "default_factory_param_name", default_factory_param_name
         )
+        object.__setattr__(
+            self, "default_factory_param_names", default_factory_param_names
+        )
         object.__setattr__(self, "tx_group_key", tx_group_key)
         if not isinstance(value_slot_name, str):
             raise TypeError(
@@ -1432,6 +1830,7 @@ class InitVarField:
             "has_default_factory",
             "default_factory",
             "default_factory_param_name",
+            "default_factory_param_names",
             "tx_group_key",
             "value_slot_name",
             "current_slot_name",
@@ -1456,6 +1855,9 @@ class InitVarField:
         pieces.append("default_factory=" + repr(self.default_factory))
         pieces.append(
             "default_factory_param_name=" + repr(self.default_factory_param_name)
+        )
+        pieces.append(
+            "default_factory_param_names=" + repr(self.default_factory_param_names)
         )
         pieces.append("tx_group_key=" + repr(self.tx_group_key))
         pieces.append("value_slot_name=" + repr(self.value_slot_name))
@@ -1482,6 +1884,7 @@ class ClassVarField:
         "has_default_factory",
         "default_factory",
         "default_factory_param_name",
+        "default_factory_param_names",
         "tx_group_key",
         "value_slot_name",
         "current_slot_name",
@@ -1501,6 +1904,7 @@ class ClassVarField:
     has_default_factory: bool
     default_factory: object
     default_factory_param_name: str
+    default_factory_param_names: object
     tx_group_key: object
     value_slot_name: str
     current_slot_name: str
@@ -1522,6 +1926,7 @@ class ClassVarField:
         has_default_factory: bool = False,
         default_factory: object = None,
         default_factory_param_name: str = "",
+        default_factory_param_names: object = (),
         tx_group_key: object = None,
         value_slot_name: str = "",
         current_slot_name: str = "",
@@ -1573,6 +1978,9 @@ class ClassVarField:
         object.__setattr__(
             self, "default_factory_param_name", default_factory_param_name
         )
+        object.__setattr__(
+            self, "default_factory_param_names", default_factory_param_names
+        )
         object.__setattr__(self, "tx_group_key", tx_group_key)
         if not isinstance(value_slot_name, str):
             raise TypeError(
@@ -1605,6 +2013,7 @@ class ClassVarField:
             "has_default_factory",
             "default_factory",
             "default_factory_param_name",
+            "default_factory_param_names",
             "tx_group_key",
             "value_slot_name",
             "current_slot_name",
@@ -1629,6 +2038,9 @@ class ClassVarField:
         pieces.append("default_factory=" + repr(self.default_factory))
         pieces.append(
             "default_factory_param_name=" + repr(self.default_factory_param_name)
+        )
+        pieces.append(
+            "default_factory_param_names=" + repr(self.default_factory_param_names)
         )
         pieces.append("tx_group_key=" + repr(self.tx_group_key))
         pieces.append("value_slot_name=" + repr(self.value_slot_name))
@@ -1655,6 +2067,7 @@ class ManagedField:
         "has_default_factory",
         "default_factory",
         "default_factory_param_name",
+        "default_factory_param_names",
         "tx_group_key",
         "value_slot_name",
         "current_slot_name",
@@ -1674,6 +2087,7 @@ class ManagedField:
     has_default_factory: bool
     default_factory: object
     default_factory_param_name: str
+    default_factory_param_names: object
     tx_group_key: object
     value_slot_name: str
     current_slot_name: str
@@ -1695,6 +2109,7 @@ class ManagedField:
         has_default_factory: bool = False,
         default_factory: object = None,
         default_factory_param_name: str = "",
+        default_factory_param_names: object = (),
         tx_group_key: object = None,
         value_slot_name: str = "",
         current_slot_name: str = "",
@@ -1746,6 +2161,9 @@ class ManagedField:
         object.__setattr__(
             self, "default_factory_param_name", default_factory_param_name
         )
+        object.__setattr__(
+            self, "default_factory_param_names", default_factory_param_names
+        )
         object.__setattr__(self, "tx_group_key", tx_group_key)
         if not isinstance(value_slot_name, str):
             raise TypeError(
@@ -1778,6 +2196,7 @@ class ManagedField:
             "has_default_factory",
             "default_factory",
             "default_factory_param_name",
+            "default_factory_param_names",
             "tx_group_key",
             "value_slot_name",
             "current_slot_name",
@@ -1802,6 +2221,9 @@ class ManagedField:
         pieces.append("default_factory=" + repr(self.default_factory))
         pieces.append(
             "default_factory_param_name=" + repr(self.default_factory_param_name)
+        )
+        pieces.append(
+            "default_factory_param_names=" + repr(self.default_factory_param_names)
         )
         pieces.append("tx_group_key=" + repr(self.tx_group_key))
         pieces.append("value_slot_name=" + repr(self.value_slot_name))
@@ -1865,6 +2287,24 @@ ClassVarAssignmentsCollection = RuntimeCollection(
     allows_multiple=True,
     identity=_ClassVarAssignmentIdProperty,
 )
+DefaultFactoryDependenciesCollection = RuntimeCollection(
+    "DefaultFactoryDependencies",
+    _DefaultFactoryDependencySpec,
+    allows_multiple=True,
+    identity=(_ConsumerFieldIdProperty, _ParamNameProperty),
+)
+DefaultFactoryEvaluationStepsCollection = RuntimeCollection(
+    "DefaultFactoryEvaluationSteps",
+    _DefaultFactoryEvaluationStepSpec,
+    allows_multiple=True,
+    identity=_EvalStepIdProperty,
+)
+DefaultFactoryDiagnosticsCollection = RuntimeCollection(
+    "DefaultFactoryDiagnostics",
+    _DefaultFactoryDiagnosticSpec,
+    allows_multiple=True,
+    identity=_DiagnosticIdProperty,
+)
 PlainFieldsCollection = RuntimeComputedCollection(
     "PlainFields", source=FieldsCollection, when=(_FieldKindProperty.eq("field"),)
 )
@@ -1889,6 +2329,9 @@ _RUNTIME_SPEC = RuntimeContainerSpec(
         InitParametersCollection,
         InitAssignmentsCollection,
         ClassVarAssignmentsCollection,
+        DefaultFactoryDependenciesCollection,
+        DefaultFactoryEvaluationStepsCollection,
+        DefaultFactoryDiagnosticsCollection,
     ),
     computed_collections=(
         PlainFieldsCollection,
@@ -2100,6 +2543,9 @@ ASSEMBLY_PROPERTIES = {
     "DefaultFactoryParamName": _YidlSimpleNamespace(
         name="DefaultFactoryParamName", storage_name="default_factory_param_name"
     ),
+    "DefaultFactoryParamNames": _YidlSimpleNamespace(
+        name="DefaultFactoryParamNames", storage_name="default_factory_param_names"
+    ),
     "TxGroupKey": _YidlSimpleNamespace(name="TxGroupKey", storage_name="tx_group_key"),
     "ValueSlotName": _YidlSimpleNamespace(
         name="ValueSlotName", storage_name="value_slot_name"
@@ -2180,6 +2626,56 @@ ASSEMBLY_PROPERTIES = {
     "ClassVarAssignmentOrder": _YidlSimpleNamespace(
         name="ClassVarAssignmentOrder", storage_name="class_var_assignment_order"
     ),
+    "DependencyOwner": _YidlSimpleNamespace(
+        name="DependencyOwner", storage_name="dependency_owner"
+    ),
+    "ConsumerFieldId": _YidlSimpleNamespace(
+        name="ConsumerFieldId", storage_name="consumer_field_id"
+    ),
+    "ConsumerFieldName": _YidlSimpleNamespace(
+        name="ConsumerFieldName", storage_name="consumer_field_name"
+    ),
+    "ProviderName": _YidlSimpleNamespace(
+        name="ProviderName", storage_name="provider_name"
+    ),
+    "ProviderFieldId": _YidlSimpleNamespace(
+        name="ProviderFieldId", storage_name="provider_field_id"
+    ),
+    "ProviderFieldKind": _YidlSimpleNamespace(
+        name="ProviderFieldKind", storage_name="provider_field_kind"
+    ),
+    "ProviderInit": _YidlSimpleNamespace(
+        name="ProviderInit", storage_name="provider_init"
+    ),
+    "ProviderHasDefault": _YidlSimpleNamespace(
+        name="ProviderHasDefault", storage_name="provider_has_default"
+    ),
+    "ProviderHasDefaultFactory": _YidlSimpleNamespace(
+        name="ProviderHasDefaultFactory", storage_name="provider_has_default_factory"
+    ),
+    "ParamName": _YidlSimpleNamespace(name="ParamName", storage_name="param_name"),
+    "ParamOrder": _YidlSimpleNamespace(name="ParamOrder", storage_name="param_order"),
+    "EvalStepId": _YidlSimpleNamespace(name="EvalStepId", storage_name="eval_step_id"),
+    "EvalOwner": _YidlSimpleNamespace(name="EvalOwner", storage_name="eval_owner"),
+    "EvalFieldId": _YidlSimpleNamespace(
+        name="EvalFieldId", storage_name="eval_field_id"
+    ),
+    "EvalFieldName": _YidlSimpleNamespace(
+        name="EvalFieldName", storage_name="eval_field_name"
+    ),
+    "EvalOrder": _YidlSimpleNamespace(name="EvalOrder", storage_name="eval_order"),
+    "DiagnosticId": _YidlSimpleNamespace(
+        name="DiagnosticId", storage_name="diagnostic_id"
+    ),
+    "DiagnosticOwner": _YidlSimpleNamespace(
+        name="DiagnosticOwner", storage_name="diagnostic_owner"
+    ),
+    "DiagnosticFieldId": _YidlSimpleNamespace(
+        name="DiagnosticFieldId", storage_name="diagnostic_field_id"
+    ),
+    "DiagnosticMessage": _YidlSimpleNamespace(
+        name="DiagnosticMessage", storage_name="diagnostic_message"
+    ),
 }
 ASSEMBLY_RESOURCES = {
     "BuildTransactionFactsBody": from_astichi_code(
@@ -2257,7 +2753,7 @@ for lifecycle_class in classes:
             policy=RejectDuplicate,
         )""",
         file_name="tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl",
-        line_number=153,
+        line_number=155,
         keep_names=(
             "ctx",
             "ClassesCollection",
@@ -2288,7 +2784,7 @@ def build_lifecycle_class(decorated_cls, builder_params__astichi_param_hole__):
     astichi_hole(function_body)
     astichi_hole(return_statement)""",
         file_name="tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl",
-        line_number=293,
+        line_number=358,
     ),
     "BuilderParam": astichi_template(
         from_astichi_code(
@@ -2296,7 +2792,7 @@ def build_lifecycle_class(decorated_cls, builder_params__astichi_param_hole__):
 def astichi_params(*, value_name__astichi_arg__):
     pass""",
             file_name="tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl",
-            line_number=310,
+            line_number=375,
         )
     ),
     "TransactionManagerParam": astichi_template(
@@ -2305,14 +2801,14 @@ def astichi_params(*, value_name__astichi_arg__):
 def astichi_params(*, transaction_manager=None):
     pass""",
             file_name="tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl",
-            line_number=315,
+            line_number=380,
         )
     ),
     "StateSlotEntry": astichi_template(
         from_astichi_code(
             "astichi_bind_external(slot_name)",
             file_name="tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl",
-            line_number=320,
+            line_number=385,
         )
     ),
     "InitParamRequired": astichi_template(
@@ -2321,7 +2817,7 @@ def astichi_params(*, transaction_manager=None):
 def astichi_params(param_name__astichi_arg__: astichi_bind_external(annotation)):
     pass""",
             file_name="tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl",
-            line_number=324,
+            line_number=389,
         )
     ),
     "InitParamDefault": astichi_template(
@@ -2333,7 +2829,7 @@ def astichi_params(
 ):
     pass""",
             file_name="tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl",
-            line_number=329,
+            line_number=394,
         )
     ),
     "PlainStateAssignment": astichi_template(
@@ -2344,7 +2840,7 @@ astichi_pass(state, outer_bind=True).astichi_ref(external=state_slot)._ = astich
     outer_bind=True,
 )""",
             file_name="tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl",
-            line_number=337,
+            line_number=402,
         )
     ),
     "PlainProperty": astichi_template(
@@ -2358,7 +2854,7 @@ def property_getter_name__astichi_arg__(self):
 def property_setter_name__astichi_arg__(self, value):
     self._y_state.astichi_ref(external=state_slot)._ = value""",
             file_name="tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl",
-            line_number=344,
+            line_number=409,
         )
     ),
     "ClassVarDefaultAssignment": astichi_template(
@@ -2369,7 +2865,7 @@ classvar_name__astichi_arg__ = astichi_pass(
     outer_bind=True,
 )""",
             file_name="tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl",
-            line_number=354,
+            line_number=419,
         )
     ),
     "ManagedCurrentStateAssignment": astichi_template(
@@ -2380,14 +2876,14 @@ astichi_pass(state, outer_bind=True).astichi_ref(external=current_slot)._ = asti
     outer_bind=True,
 )""",
             file_name="tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl",
-            line_number=361,
+            line_number=426,
         )
     ),
     "ManagedWorkingStateAssignment": astichi_template(
         from_astichi_code(
             "astichi_pass(state, outer_bind=True).astichi_ref(external=working_slot)._ = VOID",
             file_name="tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl",
-            line_number=368,
+            line_number=433,
             keep_names=("VOID",),
         )
     ),
@@ -2407,7 +2903,7 @@ def property_setter_name__astichi_arg__(self, value):
     state._y_ensure_working_transaction(astichi_bind_external(tx_index))
     state.astichi_ref(external=working_slot)._ = value""",
             file_name="tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl",
-            line_number=374,
+            line_number=439,
             keep_names=("VOID",),
         )
     ),
@@ -2426,7 +2922,7 @@ def property_setter_name__astichi_arg__(self, value):
         + astichi_bind_external(field_name)
     )""",
             file_name="tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl",
-            line_number=391,
+            line_number=456,
         )
     ),
     "ManagedWorkingProperty": astichi_template(
@@ -2445,7 +2941,7 @@ def property_setter_name__astichi_arg__(self, value):
     state._y_ensure_working_transaction(astichi_bind_external(tx_index))
     state.astichi_ref(external=working_slot)._ = value""",
             file_name="tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl",
-            line_number=405,
+            line_number=470,
             keep_names=("VOID",),
         )
     ),
@@ -2459,7 +2955,7 @@ if astichi_pass(tx_index, outer_bind=True) == astichi_bind_external(tx_index_val
         )
         astichi_pass(self, outer_bind=True).astichi_ref(external=working_slot)._ = VOID""",
             file_name="tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl",
-            line_number=422,
+            line_number=487,
             keep_names=("VOID",),
         )
     ),
@@ -2469,7 +2965,7 @@ if astichi_pass(tx_index, outer_bind=True) == astichi_bind_external(tx_index_val
 if astichi_pass(tx_index, outer_bind=True) == astichi_bind_external(tx_index_value):
     astichi_pass(self, outer_bind=True).astichi_ref(external=working_slot)._ = VOID""",
             file_name="tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl",
-            line_number=433,
+            line_number=498,
             keep_names=("VOID",),
         )
     ),
@@ -2682,7 +3178,7 @@ class working_facade_class_decl_name__astichi_arg__(
     __slots__ = ()
     astichi_hole(working_facade_properties)""",
             file_name="tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl",
-            line_number=440,
+            line_number=505,
             keep_names=("DEFAULT_TRANSACTION", "TransactionManager", "VOID", "weakref"),
         )
     ),
@@ -2703,14 +3199,14 @@ return_class_module_ref__astichi_arg__.__module__ = astichi_pass(
 ).__module__
 return return_class_result_ref__astichi_arg__""",
             file_name="tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl",
-            line_number=650,
+            line_number=715,
         )
     ),
     "PassStatement": astichi_template(
         from_astichi_code(
             "pass",
             file_name="tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl",
-            line_number=666,
+            line_number=731,
         )
     ),
 }

@@ -32,6 +32,7 @@ concept LifecycleBase {
     property HasDefaultFactory: bool = False
     property DefaultFactory: object = None
     property DefaultFactoryParamName: str = ""
+    property DefaultFactoryParamNames: object = ()
     property TxGroupKey: object = None
     property ValueSlotName: str = ""
     property CurrentSlotName: str = ""
@@ -55,6 +56,7 @@ concept LifecycleBase {
         common FieldId, FieldOwner, FieldName, FieldOrder, FieldKind, Annotation
         common Init, HasDefault, DefaultValue, DefaultValueParamName
         common HasDefaultFactory, DefaultFactory, DefaultFactoryParamName
+        common DefaultFactoryParamNames
         common TxGroupKey, ValueSlotName, CurrentSlotName, WorkingSlotName
 
         variant PlainField {
@@ -284,6 +286,69 @@ concept LifecycleBase {
     collection InitParameters: InitParameter identity InitParameterId many
     collection InitAssignments: InitAssignment identity InitAssignmentId many
     collection ClassVarAssignments: ClassVarAssignment identity ClassVarAssignmentId many
+
+    # -------------------------------------------------------------------------
+    # Default-factory dependency facts.
+    # -------------------------------------------------------------------------
+
+    property DependencyOwner: str
+    property ConsumerFieldId: str
+    property ConsumerFieldName: str = ""
+    property ProviderName: str
+    property ProviderFieldId: str = ""
+    property ProviderFieldKind: str = ""
+    property ProviderInit: bool = True
+    property ProviderHasDefault: bool = False
+    property ProviderHasDefaultFactory: bool = False
+    property ParamName: str
+    property ParamOrder: int = 0
+
+    property EvalStepId: str
+    property EvalOwner: str
+    property EvalFieldId: str
+    property EvalFieldName: str
+    property EvalOrder: int = 0
+
+    property DiagnosticId: str
+    property DiagnosticOwner: str
+    property DiagnosticFieldId: str = ""
+    property DiagnosticMessage: str
+
+    record DefaultFactoryDependency {
+        DependencyOwner
+        ConsumerFieldId
+        ConsumerFieldName
+        ProviderName
+        ProviderFieldId
+        ProviderFieldKind
+        ProviderInit
+        ProviderHasDefault
+        ProviderHasDefaultFactory
+        ParamName
+        ParamOrder
+    }
+
+    record DefaultFactoryEvaluationStep {
+        EvalStepId
+        EvalOwner
+        EvalFieldId
+        EvalFieldName
+        EvalOrder
+    }
+
+    record DefaultFactoryDiagnostic {
+        DiagnosticId
+        DiagnosticOwner
+        DiagnosticFieldId
+        DiagnosticMessage
+    }
+
+    collection DefaultFactoryDependencies:
+        DefaultFactoryDependency identity (ConsumerFieldId, ParamName) many
+    collection DefaultFactoryEvaluationSteps:
+        DefaultFactoryEvaluationStep identity EvalStepId many
+    collection DefaultFactoryDiagnostics:
+        DefaultFactoryDiagnostic identity DiagnosticId many
 
     # -------------------------------------------------------------------------
     # A3 generated module/class skeleton.
