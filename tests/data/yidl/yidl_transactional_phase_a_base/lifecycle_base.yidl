@@ -569,6 +569,7 @@ concept LifecycleBase {
             def rollback(self, *tx_groups):
                 return self._y_state._y_transaction_manager.rollback(*tx_groups)
 
+            astichi_hole(facade_base_body)
             astichi_hole(facade_properties)
 
 
@@ -602,7 +603,6 @@ concept LifecycleBase {
                 )
             }
 
-            astichi_hole(default_class_body)
             astichi_hole(default_facade_properties)
 
             def __init__(self, init_params__astichi_param_hole__):
@@ -844,7 +844,7 @@ concept LifecycleBase {
         index FieldOrder
         order FieldOrder
 
-        target default_class_body {
+        target facade_base_body {
             build /ClassDef
         }
 

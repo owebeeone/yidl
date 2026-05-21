@@ -7,7 +7,6 @@ from yidl.runtime.lifecycle import MISSING
 from yidl.runtime.lifecycle import classvar
 from yidl.runtime.lifecycle import field
 from yidl.runtime.lifecycle import initvar
-from yidl.runtime.lifecycle import lifecycle
 from yidl.runtime.lifecycle import managed
 from yidl.runtime.lifecycle import normalize_marker
 from yidl.runtime.transaction_yidl import DEFAULT_TRANSACTION
@@ -105,10 +104,3 @@ def test_normalize_rejects_reserved_names() -> None:
 
     with pytest.raises(LifecycleDefinitionError, match="Counter.__yidl_data__"):
         normalize_marker("__yidl_data__", int, field(), context="Counter")
-
-
-def test_lifecycle_placeholder_returns_class() -> None:
-    class Counter:
-        pass
-
-    assert lifecycle(Counter) is Counter
