@@ -7,6 +7,7 @@ from yidl.sentinel_maker import sentinels
 
 
 MISSING = sentinels.MISSING
+_HAS_DEFAULT_FACTORY = sentinels.HAS_DEFAULT_FACTORY
 
 
 class LifecycleDefinitionError(ValueError):

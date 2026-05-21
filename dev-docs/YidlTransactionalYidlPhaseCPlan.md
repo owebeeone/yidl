@@ -245,8 +245,10 @@ Verification:
   `initvar(init=False, default_factory=...)`
 - unsupported callable signature diagnostics: reject positional-only
   parameters, `*args`, and `**kwargs` because provider binding is by name
-- decide and document whether default values on factory parameters are ignored
-  or treated as callable-local defaults when no provider exists
+- callable parameter defaults do not create optional dependencies; every named
+  parameter is still resolved as a provider. Optional positional-only
+  parameters are ignored only to preserve zero-argument builtin factories such
+  as `list`; required positional-only parameters still reject.
 
 ### C2: Computed Dependency Operation
 

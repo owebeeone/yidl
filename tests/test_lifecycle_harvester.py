@@ -89,15 +89,116 @@ def test_harvester_treats_plain_assignment_as_default_field() -> None:
     ]
 
 
-def test_harvester_ignores_init_false_initvar() -> None:
+def test_harvester_keeps_init_false_initvar_with_default_as_provider() -> None:
     class Counter:
         seed: int = initvar(init=False, default=2)
         plain: int = field(default=3)
 
     harvested = harvest_lifecycle_definition(Counter)
 
-    assert [fact["field_name"] for fact in harvested.field_facts] == ["plain"]
-    assert "_Counter_seed_default" not in harvested.build_kwargs
+    assert [fact["field_name"] for fact in harvested.field_facts] == [
+        "seed",
+        "plain",
+    ]
+    assert harvested.field_facts[0]["field_kind"] == "initvar"
+    assert harvested.field_facts[0]["init"] is False
+    assert harvested.build_kwargs["_Counter_seed_default"] == 2
+
+
+def test_harvester_keeps_init_false_initvar_with_default_factory_as_provider() -> None:
+    def make_seed() -> int:
+        return 2
+
+    class Counter:
+        seed: int = initvar(init=False, default_factory=make_seed)
+        plain: int = field(default=3)
+
+    harvested = harvest_lifecycle_definition(Counter)
+
+    assert [fact["field_name"] for fact in harvested.field_facts] == [
+        "seed",
+        "plain",
+    ]
+    assert harvested.field_facts[0]["default_factory"] is make_seed
+    assert harvested.field_facts[0]["default_factory_param_names"] == ()
+    assert harvested.build_kwargs["_Counter_seed_default_factory"] is make_seed
+
+
+def test_harvester_rejects_init_false_initvar_without_value_source() -> None:
+    class Counter:
+        seed: int = initvar(init=False)
+
+    with pytest.raises(
+        LifecycleDefinitionError,
+        match=r"Counter\.seed: initvar\(init=False\) must define default or default_factory",
+    ):
+        harvest_lifecycle_definition(Counter)
+
+
+def test_harvester_collects_default_factory_parameter_names() -> None:
+    def make_v3(v2: int, v1: int = 4, *, scale: int) -> int:
+        return v1 + v2 + scale
+
+    class Counter:
+        v1: int
+        v2: int = field(default_factory=list)
+        v3: int = managed(default_factory=make_v3)
+
+    harvested = harvest_lifecycle_definition(Counter)
+
+    assert [
+        (fact["field_name"], fact["default_factory_param_names"])
+        for fact in harvested.field_facts
+    ] == [
+        ("v1", ()),
+        ("v2", ()),
+        ("v3", ("v2", "v1", "scale")),
+    ]
+
+
+def test_harvester_rejects_required_positional_only_default_factory_parameter() -> None:
+    def make_value(v1: int, /) -> int:
+        return v1
+
+    class Counter:
+        v1: int
+        v2: int = managed(default_factory=make_value)
+
+    with pytest.raises(
+        LifecycleDefinitionError,
+        match="default_factory parameters must be bindable by name",
+    ):
+        harvest_lifecycle_definition(Counter)
+
+
+def test_harvester_rejects_varargs_default_factory_parameter() -> None:
+    def make_value(*values: int) -> int:
+        return sum(values)
+
+    class Counter:
+        v1: int
+        v2: int = managed(default_factory=make_value)
+
+    with pytest.raises(
+        LifecycleDefinitionError,
+        match="default_factory parameters must be bindable by name",
+    ):
+        harvest_lifecycle_definition(Counter)
+
+
+def test_harvester_rejects_kwargs_default_factory_parameter() -> None:
+    def make_value(**values: int) -> int:
+        return sum(values.values())
+
+    class Counter:
+        v1: int
+        v2: int = managed(default_factory=make_value)
+
+    with pytest.raises(
+        LifecycleDefinitionError,
+        match="default_factory parameters must be bindable by name",
+    ):
+        harvest_lifecycle_definition(Counter)
 
 
 def test_harvester_rejects_reserved_class_body_names() -> None:

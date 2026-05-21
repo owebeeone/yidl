@@ -2,12 +2,14 @@ from __future__ import annotations
 
 import ast
 from collections.abc import Iterable
+from collections.abc import Mapping
 from types import ModuleType
 
 from yidl.runtime.lifecycle_markers import FieldDecl
 from yidl.runtime.lifecycle_markers import LifecycleDefinitionError
 from yidl.runtime.lifecycle_markers import LifecycleMarker
 from yidl.runtime.lifecycle_markers import MISSING
+from yidl.runtime.lifecycle_markers import _HAS_DEFAULT_FACTORY
 from yidl.runtime.lifecycle_markers import classvar
 from yidl.runtime.lifecycle_markers import field
 from yidl.runtime.lifecycle_markers import initvar
@@ -64,11 +66,22 @@ def _build_lifecycle_container(
         generated.LifecycleClass(**dict(harvested.class_fact)),
     )
     for fact in harvested.field_facts:
+        record_type = _field_record_type(generated, str(fact["field_kind"]))
         builder.add(
             generated.FieldsCollection,
-            _field_record_type(generated, str(fact["field_kind"]))(**dict(fact)),
+            record_type(**_filter_record_kwargs(record_type, fact)),
         )
     return generated.build_container(builder)
+
+
+def _filter_record_kwargs(
+    record_type: type[object],
+    fact: Mapping[str, object],
+) -> dict[str, object]:
+    slots = getattr(record_type, "__slots__", ())
+    if not isinstance(slots, tuple):
+        return dict(fact)
+    return {name: fact[name] for name in slots if name in fact}
 
 
 def _field_record_type(generated: ModuleType, kind: str) -> type[object]:
@@ -177,6 +190,7 @@ __all__ = [
     "LifecycleDefinitionError",
     "LifecycleMarker",
     "MISSING",
+    "_HAS_DEFAULT_FACTORY",
     "classvar",
     "field",
     "HarvestedLifecycle",

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from dataclasses import dataclass
+import inspect
 from types import MappingProxyType
 
 from yidl.runtime.lifecycle_markers import FieldDecl
@@ -60,8 +61,16 @@ def harvest_lifecycle_definition(cls: type[object]) -> HarvestedLifecycle:
     for name, annotation in annotations.items():
         marker = _marker_for(cls, name)
         decl = normalize_marker(name, annotation, marker, context=class_name)
-        if decl.kind == "initvar" and decl.init is False:
-            continue
+        if (
+            decl.kind == "initvar"
+            and decl.init is False
+            and not decl.has_default
+            and not decl.has_default_factory
+        ):
+            raise LifecycleDefinitionError(
+                f"{class_name}.{decl.name}: initvar(init=False) must define "
+                "default or default_factory",
+            )
         existing = field_facts_by_name.get(name)
         if existing is None:
             order = next_order
@@ -155,6 +164,10 @@ def _field_fact(
         ),
         "has_default_factory": decl.has_default_factory,
         "default_factory": decl.default_factory,
+        "default_factory_param_names": _default_factory_param_names(
+            class_name,
+            decl,
+        ),
         "default_factory_param_name": (
             f"_{class_name}_{name}_default_factory" if decl.has_default_factory else ""
         ),
@@ -182,6 +195,7 @@ def _remap_inherited_field_fact(
     has_default = bool(inherited["has_default"])
     has_default_factory = bool(inherited["has_default_factory"])
     fact = dict(inherited)
+    fact.setdefault("default_factory_param_names", ())
     fact.update(
         {
             "field_id": f"{class_id}.{name}",
@@ -203,6 +217,41 @@ def _remap_inherited_field_fact(
         fact["current_slot_name"] = f"_y_{name}_current"
         fact["working_slot_name"] = f"_y_{name}_working"
     return fact
+
+
+def _default_factory_param_names(
+    class_name: str,
+    decl: FieldDecl,
+) -> tuple[str, ...]:
+    if not decl.has_default_factory:
+        return ()
+    try:
+        signature = inspect.signature(decl.default_factory)
+    except (TypeError, ValueError):
+        return ()
+    names: list[str] = []
+    for parameter in signature.parameters.values():
+        if parameter.kind in (
+            inspect.Parameter.VAR_POSITIONAL,
+            inspect.Parameter.VAR_KEYWORD,
+        ):
+            _raise_unbindable_default_factory_param(class_name, decl)
+        if parameter.kind is inspect.Parameter.POSITIONAL_ONLY:
+            if parameter.default is inspect.Parameter.empty:
+                _raise_unbindable_default_factory_param(class_name, decl)
+            continue
+        names.append(parameter.name)
+    return tuple(names)
+
+
+def _raise_unbindable_default_factory_param(
+    class_name: str,
+    decl: FieldDecl,
+) -> None:
+    raise LifecycleDefinitionError(
+        f"{class_name}.{decl.name}: default_factory parameters must be "
+        "bindable by name",
+    )
 
 
 def _inherited_lifecycle_definitions(

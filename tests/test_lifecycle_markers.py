@@ -4,6 +4,7 @@ import pytest
 
 from yidl.runtime.lifecycle import LifecycleDefinitionError
 from yidl.runtime.lifecycle import MISSING
+from yidl.runtime.lifecycle import _HAS_DEFAULT_FACTORY
 from yidl.runtime.lifecycle import classvar
 from yidl.runtime.lifecycle import field
 from yidl.runtime.lifecycle import initvar
@@ -29,6 +30,14 @@ def test_field_marker_without_default_uses_missing() -> None:
     assert decl.has_default is False
     assert decl.default is MISSING
     assert decl.has_default_factory is False
+
+
+def test_has_default_factory_sentinel_is_shared_runtime_identity() -> None:
+    from yidl.runtime import lifecycle as lifecycle_module
+    from yidl.runtime import lifecycle_markers
+
+    assert _HAS_DEFAULT_FACTORY is lifecycle_module._HAS_DEFAULT_FACTORY
+    assert _HAS_DEFAULT_FACTORY is lifecycle_markers._HAS_DEFAULT_FACTORY
 
 
 def test_field_marker_preserves_default_factory() -> None:
