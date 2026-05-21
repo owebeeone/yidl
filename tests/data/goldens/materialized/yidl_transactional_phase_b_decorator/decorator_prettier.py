@@ -3013,8 +3013,8 @@ for lifecycle_class in classes:
             ),
             policy=RejectDuplicate,
         )""",
-        file_name="tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl",
-        line_number=155,
+        file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
+        line_number=153,
         keep_names=(
             "ctx",
             "ClassesCollection",
@@ -3200,8 +3200,8 @@ for lifecycle_class in classes:
             ),
             policy=RejectDuplicate,
         )""",
-        file_name="tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl",
-        line_number=366,
+        file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
+        line_number=364,
         keep_names=(
             "ctx",
             "ClassesCollection",
@@ -3220,8 +3220,8 @@ for lifecycle_class in classes:
         """\
 for diagnostic in ctx.records(DefaultFactoryDiagnosticsCollection):
     raise AssemblyDiagnosticError(diagnostic.diagnostic_message)""",
-        file_name="tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl",
-        line_number=551,
+        file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
+        line_number=549,
         keep_names=(
             "ctx",
             "DefaultFactoryDiagnosticsCollection",
@@ -3245,16 +3245,16 @@ VOID = object()
 def build_lifecycle_class(decorated_cls, builder_params__astichi_param_hole__):
     astichi_hole(function_body)
     astichi_hole(return_statement)""",
-        file_name="tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl",
-        line_number=567,
+        file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
+        line_number=565,
     ),
     "BuilderParam": astichi_template(
         from_astichi_code(
             """\
 def astichi_params(*, value_name__astichi_arg__):
     pass""",
-            file_name="tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl",
-            line_number=585,
+            file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
+            line_number=583,
         )
     ),
     "TransactionManagerParam": astichi_template(
@@ -3262,15 +3262,15 @@ def astichi_params(*, value_name__astichi_arg__):
             """\
 def astichi_params(*, transaction_manager=None):
     pass""",
-            file_name="tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl",
-            line_number=590,
+            file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
+            line_number=588,
         )
     ),
     "StateSlotEntry": astichi_template(
         from_astichi_code(
             "astichi_bind_external(slot_name)",
-            file_name="tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl",
-            line_number=595,
+            file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
+            line_number=593,
         )
     ),
     "InitParamRequired": astichi_template(
@@ -3278,8 +3278,8 @@ def astichi_params(*, transaction_manager=None):
             """\
 def astichi_params(param_name__astichi_arg__: astichi_bind_external(annotation)):
     pass""",
-            file_name="tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl",
-            line_number=599,
+            file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
+            line_number=597,
         )
     ),
     "InitParamDefault": astichi_template(
@@ -3290,8 +3290,8 @@ def astichi_params(
     = default_value_name__astichi_arg__
 ):
     pass""",
-            file_name="tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl",
-            line_number=604,
+            file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
+            line_number=602,
         )
     ),
     "InitParamDefaultFactory": astichi_template(
@@ -3302,8 +3302,8 @@ def astichi_params(
     = _HAS_DEFAULT_FACTORY
 ):
     pass""",
-            file_name="tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl",
-            line_number=612,
+            file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
+            line_number=610,
             keep_names=("_HAS_DEFAULT_FACTORY",),
         )
     ),
@@ -3314,8 +3314,8 @@ astichi_pass(state, outer_bind=True).astichi_ref(external=state_slot)._ = astich
     init_value_name__astichi_arg__,
     outer_bind=True,
 )""",
-            file_name="tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl",
-            line_number=622,
+            file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
+            line_number=620,
         )
     ),
     "InitVarLocalDefaultAssignment": astichi_template(
@@ -3325,8 +3325,8 @@ init_value_name__astichi_arg__ = astichi_pass(
     default_value_name__astichi_arg__,
     outer_bind=True,
 )""",
-            file_name="tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl",
-            line_number=629,
+            file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
+            line_number=627,
         )
     ),
     "PlainProperty": astichi_template(
@@ -3339,8 +3339,8 @@ def property_getter_name__astichi_arg__(self):
 @property_setter_target_name__astichi_arg__.setter
 def property_setter_name__astichi_arg__(self, value):
     self._y_state.astichi_ref(external=state_slot)._ = value""",
-            file_name="tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl",
-            line_number=636,
+            file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
+            line_number=634,
         )
     ),
     "ClassVarDefaultAssignment": astichi_template(
@@ -3350,8 +3350,8 @@ classvar_name__astichi_arg__ = astichi_pass(
     classvar_value_name__astichi_arg__,
     outer_bind=True,
 )""",
-            file_name="tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl",
-            line_number=646,
+            file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
+            line_number=644,
         )
     ),
     "ManagedCurrentStateAssignment": astichi_template(
@@ -3361,15 +3361,15 @@ astichi_pass(state, outer_bind=True).astichi_ref(external=current_slot)._ = asti
     init_value_name__astichi_arg__,
     outer_bind=True,
 )""",
-            file_name="tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl",
-            line_number=653,
+            file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
+            line_number=651,
         )
     ),
     "ManagedWorkingStateAssignment": astichi_template(
         from_astichi_code(
             "astichi_pass(state, outer_bind=True).astichi_ref(external=working_slot)._ = VOID",
-            file_name="tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl",
-            line_number=660,
+            file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
+            line_number=658,
             keep_names=("VOID",),
         )
     ),
@@ -3388,8 +3388,8 @@ def property_setter_name__astichi_arg__(self, value):
     state = self._y_state
     state._y_ensure_working_transaction(astichi_bind_external(tx_index))
     state.astichi_ref(external=working_slot)._ = value""",
-            file_name="tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl",
-            line_number=666,
+            file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
+            line_number=664,
             keep_names=("VOID",),
         )
     ),
@@ -3407,8 +3407,8 @@ def property_setter_name__astichi_arg__(self, value):
         "current facade is read-only for transactional field "
         + astichi_bind_external(field_name)
     )""",
-            file_name="tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl",
-            line_number=683,
+            file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
+            line_number=681,
         )
     ),
     "ManagedWorkingProperty": astichi_template(
@@ -3426,8 +3426,8 @@ def property_setter_name__astichi_arg__(self, value):
     state = self._y_state
     state._y_ensure_working_transaction(astichi_bind_external(tx_index))
     state.astichi_ref(external=working_slot)._ = value""",
-            file_name="tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl",
-            line_number=697,
+            file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
+            line_number=695,
             keep_names=("VOID",),
         )
     ),
@@ -3440,8 +3440,8 @@ if astichi_pass(tx_index, outer_bind=True) == astichi_bind_external(tx_index_val
             astichi_pass(self, outer_bind=True).astichi_ref(external=working_slot)
         )
         astichi_pass(self, outer_bind=True).astichi_ref(external=working_slot)._ = VOID""",
-            file_name="tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl",
-            line_number=714,
+            file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
+            line_number=712,
             keep_names=("VOID",),
         )
     ),
@@ -3450,8 +3450,8 @@ if astichi_pass(tx_index, outer_bind=True) == astichi_bind_external(tx_index_val
             """\
 if astichi_pass(tx_index, outer_bind=True) == astichi_bind_external(tx_index_value):
     astichi_pass(self, outer_bind=True).astichi_ref(external=working_slot)._ = VOID""",
-            file_name="tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl",
-            line_number=725,
+            file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
+            line_number=723,
             keep_names=("VOID",),
         )
     ),
@@ -3468,8 +3468,8 @@ astichi_pass(state, outer_bind=True).astichi_ref(external=state_slot)._ = astich
     field_name__astichi_arg__,
     outer_bind=True,
 )""",
-            file_name="tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl",
-            line_number=732,
+            file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
+            line_number=730,
             keep_names=("_HAS_DEFAULT_FACTORY",),
         )
     ),
@@ -3483,8 +3483,8 @@ astichi_pass(state, outer_bind=True).astichi_ref(external=state_slot)._ = astich
     field_name__astichi_arg__,
     outer_bind=True,
 )""",
-            file_name="tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl",
-            line_number=747,
+            file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
+            line_number=745,
         )
     ),
     "InitVarDefaultFactoryEvalInit": astichi_template(
@@ -3496,8 +3496,8 @@ if astichi_pass(field_name__astichi_arg__, outer_bind=True) is _HAS_DEFAULT_FACT
             **astichi_hole(default_factory_args)
         )
     )""",
-            file_name="tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl",
-            line_number=757,
+            file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
+            line_number=755,
             keep_names=("_HAS_DEFAULT_FACTORY",),
         )
     ),
@@ -3507,8 +3507,8 @@ if astichi_pass(field_name__astichi_arg__, outer_bind=True) is _HAS_DEFAULT_FACT
 field_name__astichi_arg__ = default_factory_name__astichi_arg__(
     **astichi_hole(default_factory_args)
 )""",
-            file_name="tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl",
-            line_number=768,
+            file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
+            line_number=766,
         )
     ),
     "DefaultFactoryStoredArg": astichi_template(
@@ -3520,8 +3520,8 @@ astichi_funcargs(
         outer_bind=True,
     ).astichi_ref(external=provider_name)
 )""",
-            file_name="tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl",
-            line_number=774,
+            file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
+            line_number=772,
         )
     ),
     "DefaultFactoryLocalArg": astichi_template(
@@ -3533,8 +3533,8 @@ astichi_funcargs(
         outer_bind=True,
     )
 )""",
-            file_name="tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl",
-            line_number=783,
+            file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
+            line_number=781,
         )
     ),
     "ClassBundle": astichi_template(
@@ -3745,8 +3745,8 @@ class working_facade_class_decl_name__astichi_arg__(
 ):
     __slots__ = ()
     astichi_hole(working_facade_properties)""",
-            file_name="tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl",
-            line_number=792,
+            file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
+            line_number=790,
             keep_names=(
                 "DEFAULT_TRANSACTION",
                 "TransactionManager",
@@ -3772,15 +3772,15 @@ return_class_module_ref__astichi_arg__.__module__ = astichi_pass(
     outer_bind=True,
 ).__module__
 return return_class_result_ref__astichi_arg__""",
-            file_name="tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl",
-            line_number=1003,
+            file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
+            line_number=1001,
         )
     ),
     "PassStatement": astichi_template(
         from_astichi_code(
             "pass",
-            file_name="tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl",
-            line_number=1019,
+            file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
+            line_number=1017,
         )
     ),
 }
