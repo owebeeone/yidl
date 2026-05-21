@@ -1352,24 +1352,24 @@ classvar_name__astichi_arg__ = astichi_pass(
     outer_bind=True,
 )""", file_name='tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl', line_number=261)), 'CommitOrderKeyBranch': astichi_template(from_astichi_code("""\
 if astichi_pass(tx_group, outer_bind=True) == astichi_bind_external(tx_group_key):
-    return getattr(
-        astichi_pass(self, outer_bind=True)._y_get_default_facade(),
-        astichi_bind_external(method_name),
-    )()""", file_name='tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl', line_number=268)), 'RequiresValidationBranch': astichi_template(from_astichi_code("""\
+    return astichi_pass(
+        self,
+        outer_bind=True,
+    )._y_get_default_facade().astichi_ref(external=method_name)()""", file_name='tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl', line_number=268)), 'RequiresValidationBranch': astichi_template(from_astichi_code("""\
 if astichi_pass(tx_group, outer_bind=True) == astichi_bind_external(tx_group_key):
     return True""", file_name='tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl', line_number=276)), 'ValidateCommitBranch': astichi_template(from_astichi_code("""\
 if astichi_pass(tx_group, outer_bind=True) == astichi_bind_external(tx_group_key):
-    result = getattr(
-        astichi_pass(self, outer_bind=True)._y_get_default_facade(),
-        astichi_bind_external(method_name),
-    )()
+    result = astichi_pass(
+        self,
+        outer_bind=True,
+    )._y_get_default_facade().astichi_ref(external=method_name)()
     if result is False:
         return False""", file_name='tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl', line_number=281)), 'TransactionHookCall': astichi_template(from_astichi_code("""\
 if astichi_pass(tx_group, outer_bind=True) == astichi_bind_external(tx_group_key):
-    getattr(
-        astichi_pass(self, outer_bind=True)._y_get_default_facade(),
-        astichi_bind_external(method_name),
-    )()""", file_name='tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl', line_number=291)), 'ClassBundle': astichi_template(from_astichi_code("""\
+    astichi_pass(
+        self,
+        outer_bind=True,
+    )._y_get_default_facade().astichi_ref(external=method_name)()""", file_name='tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl', line_number=291)), 'ClassBundle': astichi_template(from_astichi_code("""\
 class state_class_decl_name__astichi_arg__:
     __slots__ = (
         "_y_transaction_manager",
