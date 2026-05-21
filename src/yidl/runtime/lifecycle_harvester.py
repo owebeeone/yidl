@@ -4,9 +4,11 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 import inspect
 from types import MappingProxyType
+import warnings
 
 from yidl.runtime.lifecycle_markers import FieldDecl
 from yidl.runtime.lifecycle_markers import LifecycleDefinitionError
+from yidl.runtime.lifecycle_markers import LifecycleDefinitionWarning
 from yidl.runtime.lifecycle_markers import LifecycleMarker
 from yidl.runtime.lifecycle_markers import MISSING
 from yidl.runtime.lifecycle_markers import field
@@ -228,6 +230,7 @@ def _default_factory_param_names(
     try:
         signature = inspect.signature(decl.default_factory)
     except (TypeError, ValueError):
+        _warn_unintrospectable_default_factory(class_name, decl)
         return ()
     names: list[str] = []
     for parameter in signature.parameters.values():
@@ -242,6 +245,20 @@ def _default_factory_param_names(
             continue
         names.append(parameter.name)
     return tuple(names)
+
+
+def _warn_unintrospectable_default_factory(
+    class_name: str,
+    decl: FieldDecl,
+) -> None:
+    warnings.warn(
+        (
+            f"{class_name}.{decl.name}: default_factory signature could not be "
+            "introspected; treating it as zero-argument"
+        ),
+        LifecycleDefinitionWarning,
+        stacklevel=4,
+    )
 
 
 def _raise_unbindable_default_factory_param(

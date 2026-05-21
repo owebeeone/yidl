@@ -297,7 +297,7 @@ concept LifecycleBase {
     property ProviderName: str
     property ProviderFieldId: str = ""
     property ProviderFieldKind: str = ""
-    property ProviderInit: bool = True
+    property ProviderInit: bool = True  # Provider availability columns are informational now and reserved for future matchers.
     property ProviderHasDefault: bool = False
     property ProviderHasDefaultFactory: bool = False
     property ParamName: str
@@ -313,7 +313,7 @@ concept LifecycleBase {
     property EvalStateSlotName: str = ""
     property EvalDefaultFactoryParamName: str = ""
     property EvalOrder: int = 0
-    property EvalStatementOrder: int = 0
+    property EvalStatementOrder: int = 0  # Factory eval statements add 100000 so normal field initialization stays first; revisit if generated field counts approach that offset.
 
     property DiagnosticId: str
     property DiagnosticOwner: str

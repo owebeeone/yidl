@@ -7,6 +7,7 @@ from types import ModuleType
 
 from yidl.runtime.lifecycle_markers import FieldDecl
 from yidl.runtime.lifecycle_markers import LifecycleDefinitionError
+from yidl.runtime.lifecycle_markers import LifecycleDefinitionWarning
 from yidl.runtime.lifecycle_markers import LifecycleMarker
 from yidl.runtime.lifecycle_markers import MISSING
 from yidl.runtime.lifecycle_markers import _HAS_DEFAULT_FACTORY
@@ -188,6 +189,7 @@ class _RedundantPassLineCollector(ast.NodeVisitor):
 __all__ = [
     "FieldDecl",
     "LifecycleDefinitionError",
+    "LifecycleDefinitionWarning",
     "LifecycleMarker",
     "MISSING",
     "_HAS_DEFAULT_FACTORY",

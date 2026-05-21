@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+import inspect
+
 import pytest
 
 from yidl.runtime.lifecycle import LifecycleDefinitionError
+from yidl.runtime.lifecycle import LifecycleDefinitionWarning
 from yidl.runtime.lifecycle import MISSING
 from yidl.runtime.lifecycle import classvar
 from yidl.runtime.lifecycle import field
@@ -154,6 +157,32 @@ def test_harvester_collects_default_factory_parameter_names() -> None:
         ("v2", ()),
         ("v3", ("v2", "v1", "scale")),
     ]
+
+
+def test_harvester_warns_for_unintrospectable_default_factory(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def make_value() -> int:
+        return 1
+
+    def raise_for_callable(value: object) -> object:
+        if value is make_value:
+            raise ValueError("no signature")
+        return original_signature(value)
+
+    original_signature = inspect.signature
+    monkeypatch.setattr(inspect, "signature", raise_for_callable)
+
+    class Counter:
+        value: int = field(default_factory=make_value)
+
+    with pytest.warns(
+        LifecycleDefinitionWarning,
+        match="default_factory signature could not be introspected",
+    ):
+        harvested = harvest_lifecycle_definition(Counter)
+
+    assert harvested.field_facts[0]["default_factory_param_names"] == ()
 
 
 def test_harvester_rejects_required_positional_only_default_factory_parameter() -> None:

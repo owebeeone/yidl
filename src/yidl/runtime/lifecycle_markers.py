@@ -14,6 +14,10 @@ class LifecycleDefinitionError(ValueError):
     """Raised when lifecycle marker or class definition metadata is invalid."""
 
 
+class LifecycleDefinitionWarning(UserWarning):
+    """Warns when lifecycle metadata must fall back to conservative behavior."""
+
+
 @dataclass(frozen=True, slots=True)
 class LifecycleMarker:
     """Base marker stored on a decorated class before harvesting."""
