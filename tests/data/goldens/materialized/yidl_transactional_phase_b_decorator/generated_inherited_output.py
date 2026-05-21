@@ -59,15 +59,12 @@ def build_lifecycle_class(decorated_cls, *, _B_lifecycle_definition, _B_annotati
             return transaction
 
         def commit_order_key_for(self, tx_group=DEFAULT_TRANSACTION):
-            del tx_group
             return ()
 
         def requires_validation_for(self, tx_group=DEFAULT_TRANSACTION):
-            del tx_group
             return False
 
         def validate_commit_for(self, tx_group=DEFAULT_TRANSACTION):
-            del tx_group
             return True
 
         def _commit_transaction(self, tx_id, tx_group=DEFAULT_TRANSACTION):

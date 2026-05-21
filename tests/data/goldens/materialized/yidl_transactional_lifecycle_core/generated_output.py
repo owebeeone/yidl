@@ -59,15 +59,15 @@ def build_lifecycle_class(decorated_cls, *, _Counter_lifecycle_definition, _Coun
             return transaction
 
         def commit_order_key_for(self, tx_group=DEFAULT_TRANSACTION):
-            del tx_group
+            pass
             return ()
 
         def requires_validation_for(self, tx_group=DEFAULT_TRANSACTION):
-            del tx_group
+            pass
             return False
 
         def validate_commit_for(self, tx_group=DEFAULT_TRANSACTION):
-            del tx_group
+            pass
             return True
 
         def _commit_transaction(self, tx_id, tx_group=DEFAULT_TRANSACTION):
@@ -75,7 +75,9 @@ def build_lifecycle_class(decorated_cls, *, _Counter_lifecycle_definition, _Coun
             if self._y_working_tx_ids[tx_index] != tx_id:
                 return self._y_get_default_facade()
             pass
+            pass
             self._y_working_tx_ids[tx_index] = None
+            pass
             return self._y_get_default_facade()
 
         def _rollback_transaction(self, tx_id, tx_group=DEFAULT_TRANSACTION):
@@ -84,6 +86,7 @@ def build_lifecycle_class(decorated_cls, *, _Counter_lifecycle_definition, _Coun
                 return self._y_get_default_facade()
             pass
             self._y_working_tx_ids[tx_index] = None
+            pass
             return self._y_get_default_facade()
 
     class Counter_FacadeBase(decorated_cls):
