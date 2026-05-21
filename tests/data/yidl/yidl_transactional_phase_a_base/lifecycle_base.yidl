@@ -662,6 +662,10 @@ concept LifecycleBase {
         return return_class_result_ref__astichi_arg__
     ]$
 
+    resource PassStatement = template $[
+        pass
+    ]$
+
     contribution LifecycleDefinitionBuilderParam = BuilderParam {
         as LifecycleDefinitionBuilderParam
         index ClassOrder
@@ -717,6 +721,86 @@ concept LifecycleBase {
 
         target function_body {
             build /Root
+        }
+    }
+
+    contribution FacadeBaseBodyPass = PassStatement {
+        as FacadeBaseBodyPass
+        index 0
+        order 0
+
+        target facade_base_body {
+            build /ClassDef
+        }
+    }
+
+    contribution FacadePropertiesPass = PassStatement {
+        as FacadePropertiesPass
+        index 0
+        order 0
+
+        target facade_properties {
+            build /ClassDef
+        }
+    }
+
+    contribution DefaultFacadePropertiesPass = PassStatement {
+        as DefaultFacadePropertiesPass
+        index 0
+        order 0
+
+        target default_facade_properties {
+            build /ClassDef
+        }
+    }
+
+    contribution CurrentFacadePropertiesPass = PassStatement {
+        as CurrentFacadePropertiesPass
+        index 0
+        order 0
+
+        target current_facade_properties {
+            build /ClassDef
+        }
+    }
+
+    contribution WorkingFacadePropertiesPass = PassStatement {
+        as WorkingFacadePropertiesPass
+        index 0
+        order 0
+
+        target working_facade_properties {
+            build /ClassDef
+        }
+    }
+
+    contribution StateInitBodyPass = PassStatement {
+        as StateInitBodyPass
+        index 0
+        order 0
+
+        target state_init_body {
+            build /ClassDef
+        }
+    }
+
+    contribution CommitTransactionBodyPass = PassStatement {
+        as CommitTransactionBodyPass
+        index 0
+        order 0
+
+        target commit_transaction_body {
+            build /ClassDef
+        }
+    }
+
+    contribution RollbackTransactionBodyPass = PassStatement {
+        as RollbackTransactionBodyPass
+        index 0
+        order 0
+
+        target rollback_transaction_body {
+            build /ClassDef
         }
     }
 
@@ -1020,6 +1104,38 @@ concept LifecycleBase {
         default -> TransactionManagerInitParam
     }
 
+    matcher FacadeBaseBodyPassContributions(lifecycle_class: Classes) -> contribution {
+        default -> FacadeBaseBodyPass
+    }
+
+    matcher FacadePropertiesPassContributions(lifecycle_class: Classes) -> contribution {
+        default -> FacadePropertiesPass
+    }
+
+    matcher DefaultFacadePropertiesPassContributions(lifecycle_class: Classes) -> contribution {
+        default -> DefaultFacadePropertiesPass
+    }
+
+    matcher CurrentFacadePropertiesPassContributions(lifecycle_class: Classes) -> contribution {
+        default -> CurrentFacadePropertiesPass
+    }
+
+    matcher WorkingFacadePropertiesPassContributions(lifecycle_class: Classes) -> contribution {
+        default -> WorkingFacadePropertiesPass
+    }
+
+    matcher StateInitBodyPassContributions(lifecycle_class: Classes) -> contribution {
+        default -> StateInitBodyPass
+    }
+
+    matcher CommitTransactionBodyPassContributions(lifecycle_class: Classes) -> contribution {
+        default -> CommitTransactionBodyPass
+    }
+
+    matcher RollbackTransactionBodyPassContributions(lifecycle_class: Classes) -> contribution {
+        default -> RollbackTransactionBodyPass
+    }
+
     matcher PlainStateSlotContributions(field: PlainFields) -> contribution {
         default -> PlainStateSlot
     }
@@ -1165,6 +1281,30 @@ concept LifecycleBase {
 
         apply transaction_manager_param
             using TransactionManagerInitParamContributions
+
+        apply facade_base_body_pass
+            using FacadeBaseBodyPassContributions
+
+        apply facade_properties_pass
+            using FacadePropertiesPassContributions
+
+        apply default_facade_properties_pass
+            using DefaultFacadePropertiesPassContributions
+
+        apply current_facade_properties_pass
+            using CurrentFacadePropertiesPassContributions
+
+        apply working_facade_properties_pass
+            using WorkingFacadePropertiesPassContributions
+
+        apply state_init_body_pass
+            using StateInitBodyPassContributions
+
+        apply commit_transaction_body_pass
+            using CommitTransactionBodyPassContributions
+
+        apply rollback_transaction_body_pass
+            using RollbackTransactionBodyPassContributions
 
         apply classvars
             from field: ClassVarFields

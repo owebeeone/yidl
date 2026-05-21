@@ -24,11 +24,18 @@ def render_case() -> Mapping[str, str]:
     output_source = _generate_lifecycle_source(
         harvest_lifecycle_definition(_fixture_class()),
     )
+    inherited_output_source = _generate_lifecycle_source(
+        harvest_lifecycle_definition(_derived_fixture_class()),
+    )
     return {
         "decorator.py": decorator_source,
         "decorator_prettier.py": _prettier_source(decorator_source),
         "generated_output.py": output_source,
         "generated_output_prettier.py": _prettier_source(output_source),
+        "generated_inherited_output.py": inherited_output_source,
+        "generated_inherited_output_prettier.py": _prettier_source(
+            inherited_output_source,
+        ),
     }
 
 
@@ -42,9 +49,18 @@ def validate_case(sources: Mapping[str, str]) -> None:
     exec(sources["generated_output.py"], output_namespace)
     output_prettier_namespace: dict[str, object] = {}
     exec(sources["generated_output_prettier.py"], output_prettier_namespace)
+    inherited_output_namespace: dict[str, object] = {}
+    exec(sources["generated_inherited_output.py"], inherited_output_namespace)
+    inherited_output_prettier_namespace: dict[str, object] = {}
+    exec(
+        sources["generated_inherited_output_prettier.py"],
+        inherited_output_prettier_namespace,
+    )
 
     _assert_generated_class(output_namespace)
     _assert_generated_class(output_prettier_namespace)
+    _assert_inherited_generated_class(inherited_output_namespace)
+    _assert_inherited_generated_class(inherited_output_prettier_namespace)
     _assert_decorator_frontend()
 
 
@@ -62,6 +78,28 @@ def _fixture_class() -> type[object]:
     return Counter
 
 
+def _base_fixture_class() -> type[object]:
+    class A:
+        plain: int = field(default=1)
+        seed: int = initvar(default=2)
+        KIND: str = classvar(default="A")
+        v1: int = managed(default=1)
+
+    return A
+
+
+def _derived_fixture_class() -> type[object]:
+    A = lifecycle(_base_fixture_class())
+
+    class B(A):
+        plain: int = managed(default=3)
+        seed: int = initvar(default=4)
+        KIND: str = classvar(default="B")
+        v2: int = managed(default=2)
+
+    return B
+
+
 def _assert_generated_class(namespace: Mapping[str, object]) -> None:
     counter_cls = _fixture_class()
     harvested = harvest_lifecycle_definition(counter_cls)
@@ -76,6 +114,9 @@ def _assert_decorator_frontend() -> None:
     counter_cls = _fixture_class()
     generated = lifecycle(counter_cls)
     _assert_counter_class(generated, counter_cls)
+    derived_cls = _derived_fixture_class()
+    inherited = lifecycle(derived_cls)
+    _assert_inherited_counter_class(inherited, derived_cls)
 
 
 def _assert_counter_class(
@@ -119,6 +160,39 @@ def _assert_counter_class(
         assert counter.audit_count == 20
         assert counter.current.audit_count == 10
     assert counter.current.audit_count == 20
+
+
+def _assert_inherited_generated_class(namespace: Mapping[str, object]) -> None:
+    counter_cls = _derived_fixture_class()
+    harvested = harvest_lifecycle_definition(counter_cls)
+    generated = namespace["build_lifecycle_class"](
+        counter_cls,
+        **dict(harvested.build_kwargs),
+    )
+    _assert_inherited_counter_class(generated, counter_cls)
+
+
+def _assert_inherited_counter_class(
+    generated: type[object],
+    counter_cls: type[object],
+) -> None:
+    item = generated()
+    assert isinstance(item, counter_cls)
+    assert generated.KIND == "B"
+    assert item.current.KIND == "B"
+    assert item.plain == 3
+    assert item.v1 == 1
+    assert item.v2 == 2
+
+    with item.begin(DEFAULT_TRANSACTION):
+        item.plain = 4
+        item.v1 = 11
+        item.v2 = 22
+        assert item.current.plain == 3
+        assert item.working.plain == 4
+    assert item.current.plain == 4
+    assert item.current.v1 == 11
+    assert item.current.v2 == 22
 
 
 def _prettier_source(source: str) -> str:

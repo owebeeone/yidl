@@ -86,3 +86,51 @@ def test_lifecycle_source_uses_unpacked_builder_parameters() -> None:
     assert "_Counter_plain_default" in source
     assert "default_factories" not in source
     assert "defaults" not in source
+
+
+def test_lifecycle_decorator_merges_generated_base_facts() -> None:
+    @lifecycle
+    class A:
+        plain: int = field(default=1)
+        seed: int = initvar(default=2)
+        KIND: str = classvar(default="A")
+        v1: int = managed(default=1)
+
+    @lifecycle
+    class B(A):
+        plain: int = managed(default=3)
+        seed: int = initvar(default=4)
+        KIND: str = classvar(default="B")
+        v2: int = managed(default=2)
+
+    item = B()
+
+    assert isinstance(item, A)
+    assert B.KIND == "B"
+    assert item.current.KIND == "B"
+    assert item.plain == 3
+    assert item.v1 == 1
+    assert item.v2 == 2
+
+    with pytest.raises(RuntimeError, match="writes require"):
+        item.plain = 4
+
+    with item.begin(DEFAULT_TRANSACTION):
+        item.plain = 4
+        item.v1 = 11
+        item.v2 = 22
+        assert item.current.plain == 3
+        assert item.working.plain == 4
+    assert item.current.plain == 4
+    assert item.current.v1 == 11
+    assert item.current.v2 == 22
+
+    @lifecycle
+    class C(B):
+        v3: int = managed(default=5)
+
+    child = C()
+    assert isinstance(child, A)
+    assert child.v1 == 1
+    assert child.v2 == 2
+    assert child.v3 == 5

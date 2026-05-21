@@ -2706,6 +2706,13 @@ return return_class_result_ref__astichi_arg__""",
             line_number=650,
         )
     ),
+    "PassStatement": astichi_template(
+        from_astichi_code(
+            "pass",
+            file_name="tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl",
+            line_number=666,
+        )
+    ),
 }
 ASSEMBLY_CONTRIBUTIONS = {
     "LifecycleDefinitionBuilderParam": ContributionSpec(
@@ -2829,6 +2836,182 @@ ASSEMBLY_CONTRIBUTIONS = {
                     path=PathSpec(
                         segments=(
                             PathSegmentSpec(kind="name", name="Root", indexes=()),
+                        )
+                    ),
+                ),
+            ),
+        ),
+        bindings=(),
+    ),
+    "FacadeBaseBodyPass": ContributionSpec(
+        name="FacadeBaseBodyPass",
+        source_name="PassStatement",
+        source_kind="resource",
+        build_name="FacadeBaseBodyPass",
+        index=LiteralValueRef(0),
+        order=LiteralValueRef(0),
+        target=TargetSpec(
+            name="facade_base_body",
+            paths=(
+                TargetPathSpec(
+                    kind="build",
+                    path=PathSpec(
+                        segments=(
+                            PathSegmentSpec(kind="name", name="ClassDef", indexes=()),
+                        )
+                    ),
+                ),
+            ),
+        ),
+        bindings=(),
+    ),
+    "FacadePropertiesPass": ContributionSpec(
+        name="FacadePropertiesPass",
+        source_name="PassStatement",
+        source_kind="resource",
+        build_name="FacadePropertiesPass",
+        index=LiteralValueRef(0),
+        order=LiteralValueRef(0),
+        target=TargetSpec(
+            name="facade_properties",
+            paths=(
+                TargetPathSpec(
+                    kind="build",
+                    path=PathSpec(
+                        segments=(
+                            PathSegmentSpec(kind="name", name="ClassDef", indexes=()),
+                        )
+                    ),
+                ),
+            ),
+        ),
+        bindings=(),
+    ),
+    "DefaultFacadePropertiesPass": ContributionSpec(
+        name="DefaultFacadePropertiesPass",
+        source_name="PassStatement",
+        source_kind="resource",
+        build_name="DefaultFacadePropertiesPass",
+        index=LiteralValueRef(0),
+        order=LiteralValueRef(0),
+        target=TargetSpec(
+            name="default_facade_properties",
+            paths=(
+                TargetPathSpec(
+                    kind="build",
+                    path=PathSpec(
+                        segments=(
+                            PathSegmentSpec(kind="name", name="ClassDef", indexes=()),
+                        )
+                    ),
+                ),
+            ),
+        ),
+        bindings=(),
+    ),
+    "CurrentFacadePropertiesPass": ContributionSpec(
+        name="CurrentFacadePropertiesPass",
+        source_name="PassStatement",
+        source_kind="resource",
+        build_name="CurrentFacadePropertiesPass",
+        index=LiteralValueRef(0),
+        order=LiteralValueRef(0),
+        target=TargetSpec(
+            name="current_facade_properties",
+            paths=(
+                TargetPathSpec(
+                    kind="build",
+                    path=PathSpec(
+                        segments=(
+                            PathSegmentSpec(kind="name", name="ClassDef", indexes=()),
+                        )
+                    ),
+                ),
+            ),
+        ),
+        bindings=(),
+    ),
+    "WorkingFacadePropertiesPass": ContributionSpec(
+        name="WorkingFacadePropertiesPass",
+        source_name="PassStatement",
+        source_kind="resource",
+        build_name="WorkingFacadePropertiesPass",
+        index=LiteralValueRef(0),
+        order=LiteralValueRef(0),
+        target=TargetSpec(
+            name="working_facade_properties",
+            paths=(
+                TargetPathSpec(
+                    kind="build",
+                    path=PathSpec(
+                        segments=(
+                            PathSegmentSpec(kind="name", name="ClassDef", indexes=()),
+                        )
+                    ),
+                ),
+            ),
+        ),
+        bindings=(),
+    ),
+    "StateInitBodyPass": ContributionSpec(
+        name="StateInitBodyPass",
+        source_name="PassStatement",
+        source_kind="resource",
+        build_name="StateInitBodyPass",
+        index=LiteralValueRef(0),
+        order=LiteralValueRef(0),
+        target=TargetSpec(
+            name="state_init_body",
+            paths=(
+                TargetPathSpec(
+                    kind="build",
+                    path=PathSpec(
+                        segments=(
+                            PathSegmentSpec(kind="name", name="ClassDef", indexes=()),
+                        )
+                    ),
+                ),
+            ),
+        ),
+        bindings=(),
+    ),
+    "CommitTransactionBodyPass": ContributionSpec(
+        name="CommitTransactionBodyPass",
+        source_name="PassStatement",
+        source_kind="resource",
+        build_name="CommitTransactionBodyPass",
+        index=LiteralValueRef(0),
+        order=LiteralValueRef(0),
+        target=TargetSpec(
+            name="commit_transaction_body",
+            paths=(
+                TargetPathSpec(
+                    kind="build",
+                    path=PathSpec(
+                        segments=(
+                            PathSegmentSpec(kind="name", name="ClassDef", indexes=()),
+                        )
+                    ),
+                ),
+            ),
+        ),
+        bindings=(),
+    ),
+    "RollbackTransactionBodyPass": ContributionSpec(
+        name="RollbackTransactionBodyPass",
+        source_name="PassStatement",
+        source_kind="resource",
+        build_name="RollbackTransactionBodyPass",
+        index=LiteralValueRef(0),
+        order=LiteralValueRef(0),
+        target=TargetSpec(
+            name="rollback_transaction_body",
+            paths=(
+                TargetPathSpec(
+                    kind="build",
+                    path=PathSpec(
+                        segments=(
+                            PathSegmentSpec(kind="name", name="ClassDef", indexes=()),
                         )
                     ),
                 ),
@@ -3541,6 +3724,86 @@ ASSEMBLY_MATCHERS = {
         default_contribution_name="TransactionManagerInitParam",
         rules=(),
     ),
+    "FacadeBaseBodyPassContributions": ContributionMatcherSpec(
+        name="FacadeBaseBodyPassContributions",
+        inputs=(
+            AssemblyInputSpec(
+                name="lifecycle_class", collection_name="Classes", collection=None
+            ),
+        ),
+        default_contribution_name="FacadeBaseBodyPass",
+        rules=(),
+    ),
+    "FacadePropertiesPassContributions": ContributionMatcherSpec(
+        name="FacadePropertiesPassContributions",
+        inputs=(
+            AssemblyInputSpec(
+                name="lifecycle_class", collection_name="Classes", collection=None
+            ),
+        ),
+        default_contribution_name="FacadePropertiesPass",
+        rules=(),
+    ),
+    "DefaultFacadePropertiesPassContributions": ContributionMatcherSpec(
+        name="DefaultFacadePropertiesPassContributions",
+        inputs=(
+            AssemblyInputSpec(
+                name="lifecycle_class", collection_name="Classes", collection=None
+            ),
+        ),
+        default_contribution_name="DefaultFacadePropertiesPass",
+        rules=(),
+    ),
+    "CurrentFacadePropertiesPassContributions": ContributionMatcherSpec(
+        name="CurrentFacadePropertiesPassContributions",
+        inputs=(
+            AssemblyInputSpec(
+                name="lifecycle_class", collection_name="Classes", collection=None
+            ),
+        ),
+        default_contribution_name="CurrentFacadePropertiesPass",
+        rules=(),
+    ),
+    "WorkingFacadePropertiesPassContributions": ContributionMatcherSpec(
+        name="WorkingFacadePropertiesPassContributions",
+        inputs=(
+            AssemblyInputSpec(
+                name="lifecycle_class", collection_name="Classes", collection=None
+            ),
+        ),
+        default_contribution_name="WorkingFacadePropertiesPass",
+        rules=(),
+    ),
+    "StateInitBodyPassContributions": ContributionMatcherSpec(
+        name="StateInitBodyPassContributions",
+        inputs=(
+            AssemblyInputSpec(
+                name="lifecycle_class", collection_name="Classes", collection=None
+            ),
+        ),
+        default_contribution_name="StateInitBodyPass",
+        rules=(),
+    ),
+    "CommitTransactionBodyPassContributions": ContributionMatcherSpec(
+        name="CommitTransactionBodyPassContributions",
+        inputs=(
+            AssemblyInputSpec(
+                name="lifecycle_class", collection_name="Classes", collection=None
+            ),
+        ),
+        default_contribution_name="CommitTransactionBodyPass",
+        rules=(),
+    ),
+    "RollbackTransactionBodyPassContributions": ContributionMatcherSpec(
+        name="RollbackTransactionBodyPassContributions",
+        inputs=(
+            AssemblyInputSpec(
+                name="lifecycle_class", collection_name="Classes", collection=None
+            ),
+        ),
+        default_contribution_name="RollbackTransactionBodyPass",
+        rules=(),
+    ),
     "PlainStateSlotContributions": ContributionMatcherSpec(
         name="PlainStateSlotContributions",
         inputs=(
@@ -3943,6 +4206,94 @@ ASSEMBLY_EDGES = {
         from_inputs=(),
         condition=None,
         matcher_name="TransactionManagerInitParamContributions",
+    ),
+    "ClassProduction.facade_base_body_pass": AssemblyEdgeSpec(
+        name="ClassProduction.facade_base_body_pass",
+        context_inputs=(
+            AssemblyInputSpec(
+                name="lifecycle_class", collection_name="Classes", collection=None
+            ),
+        ),
+        from_inputs=(),
+        condition=None,
+        matcher_name="FacadeBaseBodyPassContributions",
+    ),
+    "ClassProduction.facade_properties_pass": AssemblyEdgeSpec(
+        name="ClassProduction.facade_properties_pass",
+        context_inputs=(
+            AssemblyInputSpec(
+                name="lifecycle_class", collection_name="Classes", collection=None
+            ),
+        ),
+        from_inputs=(),
+        condition=None,
+        matcher_name="FacadePropertiesPassContributions",
+    ),
+    "ClassProduction.default_facade_properties_pass": AssemblyEdgeSpec(
+        name="ClassProduction.default_facade_properties_pass",
+        context_inputs=(
+            AssemblyInputSpec(
+                name="lifecycle_class", collection_name="Classes", collection=None
+            ),
+        ),
+        from_inputs=(),
+        condition=None,
+        matcher_name="DefaultFacadePropertiesPassContributions",
+    ),
+    "ClassProduction.current_facade_properties_pass": AssemblyEdgeSpec(
+        name="ClassProduction.current_facade_properties_pass",
+        context_inputs=(
+            AssemblyInputSpec(
+                name="lifecycle_class", collection_name="Classes", collection=None
+            ),
+        ),
+        from_inputs=(),
+        condition=None,
+        matcher_name="CurrentFacadePropertiesPassContributions",
+    ),
+    "ClassProduction.working_facade_properties_pass": AssemblyEdgeSpec(
+        name="ClassProduction.working_facade_properties_pass",
+        context_inputs=(
+            AssemblyInputSpec(
+                name="lifecycle_class", collection_name="Classes", collection=None
+            ),
+        ),
+        from_inputs=(),
+        condition=None,
+        matcher_name="WorkingFacadePropertiesPassContributions",
+    ),
+    "ClassProduction.state_init_body_pass": AssemblyEdgeSpec(
+        name="ClassProduction.state_init_body_pass",
+        context_inputs=(
+            AssemblyInputSpec(
+                name="lifecycle_class", collection_name="Classes", collection=None
+            ),
+        ),
+        from_inputs=(),
+        condition=None,
+        matcher_name="StateInitBodyPassContributions",
+    ),
+    "ClassProduction.commit_transaction_body_pass": AssemblyEdgeSpec(
+        name="ClassProduction.commit_transaction_body_pass",
+        context_inputs=(
+            AssemblyInputSpec(
+                name="lifecycle_class", collection_name="Classes", collection=None
+            ),
+        ),
+        from_inputs=(),
+        condition=None,
+        matcher_name="CommitTransactionBodyPassContributions",
+    ),
+    "ClassProduction.rollback_transaction_body_pass": AssemblyEdgeSpec(
+        name="ClassProduction.rollback_transaction_body_pass",
+        context_inputs=(
+            AssemblyInputSpec(
+                name="lifecycle_class", collection_name="Classes", collection=None
+            ),
+        ),
+        from_inputs=(),
+        condition=None,
+        matcher_name="RollbackTransactionBodyPassContributions",
     ),
     "ClassProduction.classvars": AssemblyEdgeSpec(
         name="ClassProduction.classvars",
@@ -4466,6 +4817,126 @@ ASSEMBLY_PRODUCTIONS = {
                     from_inputs=(),
                     condition=None,
                     matcher_name="TransactionManagerInitParamContributions",
+                )
+            ),
+            InlineApplySpec(
+                edge=AssemblyEdgeSpec(
+                    name="ClassProduction.facade_base_body_pass",
+                    context_inputs=(
+                        AssemblyInputSpec(
+                            name="lifecycle_class",
+                            collection_name="Classes",
+                            collection=None,
+                        ),
+                    ),
+                    from_inputs=(),
+                    condition=None,
+                    matcher_name="FacadeBaseBodyPassContributions",
+                )
+            ),
+            InlineApplySpec(
+                edge=AssemblyEdgeSpec(
+                    name="ClassProduction.facade_properties_pass",
+                    context_inputs=(
+                        AssemblyInputSpec(
+                            name="lifecycle_class",
+                            collection_name="Classes",
+                            collection=None,
+                        ),
+                    ),
+                    from_inputs=(),
+                    condition=None,
+                    matcher_name="FacadePropertiesPassContributions",
+                )
+            ),
+            InlineApplySpec(
+                edge=AssemblyEdgeSpec(
+                    name="ClassProduction.default_facade_properties_pass",
+                    context_inputs=(
+                        AssemblyInputSpec(
+                            name="lifecycle_class",
+                            collection_name="Classes",
+                            collection=None,
+                        ),
+                    ),
+                    from_inputs=(),
+                    condition=None,
+                    matcher_name="DefaultFacadePropertiesPassContributions",
+                )
+            ),
+            InlineApplySpec(
+                edge=AssemblyEdgeSpec(
+                    name="ClassProduction.current_facade_properties_pass",
+                    context_inputs=(
+                        AssemblyInputSpec(
+                            name="lifecycle_class",
+                            collection_name="Classes",
+                            collection=None,
+                        ),
+                    ),
+                    from_inputs=(),
+                    condition=None,
+                    matcher_name="CurrentFacadePropertiesPassContributions",
+                )
+            ),
+            InlineApplySpec(
+                edge=AssemblyEdgeSpec(
+                    name="ClassProduction.working_facade_properties_pass",
+                    context_inputs=(
+                        AssemblyInputSpec(
+                            name="lifecycle_class",
+                            collection_name="Classes",
+                            collection=None,
+                        ),
+                    ),
+                    from_inputs=(),
+                    condition=None,
+                    matcher_name="WorkingFacadePropertiesPassContributions",
+                )
+            ),
+            InlineApplySpec(
+                edge=AssemblyEdgeSpec(
+                    name="ClassProduction.state_init_body_pass",
+                    context_inputs=(
+                        AssemblyInputSpec(
+                            name="lifecycle_class",
+                            collection_name="Classes",
+                            collection=None,
+                        ),
+                    ),
+                    from_inputs=(),
+                    condition=None,
+                    matcher_name="StateInitBodyPassContributions",
+                )
+            ),
+            InlineApplySpec(
+                edge=AssemblyEdgeSpec(
+                    name="ClassProduction.commit_transaction_body_pass",
+                    context_inputs=(
+                        AssemblyInputSpec(
+                            name="lifecycle_class",
+                            collection_name="Classes",
+                            collection=None,
+                        ),
+                    ),
+                    from_inputs=(),
+                    condition=None,
+                    matcher_name="CommitTransactionBodyPassContributions",
+                )
+            ),
+            InlineApplySpec(
+                edge=AssemblyEdgeSpec(
+                    name="ClassProduction.rollback_transaction_body_pass",
+                    context_inputs=(
+                        AssemblyInputSpec(
+                            name="lifecycle_class",
+                            collection_name="Classes",
+                            collection=None,
+                        ),
+                    ),
+                    from_inputs=(),
+                    condition=None,
+                    matcher_name="RollbackTransactionBodyPassContributions",
                 )
             ),
             InlineApplySpec(

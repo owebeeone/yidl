@@ -119,3 +119,63 @@ def test_harvester_preserves_first_transaction_group_order() -> None:
 
     assert harvested.tx_groups == (DEFAULT_TRANSACTION, "audit", "other")
 
+
+def test_harvester_merges_inherited_generated_lifecycle_facts() -> None:
+    class BaseOriginal:
+        plain: int = field(default=1)
+        v1: int = managed("audit", default=2)
+
+    base_harvested = harvest_lifecycle_definition(BaseOriginal)
+
+    class GeneratedBase:
+        __yidl_lifecycle_generated__ = True
+        __yidl_lifecycle_definition__ = base_harvested.lifecycle_definition
+
+    class Derived(GeneratedBase):
+        plain: int = managed("audit", default=3)
+        v2: int = managed("other", default=4)
+
+    harvested = harvest_lifecycle_definition(Derived)
+
+    assert [
+        (
+            fact["field_name"],
+            fact["field_kind"],
+            fact["field_order"],
+            fact["field_owner"],
+            fact["default_value"],
+            fact["default_value_param_name"],
+            fact["tx_group_key"],
+        )
+        for fact in harvested.field_facts
+    ] == [
+        (
+            "plain",
+            "managed",
+            10,
+            "test_harvester_merges_inherited_generated_lifecycle_facts.<locals>.Derived",
+            3,
+            "_Derived_plain_default",
+            "audit",
+        ),
+        (
+            "v1",
+            "managed",
+            20,
+            "test_harvester_merges_inherited_generated_lifecycle_facts.<locals>.Derived",
+            2,
+            "_Derived_v1_default",
+            "audit",
+        ),
+        (
+            "v2",
+            "managed",
+            30,
+            "test_harvester_merges_inherited_generated_lifecycle_facts.<locals>.Derived",
+            4,
+            "_Derived_v2_default",
+            "other",
+        ),
+    ]
+    assert harvested.tx_groups == (DEFAULT_TRANSACTION, "audit", "other")
+    assert harvested.build_kwargs["_Derived_v1_default"] == 2

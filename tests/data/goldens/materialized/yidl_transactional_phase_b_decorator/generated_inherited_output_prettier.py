@@ -9,39 +9,40 @@ VOID = object()
 def build_lifecycle_class(
     decorated_cls,
     *,
-    _Counter_lifecycle_definition,
-    _Counter_annotations,
-    _Counter_tx_groups,
-    _Counter_plain_default,
-    _Counter_seed_default,
-    _Counter_KIND_default,
-    _Counter_count_default,
-    _Counter_audit_count_default,
+    _B_lifecycle_definition,
+    _B_annotations,
+    _B_tx_groups,
+    _B_plain_default,
+    _B_seed_default,
+    _B_KIND_default,
+    _B_v1_default,
+    _B_v2_default,
 ):
 
-    class Counter_State:
+    class B_State:
         __slots__ = (
             "_y_transaction_manager",
             "_y_default_ref",
             "_y_current_ref",
             "_y_working_ref",
-            "_y_plain_value",
-            "_y_count_current",
-            "_y_count_working",
-            "_y_audit_count_current",
-            "_y_audit_count_working",
+            "_y_plain_current",
+            "_y_plain_working",
+            "_y_v1_current",
+            "_y_v1_working",
+            "_y_v2_current",
+            "_y_v2_working",
             "_y_working_tx_ids",
         )
-        __yidl_tx_index_to_group__ = _Counter_tx_groups
+        __yidl_tx_index_to_group__ = _B_tx_groups
         __yidl_tx_group_to_index__ = {
-            group: index for index, group in enumerate(_Counter_tx_groups)
+            group: index for index, group in enumerate(_B_tx_groups)
         }
 
         def _y_get_default_facade(self):
             ref = self._y_default_ref
             facade = None if ref is None else ref()
             if facade is None:
-                facade = object.__new__(Counter)
+                facade = object.__new__(B)
                 object.__setattr__(facade, "_y_state", self)
                 self._y_default_ref = weakref.ref(facade)
             return facade
@@ -50,7 +51,7 @@ def build_lifecycle_class(
             ref = self._y_current_ref
             facade = None if ref is None else ref()
             if facade is None:
-                facade = object.__new__(Counter_Current)
+                facade = object.__new__(B_Current)
                 object.__setattr__(facade, "_y_state", self)
                 self._y_current_ref = weakref.ref(facade)
             return facade
@@ -59,7 +60,7 @@ def build_lifecycle_class(
             ref = self._y_working_ref
             facade = None if ref is None else ref()
             if facade is None:
-                facade = object.__new__(Counter_Working)
+                facade = object.__new__(B_Working)
                 object.__setattr__(facade, "_y_state", self)
                 self._y_working_ref = weakref.ref(facade)
             return facade
@@ -107,13 +108,17 @@ def build_lifecycle_class(
                 return self._y_get_default_facade()
             pass
             if tx_index == 0:
-                if self._y_count_working is not VOID:
-                    self._y_count_current = self._y_count_working
-                    self._y_count_working = VOID
-            if tx_index == 1:
-                if self._y_audit_count_working is not VOID:
-                    self._y_audit_count_current = self._y_audit_count_working
-                    self._y_audit_count_working = VOID
+                if self._y_plain_working is not VOID:
+                    self._y_plain_current = self._y_plain_working
+                    self._y_plain_working = VOID
+            if tx_index == 0:
+                if self._y_v1_working is not VOID:
+                    self._y_v1_current = self._y_v1_working
+                    self._y_v1_working = VOID
+            if tx_index == 0:
+                if self._y_v2_working is not VOID:
+                    self._y_v2_current = self._y_v2_working
+                    self._y_v2_working = VOID
             self._y_working_tx_ids[tx_index] = None
             return self._y_get_default_facade()
 
@@ -123,13 +128,15 @@ def build_lifecycle_class(
                 return self._y_get_default_facade()
             pass
             if tx_index == 0:
-                self._y_count_working = VOID
-            if tx_index == 1:
-                self._y_audit_count_working = VOID
+                self._y_plain_working = VOID
+            if tx_index == 0:
+                self._y_v1_working = VOID
+            if tx_index == 0:
+                self._y_v2_working = VOID
             self._y_working_tx_ids[tx_index] = None
             return self._y_get_default_facade()
 
-    class Counter_FacadeBase(decorated_cls):
+    class B_FacadeBase(decorated_cls):
         __slots__ = ("_y_state",)
 
         @property
@@ -160,143 +167,169 @@ def build_lifecycle_class(
             return self._y_state._y_transaction_manager.rollback(*tx_groups)
 
         pass
-        KIND = _Counter_KIND_default
+        KIND = _B_KIND_default
         pass
 
-        @property
-        def plain(self):
-            return self._y_state._y_plain_value
-
-        @plain.setter
-        def plain(self, value):
-            self._y_state._y_plain_value = value
-
-    class Counter(Counter_FacadeBase):
+    class B(B_FacadeBase):
         __slots__ = ()
-        __annotations__ = _Counter_annotations
+        __annotations__ = _B_annotations
         __yidl_lifecycle_generated__ = True
         __yidl_lifecycle_user_class__ = decorated_cls
-        __yidl_lifecycle_definition__ = _Counter_lifecycle_definition
-        __yidl_tx_index_to_group__ = _Counter_tx_groups
+        __yidl_lifecycle_definition__ = _B_lifecycle_definition
+        __yidl_tx_index_to_group__ = _B_tx_groups
         __yidl_tx_group_to_index__ = {
-            group: index for index, group in enumerate(_Counter_tx_groups)
+            group: index for index, group in enumerate(_B_tx_groups)
         }
         pass
 
         @property
-        def count(self):
+        def plain(self):
             state = self._y_state
-            if state._y_count_working is not VOID:
-                return state._y_count_working
-            return state._y_count_current
+            if state._y_plain_working is not VOID:
+                return state._y_plain_working
+            return state._y_plain_current
 
-        @count.setter
-        def count(self, value):
+        @plain.setter
+        def plain(self, value):
             state = self._y_state
             state._y_ensure_working_transaction(0)
-            state._y_count_working = value
+            state._y_plain_working = value
 
         @property
-        def audit_count(self):
+        def v1(self):
             state = self._y_state
-            if state._y_audit_count_working is not VOID:
-                return state._y_audit_count_working
-            return state._y_audit_count_current
+            if state._y_v1_working is not VOID:
+                return state._y_v1_working
+            return state._y_v1_current
 
-        @audit_count.setter
-        def audit_count(self, value):
+        @v1.setter
+        def v1(self, value):
             state = self._y_state
-            state._y_ensure_working_transaction(1)
-            state._y_audit_count_working = value
+            state._y_ensure_working_transaction(0)
+            state._y_v1_working = value
+
+        @property
+        def v2(self):
+            state = self._y_state
+            if state._y_v2_working is not VOID:
+                return state._y_v2_working
+            return state._y_v2_current
+
+        @v2.setter
+        def v2(self, value):
+            state = self._y_state
+            state._y_ensure_working_transaction(0)
+            state._y_v2_working = value
 
         def __init__(
             self,
-            plain: "int" = _Counter_plain_default,
-            seed: "int" = _Counter_seed_default,
-            count: "int" = _Counter_count_default,
-            audit_count: "int" = _Counter_audit_count_default,
+            plain: "int" = _B_plain_default,
+            seed: "int" = _B_seed_default,
+            v1: "int" = _B_v1_default,
+            v2: "int" = _B_v2_default,
             *,
             transaction_manager=None,
         ):
-            state = object.__new__(Counter_State)
+            state = object.__new__(B_State)
             object.__setattr__(self, "_y_state", state)
             state._y_transaction_manager = transaction_manager or TransactionManager(
                 tx_groups=tuple(
-                    (
-                        group
-                        for group in _Counter_tx_groups
-                        if group != DEFAULT_TRANSACTION
-                    )
+                    (group for group in _B_tx_groups if group != DEFAULT_TRANSACTION)
                 )
             )
             state._y_default_ref = weakref.ref(self)
             state._y_current_ref = None
             state._y_working_ref = None
             pass
-            state._y_plain_value = plain
-            state._y_count_current = count
-            state._y_count_working = VOID
-            state._y_audit_count_current = audit_count
-            state._y_audit_count_working = VOID
-            state._y_working_tx_ids = [None for _group in _Counter_tx_groups]
+            state._y_plain_current = plain
+            state._y_plain_working = VOID
+            state._y_v1_current = v1
+            state._y_v1_working = VOID
+            state._y_v2_current = v2
+            state._y_v2_working = VOID
+            state._y_working_tx_ids = [None for _group in _B_tx_groups]
 
-    class Counter_Current(Counter_FacadeBase):
+    class B_Current(B_FacadeBase):
         __slots__ = ()
         pass
 
         @property
-        def count(self):
-            return self._y_state._y_count_current
+        def plain(self):
+            return self._y_state._y_plain_current
 
-        @count.setter
-        def count(self, value):
+        @plain.setter
+        def plain(self, value):
             del value
             raise AttributeError(
-                "current facade is read-only for transactional field " + "count"
+                "current facade is read-only for transactional field " + "plain"
             )
 
         @property
-        def audit_count(self):
-            return self._y_state._y_audit_count_current
+        def v1(self):
+            return self._y_state._y_v1_current
 
-        @audit_count.setter
-        def audit_count(self, value):
+        @v1.setter
+        def v1(self, value):
             del value
             raise AttributeError(
-                "current facade is read-only for transactional field " + "audit_count"
+                "current facade is read-only for transactional field " + "v1"
             )
 
-    class Counter_Working(Counter_FacadeBase):
+        @property
+        def v2(self):
+            return self._y_state._y_v2_current
+
+        @v2.setter
+        def v2(self, value):
+            del value
+            raise AttributeError(
+                "current facade is read-only for transactional field " + "v2"
+            )
+
+    class B_Working(B_FacadeBase):
         __slots__ = ()
         pass
 
         @property
-        def count(self):
+        def plain(self):
             state = self._y_state
-            if state._y_count_working is not VOID:
-                return state._y_count_working
-            return state._y_count_current
+            if state._y_plain_working is not VOID:
+                return state._y_plain_working
+            return state._y_plain_current
 
-        @count.setter
-        def count(self, value):
+        @plain.setter
+        def plain(self, value):
             state = self._y_state
             state._y_ensure_working_transaction(0)
-            state._y_count_working = value
+            state._y_plain_working = value
 
         @property
-        def audit_count(self):
+        def v1(self):
             state = self._y_state
-            if state._y_audit_count_working is not VOID:
-                return state._y_audit_count_working
-            return state._y_audit_count_current
+            if state._y_v1_working is not VOID:
+                return state._y_v1_working
+            return state._y_v1_current
 
-        @audit_count.setter
-        def audit_count(self, value):
+        @v1.setter
+        def v1(self, value):
             state = self._y_state
-            state._y_ensure_working_transaction(1)
-            state._y_audit_count_working = value
+            state._y_ensure_working_transaction(0)
+            state._y_v1_working = value
 
-    Counter.__name__ = decorated_cls.__name__
-    Counter.__qualname__ = decorated_cls.__qualname__
-    Counter.__module__ = decorated_cls.__module__
-    return Counter
+        @property
+        def v2(self):
+            state = self._y_state
+            if state._y_v2_working is not VOID:
+                return state._y_v2_working
+            return state._y_v2_current
+
+        @v2.setter
+        def v2(self, value):
+            state = self._y_state
+            state._y_ensure_working_transaction(0)
+            state._y_v2_working = value
+
+    B.__name__ = decorated_cls.__name__
+    B.__qualname__ = decorated_cls.__qualname__
+    B.__module__ = decorated_cls.__module__
+    return B

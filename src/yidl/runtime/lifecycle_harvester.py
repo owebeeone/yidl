@@ -33,40 +33,64 @@ def harvest_lifecycle_definition(cls: type[object]) -> HarvestedLifecycle:
     """Harvest Phase A-compatible lifecycle facts from ``cls``."""
 
     _reject_reserved_class_body_names(cls)
-    annotations = dict(getattr(cls, "__annotations__", {}))
+    annotations = dict(cls.__dict__.get("__annotations__", {}))
     class_fact = _class_fact(cls)
     class_id = str(class_fact["class_id"])
     class_name = str(class_fact["class_name"])
 
-    field_facts: list[Mapping[str, object]] = []
+    field_facts_by_name: dict[str, Mapping[str, object]] = {}
     build_kwargs: dict[str, object] = {
         str(class_fact["lifecycle_definition_param_name"]): None,
         str(class_fact["annotations_param_name"]): MappingProxyType(dict(annotations)),
         str(class_fact["tx_groups_param_name"]): (),
     }
     tx_groups = _TxGroupBuilder()
+    next_order = ORDER_STEP
 
-    for field_index, (name, annotation) in enumerate(annotations.items()):
+    for definition in _inherited_lifecycle_definitions(cls):
+        for group in _definition_tx_groups(definition):
+            tx_groups.add(group)
+        for inherited_fact in _definition_field_facts(definition):
+            name = str(inherited_fact["field_name"])
+            if name in field_facts_by_name:
+                continue
+            fact = _remap_inherited_field_fact(class_id, class_name, inherited_fact)
+            field_facts_by_name[name] = MappingProxyType(fact)
+            next_order = max(next_order, int(fact["field_order"]) + ORDER_STEP)
+
+    for name, annotation in annotations.items():
         marker = _marker_for(cls, name)
         decl = normalize_marker(name, annotation, marker, context=class_name)
         if decl.kind == "initvar" and decl.init is False:
             continue
-        order = (field_index + 1) * ORDER_STEP
+        existing = field_facts_by_name.get(name)
+        if existing is None:
+            order = next_order
+            next_order += ORDER_STEP
+        else:
+            order = int(existing["field_order"])
         fact = _field_fact(class_id, class_name, decl, order)
-        field_facts.append(MappingProxyType(fact))
+        field_facts_by_name[name] = MappingProxyType(fact)
         if decl.kind == "managed":
             tx_groups.add(decl.tx_group)
-        if decl.has_default:
-            build_kwargs[str(fact["default_value_param_name"])] = decl.default
-        if decl.has_default_factory:
-            build_kwargs[str(fact["default_factory_param_name"])] = decl.default_factory
+
+    field_facts = tuple(field_facts_by_name.values())
+    for fact in field_facts:
+        if fact["field_kind"] == "managed":
+            tx_groups.add(fact["tx_group_key"])
+        if fact["has_default"]:
+            build_kwargs[str(fact["default_value_param_name"])] = fact["default_value"]
+        if fact["has_default_factory"]:
+            build_kwargs[str(fact["default_factory_param_name"])] = fact[
+                "default_factory"
+            ]
 
     tx_group_values = tx_groups.values()
     lifecycle_definition = MappingProxyType(
         {
             "version": LIFECYCLE_METADATA_VERSION,
             "class": MappingProxyType(dict(class_fact)),
-            "fields": tuple(field_facts),
+            "fields": field_facts,
             "tx_groups": tx_group_values,
         },
     )
@@ -77,7 +101,7 @@ def harvest_lifecycle_definition(cls: type[object]) -> HarvestedLifecycle:
 
     return HarvestedLifecycle(
         class_fact=MappingProxyType(dict(class_fact)),
-        field_facts=tuple(field_facts),
+        field_facts=field_facts,
         lifecycle_definition=lifecycle_definition,
         annotations=MappingProxyType(dict(annotations)),
         tx_groups=tx_group_values,
@@ -143,6 +167,87 @@ def _field_fact(
         fact["current_slot_name"] = f"_y_{name}_current"
         fact["working_slot_name"] = f"_y_{name}_working"
     return fact
+
+
+def _remap_inherited_field_fact(
+    class_id: str,
+    class_name: str,
+    inherited: Mapping[str, object],
+) -> dict[str, object]:
+    name = str(inherited["field_name"])
+    kind = str(inherited["field_kind"])
+    has_default = bool(inherited["has_default"])
+    has_default_factory = bool(inherited["has_default_factory"])
+    fact = dict(inherited)
+    fact.update(
+        {
+            "field_id": f"{class_id}.{name}",
+            "field_owner": class_id,
+            "default_value_param_name": (
+                f"_{class_name}_{name}_default" if has_default else ""
+            ),
+            "default_factory_param_name": (
+                f"_{class_name}_{name}_default_factory"
+                if has_default_factory
+                else ""
+            ),
+            "value_slot_name": "",
+            "current_slot_name": "",
+            "working_slot_name": "",
+        },
+    )
+    if kind == "field":
+        fact["value_slot_name"] = f"_y_{name}_value"
+    elif kind == "managed":
+        fact["current_slot_name"] = f"_y_{name}_current"
+        fact["working_slot_name"] = f"_y_{name}_working"
+    return fact
+
+
+def _inherited_lifecycle_definitions(
+    cls: type[object],
+) -> tuple[Mapping[str, object], ...]:
+    definitions: list[Mapping[str, object]] = []
+    for base in cls.__mro__[1:]:
+        if base is object:
+            continue
+        if getattr(base, "__yidl_lifecycle_generated__", False) is not True:
+            continue
+        definition = getattr(base, "__yidl_lifecycle_definition__", None)
+        if not isinstance(definition, Mapping):
+            raise LifecycleDefinitionError(
+                f"{cls.__name__}: inherited lifecycle metadata is invalid",
+            )
+        version = definition.get("version")
+        if version != LIFECYCLE_METADATA_VERSION:
+            raise LifecycleDefinitionError(
+                f"{cls.__name__}: unsupported lifecycle metadata version {version!r}",
+            )
+        definitions.append(definition)
+    return tuple(definitions)
+
+
+def _definition_field_facts(
+    definition: Mapping[str, object],
+) -> tuple[Mapping[str, object], ...]:
+    fields = definition.get("fields", ())
+    if not isinstance(fields, tuple):
+        raise LifecycleDefinitionError("inherited lifecycle fields must be a tuple")
+    for field_fact in fields:
+        if not isinstance(field_fact, Mapping):
+            raise LifecycleDefinitionError(
+                "inherited lifecycle field metadata is invalid",
+            )
+    return fields
+
+
+def _definition_tx_groups(definition: Mapping[str, object]) -> tuple[object, ...]:
+    tx_groups = definition.get("tx_groups", (DEFAULT_TRANSACTION,))
+    if not isinstance(tx_groups, tuple):
+        raise LifecycleDefinitionError(
+            "inherited lifecycle transaction groups must be a tuple",
+        )
+    return tx_groups
 
 
 def _marker_for(cls: type[object], name: str) -> LifecycleMarker:
