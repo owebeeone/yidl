@@ -72,6 +72,7 @@ def harvest_lifecycle_definition(cls: type[object]) -> HarvestedLifecycle:
             fact = _remap_inherited_transaction_method_fact(
                 class_id,
                 inherited_fact,
+                _definition_tx_groups(definition),
             )
             transaction_method_facts.append(MappingProxyType(fact))
             next_method_order = max(
@@ -278,6 +279,7 @@ def _local_transaction_method_facts(
                     f"{cls.__name__}.{name}: transaction marker references "
                     f"unknown group {marker.tx_group!r}",
                 )
+            tx_index = tx_groups.index(marker.tx_group)
             facts.append(
                 MappingProxyType(
                     {
@@ -286,6 +288,7 @@ def _local_transaction_method_facts(
                         "method_name": name,
                         "method_kind": marker.kind,
                         "tx_group_key": marker.tx_group,
+                        "tx_index": tx_index,
                         "declaration_order": next_order,
                     },
                 ),
@@ -297,10 +300,14 @@ def _local_transaction_method_facts(
 def _remap_inherited_transaction_method_fact(
     class_id: str,
     inherited: Mapping[str, object],
+    tx_groups: tuple[object, ...],
 ) -> dict[str, object]:
     fact = dict(inherited)
     name = str(fact["method_name"])
     kind = str(fact["method_kind"])
+    tx_group = fact["tx_group_key"]
+    if "tx_index" not in fact:
+        fact["tx_index"] = tx_groups.index(tx_group)
     fact.update(
         {
             "method_id": f"{class_id}.{name}.{kind}",

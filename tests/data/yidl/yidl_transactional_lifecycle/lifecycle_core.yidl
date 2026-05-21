@@ -44,6 +44,7 @@ concept LifecycleCore {
     property MethodName: str
     property MethodKind: str
     property DeclarationOrder: int = 0
+    property TxIndex: int = 0
 
     record LifecycleClass {
         ClassId
@@ -84,6 +85,7 @@ concept LifecycleCore {
         MethodName
         MethodKind
         TxGroupKey
+        TxIndex
         DeclarationOrder
     }
 
@@ -265,7 +267,7 @@ concept LifecycleCore {
     ]$
 
     resource CommitOrderKeyBranch = template $[
-        if astichi_pass(tx_group, outer_bind=True) == astichi_bind_external(tx_group_key):
+        if astichi_pass(tx_index, outer_bind=True) == astichi_bind_external(tx_index_value):
             return astichi_pass(
                 self,
                 outer_bind=True,
@@ -273,12 +275,12 @@ concept LifecycleCore {
     ]$
 
     resource RequiresValidationBranch = template $[
-        if astichi_pass(tx_group, outer_bind=True) == astichi_bind_external(tx_group_key):
+        if astichi_pass(tx_index, outer_bind=True) == astichi_bind_external(tx_index_value):
             return True
     ]$
 
     resource ValidateCommitBranch = template $[
-        if astichi_pass(tx_group, outer_bind=True) == astichi_bind_external(tx_group_key):
+        if astichi_pass(tx_index, outer_bind=True) == astichi_bind_external(tx_index_value):
             result = astichi_pass(
                 self,
                 outer_bind=True,
@@ -288,7 +290,7 @@ concept LifecycleCore {
     ]$
 
     resource TransactionHookCall = template $[
-        if astichi_pass(tx_group, outer_bind=True) == astichi_bind_external(tx_group_key):
+        if astichi_pass(tx_index, outer_bind=True) == astichi_bind_external(tx_index_value):
             astichi_pass(
                 self,
                 outer_bind=True,
@@ -368,14 +370,17 @@ concept LifecycleCore {
                 return transaction
 
             def commit_order_key_for(self, tx_group=DEFAULT_TRANSACTION):
+                tx_index = self.__yidl_tx_group_to_index__[tx_group]
                 astichi_hole(commit_order_key_body)
                 return ()
 
             def requires_validation_for(self, tx_group=DEFAULT_TRANSACTION):
+                tx_index = self.__yidl_tx_group_to_index__[tx_group]
                 astichi_hole(requires_validation_body)
                 return False
 
             def validate_commit_for(self, tx_group=DEFAULT_TRANSACTION):
+                tx_index = self.__yidl_tx_group_to_index__[tx_group]
                 astichi_hole(validate_commit_body)
                 return True
 
@@ -912,7 +917,7 @@ concept LifecycleCore {
         }
 
         external method_name = MethodName
-        external tx_group_key = TxGroupKey
+        external tx_index_value = TxIndex
     }
 
     contribution RequiresValidationBranchContribution = RequiresValidationBranch {
@@ -924,7 +929,7 @@ concept LifecycleCore {
             build /ClassDef
         }
 
-        external tx_group_key = TxGroupKey
+        external tx_index_value = TxIndex
     }
 
     contribution ValidateCommitBranchContribution = ValidateCommitBranch {
@@ -937,7 +942,7 @@ concept LifecycleCore {
         }
 
         external method_name = MethodName
-        external tx_group_key = TxGroupKey
+        external tx_index_value = TxIndex
     }
 
     contribution BeforeCommitHookContribution = TransactionHookCall {
@@ -950,7 +955,7 @@ concept LifecycleCore {
         }
 
         external method_name = MethodName
-        external tx_group_key = TxGroupKey
+        external tx_index_value = TxIndex
     }
 
     contribution AfterCommitHookContribution = TransactionHookCall {
@@ -963,7 +968,7 @@ concept LifecycleCore {
         }
 
         external method_name = MethodName
-        external tx_group_key = TxGroupKey
+        external tx_index_value = TxIndex
     }
 
     contribution AfterRollbackHookContribution = TransactionHookCall {
@@ -976,7 +981,7 @@ concept LifecycleCore {
         }
 
         external method_name = MethodName
-        external tx_group_key = TxGroupKey
+        external tx_index_value = TxIndex
     }
 
     contribution CoreClassDefinition = CoreClassProduction {

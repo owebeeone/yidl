@@ -135,6 +135,7 @@ _MethodKindProperty = RuntimeProperty(
 _DeclarationOrderProperty = RuntimeProperty(
     "DeclarationOrder", int, default=0, storage_name="declaration_order"
 )
+_TxIndexProperty = RuntimeProperty("TxIndex", int, default=0, storage_name="tx_index")
 _FacadeIdProperty = RuntimeProperty(
     "FacadeId", str, default=REQUIRED, storage_name="facade_id"
 )
@@ -225,7 +226,6 @@ _ClassVarAssignmentOrderProperty = RuntimeProperty(
 _TxGroupOrderProperty = RuntimeProperty(
     "TxGroupOrder", int, default=0, storage_name="tx_group_order"
 )
-_TxIndexProperty = RuntimeProperty("TxIndex", int, default=0, storage_name="tx_index")
 _DependencyOwnerProperty = RuntimeProperty(
     "DependencyOwner", str, default=REQUIRED, storage_name="dependency_owner"
 )
@@ -335,6 +335,7 @@ _TransactionMethodSpec = RuntimeRecord(
         _MethodNameProperty,
         _MethodKindProperty,
         _TxGroupKeyProperty,
+        _TxIndexProperty,
         _DeclarationOrderProperty,
     ),
 )
@@ -709,6 +710,7 @@ class TransactionMethod:
         "method_name",
         "method_kind",
         "tx_group_key",
+        "tx_index",
         "declaration_order",
     )
     __dds_record_spec__ = _TransactionMethodSpec
@@ -717,6 +719,7 @@ class TransactionMethod:
     method_name: str
     method_kind: str
     tx_group_key: object
+    tx_index: int
     declaration_order: int
 
     def __init__(
@@ -727,6 +730,7 @@ class TransactionMethod:
         method_name: str,
         method_kind: str,
         tx_group_key: object = None,
+        tx_index: int = 0,
         declaration_order: int = 0,
     ):
         if not isinstance(method_id, str):
@@ -744,6 +748,9 @@ class TransactionMethod:
             raise TypeError("MethodKind must be str, got " + type(method_kind).__name__)
         object.__setattr__(self, "method_kind", method_kind)
         object.__setattr__(self, "tx_group_key", tx_group_key)
+        if not isinstance(tx_index, int):
+            raise TypeError("TxIndex must be int, got " + type(tx_index).__name__)
+        object.__setattr__(self, "tx_index", tx_index)
         if not isinstance(declaration_order, int):
             raise TypeError(
                 "DeclarationOrder must be int, got " + type(declaration_order).__name__
@@ -757,6 +764,7 @@ class TransactionMethod:
             "method_name",
             "method_kind",
             "tx_group_key",
+            "tx_index",
             "declaration_order",
         ):
             raise AttributeError("TransactionMethod records are immutable")
@@ -769,6 +777,7 @@ class TransactionMethod:
         pieces.append("method_name=" + repr(self.method_name))
         pieces.append("method_kind=" + repr(self.method_kind))
         pieces.append("tx_group_key=" + repr(self.tx_group_key))
+        pieces.append("tx_index=" + repr(self.tx_index))
         pieces.append("declaration_order=" + repr(self.declaration_order))
         return "TransactionMethod" + "(" + ", ".join(pieces) + ")"
 
@@ -2959,6 +2968,7 @@ ASSEMBLY_PROPERTIES = {
     "DeclarationOrder": _YidlSimpleNamespace(
         name="DeclarationOrder", storage_name="declaration_order"
     ),
+    "TxIndex": _YidlSimpleNamespace(name="TxIndex", storage_name="tx_index"),
     "FacadeId": _YidlSimpleNamespace(name="FacadeId", storage_name="facade_id"),
     "FacadeOwner": _YidlSimpleNamespace(
         name="FacadeOwner", storage_name="facade_owner"
@@ -3028,7 +3038,6 @@ ASSEMBLY_PROPERTIES = {
     "TxGroupOrder": _YidlSimpleNamespace(
         name="TxGroupOrder", storage_name="tx_group_order"
     ),
-    "TxIndex": _YidlSimpleNamespace(name="TxIndex", storage_name="tx_index"),
     "DependencyOwner": _YidlSimpleNamespace(
         name="DependencyOwner", storage_name="dependency_owner"
     ),
@@ -3116,7 +3125,7 @@ def build_lifecycle_class(decorated_cls, builder_params__astichi_param_hole__):
     astichi_hole(function_body)
     astichi_hole(return_statement)""",
         file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-        line_number=192,
+        line_number=194,
     ),
     "BuilderParam": astichi_template(
         from_astichi_code(
@@ -3124,7 +3133,7 @@ def build_lifecycle_class(decorated_cls, builder_params__astichi_param_hole__):
 def astichi_params(*, value_name__astichi_arg__):
     pass""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=210,
+            line_number=212,
         )
     ),
     "TransactionManagerParam": astichi_template(
@@ -3133,14 +3142,14 @@ def astichi_params(*, value_name__astichi_arg__):
 def astichi_params(*, transaction_manager=None):
     pass""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=215,
+            line_number=217,
         )
     ),
     "StateSlotEntry": astichi_template(
         from_astichi_code(
             "astichi_bind_external(slot_name)",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=220,
+            line_number=222,
         )
     ),
     "InitParamRequired": astichi_template(
@@ -3149,7 +3158,7 @@ def astichi_params(*, transaction_manager=None):
 def astichi_params(param_name__astichi_arg__: astichi_bind_external(annotation)):
     pass""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=224,
+            line_number=226,
         )
     ),
     "InitParamDefault": astichi_template(
@@ -3161,7 +3170,7 @@ def astichi_params(
 ):
     pass""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=229,
+            line_number=231,
         )
     ),
     "PlainStateAssignment": astichi_template(
@@ -3172,7 +3181,7 @@ astichi_pass(state, outer_bind=True).astichi_ref(external=state_slot)._ = astich
     outer_bind=True,
 )""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=237,
+            line_number=239,
         )
     ),
     "InitVarLocalDefaultAssignment": astichi_template(
@@ -3183,7 +3192,7 @@ init_value_name__astichi_arg__ = astichi_pass(
     outer_bind=True,
 )""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=244,
+            line_number=246,
         )
     ),
     "PlainProperty": astichi_template(
@@ -3197,7 +3206,7 @@ def property_getter_name__astichi_arg__(self):
 def property_setter_name__astichi_arg__(self, value):
     self._y_state.astichi_ref(external=state_slot)._ = value""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=251,
+            line_number=253,
         )
     ),
     "ClassVarDefaultAssignment": astichi_template(
@@ -3208,34 +3217,34 @@ classvar_name__astichi_arg__ = astichi_pass(
     outer_bind=True,
 )""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=261,
+            line_number=263,
         )
     ),
     "CommitOrderKeyBranch": astichi_template(
         from_astichi_code(
             """\
-if astichi_pass(tx_group, outer_bind=True) == astichi_bind_external(tx_group_key):
+if astichi_pass(tx_index, outer_bind=True) == astichi_bind_external(tx_index_value):
     return astichi_pass(
         self,
         outer_bind=True,
     )._y_get_default_facade().astichi_ref(external=method_name)()""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=268,
+            line_number=270,
         )
     ),
     "RequiresValidationBranch": astichi_template(
         from_astichi_code(
             """\
-if astichi_pass(tx_group, outer_bind=True) == astichi_bind_external(tx_group_key):
+if astichi_pass(tx_index, outer_bind=True) == astichi_bind_external(tx_index_value):
     return True""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=276,
+            line_number=278,
         )
     ),
     "ValidateCommitBranch": astichi_template(
         from_astichi_code(
             """\
-if astichi_pass(tx_group, outer_bind=True) == astichi_bind_external(tx_group_key):
+if astichi_pass(tx_index, outer_bind=True) == astichi_bind_external(tx_index_value):
     result = astichi_pass(
         self,
         outer_bind=True,
@@ -3243,19 +3252,19 @@ if astichi_pass(tx_group, outer_bind=True) == astichi_bind_external(tx_group_key
     if result is False:
         return False""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=281,
+            line_number=283,
         )
     ),
     "TransactionHookCall": astichi_template(
         from_astichi_code(
             """\
-if astichi_pass(tx_group, outer_bind=True) == astichi_bind_external(tx_group_key):
+if astichi_pass(tx_index, outer_bind=True) == astichi_bind_external(tx_index_value):
     astichi_pass(
         self,
         outer_bind=True,
     )._y_get_default_facade().astichi_ref(external=method_name)()""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=291,
+            line_number=293,
         )
     ),
     "ClassBundle": astichi_template(
@@ -3333,14 +3342,17 @@ class state_class_decl_name__astichi_arg__:
         return transaction
 
     def commit_order_key_for(self, tx_group=DEFAULT_TRANSACTION):
+        tx_index = self.__yidl_tx_group_to_index__[tx_group]
         astichi_hole(commit_order_key_body)
         return ()
 
     def requires_validation_for(self, tx_group=DEFAULT_TRANSACTION):
+        tx_index = self.__yidl_tx_group_to_index__[tx_group]
         astichi_hole(requires_validation_body)
         return False
 
     def validate_commit_for(self, tx_group=DEFAULT_TRANSACTION):
+        tx_index = self.__yidl_tx_group_to_index__[tx_group]
         astichi_hole(validate_commit_body)
         return True
 
@@ -3497,7 +3509,7 @@ class working_facade_class_decl_name__astichi_arg__(
     __slots__ = ()
     astichi_hole(working_facade_properties)""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=299,
+            line_number=301,
             keep_names=(
                 "DEFAULT_TRANSACTION",
                 "TransactionManager",
@@ -3524,14 +3536,14 @@ return_class_module_ref__astichi_arg__.__module__ = astichi_pass(
 ).__module__
 return return_class_result_ref__astichi_arg__""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=540,
+            line_number=545,
         )
     ),
     "PassStatement": astichi_template(
         from_astichi_code(
             "pass",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=556,
+            line_number=561,
         )
     ),
     "BuildTransactionFactsBody": from_astichi_code(
@@ -3609,7 +3621,7 @@ for lifecycle_class in classes:
             policy=RejectDuplicate,
         )""",
         file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_managed.yidl",
-        line_number=54,
+        line_number=52,
         keep_names=(
             "ctx",
             "ClassesCollection",
@@ -3631,14 +3643,14 @@ astichi_pass(state, outer_bind=True).astichi_ref(external=current_slot)._ = asti
     outer_bind=True,
 )""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_managed.yidl",
-            line_number=144,
+            line_number=142,
         )
     ),
     "ManagedWorkingStateAssignment": astichi_template(
         from_astichi_code(
             "astichi_pass(state, outer_bind=True).astichi_ref(external=working_slot)._ = VOID",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_managed.yidl",
-            line_number=151,
+            line_number=149,
             keep_names=("VOID",),
         )
     ),
@@ -3658,7 +3670,7 @@ def property_setter_name__astichi_arg__(self, value):
     state._y_ensure_working_transaction(astichi_bind_external(tx_index))
     state.astichi_ref(external=working_slot)._ = value""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_managed.yidl",
-            line_number=157,
+            line_number=155,
             keep_names=("VOID",),
         )
     ),
@@ -3677,7 +3689,7 @@ def property_setter_name__astichi_arg__(self, value):
         + astichi_bind_external(field_name)
     )""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_managed.yidl",
-            line_number=174,
+            line_number=172,
         )
     ),
     "ManagedWorkingProperty": astichi_template(
@@ -3696,7 +3708,7 @@ def property_setter_name__astichi_arg__(self, value):
     state._y_ensure_working_transaction(astichi_bind_external(tx_index))
     state.astichi_ref(external=working_slot)._ = value""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_managed.yidl",
-            line_number=188,
+            line_number=186,
             keep_names=("VOID",),
         )
     ),
@@ -3710,7 +3722,7 @@ if astichi_pass(tx_index, outer_bind=True) == astichi_bind_external(tx_index_val
         )
         astichi_pass(self, outer_bind=True).astichi_ref(external=working_slot)._ = VOID""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_managed.yidl",
-            line_number=205,
+            line_number=203,
             keep_names=("VOID",),
         )
     ),
@@ -3720,7 +3732,7 @@ if astichi_pass(tx_index, outer_bind=True) == astichi_bind_external(tx_index_val
 if astichi_pass(tx_index, outer_bind=True) == astichi_bind_external(tx_index_value):
     astichi_pass(self, outer_bind=True).astichi_ref(external=working_slot)._ = VOID""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_managed.yidl",
-            line_number=216,
+            line_number=214,
             keep_names=("VOID",),
         )
     ),
@@ -4826,7 +4838,7 @@ ASSEMBLY_CONTRIBUTIONS = {
                 kind="external", name="method_name", value=ValueRef("MethodName")
             ),
             BindingSpec(
-                kind="external", name="tx_group_key", value=ValueRef("TxGroupKey")
+                kind="external", name="tx_index_value", value=ValueRef("TxIndex")
             ),
         ),
     ),
@@ -4852,7 +4864,7 @@ ASSEMBLY_CONTRIBUTIONS = {
         ),
         bindings=(
             BindingSpec(
-                kind="external", name="tx_group_key", value=ValueRef("TxGroupKey")
+                kind="external", name="tx_index_value", value=ValueRef("TxIndex")
             ),
         ),
     ),
@@ -4881,7 +4893,7 @@ ASSEMBLY_CONTRIBUTIONS = {
                 kind="external", name="method_name", value=ValueRef("MethodName")
             ),
             BindingSpec(
-                kind="external", name="tx_group_key", value=ValueRef("TxGroupKey")
+                kind="external", name="tx_index_value", value=ValueRef("TxIndex")
             ),
         ),
     ),
@@ -4910,7 +4922,7 @@ ASSEMBLY_CONTRIBUTIONS = {
                 kind="external", name="method_name", value=ValueRef("MethodName")
             ),
             BindingSpec(
-                kind="external", name="tx_group_key", value=ValueRef("TxGroupKey")
+                kind="external", name="tx_index_value", value=ValueRef("TxIndex")
             ),
         ),
     ),
@@ -4939,7 +4951,7 @@ ASSEMBLY_CONTRIBUTIONS = {
                 kind="external", name="method_name", value=ValueRef("MethodName")
             ),
             BindingSpec(
-                kind="external", name="tx_group_key", value=ValueRef("TxGroupKey")
+                kind="external", name="tx_index_value", value=ValueRef("TxIndex")
             ),
         ),
     ),
@@ -4968,7 +4980,7 @@ ASSEMBLY_CONTRIBUTIONS = {
                 kind="external", name="method_name", value=ValueRef("MethodName")
             ),
             BindingSpec(
-                kind="external", name="tx_group_key", value=ValueRef("TxGroupKey")
+                kind="external", name="tx_index_value", value=ValueRef("TxIndex")
             ),
         ),
     ),

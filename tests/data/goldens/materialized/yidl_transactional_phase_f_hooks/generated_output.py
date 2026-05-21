@@ -59,17 +59,20 @@ def build_lifecycle_class(decorated_cls, *, _Counter_lifecycle_definition, _Coun
             return transaction
 
         def commit_order_key_for(self, tx_group=DEFAULT_TRANSACTION):
-            if tx_group == 'default_transaction':
+            tx_index = self.__yidl_tx_group_to_index__[tx_group]
+            if tx_index == 0:
                 return self._y_get_default_facade()._commit_key()
             return ()
 
         def requires_validation_for(self, tx_group=DEFAULT_TRANSACTION):
-            if tx_group == 'default_transaction':
+            tx_index = self.__yidl_tx_group_to_index__[tx_group]
+            if tx_index == 0:
                 return True
             return False
 
         def validate_commit_for(self, tx_group=DEFAULT_TRANSACTION):
-            if tx_group == 'default_transaction':
+            tx_index = self.__yidl_tx_group_to_index__[tx_group]
+            if tx_index == 0:
                 result = self._y_get_default_facade()._validate_count()
                 if result is False:
                     return False
@@ -79,7 +82,7 @@ def build_lifecycle_class(decorated_cls, *, _Counter_lifecycle_definition, _Coun
             tx_index = self.__yidl_tx_group_to_index__[tx_group]
             if self._y_working_tx_ids[tx_index] != tx_id:
                 return self._y_get_default_facade()
-            if tx_group == 'default_transaction':
+            if tx_index == 0:
                 self._y_get_default_facade()._before_default()
             if tx_index == 0:
                 if self._y_count_working is not VOID:
@@ -90,7 +93,7 @@ def build_lifecycle_class(decorated_cls, *, _Counter_lifecycle_definition, _Coun
                     self._y_audit_count_current = self._y_audit_count_working
                     self._y_audit_count_working = VOID
             self._y_working_tx_ids[tx_index] = None
-            if tx_group == 'default_transaction':
+            if tx_index == 0:
                 self._y_get_default_facade()._after_default()
             return self._y_get_default_facade()
 
@@ -103,7 +106,7 @@ def build_lifecycle_class(decorated_cls, *, _Counter_lifecycle_definition, _Coun
             if tx_index == 1:
                 self._y_audit_count_working = VOID
             self._y_working_tx_ids[tx_index] = None
-            if tx_group == 'audit':
+            if tx_index == 1:
                 self._y_get_default_facade()._after_audit_rollback()
             return self._y_get_default_facade()
 

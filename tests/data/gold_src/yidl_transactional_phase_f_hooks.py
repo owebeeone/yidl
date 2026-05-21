@@ -184,6 +184,10 @@ def _assert_source_shape(sources: Mapping[str, str]) -> None:
         assert "self._y_get_default_facade()._before_default()" in generated
         assert "self._y_get_default_facade()._after_default()" in generated
         assert "self._y_get_default_facade()._after_audit_rollback()" in generated
+        assert 'if tx_group == "default_transaction":' not in generated
+        assert 'if tx_group == "audit":' not in generated
+        assert "if tx_index == 0:" in generated
+        assert "if tx_index == 1:" in generated
         assert "getattr(\n            self._y_get_default_facade()" not in generated
 
 
