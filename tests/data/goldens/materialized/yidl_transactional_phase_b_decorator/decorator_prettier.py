@@ -243,6 +243,9 @@ _ParamNameProperty = RuntimeProperty(
 _ParamOrderProperty = RuntimeProperty(
     "ParamOrder", int, default=0, storage_name="param_order"
 )
+_ConsumerEvalOrderProperty = RuntimeProperty(
+    "ConsumerEvalOrder", int, default=0, storage_name="consumer_eval_order"
+)
 _EvalStepIdProperty = RuntimeProperty(
     "EvalStepId", str, default=REQUIRED, storage_name="eval_step_id"
 )
@@ -255,8 +258,26 @@ _EvalFieldIdProperty = RuntimeProperty(
 _EvalFieldNameProperty = RuntimeProperty(
     "EvalFieldName", str, default=REQUIRED, storage_name="eval_field_name"
 )
+_EvalFieldKindProperty = RuntimeProperty(
+    "EvalFieldKind", str, default="", storage_name="eval_field_kind"
+)
+_EvalInitProperty = RuntimeProperty(
+    "EvalInit", bool, default=True, storage_name="eval_init"
+)
+_EvalStateSlotNameProperty = RuntimeProperty(
+    "EvalStateSlotName", str, default="", storage_name="eval_state_slot_name"
+)
+_EvalDefaultFactoryParamNameProperty = RuntimeProperty(
+    "EvalDefaultFactoryParamName",
+    str,
+    default="",
+    storage_name="eval_default_factory_param_name",
+)
 _EvalOrderProperty = RuntimeProperty(
     "EvalOrder", int, default=0, storage_name="eval_order"
+)
+_EvalStatementOrderProperty = RuntimeProperty(
+    "EvalStatementOrder", int, default=0, storage_name="eval_statement_order"
 )
 _DiagnosticIdProperty = RuntimeProperty(
     "DiagnosticId", str, default=REQUIRED, storage_name="diagnostic_id"
@@ -378,6 +399,7 @@ _DefaultFactoryDependencySpec = RuntimeRecord(
         _ProviderHasDefaultFactoryProperty,
         _ParamNameProperty,
         _ParamOrderProperty,
+        _ConsumerEvalOrderProperty,
     ),
 )
 _DefaultFactoryEvaluationStepSpec = RuntimeRecord(
@@ -387,7 +409,12 @@ _DefaultFactoryEvaluationStepSpec = RuntimeRecord(
         _EvalOwnerProperty,
         _EvalFieldIdProperty,
         _EvalFieldNameProperty,
+        _EvalFieldKindProperty,
+        _EvalInitProperty,
+        _EvalStateSlotNameProperty,
+        _EvalDefaultFactoryParamNameProperty,
         _EvalOrderProperty,
+        _EvalStatementOrderProperty,
     ),
 )
 _DefaultFactoryDiagnosticSpec = RuntimeRecord(
@@ -1242,6 +1269,7 @@ class DefaultFactoryDependency:
         "provider_has_default_factory",
         "param_name",
         "param_order",
+        "consumer_eval_order",
     )
     __dds_record_spec__ = _DefaultFactoryDependencySpec
     dependency_owner: str
@@ -1255,6 +1283,7 @@ class DefaultFactoryDependency:
     provider_has_default_factory: bool
     param_name: str
     param_order: int
+    consumer_eval_order: int
 
     def __init__(
         self,
@@ -1270,6 +1299,7 @@ class DefaultFactoryDependency:
         provider_has_default_factory: bool = False,
         param_name: str,
         param_order: int = 0,
+        consumer_eval_order: int = 0,
     ):
         if not isinstance(dependency_owner, str):
             raise TypeError(
@@ -1328,6 +1358,12 @@ class DefaultFactoryDependency:
         if not isinstance(param_order, int):
             raise TypeError("ParamOrder must be int, got " + type(param_order).__name__)
         object.__setattr__(self, "param_order", param_order)
+        if not isinstance(consumer_eval_order, int):
+            raise TypeError(
+                "ConsumerEvalOrder must be int, got "
+                + type(consumer_eval_order).__name__
+            )
+        object.__setattr__(self, "consumer_eval_order", consumer_eval_order)
 
     def __setattr__(self, name, value):
         if name in (
@@ -1342,6 +1378,7 @@ class DefaultFactoryDependency:
             "provider_has_default_factory",
             "param_name",
             "param_order",
+            "consumer_eval_order",
         ):
             raise AttributeError("DefaultFactoryDependency records are immutable")
         object.__setattr__(self, name, value)
@@ -1361,6 +1398,7 @@ class DefaultFactoryDependency:
         )
         pieces.append("param_name=" + repr(self.param_name))
         pieces.append("param_order=" + repr(self.param_order))
+        pieces.append("consumer_eval_order=" + repr(self.consumer_eval_order))
         return "DefaultFactoryDependency" + "(" + ", ".join(pieces) + ")"
 
 
@@ -1373,14 +1411,24 @@ class DefaultFactoryEvaluationStep:
         "eval_owner",
         "eval_field_id",
         "eval_field_name",
+        "eval_field_kind",
+        "eval_init",
+        "eval_state_slot_name",
+        "eval_default_factory_param_name",
         "eval_order",
+        "eval_statement_order",
     )
     __dds_record_spec__ = _DefaultFactoryEvaluationStepSpec
     eval_step_id: str
     eval_owner: str
     eval_field_id: str
     eval_field_name: str
+    eval_field_kind: str
+    eval_init: bool
+    eval_state_slot_name: str
+    eval_default_factory_param_name: str
     eval_order: int
+    eval_statement_order: int
 
     def __init__(
         self,
@@ -1389,7 +1437,12 @@ class DefaultFactoryEvaluationStep:
         eval_owner: str,
         eval_field_id: str,
         eval_field_name: str,
+        eval_field_kind: str = "",
+        eval_init: bool = True,
+        eval_state_slot_name: str = "",
+        eval_default_factory_param_name: str = "",
         eval_order: int = 0,
+        eval_statement_order: int = 0,
     ):
         if not isinstance(eval_step_id, str):
             raise TypeError(
@@ -1409,9 +1462,37 @@ class DefaultFactoryEvaluationStep:
                 "EvalFieldName must be str, got " + type(eval_field_name).__name__
             )
         object.__setattr__(self, "eval_field_name", eval_field_name)
+        if not isinstance(eval_field_kind, str):
+            raise TypeError(
+                "EvalFieldKind must be str, got " + type(eval_field_kind).__name__
+            )
+        object.__setattr__(self, "eval_field_kind", eval_field_kind)
+        if not isinstance(eval_init, bool):
+            raise TypeError("EvalInit must be bool, got " + type(eval_init).__name__)
+        object.__setattr__(self, "eval_init", eval_init)
+        if not isinstance(eval_state_slot_name, str):
+            raise TypeError(
+                "EvalStateSlotName must be str, got "
+                + type(eval_state_slot_name).__name__
+            )
+        object.__setattr__(self, "eval_state_slot_name", eval_state_slot_name)
+        if not isinstance(eval_default_factory_param_name, str):
+            raise TypeError(
+                "EvalDefaultFactoryParamName must be str, got "
+                + type(eval_default_factory_param_name).__name__
+            )
+        object.__setattr__(
+            self, "eval_default_factory_param_name", eval_default_factory_param_name
+        )
         if not isinstance(eval_order, int):
             raise TypeError("EvalOrder must be int, got " + type(eval_order).__name__)
         object.__setattr__(self, "eval_order", eval_order)
+        if not isinstance(eval_statement_order, int):
+            raise TypeError(
+                "EvalStatementOrder must be int, got "
+                + type(eval_statement_order).__name__
+            )
+        object.__setattr__(self, "eval_statement_order", eval_statement_order)
 
     def __setattr__(self, name, value):
         if name in (
@@ -1419,7 +1500,12 @@ class DefaultFactoryEvaluationStep:
             "eval_owner",
             "eval_field_id",
             "eval_field_name",
+            "eval_field_kind",
+            "eval_init",
+            "eval_state_slot_name",
+            "eval_default_factory_param_name",
             "eval_order",
+            "eval_statement_order",
         ):
             raise AttributeError("DefaultFactoryEvaluationStep records are immutable")
         object.__setattr__(self, name, value)
@@ -1430,7 +1516,15 @@ class DefaultFactoryEvaluationStep:
         pieces.append("eval_owner=" + repr(self.eval_owner))
         pieces.append("eval_field_id=" + repr(self.eval_field_id))
         pieces.append("eval_field_name=" + repr(self.eval_field_name))
+        pieces.append("eval_field_kind=" + repr(self.eval_field_kind))
+        pieces.append("eval_init=" + repr(self.eval_init))
+        pieces.append("eval_state_slot_name=" + repr(self.eval_state_slot_name))
+        pieces.append(
+            "eval_default_factory_param_name="
+            + repr(self.eval_default_factory_param_name)
+        )
         pieces.append("eval_order=" + repr(self.eval_order))
+        pieces.append("eval_statement_order=" + repr(self.eval_statement_order))
         return "DefaultFactoryEvaluationStep" + "(" + ", ".join(pieces) + ")"
 
 
@@ -2520,11 +2614,17 @@ def run_build_default_factory_facts(builder):
                     provider_has_default_factory=provider.has_default_factory,
                     param_name=param_name,
                     param_order=param_order,
+                    consumer_eval_order=eval_order_by_id[consumer.field_id],
                 ),
                 policy=RejectDuplicate,
             )
         for eval_order, field_id in enumerate(ordered_field_ids):
             field = by_id[field_id]
+            state_slot = ""
+            if field.field_kind == "field":
+                state_slot = field.value_slot_name
+            elif field.field_kind == "managed":
+                state_slot = field.current_slot_name
             ctx.write(
                 DefaultFactoryEvaluationStepsCollection,
                 DefaultFactoryEvaluationStep(
@@ -2532,7 +2632,12 @@ def run_build_default_factory_facts(builder):
                     eval_owner=lifecycle_class.class_id,
                     eval_field_id=field.field_id,
                     eval_field_name=field.field_name,
+                    eval_field_kind=field.field_kind,
+                    eval_init=field.init,
+                    eval_state_slot_name=state_slot,
+                    eval_default_factory_param_name=field.default_factory_param_name,
                     eval_order=eval_order,
+                    eval_statement_order=100000 + eval_order,
                 ),
                 policy=RejectDuplicate,
             )
@@ -2784,6 +2889,9 @@ ASSEMBLY_PROPERTIES = {
     ),
     "ParamName": _YidlSimpleNamespace(name="ParamName", storage_name="param_name"),
     "ParamOrder": _YidlSimpleNamespace(name="ParamOrder", storage_name="param_order"),
+    "ConsumerEvalOrder": _YidlSimpleNamespace(
+        name="ConsumerEvalOrder", storage_name="consumer_eval_order"
+    ),
     "EvalStepId": _YidlSimpleNamespace(name="EvalStepId", storage_name="eval_step_id"),
     "EvalOwner": _YidlSimpleNamespace(name="EvalOwner", storage_name="eval_owner"),
     "EvalFieldId": _YidlSimpleNamespace(
@@ -2792,7 +2900,21 @@ ASSEMBLY_PROPERTIES = {
     "EvalFieldName": _YidlSimpleNamespace(
         name="EvalFieldName", storage_name="eval_field_name"
     ),
+    "EvalFieldKind": _YidlSimpleNamespace(
+        name="EvalFieldKind", storage_name="eval_field_kind"
+    ),
+    "EvalInit": _YidlSimpleNamespace(name="EvalInit", storage_name="eval_init"),
+    "EvalStateSlotName": _YidlSimpleNamespace(
+        name="EvalStateSlotName", storage_name="eval_state_slot_name"
+    ),
+    "EvalDefaultFactoryParamName": _YidlSimpleNamespace(
+        name="EvalDefaultFactoryParamName",
+        storage_name="eval_default_factory_param_name",
+    ),
     "EvalOrder": _YidlSimpleNamespace(name="EvalOrder", storage_name="eval_order"),
+    "EvalStatementOrder": _YidlSimpleNamespace(
+        name="EvalStatementOrder", storage_name="eval_statement_order"
+    ),
     "DiagnosticId": _YidlSimpleNamespace(
         name="DiagnosticId", storage_name="diagnostic_id"
     ),
@@ -3038,12 +3160,18 @@ for lifecycle_class in classes:
                 provider_has_default_factory=provider.has_default_factory,
                 param_name=param_name,
                 param_order=param_order,
+                consumer_eval_order=eval_order_by_id[consumer.field_id],
             ),
             policy=RejectDuplicate,
         )
 
     for eval_order, field_id in enumerate(ordered_field_ids):
         field = by_id[field_id]
+        state_slot = ""
+        if field.field_kind == "field":
+            state_slot = field.value_slot_name
+        elif field.field_kind == "managed":
+            state_slot = field.current_slot_name
         ctx.write(
             DefaultFactoryEvaluationStepsCollection,
             DefaultFactoryEvaluationStep(
@@ -3051,12 +3179,19 @@ for lifecycle_class in classes:
                 eval_owner=lifecycle_class.class_id,
                 eval_field_id=field.field_id,
                 eval_field_name=field.field_name,
+                eval_field_kind=field.field_kind,
+                eval_init=field.init,
+                eval_state_slot_name=state_slot,
+                eval_default_factory_param_name=(
+                    field.default_factory_param_name
+                ),
                 eval_order=eval_order,
+                eval_statement_order=100000 + eval_order,
             ),
             policy=RejectDuplicate,
         )""",
         file_name="tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl",
-        line_number=354,
+        line_number=366,
         keep_names=(
             "ctx",
             "ClassesCollection",
@@ -3077,6 +3212,7 @@ from __future__ import annotations
 
 import weakref
 
+from yidl.runtime.lifecycle import _HAS_DEFAULT_FACTORY
 from yidl.runtime.transaction_yidl import DEFAULT_TRANSACTION
 from yidl.runtime.transaction_yidl import TransactionManager
 
@@ -3088,7 +3224,7 @@ def build_lifecycle_class(decorated_cls, builder_params__astichi_param_hole__):
     astichi_hole(function_body)
     astichi_hole(return_statement)""",
         file_name="tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl",
-        line_number=530,
+        line_number=555,
     ),
     "BuilderParam": astichi_template(
         from_astichi_code(
@@ -3096,7 +3232,7 @@ def build_lifecycle_class(decorated_cls, builder_params__astichi_param_hole__):
 def astichi_params(*, value_name__astichi_arg__):
     pass""",
             file_name="tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl",
-            line_number=547,
+            line_number=573,
         )
     ),
     "TransactionManagerParam": astichi_template(
@@ -3105,14 +3241,14 @@ def astichi_params(*, value_name__astichi_arg__):
 def astichi_params(*, transaction_manager=None):
     pass""",
             file_name="tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl",
-            line_number=552,
+            line_number=578,
         )
     ),
     "StateSlotEntry": astichi_template(
         from_astichi_code(
             "astichi_bind_external(slot_name)",
             file_name="tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl",
-            line_number=557,
+            line_number=583,
         )
     ),
     "InitParamRequired": astichi_template(
@@ -3121,7 +3257,7 @@ def astichi_params(*, transaction_manager=None):
 def astichi_params(param_name__astichi_arg__: astichi_bind_external(annotation)):
     pass""",
             file_name="tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl",
-            line_number=561,
+            line_number=587,
         )
     ),
     "InitParamDefault": astichi_template(
@@ -3133,7 +3269,20 @@ def astichi_params(
 ):
     pass""",
             file_name="tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl",
-            line_number=566,
+            line_number=592,
+        )
+    ),
+    "InitParamDefaultFactory": astichi_template(
+        from_astichi_code(
+            """\
+def astichi_params(
+    param_name__astichi_arg__: astichi_bind_external(annotation)
+    = _HAS_DEFAULT_FACTORY
+):
+    pass""",
+            file_name="tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl",
+            line_number=600,
+            keep_names=("_HAS_DEFAULT_FACTORY",),
         )
     ),
     "PlainStateAssignment": astichi_template(
@@ -3144,7 +3293,18 @@ astichi_pass(state, outer_bind=True).astichi_ref(external=state_slot)._ = astich
     outer_bind=True,
 )""",
             file_name="tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl",
-            line_number=574,
+            line_number=610,
+        )
+    ),
+    "InitVarLocalDefaultAssignment": astichi_template(
+        from_astichi_code(
+            """\
+init_value_name__astichi_arg__ = astichi_pass(
+    default_value_name__astichi_arg__,
+    outer_bind=True,
+)""",
+            file_name="tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl",
+            line_number=617,
         )
     ),
     "PlainProperty": astichi_template(
@@ -3158,7 +3318,7 @@ def property_getter_name__astichi_arg__(self):
 def property_setter_name__astichi_arg__(self, value):
     self._y_state.astichi_ref(external=state_slot)._ = value""",
             file_name="tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl",
-            line_number=581,
+            line_number=624,
         )
     ),
     "ClassVarDefaultAssignment": astichi_template(
@@ -3169,7 +3329,7 @@ classvar_name__astichi_arg__ = astichi_pass(
     outer_bind=True,
 )""",
             file_name="tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl",
-            line_number=591,
+            line_number=634,
         )
     ),
     "ManagedCurrentStateAssignment": astichi_template(
@@ -3180,14 +3340,14 @@ astichi_pass(state, outer_bind=True).astichi_ref(external=current_slot)._ = asti
     outer_bind=True,
 )""",
             file_name="tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl",
-            line_number=598,
+            line_number=641,
         )
     ),
     "ManagedWorkingStateAssignment": astichi_template(
         from_astichi_code(
             "astichi_pass(state, outer_bind=True).astichi_ref(external=working_slot)._ = VOID",
             file_name="tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl",
-            line_number=605,
+            line_number=648,
             keep_names=("VOID",),
         )
     ),
@@ -3207,7 +3367,7 @@ def property_setter_name__astichi_arg__(self, value):
     state._y_ensure_working_transaction(astichi_bind_external(tx_index))
     state.astichi_ref(external=working_slot)._ = value""",
             file_name="tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl",
-            line_number=611,
+            line_number=654,
             keep_names=("VOID",),
         )
     ),
@@ -3226,7 +3386,7 @@ def property_setter_name__astichi_arg__(self, value):
         + astichi_bind_external(field_name)
     )""",
             file_name="tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl",
-            line_number=628,
+            line_number=671,
         )
     ),
     "ManagedWorkingProperty": astichi_template(
@@ -3245,7 +3405,7 @@ def property_setter_name__astichi_arg__(self, value):
     state._y_ensure_working_transaction(astichi_bind_external(tx_index))
     state.astichi_ref(external=working_slot)._ = value""",
             file_name="tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl",
-            line_number=642,
+            line_number=685,
             keep_names=("VOID",),
         )
     ),
@@ -3259,7 +3419,7 @@ if astichi_pass(tx_index, outer_bind=True) == astichi_bind_external(tx_index_val
         )
         astichi_pass(self, outer_bind=True).astichi_ref(external=working_slot)._ = VOID""",
             file_name="tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl",
-            line_number=659,
+            line_number=702,
             keep_names=("VOID",),
         )
     ),
@@ -3269,8 +3429,90 @@ if astichi_pass(tx_index, outer_bind=True) == astichi_bind_external(tx_index_val
 if astichi_pass(tx_index, outer_bind=True) == astichi_bind_external(tx_index_value):
     astichi_pass(self, outer_bind=True).astichi_ref(external=working_slot)._ = VOID""",
             file_name="tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl",
-            line_number=670,
+            line_number=713,
             keep_names=("VOID",),
+        )
+    ),
+    "StoredDefaultFactoryEvalInit": astichi_template(
+        from_astichi_code(
+            """\
+if astichi_pass(field_name__astichi_arg__, outer_bind=True) is _HAS_DEFAULT_FACTORY:
+    astichi_pass(field_name__astichi_arg__, outer_bind=True)._ = (
+        default_factory_name__astichi_arg__(
+            **astichi_hole(default_factory_args)
+        )
+    )
+astichi_pass(state, outer_bind=True).astichi_ref(external=state_slot)._ = astichi_pass(
+    field_name__astichi_arg__,
+    outer_bind=True,
+)""",
+            file_name="tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl",
+            line_number=720,
+            keep_names=("_HAS_DEFAULT_FACTORY",),
+        )
+    ),
+    "StoredDefaultFactoryEvalNoInit": astichi_template(
+        from_astichi_code(
+            """\
+field_name__astichi_arg__ = default_factory_name__astichi_arg__(
+    **astichi_hole(default_factory_args)
+)
+astichi_pass(state, outer_bind=True).astichi_ref(external=state_slot)._ = astichi_pass(
+    field_name__astichi_arg__,
+    outer_bind=True,
+)""",
+            file_name="tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl",
+            line_number=735,
+        )
+    ),
+    "InitVarDefaultFactoryEvalInit": astichi_template(
+        from_astichi_code(
+            """\
+if astichi_pass(field_name__astichi_arg__, outer_bind=True) is _HAS_DEFAULT_FACTORY:
+    astichi_pass(field_name__astichi_arg__, outer_bind=True)._ = (
+        default_factory_name__astichi_arg__(
+            **astichi_hole(default_factory_args)
+        )
+    )""",
+            file_name="tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl",
+            line_number=745,
+            keep_names=("_HAS_DEFAULT_FACTORY",),
+        )
+    ),
+    "InitVarDefaultFactoryEvalNoInit": astichi_template(
+        from_astichi_code(
+            """\
+field_name__astichi_arg__ = default_factory_name__astichi_arg__(
+    **astichi_hole(default_factory_args)
+)""",
+            file_name="tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl",
+            line_number=756,
+        )
+    ),
+    "DefaultFactoryStoredArg": astichi_template(
+        from_astichi_code(
+            """\
+astichi_funcargs(
+    param_name__astichi_arg__=astichi_pass(
+        self,
+        outer_bind=True,
+    ).astichi_ref(external=provider_name)
+)""",
+            file_name="tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl",
+            line_number=762,
+        )
+    ),
+    "DefaultFactoryLocalArg": astichi_template(
+        from_astichi_code(
+            """\
+astichi_funcargs(
+    param_name__astichi_arg__=astichi_pass(
+        provider_name__astichi_arg__,
+        outer_bind=True,
+    )
+)""",
+            file_name="tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl",
+            line_number=771,
         )
     ),
     "ClassBundle": astichi_template(
@@ -3482,8 +3724,14 @@ class working_facade_class_decl_name__astichi_arg__(
     __slots__ = ()
     astichi_hole(working_facade_properties)""",
             file_name="tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl",
-            line_number=677,
-            keep_names=("DEFAULT_TRANSACTION", "TransactionManager", "VOID", "weakref"),
+            line_number=780,
+            keep_names=(
+                "DEFAULT_TRANSACTION",
+                "TransactionManager",
+                "VOID",
+                "weakref",
+                "_HAS_DEFAULT_FACTORY",
+            ),
         )
     ),
     "ReturnClass": astichi_template(
@@ -3503,14 +3751,14 @@ return_class_module_ref__astichi_arg__.__module__ = astichi_pass(
 ).__module__
 return return_class_result_ref__astichi_arg__""",
             file_name="tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl",
-            line_number=887,
+            line_number=991,
         )
     ),
     "PassStatement": astichi_template(
         from_astichi_code(
             "pass",
             file_name="tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl",
-            line_number=903,
+            line_number=1007,
         )
     ),
 }
@@ -3618,6 +3866,34 @@ ASSEMBLY_CONTRIBUTIONS = {
         bindings=(
             BindingSpec(
                 kind="ident", name="value_name", value=ValueRef("DefaultValueParamName")
+            ),
+        ),
+    ),
+    "FieldDefaultFactoryBuilderParam": ContributionSpec(
+        name="FieldDefaultFactoryBuilderParam",
+        source_name="BuilderParam",
+        source_kind="resource",
+        build_name="FieldDefaultFactoryBuilderParam",
+        index=ValueRef("FieldOrder"),
+        order=ValueRef("FieldOrder"),
+        target=TargetSpec(
+            name="builder_params",
+            paths=(
+                TargetPathSpec(
+                    kind="build",
+                    path=PathSpec(
+                        segments=(
+                            PathSegmentSpec(kind="name", name="Root", indexes=()),
+                        )
+                    ),
+                ),
+            ),
+        ),
+        bindings=(
+            BindingSpec(
+                kind="ident",
+                name="value_name",
+                value=ValueRef("DefaultFactoryParamName"),
             ),
         ),
     ),
@@ -3967,6 +4243,33 @@ ASSEMBLY_CONTRIBUTIONS = {
             ),
         ),
     ),
+    "PlainInitParamDefaultFactory": ContributionSpec(
+        name="PlainInitParamDefaultFactory",
+        source_name="InitParamDefaultFactory",
+        source_kind="resource",
+        build_name="PlainInitParam",
+        index=ValueRef("FieldOrder"),
+        order=ValueRef("FieldOrder"),
+        target=TargetSpec(
+            name="init_params",
+            paths=(
+                TargetPathSpec(
+                    kind="build",
+                    path=PathSpec(
+                        segments=(
+                            PathSegmentSpec(kind="name", name="ClassDef", indexes=()),
+                        )
+                    ),
+                ),
+            ),
+        ),
+        bindings=(
+            BindingSpec(kind="ident", name="param_name", value=ValueRef("FieldName")),
+            BindingSpec(
+                kind="external", name="annotation", value=ValueRef("Annotation")
+            ),
+        ),
+    ),
     "InitVarParamRequired": ContributionSpec(
         name="InitVarParamRequired",
         source_name="InitParamRequired",
@@ -4026,6 +4329,64 @@ ASSEMBLY_CONTRIBUTIONS = {
             ),
         ),
     ),
+    "InitVarParamDefaultFactory": ContributionSpec(
+        name="InitVarParamDefaultFactory",
+        source_name="InitParamDefaultFactory",
+        source_kind="resource",
+        build_name="InitVarParam",
+        index=ValueRef("FieldOrder"),
+        order=ValueRef("FieldOrder"),
+        target=TargetSpec(
+            name="init_params",
+            paths=(
+                TargetPathSpec(
+                    kind="build",
+                    path=PathSpec(
+                        segments=(
+                            PathSegmentSpec(kind="name", name="ClassDef", indexes=()),
+                        )
+                    ),
+                ),
+            ),
+        ),
+        bindings=(
+            BindingSpec(kind="ident", name="param_name", value=ValueRef("FieldName")),
+            BindingSpec(
+                kind="external", name="annotation", value=ValueRef("Annotation")
+            ),
+        ),
+    ),
+    "InitVarLocalDefault": ContributionSpec(
+        name="InitVarLocalDefault",
+        source_name="InitVarLocalDefaultAssignment",
+        source_kind="resource",
+        build_name="InitVarLocalDefault",
+        index=ValueRef("FieldOrder"),
+        order=ValueRef("FieldOrder"),
+        target=TargetSpec(
+            name="state_init_body",
+            paths=(
+                TargetPathSpec(
+                    kind="build",
+                    path=PathSpec(
+                        segments=(
+                            PathSegmentSpec(kind="name", name="ClassDef", indexes=()),
+                        )
+                    ),
+                ),
+            ),
+        ),
+        bindings=(
+            BindingSpec(
+                kind="ident", name="init_value_name", value=ValueRef("FieldName")
+            ),
+            BindingSpec(
+                kind="ident",
+                name="default_value_name",
+                value=ValueRef("DefaultValueParamName"),
+            ),
+        ),
+    ),
     "PlainInitAssignment": ContributionSpec(
         name="PlainInitAssignment",
         source_name="PlainStateAssignment",
@@ -4049,6 +4410,37 @@ ASSEMBLY_CONTRIBUTIONS = {
         bindings=(
             BindingSpec(
                 kind="ident", name="init_value_name", value=ValueRef("FieldName")
+            ),
+            BindingSpec(
+                kind="external", name="state_slot", value=ValueRef("ValueSlotName")
+            ),
+        ),
+    ),
+    "PlainDefaultAssignment": ContributionSpec(
+        name="PlainDefaultAssignment",
+        source_name="PlainStateAssignment",
+        source_kind="resource",
+        build_name="PlainDefaultAssignment",
+        index=ValueRef("FieldOrder"),
+        order=ValueRef("FieldOrder"),
+        target=TargetSpec(
+            name="state_init_body",
+            paths=(
+                TargetPathSpec(
+                    kind="build",
+                    path=PathSpec(
+                        segments=(
+                            PathSegmentSpec(kind="name", name="ClassDef", indexes=()),
+                        )
+                    ),
+                ),
+            ),
+        ),
+        bindings=(
+            BindingSpec(
+                kind="ident",
+                name="init_value_name",
+                value=ValueRef("DefaultValueParamName"),
             ),
             BindingSpec(
                 kind="external", name="state_slot", value=ValueRef("ValueSlotName")
@@ -4207,6 +4599,60 @@ ASSEMBLY_CONTRIBUTIONS = {
             ),
         ),
     ),
+    "ManagedInitParamRequired": ContributionSpec(
+        name="ManagedInitParamRequired",
+        source_name="InitParamRequired",
+        source_kind="resource",
+        build_name="ManagedInitParam",
+        index=ValueRef("FieldOrder"),
+        order=ValueRef("FieldOrder"),
+        target=TargetSpec(
+            name="init_params",
+            paths=(
+                TargetPathSpec(
+                    kind="build",
+                    path=PathSpec(
+                        segments=(
+                            PathSegmentSpec(kind="name", name="ClassDef", indexes=()),
+                        )
+                    ),
+                ),
+            ),
+        ),
+        bindings=(
+            BindingSpec(kind="ident", name="param_name", value=ValueRef("FieldName")),
+            BindingSpec(
+                kind="external", name="annotation", value=ValueRef("Annotation")
+            ),
+        ),
+    ),
+    "ManagedInitParamDefaultFactory": ContributionSpec(
+        name="ManagedInitParamDefaultFactory",
+        source_name="InitParamDefaultFactory",
+        source_kind="resource",
+        build_name="ManagedInitParam",
+        index=ValueRef("FieldOrder"),
+        order=ValueRef("FieldOrder"),
+        target=TargetSpec(
+            name="init_params",
+            paths=(
+                TargetPathSpec(
+                    kind="build",
+                    path=PathSpec(
+                        segments=(
+                            PathSegmentSpec(kind="name", name="ClassDef", indexes=()),
+                        )
+                    ),
+                ),
+            ),
+        ),
+        bindings=(
+            BindingSpec(kind="ident", name="param_name", value=ValueRef("FieldName")),
+            BindingSpec(
+                kind="external", name="annotation", value=ValueRef("Annotation")
+            ),
+        ),
+    ),
     "ManagedCurrentInitAssignment": ContributionSpec(
         name="ManagedCurrentInitAssignment",
         source_name="ManagedCurrentStateAssignment",
@@ -4230,6 +4676,37 @@ ASSEMBLY_CONTRIBUTIONS = {
         bindings=(
             BindingSpec(
                 kind="ident", name="init_value_name", value=ValueRef("FieldName")
+            ),
+            BindingSpec(
+                kind="external", name="current_slot", value=ValueRef("CurrentSlotName")
+            ),
+        ),
+    ),
+    "ManagedCurrentDefaultAssignment": ContributionSpec(
+        name="ManagedCurrentDefaultAssignment",
+        source_name="ManagedCurrentStateAssignment",
+        source_kind="resource",
+        build_name="ManagedCurrentDefaultAssignment",
+        index=ValueRef("FieldOrder"),
+        order=ValueRef("FieldOrder"),
+        target=TargetSpec(
+            name="state_init_body",
+            paths=(
+                TargetPathSpec(
+                    kind="build",
+                    path=PathSpec(
+                        segments=(
+                            PathSegmentSpec(kind="name", name="ClassDef", indexes=()),
+                        )
+                    ),
+                ),
+            ),
+        ),
+        bindings=(
+            BindingSpec(
+                kind="ident",
+                name="init_value_name",
+                value=ValueRef("DefaultValueParamName"),
             ),
             BindingSpec(
                 kind="external", name="current_slot", value=ValueRef("CurrentSlotName")
@@ -4445,6 +4922,200 @@ ASSEMBLY_CONTRIBUTIONS = {
             ),
         ),
     ),
+    "StoredDefaultFactoryEvalInitContribution": ContributionSpec(
+        name="StoredDefaultFactoryEvalInitContribution",
+        source_name="StoredDefaultFactoryEvalInit",
+        source_kind="resource",
+        build_name="DefaultFactoryEval",
+        index=ValueRef("EvalOrder"),
+        order=ValueRef("EvalStatementOrder"),
+        target=TargetSpec(
+            name="state_init_body",
+            paths=(
+                TargetPathSpec(
+                    kind="build",
+                    path=PathSpec(
+                        segments=(
+                            PathSegmentSpec(kind="name", name="ClassDef", indexes=()),
+                        )
+                    ),
+                ),
+            ),
+        ),
+        bindings=(
+            BindingSpec(
+                kind="ident", name="field_name", value=ValueRef("EvalFieldName")
+            ),
+            BindingSpec(
+                kind="ident",
+                name="default_factory_name",
+                value=ValueRef("EvalDefaultFactoryParamName"),
+            ),
+            BindingSpec(
+                kind="external", name="state_slot", value=ValueRef("EvalStateSlotName")
+            ),
+        ),
+    ),
+    "StoredDefaultFactoryEvalNoInitContribution": ContributionSpec(
+        name="StoredDefaultFactoryEvalNoInitContribution",
+        source_name="StoredDefaultFactoryEvalNoInit",
+        source_kind="resource",
+        build_name="DefaultFactoryEval",
+        index=ValueRef("EvalOrder"),
+        order=ValueRef("EvalStatementOrder"),
+        target=TargetSpec(
+            name="state_init_body",
+            paths=(
+                TargetPathSpec(
+                    kind="build",
+                    path=PathSpec(
+                        segments=(
+                            PathSegmentSpec(kind="name", name="ClassDef", indexes=()),
+                        )
+                    ),
+                ),
+            ),
+        ),
+        bindings=(
+            BindingSpec(
+                kind="ident", name="field_name", value=ValueRef("EvalFieldName")
+            ),
+            BindingSpec(
+                kind="ident",
+                name="default_factory_name",
+                value=ValueRef("EvalDefaultFactoryParamName"),
+            ),
+            BindingSpec(
+                kind="external", name="state_slot", value=ValueRef("EvalStateSlotName")
+            ),
+        ),
+    ),
+    "InitVarDefaultFactoryEvalInitContribution": ContributionSpec(
+        name="InitVarDefaultFactoryEvalInitContribution",
+        source_name="InitVarDefaultFactoryEvalInit",
+        source_kind="resource",
+        build_name="DefaultFactoryEval",
+        index=ValueRef("EvalOrder"),
+        order=ValueRef("EvalStatementOrder"),
+        target=TargetSpec(
+            name="state_init_body",
+            paths=(
+                TargetPathSpec(
+                    kind="build",
+                    path=PathSpec(
+                        segments=(
+                            PathSegmentSpec(kind="name", name="ClassDef", indexes=()),
+                        )
+                    ),
+                ),
+            ),
+        ),
+        bindings=(
+            BindingSpec(
+                kind="ident", name="field_name", value=ValueRef("EvalFieldName")
+            ),
+            BindingSpec(
+                kind="ident",
+                name="default_factory_name",
+                value=ValueRef("EvalDefaultFactoryParamName"),
+            ),
+        ),
+    ),
+    "InitVarDefaultFactoryEvalNoInitContribution": ContributionSpec(
+        name="InitVarDefaultFactoryEvalNoInitContribution",
+        source_name="InitVarDefaultFactoryEvalNoInit",
+        source_kind="resource",
+        build_name="DefaultFactoryEval",
+        index=ValueRef("EvalOrder"),
+        order=ValueRef("EvalStatementOrder"),
+        target=TargetSpec(
+            name="state_init_body",
+            paths=(
+                TargetPathSpec(
+                    kind="build",
+                    path=PathSpec(
+                        segments=(
+                            PathSegmentSpec(kind="name", name="ClassDef", indexes=()),
+                        )
+                    ),
+                ),
+            ),
+        ),
+        bindings=(
+            BindingSpec(
+                kind="ident", name="field_name", value=ValueRef("EvalFieldName")
+            ),
+            BindingSpec(
+                kind="ident",
+                name="default_factory_name",
+                value=ValueRef("EvalDefaultFactoryParamName"),
+            ),
+        ),
+    ),
+    "DefaultFactoryStoredArgContribution": ContributionSpec(
+        name="DefaultFactoryStoredArgContribution",
+        source_name="DefaultFactoryStoredArg",
+        source_kind="resource",
+        build_name="DefaultFactoryArg",
+        index=TupleValueRef((ValueRef("ConsumerEvalOrder"), ValueRef("ParamOrder"))),
+        order=ValueRef("ParamOrder"),
+        target=TargetSpec(
+            name="default_factory_args",
+            paths=(
+                TargetPathSpec(
+                    kind="build",
+                    path=PathSpec(
+                        segments=(
+                            PathSegmentSpec(kind="name", name="ClassDef", indexes=()),
+                            PathSegmentSpec(
+                                kind="name",
+                                name="DefaultFactoryEval",
+                                indexes=(ValueRef("ConsumerEvalOrder"),),
+                            ),
+                        )
+                    ),
+                ),
+            ),
+        ),
+        bindings=(
+            BindingSpec(kind="ident", name="param_name", value=ValueRef("ParamName")),
+            BindingSpec(
+                kind="external", name="provider_name", value=ValueRef("ProviderName")
+            ),
+        ),
+    ),
+    "DefaultFactoryLocalArgContribution": ContributionSpec(
+        name="DefaultFactoryLocalArgContribution",
+        source_name="DefaultFactoryLocalArg",
+        source_kind="resource",
+        build_name="DefaultFactoryArg",
+        index=TupleValueRef((ValueRef("ConsumerEvalOrder"), ValueRef("ParamOrder"))),
+        order=ValueRef("ParamOrder"),
+        target=TargetSpec(
+            name="default_factory_args",
+            paths=(
+                TargetPathSpec(
+                    kind="build",
+                    path=PathSpec(
+                        segments=(
+                            PathSegmentSpec(kind="name", name="ClassDef", indexes=()),
+                            PathSegmentSpec(
+                                kind="name",
+                                name="DefaultFactoryEval",
+                                indexes=(ValueRef("ConsumerEvalOrder"),),
+                            ),
+                        )
+                    ),
+                ),
+            ),
+        ),
+        bindings=(
+            BindingSpec(kind="ident", name="param_name", value=ValueRef("ParamName")),
+            BindingSpec(
+                kind="ident", name="provider_name", value=ValueRef("ProviderName")
+            ),
+        ),
+    ),
 }
 ASSEMBLY_MATCHERS = {
     "BuilderParamContributions": ContributionMatcherSpec(
@@ -4490,6 +5161,14 @@ ASSEMBLY_MATCHERS = {
                     left=ValueRef("HasDefault"), right=LiteralValueRef(True)
                 ),
                 contribution_name="FieldDefaultBuilderParam",
+                weight=1.0,
+            ),
+            ContributionRuleSpec(
+                name="has_default_factory",
+                condition=EqConditionSpec(
+                    left=ValueRef("HasDefaultFactory"), right=LiteralValueRef(True)
+                ),
+                contribution_name="FieldDefaultFactoryBuilderParam",
                 weight=1.0,
             ),
         ),
@@ -4633,6 +5312,10 @@ ASSEMBLY_MATCHERS = {
                         EqConditionSpec(
                             left=ValueRef("HasDefault"), right=LiteralValueRef(False)
                         ),
+                        EqConditionSpec(
+                            left=ValueRef("HasDefaultFactory"),
+                            right=LiteralValueRef(False),
+                        ),
                     )
                 ),
                 contribution_name="PlainInitParamRequired",
@@ -4648,9 +5331,29 @@ ASSEMBLY_MATCHERS = {
                         EqConditionSpec(
                             left=ValueRef("HasDefault"), right=LiteralValueRef(True)
                         ),
+                        EqConditionSpec(
+                            left=ValueRef("HasDefaultFactory"),
+                            right=LiteralValueRef(False),
+                        ),
                     )
                 ),
                 contribution_name="PlainInitParamDefault",
+                weight=1.0,
+            ),
+            ContributionRuleSpec(
+                name="default_factory",
+                condition=AndConditionSpec(
+                    items=(
+                        EqConditionSpec(
+                            left=ValueRef("Init"), right=LiteralValueRef(True)
+                        ),
+                        EqConditionSpec(
+                            left=ValueRef("HasDefaultFactory"),
+                            right=LiteralValueRef(True),
+                        ),
+                    )
+                ),
+                contribution_name="PlainInitParamDefaultFactory",
                 weight=1.0,
             ),
         ),
@@ -4674,6 +5377,10 @@ ASSEMBLY_MATCHERS = {
                         EqConditionSpec(
                             left=ValueRef("HasDefault"), right=LiteralValueRef(False)
                         ),
+                        EqConditionSpec(
+                            left=ValueRef("HasDefaultFactory"),
+                            right=LiteralValueRef(False),
+                        ),
                     )
                 ),
                 contribution_name="InitVarParamRequired",
@@ -4689,9 +5396,59 @@ ASSEMBLY_MATCHERS = {
                         EqConditionSpec(
                             left=ValueRef("HasDefault"), right=LiteralValueRef(True)
                         ),
+                        EqConditionSpec(
+                            left=ValueRef("HasDefaultFactory"),
+                            right=LiteralValueRef(False),
+                        ),
                     )
                 ),
                 contribution_name="InitVarParamDefault",
+                weight=1.0,
+            ),
+            ContributionRuleSpec(
+                name="default_factory",
+                condition=AndConditionSpec(
+                    items=(
+                        EqConditionSpec(
+                            left=ValueRef("Init"), right=LiteralValueRef(True)
+                        ),
+                        EqConditionSpec(
+                            left=ValueRef("HasDefaultFactory"),
+                            right=LiteralValueRef(True),
+                        ),
+                    )
+                ),
+                contribution_name="InitVarParamDefaultFactory",
+                weight=1.0,
+            ),
+        ),
+    ),
+    "InitVarLocalDefaultContributions": ContributionMatcherSpec(
+        name="InitVarLocalDefaultContributions",
+        inputs=(
+            AssemblyInputSpec(
+                name="field", collection_name="InitVarFields", collection=None
+            ),
+        ),
+        default_contribution_name=None,
+        rules=(
+            ContributionRuleSpec(
+                name="default_value",
+                condition=AndConditionSpec(
+                    items=(
+                        EqConditionSpec(
+                            left=ValueRef("Init"), right=LiteralValueRef(False)
+                        ),
+                        EqConditionSpec(
+                            left=ValueRef("HasDefault"), right=LiteralValueRef(True)
+                        ),
+                        EqConditionSpec(
+                            left=ValueRef("HasDefaultFactory"),
+                            right=LiteralValueRef(False),
+                        ),
+                    )
+                ),
+                contribution_name="InitVarLocalDefault",
                 weight=1.0,
             ),
         ),
@@ -4707,10 +5464,37 @@ ASSEMBLY_MATCHERS = {
         rules=(
             ContributionRuleSpec(
                 name="init_field",
-                condition=EqConditionSpec(
-                    left=ValueRef("Init"), right=LiteralValueRef(True)
+                condition=AndConditionSpec(
+                    items=(
+                        EqConditionSpec(
+                            left=ValueRef("Init"), right=LiteralValueRef(True)
+                        ),
+                        EqConditionSpec(
+                            left=ValueRef("HasDefaultFactory"),
+                            right=LiteralValueRef(False),
+                        ),
+                    )
                 ),
                 contribution_name="PlainInitAssignment",
+                weight=1.0,
+            ),
+            ContributionRuleSpec(
+                name="default_value",
+                condition=AndConditionSpec(
+                    items=(
+                        EqConditionSpec(
+                            left=ValueRef("Init"), right=LiteralValueRef(False)
+                        ),
+                        EqConditionSpec(
+                            left=ValueRef("HasDefault"), right=LiteralValueRef(True)
+                        ),
+                        EqConditionSpec(
+                            left=ValueRef("HasDefaultFactory"),
+                            right=LiteralValueRef(False),
+                        ),
+                    )
+                ),
+                contribution_name="PlainDefaultAssignment",
                 weight=1.0,
             ),
         ),
@@ -4774,6 +5558,25 @@ ASSEMBLY_MATCHERS = {
         default_contribution_name=None,
         rules=(
             ContributionRuleSpec(
+                name="required",
+                condition=AndConditionSpec(
+                    items=(
+                        EqConditionSpec(
+                            left=ValueRef("Init"), right=LiteralValueRef(True)
+                        ),
+                        EqConditionSpec(
+                            left=ValueRef("HasDefault"), right=LiteralValueRef(False)
+                        ),
+                        EqConditionSpec(
+                            left=ValueRef("HasDefaultFactory"),
+                            right=LiteralValueRef(False),
+                        ),
+                    )
+                ),
+                contribution_name="ManagedInitParamRequired",
+                weight=1.0,
+            ),
+            ContributionRuleSpec(
                 name="default_value",
                 condition=AndConditionSpec(
                     items=(
@@ -4783,9 +5586,29 @@ ASSEMBLY_MATCHERS = {
                         EqConditionSpec(
                             left=ValueRef("HasDefault"), right=LiteralValueRef(True)
                         ),
+                        EqConditionSpec(
+                            left=ValueRef("HasDefaultFactory"),
+                            right=LiteralValueRef(False),
+                        ),
                     )
                 ),
                 contribution_name="ManagedInitParamDefault",
+                weight=1.0,
+            ),
+            ContributionRuleSpec(
+                name="default_factory",
+                condition=AndConditionSpec(
+                    items=(
+                        EqConditionSpec(
+                            left=ValueRef("Init"), right=LiteralValueRef(True)
+                        ),
+                        EqConditionSpec(
+                            left=ValueRef("HasDefaultFactory"),
+                            right=LiteralValueRef(True),
+                        ),
+                    )
+                ),
+                contribution_name="ManagedInitParamDefaultFactory",
                 weight=1.0,
             ),
         ),
@@ -4801,10 +5624,37 @@ ASSEMBLY_MATCHERS = {
         rules=(
             ContributionRuleSpec(
                 name="init_field",
-                condition=EqConditionSpec(
-                    left=ValueRef("Init"), right=LiteralValueRef(True)
+                condition=AndConditionSpec(
+                    items=(
+                        EqConditionSpec(
+                            left=ValueRef("Init"), right=LiteralValueRef(True)
+                        ),
+                        EqConditionSpec(
+                            left=ValueRef("HasDefaultFactory"),
+                            right=LiteralValueRef(False),
+                        ),
+                    )
                 ),
                 contribution_name="ManagedCurrentInitAssignment",
+                weight=1.0,
+            ),
+            ContributionRuleSpec(
+                name="default_value",
+                condition=AndConditionSpec(
+                    items=(
+                        EqConditionSpec(
+                            left=ValueRef("Init"), right=LiteralValueRef(False)
+                        ),
+                        EqConditionSpec(
+                            left=ValueRef("HasDefault"), right=LiteralValueRef(True)
+                        ),
+                        EqConditionSpec(
+                            left=ValueRef("HasDefaultFactory"),
+                            right=LiteralValueRef(False),
+                        ),
+                    )
+                ),
+                contribution_name="ManagedCurrentDefaultAssignment",
                 weight=1.0,
             ),
         ),
@@ -4878,6 +5728,136 @@ ASSEMBLY_MATCHERS = {
         ),
         default_contribution_name="ManagedRollback",
         rules=(),
+    ),
+    "DefaultFactoryEvalContributions": ContributionMatcherSpec(
+        name="DefaultFactoryEvalContributions",
+        inputs=(
+            AssemblyInputSpec(
+                name="step",
+                collection_name="DefaultFactoryEvaluationSteps",
+                collection=None,
+            ),
+        ),
+        default_contribution_name=None,
+        rules=(
+            ContributionRuleSpec(
+                name="field_init",
+                condition=AndConditionSpec(
+                    items=(
+                        EqConditionSpec(
+                            left=ValueRef("EvalFieldKind"),
+                            right=LiteralValueRef("field"),
+                        ),
+                        EqConditionSpec(
+                            left=ValueRef("EvalInit"), right=LiteralValueRef(True)
+                        ),
+                    )
+                ),
+                contribution_name="StoredDefaultFactoryEvalInitContribution",
+                weight=1.0,
+            ),
+            ContributionRuleSpec(
+                name="field_no_init",
+                condition=AndConditionSpec(
+                    items=(
+                        EqConditionSpec(
+                            left=ValueRef("EvalFieldKind"),
+                            right=LiteralValueRef("field"),
+                        ),
+                        EqConditionSpec(
+                            left=ValueRef("EvalInit"), right=LiteralValueRef(False)
+                        ),
+                    )
+                ),
+                contribution_name="StoredDefaultFactoryEvalNoInitContribution",
+                weight=1.0,
+            ),
+            ContributionRuleSpec(
+                name="managed_init",
+                condition=AndConditionSpec(
+                    items=(
+                        EqConditionSpec(
+                            left=ValueRef("EvalFieldKind"),
+                            right=LiteralValueRef("managed"),
+                        ),
+                        EqConditionSpec(
+                            left=ValueRef("EvalInit"), right=LiteralValueRef(True)
+                        ),
+                    )
+                ),
+                contribution_name="StoredDefaultFactoryEvalInitContribution",
+                weight=1.0,
+            ),
+            ContributionRuleSpec(
+                name="managed_no_init",
+                condition=AndConditionSpec(
+                    items=(
+                        EqConditionSpec(
+                            left=ValueRef("EvalFieldKind"),
+                            right=LiteralValueRef("managed"),
+                        ),
+                        EqConditionSpec(
+                            left=ValueRef("EvalInit"), right=LiteralValueRef(False)
+                        ),
+                    )
+                ),
+                contribution_name="StoredDefaultFactoryEvalNoInitContribution",
+                weight=1.0,
+            ),
+            ContributionRuleSpec(
+                name="initvar_init",
+                condition=AndConditionSpec(
+                    items=(
+                        EqConditionSpec(
+                            left=ValueRef("EvalFieldKind"),
+                            right=LiteralValueRef("initvar"),
+                        ),
+                        EqConditionSpec(
+                            left=ValueRef("EvalInit"), right=LiteralValueRef(True)
+                        ),
+                    )
+                ),
+                contribution_name="InitVarDefaultFactoryEvalInitContribution",
+                weight=1.0,
+            ),
+            ContributionRuleSpec(
+                name="initvar_no_init",
+                condition=AndConditionSpec(
+                    items=(
+                        EqConditionSpec(
+                            left=ValueRef("EvalFieldKind"),
+                            right=LiteralValueRef("initvar"),
+                        ),
+                        EqConditionSpec(
+                            left=ValueRef("EvalInit"), right=LiteralValueRef(False)
+                        ),
+                    )
+                ),
+                contribution_name="InitVarDefaultFactoryEvalNoInitContribution",
+                weight=1.0,
+            ),
+        ),
+    ),
+    "DefaultFactoryArgContributions": ContributionMatcherSpec(
+        name="DefaultFactoryArgContributions",
+        inputs=(
+            AssemblyInputSpec(
+                name="dep",
+                collection_name="DefaultFactoryDependencies",
+                collection=None,
+            ),
+        ),
+        default_contribution_name="DefaultFactoryStoredArgContribution",
+        rules=(
+            ContributionRuleSpec(
+                name="local_provider",
+                condition=EqConditionSpec(
+                    left=ValueRef("ProviderFieldKind"), right=LiteralValueRef("initvar")
+                ),
+                contribution_name="DefaultFactoryLocalArgContribution",
+                weight=1.0,
+            ),
+        ),
     ),
 }
 ASSEMBLY_EDGES = {
@@ -5163,6 +6143,23 @@ ASSEMBLY_EDGES = {
         ),
         matcher_name="ManagedInitParamContributions",
     ),
+    "ClassProduction.initvar_local_defaults": AssemblyEdgeSpec(
+        name="ClassProduction.initvar_local_defaults",
+        context_inputs=(
+            AssemblyInputSpec(
+                name="lifecycle_class", collection_name="Classes", collection=None
+            ),
+        ),
+        from_inputs=(
+            AssemblyInputSpec(
+                name="field", collection_name="InitVarFields", collection=None
+            ),
+        ),
+        condition=EqConditionSpec(
+            left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
+        ),
+        matcher_name="InitVarLocalDefaultContributions",
+    ),
     "ClassProduction.plain_init_assignments": AssemblyEdgeSpec(
         name="ClassProduction.plain_init_assignments",
         context_inputs=(
@@ -5213,6 +6210,44 @@ ASSEMBLY_EDGES = {
             left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
         ),
         matcher_name="ManagedWorkingInitAssignmentContributions",
+    ),
+    "ClassProduction.default_factory_evals": AssemblyEdgeSpec(
+        name="ClassProduction.default_factory_evals",
+        context_inputs=(
+            AssemblyInputSpec(
+                name="lifecycle_class", collection_name="Classes", collection=None
+            ),
+        ),
+        from_inputs=(
+            AssemblyInputSpec(
+                name="step",
+                collection_name="DefaultFactoryEvaluationSteps",
+                collection=None,
+            ),
+        ),
+        condition=EqConditionSpec(
+            left=ValueRef("EvalOwner"), right=ValueRef("ClassId")
+        ),
+        matcher_name="DefaultFactoryEvalContributions",
+    ),
+    "ClassProduction.default_factory_args": AssemblyEdgeSpec(
+        name="ClassProduction.default_factory_args",
+        context_inputs=(
+            AssemblyInputSpec(
+                name="lifecycle_class", collection_name="Classes", collection=None
+            ),
+        ),
+        from_inputs=(
+            AssemblyInputSpec(
+                name="dep",
+                collection_name="DefaultFactoryDependencies",
+                collection=None,
+            ),
+        ),
+        condition=EqConditionSpec(
+            left=ValueRef("DependencyOwner"), right=ValueRef("ClassId")
+        ),
+        matcher_name="DefaultFactoryArgContributions",
     ),
     "ClassProduction.plain_properties": AssemblyEdgeSpec(
         name="ClassProduction.plain_properties",
@@ -5831,6 +6866,29 @@ ASSEMBLY_PRODUCTIONS = {
             ),
             InlineApplySpec(
                 edge=AssemblyEdgeSpec(
+                    name="ClassProduction.initvar_local_defaults",
+                    context_inputs=(
+                        AssemblyInputSpec(
+                            name="lifecycle_class",
+                            collection_name="Classes",
+                            collection=None,
+                        ),
+                    ),
+                    from_inputs=(
+                        AssemblyInputSpec(
+                            name="field",
+                            collection_name="InitVarFields",
+                            collection=None,
+                        ),
+                    ),
+                    condition=EqConditionSpec(
+                        left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
+                    ),
+                    matcher_name="InitVarLocalDefaultContributions",
+                )
+            ),
+            InlineApplySpec(
+                edge=AssemblyEdgeSpec(
                     name="ClassProduction.plain_init_assignments",
                     context_inputs=(
                         AssemblyInputSpec(
@@ -5894,6 +6952,52 @@ ASSEMBLY_PRODUCTIONS = {
                         left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
                     ),
                     matcher_name="ManagedWorkingInitAssignmentContributions",
+                )
+            ),
+            InlineApplySpec(
+                edge=AssemblyEdgeSpec(
+                    name="ClassProduction.default_factory_evals",
+                    context_inputs=(
+                        AssemblyInputSpec(
+                            name="lifecycle_class",
+                            collection_name="Classes",
+                            collection=None,
+                        ),
+                    ),
+                    from_inputs=(
+                        AssemblyInputSpec(
+                            name="step",
+                            collection_name="DefaultFactoryEvaluationSteps",
+                            collection=None,
+                        ),
+                    ),
+                    condition=EqConditionSpec(
+                        left=ValueRef("EvalOwner"), right=ValueRef("ClassId")
+                    ),
+                    matcher_name="DefaultFactoryEvalContributions",
+                )
+            ),
+            InlineApplySpec(
+                edge=AssemblyEdgeSpec(
+                    name="ClassProduction.default_factory_args",
+                    context_inputs=(
+                        AssemblyInputSpec(
+                            name="lifecycle_class",
+                            collection_name="Classes",
+                            collection=None,
+                        ),
+                    ),
+                    from_inputs=(
+                        AssemblyInputSpec(
+                            name="dep",
+                            collection_name="DefaultFactoryDependencies",
+                            collection=None,
+                        ),
+                    ),
+                    condition=EqConditionSpec(
+                        left=ValueRef("DependencyOwner"), right=ValueRef("ClassId")
+                    ),
+                    matcher_name="DefaultFactoryArgContributions",
                 )
             ),
             InlineApplySpec(

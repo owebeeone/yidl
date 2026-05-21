@@ -1,5 +1,6 @@
 from __future__ import annotations
 import weakref
+from yidl.runtime.lifecycle import _HAS_DEFAULT_FACTORY
 from yidl.runtime.transaction_yidl import DEFAULT_TRANSACTION
 from yidl.runtime.transaction_yidl import TransactionManager
 

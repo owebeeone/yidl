@@ -302,12 +302,18 @@ concept LifecycleBase {
     property ProviderHasDefaultFactory: bool = False
     property ParamName: str
     property ParamOrder: int = 0
+    property ConsumerEvalOrder: int = 0
 
     property EvalStepId: str
     property EvalOwner: str
     property EvalFieldId: str
     property EvalFieldName: str
+    property EvalFieldKind: str = ""
+    property EvalInit: bool = True
+    property EvalStateSlotName: str = ""
+    property EvalDefaultFactoryParamName: str = ""
     property EvalOrder: int = 0
+    property EvalStatementOrder: int = 0
 
     property DiagnosticId: str
     property DiagnosticOwner: str
@@ -326,6 +332,7 @@ concept LifecycleBase {
         ProviderHasDefaultFactory
         ParamName
         ParamOrder
+        ConsumerEvalOrder
     }
 
     record DefaultFactoryEvaluationStep {
@@ -333,7 +340,12 @@ concept LifecycleBase {
         EvalOwner
         EvalFieldId
         EvalFieldName
+        EvalFieldKind
+        EvalInit
+        EvalStateSlotName
+        EvalDefaultFactoryParamName
         EvalOrder
+        EvalStatementOrder
     }
 
     record DefaultFactoryDiagnostic {
@@ -491,12 +503,18 @@ concept LifecycleBase {
                         provider_has_default_factory=provider.has_default_factory,
                         param_name=param_name,
                         param_order=param_order,
+                        consumer_eval_order=eval_order_by_id[consumer.field_id],
                     ),
                     policy=RejectDuplicate,
                 )
 
             for eval_order, field_id in enumerate(ordered_field_ids):
                 field = by_id[field_id]
+                state_slot = ""
+                if field.field_kind == "field":
+                    state_slot = field.value_slot_name
+                elif field.field_kind == "managed":
+                    state_slot = field.current_slot_name
                 ctx.write(
                     DefaultFactoryEvaluationStepsCollection,
                     DefaultFactoryEvaluationStep(
@@ -504,7 +522,14 @@ concept LifecycleBase {
                         eval_owner=lifecycle_class.class_id,
                         eval_field_id=field.field_id,
                         eval_field_name=field.field_name,
+                        eval_field_kind=field.field_kind,
+                        eval_init=field.init,
+                        eval_state_slot_name=state_slot,
+                        eval_default_factory_param_name=(
+                            field.default_factory_param_name
+                        ),
                         eval_order=eval_order,
+                        eval_statement_order=100000 + eval_order,
                     ),
                     policy=RejectDuplicate,
                 )
@@ -531,6 +556,7 @@ concept LifecycleBase {
 
         import weakref
 
+        from yidl.runtime.lifecycle import _HAS_DEFAULT_FACTORY
         from yidl.runtime.transaction_yidl import DEFAULT_TRANSACTION
         from yidl.runtime.transaction_yidl import TransactionManager
 
@@ -570,9 +596,26 @@ concept LifecycleBase {
             pass
     ]$
 
+    resource InitParamDefaultFactory = template $[
+        def astichi_params(
+            param_name__astichi_arg__: astichi_bind_external(annotation)
+            = _HAS_DEFAULT_FACTORY
+        ):
+            pass
+    ]$ {
+        keep _HAS_DEFAULT_FACTORY
+    }
+
     resource PlainStateAssignment = template $[
         astichi_pass(state, outer_bind=True).astichi_ref(external=state_slot)._ = astichi_pass(
             init_value_name__astichi_arg__,
+            outer_bind=True,
+        )
+    ]$
+
+    resource InitVarLocalDefaultAssignment = template $[
+        init_value_name__astichi_arg__ = astichi_pass(
+            default_value_name__astichi_arg__,
             outer_bind=True,
         )
     ]$
@@ -672,6 +715,66 @@ concept LifecycleBase {
     ]$ {
         keep VOID
     }
+
+    resource StoredDefaultFactoryEvalInit = template $[
+        if astichi_pass(field_name__astichi_arg__, outer_bind=True) is _HAS_DEFAULT_FACTORY:
+            astichi_pass(field_name__astichi_arg__, outer_bind=True)._ = (
+                default_factory_name__astichi_arg__(
+                    **astichi_hole(default_factory_args)
+                )
+            )
+        astichi_pass(state, outer_bind=True).astichi_ref(external=state_slot)._ = astichi_pass(
+            field_name__astichi_arg__,
+            outer_bind=True,
+        )
+    ]$ {
+        keep _HAS_DEFAULT_FACTORY
+    }
+
+    resource StoredDefaultFactoryEvalNoInit = template $[
+        field_name__astichi_arg__ = default_factory_name__astichi_arg__(
+            **astichi_hole(default_factory_args)
+        )
+        astichi_pass(state, outer_bind=True).astichi_ref(external=state_slot)._ = astichi_pass(
+            field_name__astichi_arg__,
+            outer_bind=True,
+        )
+    ]$
+
+    resource InitVarDefaultFactoryEvalInit = template $[
+        if astichi_pass(field_name__astichi_arg__, outer_bind=True) is _HAS_DEFAULT_FACTORY:
+            astichi_pass(field_name__astichi_arg__, outer_bind=True)._ = (
+                default_factory_name__astichi_arg__(
+                    **astichi_hole(default_factory_args)
+                )
+            )
+    ]$ {
+        keep _HAS_DEFAULT_FACTORY
+    }
+
+    resource InitVarDefaultFactoryEvalNoInit = template $[
+        field_name__astichi_arg__ = default_factory_name__astichi_arg__(
+            **astichi_hole(default_factory_args)
+        )
+    ]$
+
+    resource DefaultFactoryStoredArg = template $[
+        astichi_funcargs(
+            param_name__astichi_arg__=astichi_pass(
+                self,
+                outer_bind=True,
+            ).astichi_ref(external=provider_name)
+        )
+    ]$
+
+    resource DefaultFactoryLocalArg = template $[
+        astichi_funcargs(
+            param_name__astichi_arg__=astichi_pass(
+                provider_name__astichi_arg__,
+                outer_bind=True,
+            )
+        )
+    ]$
 
     resource ClassBundle = template $[
         class state_class_decl_name__astichi_arg__:
@@ -881,6 +984,7 @@ concept LifecycleBase {
             astichi_hole(working_facade_properties)
     ]$ {
         keep DEFAULT_TRANSACTION, TransactionManager, VOID, weakref
+        keep _HAS_DEFAULT_FACTORY
     }
 
     resource ReturnClass = template $[
@@ -949,6 +1053,18 @@ concept LifecycleBase {
         }
 
         ident value_name = DefaultValueParamName
+    }
+
+    contribution FieldDefaultFactoryBuilderParam = BuilderParam {
+        as FieldDefaultFactoryBuilderParam
+        index FieldOrder
+        order FieldOrder
+
+        target builder_params {
+            build /Root
+        }
+
+        ident value_name = DefaultFactoryParamName
     }
 
     contribution ClassDefinition = ClassProduction {
@@ -1105,6 +1221,19 @@ concept LifecycleBase {
         ident default_value_name = DefaultValueParamName
     }
 
+    contribution PlainInitParamDefaultFactory = InitParamDefaultFactory {
+        as PlainInitParam
+        index FieldOrder
+        order FieldOrder
+
+        target init_params {
+            build /ClassDef
+        }
+
+        ident param_name = FieldName
+        external annotation = Annotation
+    }
+
     contribution InitVarParamRequired = InitParamRequired {
         as InitVarParam
         index FieldOrder
@@ -1132,6 +1261,32 @@ concept LifecycleBase {
         ident default_value_name = DefaultValueParamName
     }
 
+    contribution InitVarParamDefaultFactory = InitParamDefaultFactory {
+        as InitVarParam
+        index FieldOrder
+        order FieldOrder
+
+        target init_params {
+            build /ClassDef
+        }
+
+        ident param_name = FieldName
+        external annotation = Annotation
+    }
+
+    contribution InitVarLocalDefault = InitVarLocalDefaultAssignment {
+        as InitVarLocalDefault
+        index FieldOrder
+        order FieldOrder
+
+        target state_init_body {
+            build /ClassDef
+        }
+
+        ident init_value_name = FieldName
+        ident default_value_name = DefaultValueParamName
+    }
+
     contribution PlainInitAssignment = PlainStateAssignment {
         as PlainInitAssignment
         index FieldOrder
@@ -1142,6 +1297,19 @@ concept LifecycleBase {
         }
 
         ident init_value_name = FieldName
+        external state_slot = ValueSlotName
+    }
+
+    contribution PlainDefaultAssignment = PlainStateAssignment {
+        as PlainDefaultAssignment
+        index FieldOrder
+        order FieldOrder
+
+        target state_init_body {
+            build /ClassDef
+        }
+
+        ident init_value_name = DefaultValueParamName
         external state_slot = ValueSlotName
     }
 
@@ -1211,6 +1379,32 @@ concept LifecycleBase {
         ident default_value_name = DefaultValueParamName
     }
 
+    contribution ManagedInitParamRequired = InitParamRequired {
+        as ManagedInitParam
+        index FieldOrder
+        order FieldOrder
+
+        target init_params {
+            build /ClassDef
+        }
+
+        ident param_name = FieldName
+        external annotation = Annotation
+    }
+
+    contribution ManagedInitParamDefaultFactory = InitParamDefaultFactory {
+        as ManagedInitParam
+        index FieldOrder
+        order FieldOrder
+
+        target init_params {
+            build /ClassDef
+        }
+
+        ident param_name = FieldName
+        external annotation = Annotation
+    }
+
     contribution ManagedCurrentInitAssignment = ManagedCurrentStateAssignment {
         as ManagedCurrentInitAssignment
         index FieldOrder
@@ -1221,6 +1415,19 @@ concept LifecycleBase {
         }
 
         ident init_value_name = FieldName
+        external current_slot = CurrentSlotName
+    }
+
+    contribution ManagedCurrentDefaultAssignment = ManagedCurrentStateAssignment {
+        as ManagedCurrentDefaultAssignment
+        index FieldOrder
+        order FieldOrder
+
+        target state_init_body {
+            build /ClassDef
+        }
+
+        ident init_value_name = DefaultValueParamName
         external current_slot = CurrentSlotName
     }
 
@@ -1313,6 +1520,86 @@ concept LifecycleBase {
         external tx_index_value = TxIndex
     }
 
+    contribution StoredDefaultFactoryEvalInitContribution = StoredDefaultFactoryEvalInit {
+        as DefaultFactoryEval
+        index EvalOrder
+        order EvalStatementOrder
+
+        target state_init_body {
+            build /ClassDef
+        }
+
+        ident field_name = EvalFieldName
+        ident default_factory_name = EvalDefaultFactoryParamName
+        external state_slot = EvalStateSlotName
+    }
+
+    contribution StoredDefaultFactoryEvalNoInitContribution = StoredDefaultFactoryEvalNoInit {
+        as DefaultFactoryEval
+        index EvalOrder
+        order EvalStatementOrder
+
+        target state_init_body {
+            build /ClassDef
+        }
+
+        ident field_name = EvalFieldName
+        ident default_factory_name = EvalDefaultFactoryParamName
+        external state_slot = EvalStateSlotName
+    }
+
+    contribution InitVarDefaultFactoryEvalInitContribution = InitVarDefaultFactoryEvalInit {
+        as DefaultFactoryEval
+        index EvalOrder
+        order EvalStatementOrder
+
+        target state_init_body {
+            build /ClassDef
+        }
+
+        ident field_name = EvalFieldName
+        ident default_factory_name = EvalDefaultFactoryParamName
+    }
+
+    contribution InitVarDefaultFactoryEvalNoInitContribution = InitVarDefaultFactoryEvalNoInit {
+        as DefaultFactoryEval
+        index EvalOrder
+        order EvalStatementOrder
+
+        target state_init_body {
+            build /ClassDef
+        }
+
+        ident field_name = EvalFieldName
+        ident default_factory_name = EvalDefaultFactoryParamName
+    }
+
+    contribution DefaultFactoryStoredArgContribution = DefaultFactoryStoredArg {
+        as DefaultFactoryArg
+        index (ConsumerEvalOrder, ParamOrder)
+        order ParamOrder
+
+        target default_factory_args {
+            build /ClassDef/DefaultFactoryEval[ConsumerEvalOrder]
+        }
+
+        ident param_name = ParamName
+        external provider_name = ProviderName
+    }
+
+    contribution DefaultFactoryLocalArgContribution = DefaultFactoryLocalArg {
+        as DefaultFactoryArg
+        index (ConsumerEvalOrder, ParamOrder)
+        order ParamOrder
+
+        target default_factory_args {
+            build /ClassDef/DefaultFactoryEval[ConsumerEvalOrder]
+        }
+
+        ident param_name = ParamName
+        ident provider_name = ProviderName
+    }
+
     matcher BuilderParamContributions(lifecycle_class: Classes) -> contribution {
         default -> LifecycleDefinitionBuilderParam
     }
@@ -1327,6 +1614,7 @@ concept LifecycleBase {
 
     matcher FieldDefaultBuilderParamContributions(field: Fields) -> contribution {
         rule has_default when HasDefault == True -> FieldDefaultBuilderParam
+        rule has_default_factory when HasDefaultFactory == True -> FieldDefaultFactoryBuilderParam
     }
 
     matcher ClassDefinitionContributions(lifecycle_class: Classes) -> contribution {
@@ -1380,23 +1668,46 @@ concept LifecycleBase {
     matcher PlainInitParamContributions(field: PlainFields) -> contribution {
         rule required when Init == True
                       and HasDefault == False
+                      and HasDefaultFactory == False
                       -> PlainInitParamRequired
         rule default_value when Init == True
                            and HasDefault == True
+                           and HasDefaultFactory == False
                            -> PlainInitParamDefault
+        rule default_factory when Init == True
+                             and HasDefaultFactory == True
+                             -> PlainInitParamDefaultFactory
     }
 
     matcher InitVarParamContributions(field: InitVarFields) -> contribution {
         rule required when Init == True
                       and HasDefault == False
+                      and HasDefaultFactory == False
                       -> InitVarParamRequired
         rule default_value when Init == True
                            and HasDefault == True
+                           and HasDefaultFactory == False
                            -> InitVarParamDefault
+        rule default_factory when Init == True
+                             and HasDefaultFactory == True
+                             -> InitVarParamDefaultFactory
+    }
+
+    matcher InitVarLocalDefaultContributions(field: InitVarFields) -> contribution {
+        rule default_value when Init == False
+                           and HasDefault == True
+                           and HasDefaultFactory == False
+                           -> InitVarLocalDefault
     }
 
     matcher PlainInitAssignmentContributions(field: PlainFields) -> contribution {
-        rule init_field when Init == True -> PlainInitAssignment
+        rule init_field when Init == True
+                        and HasDefaultFactory == False
+                        -> PlainInitAssignment
+        rule default_value when Init == False
+                           and HasDefault == True
+                           and HasDefaultFactory == False
+                           -> PlainDefaultAssignment
     }
 
     matcher PlainPropertyContributions(field: PlainFields) -> contribution {
@@ -1416,13 +1727,27 @@ concept LifecycleBase {
     }
 
     matcher ManagedInitParamContributions(field: ManagedFields) -> contribution {
+        rule required when Init == True
+                      and HasDefault == False
+                      and HasDefaultFactory == False
+                      -> ManagedInitParamRequired
         rule default_value when Init == True
                            and HasDefault == True
+                           and HasDefaultFactory == False
                            -> ManagedInitParamDefault
+        rule default_factory when Init == True
+                             and HasDefaultFactory == True
+                             -> ManagedInitParamDefaultFactory
     }
 
     matcher ManagedCurrentInitAssignmentContributions(field: ManagedFields) -> contribution {
-        rule init_field when Init == True -> ManagedCurrentInitAssignment
+        rule init_field when Init == True
+                        and HasDefaultFactory == False
+                        -> ManagedCurrentInitAssignment
+        rule default_value when Init == False
+                           and HasDefault == True
+                           and HasDefaultFactory == False
+                           -> ManagedCurrentDefaultAssignment
     }
 
     matcher ManagedWorkingInitAssignmentContributions(field: ManagedFields) -> contribution {
@@ -1447,6 +1772,33 @@ concept LifecycleBase {
 
     matcher ManagedRollbackContributions(field: IndexedTransactionalFields) -> contribution {
         default -> ManagedRollback
+    }
+
+    matcher DefaultFactoryEvalContributions(step: DefaultFactoryEvaluationSteps) -> contribution {
+        rule field_init when EvalFieldKind == "field"
+                        and EvalInit == True
+                        -> StoredDefaultFactoryEvalInitContribution
+        rule field_no_init when EvalFieldKind == "field"
+                           and EvalInit == False
+                           -> StoredDefaultFactoryEvalNoInitContribution
+        rule managed_init when EvalFieldKind == "managed"
+                          and EvalInit == True
+                          -> StoredDefaultFactoryEvalInitContribution
+        rule managed_no_init when EvalFieldKind == "managed"
+                             and EvalInit == False
+                             -> StoredDefaultFactoryEvalNoInitContribution
+        rule initvar_init when EvalFieldKind == "initvar"
+                          and EvalInit == True
+                          -> InitVarDefaultFactoryEvalInitContribution
+        rule initvar_no_init when EvalFieldKind == "initvar"
+                             and EvalInit == False
+                             -> InitVarDefaultFactoryEvalNoInitContribution
+    }
+
+    matcher DefaultFactoryArgContributions(dep: DefaultFactoryDependencies) -> contribution {
+        default -> DefaultFactoryStoredArgContribution
+        rule local_provider when ProviderFieldKind == "initvar"
+                            -> DefaultFactoryLocalArgContribution
     }
 
     production ModuleProduction -> composable {
@@ -1563,6 +1915,11 @@ concept LifecycleBase {
             where FieldOwner == ClassId
             using ManagedInitParamContributions
 
+        apply initvar_local_defaults
+            from field: InitVarFields
+            where FieldOwner == ClassId
+            using InitVarLocalDefaultContributions
+
         apply plain_init_assignments
             from field: PlainFields
             where FieldOwner == ClassId
@@ -1577,6 +1934,16 @@ concept LifecycleBase {
             from field: ManagedFields
             where FieldOwner == ClassId
             using ManagedWorkingInitAssignmentContributions
+
+        apply default_factory_evals
+            from step: DefaultFactoryEvaluationSteps
+            where EvalOwner == ClassId
+            using DefaultFactoryEvalContributions
+
+        apply default_factory_args
+            from dep: DefaultFactoryDependencies
+            where DependencyOwner == ClassId
+            using DefaultFactoryArgContributions
 
         apply plain_properties
             from field: PlainFields

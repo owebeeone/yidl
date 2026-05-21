@@ -90,6 +90,62 @@ def test_lifecycle_source_uses_unpacked_builder_parameters() -> None:
     assert "\n        pass\n" not in source
 
 
+def test_lifecycle_decorator_evaluates_parameterized_default_factories() -> None:
+    class Example:
+        SCALE: int = classvar(default=10)
+        v1: int
+        seed: int = initvar(init=False, default=4)
+        temp: int = initvar(
+            init=False,
+            default_factory=lambda seed, v1: seed + v1,
+        )
+        v2: int = managed(default_factory=lambda v1: v1 + 2)
+        v3: int = managed(default_factory=lambda v2, v1: v1 + v2 + 2)
+        v4: int = managed(init=False, default_factory=lambda v3: v3 * 2)
+        v5: int = managed(
+            init=False,
+            default_factory=lambda SCALE, v4: SCALE + v4,
+        )
+
+    generated = lifecycle(Example)
+    item = generated(v1=1)
+
+    assert item.v1 == 1
+    assert item.v2 == 3
+    assert item.v3 == 6
+    assert item.v4 == 12
+    assert item.v5 == 22
+    assert not hasattr(item._y_state, "_y_seed_value")
+    assert not hasattr(item._y_state, "_y_temp_value")
+
+    explicit = generated(v1=1, v2=20, v3=30)
+    assert explicit.v2 == 20
+    assert explicit.v3 == 30
+    assert explicit.v4 == 60
+    assert explicit.v5 == 70
+
+
+def test_lifecycle_source_uses_direct_default_factory_calls() -> None:
+    class Example:
+        SCALE: int = classvar(default=10)
+        v1: int
+        v2: int = managed(default_factory=lambda v1: v1 + 2)
+        v3: int = managed(default_factory=lambda v2, v1: v1 + v2 + 2)
+        v4: int = managed(init=False, default_factory=lambda v3: v3 * 2)
+        v5: int = managed(
+            init=False,
+            default_factory=lambda SCALE, v4: SCALE + v4,
+        )
+
+    source = _generate_lifecycle_source(harvest_lifecycle_definition(Example))
+
+    assert "locals()" not in source
+    assert "_Example_v2_default_factory(v1=self.v1)" in source
+    assert "_Example_v3_default_factory(v2=self.v2, v1=self.v1)" in source
+    assert "_Example_v4_default_factory(v3=self.v3)" in source
+    assert "_Example_v5_default_factory(SCALE=self.SCALE, v4=self.v4)" in source
+
+
 def test_lifecycle_decorator_merges_generated_base_facts() -> None:
     @lifecycle
     class A:
