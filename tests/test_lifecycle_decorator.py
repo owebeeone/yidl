@@ -266,6 +266,43 @@ def test_lifecycle_decorator_rejects_generated_facade_class_collision() -> None:
         lifecycle(Counter)
 
 
+def test_lifecycle_facade_allows_unrelated_user_attributes() -> None:
+    class Counter:
+        value: int = field(default=1)
+
+    item = lifecycle(Counter)()
+
+    item.note = "kept"
+
+    assert item.note == "kept"
+    assert item.value == 1
+
+
+def test_lifecycle_facade_rejects_reserved_generated_attributes() -> None:
+    class Counter:
+        value: int = field(default=1)
+
+    item = lifecycle(Counter)()
+
+    with pytest.raises(AttributeError, match="reserved for generated lifecycle state"):
+        item._y_shadow = 1
+    with pytest.raises(AttributeError, match="reserved for generated lifecycle state"):
+        item.__yidl_shadow__ = 1
+
+
+def test_lifecycle_facade_rejects_lifecycle_field_deletion() -> None:
+    class Counter:
+        plain: int = field(default=1)
+        count: int = managed(default=2)
+
+    item = lifecycle(Counter)()
+
+    with pytest.raises(AttributeError, match="lifecycle field 'plain' cannot be deleted"):
+        del item.plain
+    with pytest.raises(AttributeError, match="lifecycle field 'count' cannot be deleted"):
+        del item.count
+
+
 @pytest.mark.skipif(
     os.environ.get("YIDL_PERF_TESTS") != "1",
     reason="set YIDL_PERF_TESTS=1 to run constructor throughput comparison",

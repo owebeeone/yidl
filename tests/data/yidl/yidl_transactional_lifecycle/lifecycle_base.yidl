@@ -74,6 +74,7 @@ concept LifecycleBase extends default_factories.LifecycleDefaultFactories {
             ident tx_groups_for_slots_name = TxGroupsParamName
             ident lifecycle_definition_name = LifecycleDefinitionParamName
             ident annotations_name = AnnotationsParamName
+            external lifecycle_field_names = LifecycleFieldNames
         }
 
         apply state_slots

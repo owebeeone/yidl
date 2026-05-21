@@ -96,6 +96,11 @@ def harvest_lifecycle_definition(cls: type[object]) -> HarvestedLifecycle:
             key=lambda fact: int(fact["field_order"]),
         ),
     )
+    class_fact["lifecycle_field_names"] = tuple(
+        str(fact["field_name"])
+        for fact in field_facts
+        if fact["field_kind"] in {"field", "managed"}
+    )
     for fact in field_facts:
         if fact["field_kind"] == "managed":
             tx_groups.add(fact["tx_group_key"])
@@ -145,6 +150,7 @@ def _class_fact(cls: type[object]) -> dict[str, object]:
         "lifecycle_definition_param_name": f"_{class_name}_lifecycle_definition",
         "annotations_param_name": f"_{class_name}_annotations",
         "tx_groups_param_name": f"_{class_name}_tx_groups",
+        "lifecycle_field_names": (),
     }
 
 

@@ -18,6 +18,7 @@ concept LifecycleCore {
     property LifecycleDefinitionParamName: str = ""
     property AnnotationsParamName: str = ""
     property TxGroupsParamName: str = ""
+    property LifecycleFieldNames: object = ()
 
     property FieldId: str
     property FieldOwner: str
@@ -50,6 +51,7 @@ concept LifecycleCore {
         LifecycleDefinitionParamName
         AnnotationsParamName
         TxGroupsParamName
+        LifecycleFieldNames
     }
 
     family LifecycleFieldSpec {
@@ -346,6 +348,33 @@ concept LifecycleCore {
             astichi_pass(decorated_cls, outer_bind=True)
         ):
             __slots__ = ("_y_state",)
+            _y_lifecycle_field_names = frozenset(
+                astichi_bind_external(lifecycle_field_names)
+            )
+
+            def __setattr__(self, name, value):
+                if name in self._y_lifecycle_field_names:
+                    descriptor = getattr(type(self), name, None)
+                    if descriptor is None or not hasattr(descriptor, "__set__"):
+                        raise AttributeError(
+                            f"lifecycle field {name!r} is not assignable"
+                        )
+                    descriptor.__set__(self, value)
+                    return
+                if name.startswith("_y_") or name.startswith("__yidl_"):
+                    raise AttributeError(
+                        f"{name!r} is reserved for generated lifecycle state"
+                    )
+                object.__setattr__(self, name, value)
+
+            def __delattr__(self, name):
+                if name in self._y_lifecycle_field_names:
+                    raise AttributeError(f"lifecycle field {name!r} cannot be deleted")
+                if name.startswith("_y_") or name.startswith("__yidl_"):
+                    raise AttributeError(
+                        f"{name!r} is reserved for generated lifecycle state"
+                    )
+                object.__delattr__(self, name)
 
             @property
             def default(self):
@@ -929,6 +958,7 @@ concept LifecycleCore {
             ident tx_groups_for_slots_name = TxGroupsParamName
             ident lifecycle_definition_name = LifecycleDefinitionParamName
             ident annotations_name = AnnotationsParamName
+            external lifecycle_field_names = LifecycleFieldNames
         }
 
         apply state_slots
