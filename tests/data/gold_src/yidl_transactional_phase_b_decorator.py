@@ -62,6 +62,7 @@ def validate_case(sources: Mapping[str, str]) -> None:
     _assert_inherited_generated_class(inherited_output_namespace)
     _assert_inherited_generated_class(inherited_output_prettier_namespace)
     _assert_decorator_frontend()
+    _assert_unpacked_parameter_boundary(sources)
 
 
 def _fixture_class() -> type[object]:
@@ -197,6 +198,19 @@ def _assert_inherited_counter_class(
 
 def _prettier_source(source: str) -> str:
     return black.format_str(source, mode=black.FileMode())
+
+
+def _assert_unpacked_parameter_boundary(sources: Mapping[str, str]) -> None:
+    generated_sources = (
+        sources["generated_output.py"],
+        sources["generated_output_prettier.py"],
+        sources["generated_inherited_output.py"],
+        sources["generated_inherited_output_prettier.py"],
+    )
+    for source in generated_sources:
+        assert "_Counter_plain_default" in source or "_B_plain_default" in source
+        assert "default_factories" not in source
+        assert "defaults" not in source
 
 
 if __name__ == "__main__":

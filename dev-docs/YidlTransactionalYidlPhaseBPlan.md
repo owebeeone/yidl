@@ -497,6 +497,8 @@ tests/data/goldens/materialized/yidl_transactional_phase_b_decorator/decorator.p
 tests/data/goldens/materialized/yidl_transactional_phase_b_decorator/decorator_prettier.py
 tests/data/goldens/materialized/yidl_transactional_phase_b_decorator/generated_output.py
 tests/data/goldens/materialized/yidl_transactional_phase_b_decorator/generated_output_prettier.py
+tests/data/goldens/materialized/yidl_transactional_phase_b_decorator/generated_inherited_output.py
+tests/data/goldens/materialized/yidl_transactional_phase_b_decorator/generated_inherited_output_prettier.py
 ```
 
 The golden should prove:
@@ -625,6 +627,9 @@ Deliverables:
 Verification:
 
 - generated source grep/shape assertions
+- decorator-path golden asserts generated output uses unpacked keyword-only
+  values such as `_Counter_plain_default`, not generic `defaults` or
+  `default_factories` dictionaries
 - full relevant regression
 
 ## Roll-Build Candidate Assessment
