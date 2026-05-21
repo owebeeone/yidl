@@ -42,10 +42,32 @@ def build_lifecycle_class(
             if facade is None:
                 facade = object.__new__(Counter)
                 object.__setattr__(facade, "_y_state", self)
+                current_ref = self._y_current_ref
+                working_ref = self._y_working_ref
+                object.__setattr__(
+                    facade,
+                    "_y_current_facade",
+                    None if current_ref is None else current_ref(),
+                )
+                object.__setattr__(
+                    facade,
+                    "_y_working_facade",
+                    None if working_ref is None else working_ref(),
+                )
                 self._y_default_ref = weakref.ref(facade)
             return facade
 
         def _y_get_current_facade(self):
+            default_ref = self._y_default_ref
+            default = None if default_ref is None else default_ref()
+            if default is not None:
+                facade = default._y_current_facade
+                if facade is None:
+                    facade = object.__new__(Counter_Current)
+                    object.__setattr__(facade, "_y_state", self)
+                    object.__setattr__(default, "_y_current_facade", facade)
+                    self._y_current_ref = weakref.ref(facade)
+                return facade
             ref = self._y_current_ref
             facade = None if ref is None else ref()
             if facade is None:
@@ -55,6 +77,16 @@ def build_lifecycle_class(
             return facade
 
         def _y_get_working_facade(self):
+            default_ref = self._y_default_ref
+            default = None if default_ref is None else default_ref()
+            if default is not None:
+                facade = default._y_working_facade
+                if facade is None:
+                    facade = object.__new__(Counter_Working)
+                    object.__setattr__(facade, "_y_state", self)
+                    object.__setattr__(default, "_y_working_facade", facade)
+                    self._y_working_ref = weakref.ref(facade)
+                return facade
             ref = self._y_working_ref
             facade = None if ref is None else ref()
             if facade is None:
@@ -235,7 +267,7 @@ def build_lifecycle_class(
             self._y_state._y_rank_value = value
 
     class Counter(Counter_FacadeBase):
-        __slots__ = ()
+        __slots__ = ("_y_current_facade", "_y_working_facade")
         __annotations__ = _Counter_annotations
         __yidl_lifecycle_generated__ = True
         __yidl_lifecycle_user_class__ = decorated_cls
@@ -281,6 +313,8 @@ def build_lifecycle_class(
         ):
             state = object.__new__(Counter_State)
             object.__setattr__(self, "_y_state", state)
+            object.__setattr__(self, "_y_current_facade", None)
+            object.__setattr__(self, "_y_working_facade", None)
             state._y_transaction_manager = transaction_manager or TransactionManager(
                 tx_groups=tuple(
                     (

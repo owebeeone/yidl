@@ -1544,10 +1544,32 @@ class state_class_decl_name__astichi_arg__:
         if facade is None:
             facade = object.__new__(default_facade_class_ref__astichi_arg__)
             object.__setattr__(facade, "_y_state", self)
+            current_ref = self._y_current_ref
+            working_ref = self._y_working_ref
+            object.__setattr__(
+                facade,
+                "_y_current_facade",
+                None if current_ref is None else current_ref(),
+            )
+            object.__setattr__(
+                facade,
+                "_y_working_facade",
+                None if working_ref is None else working_ref(),
+            )
             self._y_default_ref = weakref.ref(facade)
         return facade
 
     def _y_get_current_facade(self):
+        default_ref = self._y_default_ref
+        default = None if default_ref is None else default_ref()
+        if default is not None:
+            facade = default._y_current_facade
+            if facade is None:
+                facade = object.__new__(current_facade_class_ref__astichi_arg__)
+                object.__setattr__(facade, "_y_state", self)
+                object.__setattr__(default, "_y_current_facade", facade)
+                self._y_current_ref = weakref.ref(facade)
+            return facade
         ref = self._y_current_ref
         facade = None if ref is None else ref()
         if facade is None:
@@ -1557,6 +1579,16 @@ class state_class_decl_name__astichi_arg__:
         return facade
 
     def _y_get_working_facade(self):
+        default_ref = self._y_default_ref
+        default = None if default_ref is None else default_ref()
+        if default is not None:
+            facade = default._y_working_facade
+            if facade is None:
+                facade = object.__new__(working_facade_class_ref__astichi_arg__)
+                object.__setattr__(facade, "_y_state", self)
+                object.__setattr__(default, "_y_working_facade", facade)
+                self._y_working_ref = weakref.ref(facade)
+            return facade
         ref = self._y_working_ref
         facade = None if ref is None else ref()
         if facade is None:
@@ -1711,7 +1743,7 @@ class facade_base_decl_name__astichi_arg__(
 class default_facade_class_decl_name__astichi_arg__(
     facade_base_default_base_name__astichi_arg__
 ):
-    __slots__ = ()
+    __slots__ = ("_y_current_facade", "_y_working_facade")
     __annotations__ = astichi_pass(
         annotations_name__astichi_arg__,
         outer_bind=True,
@@ -1743,6 +1775,8 @@ class default_facade_class_decl_name__astichi_arg__(
     def __init__(self, init_params__astichi_param_hole__):
         state = object.__new__(state_class_ref__astichi_arg__)
         object.__setattr__(self, "_y_state", state)
+        object.__setattr__(self, "_y_current_facade", None)
+        object.__setattr__(self, "_y_working_facade", None)
         state._y_transaction_manager = transaction_manager or TransactionManager(
             tx_groups=tuple(
                 group for group in astichi_pass(
@@ -1789,7 +1823,7 @@ return_class_module_ref__astichi_arg__.__module__ = astichi_pass(
     decorated_cls,
     outer_bind=True,
 ).__module__
-return return_class_result_ref__astichi_arg__""", file_name='tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl', line_number=574)), 'PassStatement': astichi_template(from_astichi_code('pass', file_name='tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl', line_number=590)), 'BuildTransactionFactsBody': from_astichi_code("""\
+return return_class_result_ref__astichi_arg__""", file_name='tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl', line_number=608)), 'PassStatement': astichi_template(from_astichi_code('pass', file_name='tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl', line_number=624)), 'BuildTransactionFactsBody': from_astichi_code("""\
 from yidl.runtime.transaction_yidl import DEFAULT_TRANSACTION
 
 classes = sorted(

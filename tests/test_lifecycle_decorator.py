@@ -63,6 +63,8 @@ def test_lifecycle_decorator_builds_phase_a_generated_class() -> None:
     assert counter.default is counter
     assert counter.current is counter.current
     assert counter.working is counter.working
+    assert counter._y_current_facade is counter.current
+    assert counter._y_working_facade is counter.working
 
     assert generated.KIND == "counter"
     assert counter.KIND == "counter"
