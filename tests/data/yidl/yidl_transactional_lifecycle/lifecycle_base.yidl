@@ -1,0 +1,8 @@
+module tests.lifecycle_base
+
+import "lifecycle_default_factories.yidl" as default_factories
+
+export concept LifecycleBase
+
+concept LifecycleBase extends default_factories.LifecycleDefaultFactories {
+}

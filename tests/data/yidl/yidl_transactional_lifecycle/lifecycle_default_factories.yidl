@@ -1,0 +1,8 @@
+module tests.lifecycle_default_factories
+
+import "lifecycle_managed.yidl" as managed
+
+export concept LifecycleDefaultFactories
+
+concept LifecycleDefaultFactories extends managed.LifecycleManaged {
+}

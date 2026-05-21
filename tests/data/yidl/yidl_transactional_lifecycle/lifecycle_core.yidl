@@ -1,0 +1,1992 @@
+module tests.lifecycle_core
+
+export concept LifecycleCore
+
+concept LifecycleCore {
+    # -------------------------------------------------------------------------
+    # Decorator/runtime inputs.
+    # -------------------------------------------------------------------------
+
+    property ClassId: str
+    property ClassName: str
+    property ClassOrder: int = 0
+    property ModuleName: str = "__main__"
+    property StateClassName: str
+    property FacadeBaseClassName: str
+    property CurrentFacadeClassName: str
+    property WorkingFacadeClassName: str
+    property LifecycleDefinitionParamName: str = ""
+    property AnnotationsParamName: str = ""
+    property TxGroupsParamName: str = ""
+
+    property FieldId: str
+    property FieldOwner: str
+    property FieldName: str
+    property FieldOrder: int
+    property FieldKind: str = "field"
+    property Annotation: object = object
+    property Init: bool = True
+    property HasDefault: bool = False
+    property DefaultValue: object = None
+    property DefaultValueParamName: str = ""
+    property HasDefaultFactory: bool = False
+    property DefaultFactory: object = None
+    property DefaultFactoryParamName: str = ""
+    property DefaultFactoryParamNames: object = ()
+    property TxGroupKey: object = None
+    property ValueSlotName: str = ""
+    property CurrentSlotName: str = ""
+    property WorkingSlotName: str = ""
+
+    record LifecycleClass {
+        ClassId
+        ClassName
+        ClassOrder
+        ModuleName
+        StateClassName
+        FacadeBaseClassName
+        CurrentFacadeClassName
+        WorkingFacadeClassName
+        LifecycleDefinitionParamName
+        AnnotationsParamName
+        TxGroupsParamName
+    }
+
+    family LifecycleFieldSpec {
+        common FieldId, FieldOwner, FieldName, FieldOrder, FieldKind, Annotation
+        common Init, HasDefault, DefaultValue, DefaultValueParamName
+        common HasDefaultFactory, DefaultFactory, DefaultFactoryParamName
+        common DefaultFactoryParamNames
+        common TxGroupKey, ValueSlotName, CurrentSlotName, WorkingSlotName
+
+        variant PlainField {
+        }
+
+        variant InitVarField {
+        }
+
+        variant ClassVarField {
+        }
+
+        variant ManagedField {
+        }
+    }
+
+    collection Classes: LifecycleClass identity ClassId many
+    collection Fields: LifecycleFieldSpec identity FieldId many
+    computed collection PlainFields: LifecycleFieldSpec from Fields where FieldKind == "field"
+    computed collection InitVarFields: LifecycleFieldSpec from Fields where FieldKind == "initvar"
+    computed collection ClassVarFields: LifecycleFieldSpec from Fields where FieldKind == "classvar"
+    computed collection ManagedFields: LifecycleFieldSpec from Fields where FieldKind == "managed"
+
+    # -------------------------------------------------------------------------
+    # Facade facts.
+    # -------------------------------------------------------------------------
+
+    property FacadeId: str
+    property FacadeOwner: str
+    property FacadeKind: str
+    property FacadeMode: str
+    property FacadeClassName: str
+    property FacadeOrder: int = 0
+
+    property OwnerFacadeId: str
+    property TargetFacadeId: str
+    property ExposureOrder: int = 0
+
+    record FacadeClass {
+        FacadeOwner
+        FacadeId
+        FacadeKind
+        FacadeMode
+        FacadeClassName
+        FacadeOrder
+    }
+
+    record FacadeExposure {
+        FacadeOwner
+        OwnerFacadeId
+        FieldName
+        TargetFacadeId
+        ExposureOrder
+    }
+
+    collection FacadeClasses: FacadeClass identity (FacadeOwner, FacadeId) many
+    collection FacadeExposures: FacadeExposure identity (FacadeOwner, OwnerFacadeId, FieldName) many
+
+    # -------------------------------------------------------------------------
+    # Transaction facts.
+    # -------------------------------------------------------------------------
+
+    property TxGroupOrder: int = 0
+    property TxIndex: int = 0
+
+    record TransactionalField {
+        FieldId
+        FieldOwner
+        FieldName
+        FieldOrder
+        TxGroupKey
+    }
+
+    record TxGroup {
+        ClassId
+        TxGroupKey
+        TxIndex
+        TxGroupOrder
+    }
+
+    record IndexedTransactionalField {
+        FieldId
+        FieldOwner
+        FieldName
+        FieldOrder
+        TxGroupKey
+        TxIndex
+        CurrentSlotName
+        WorkingSlotName
+    }
+
+    collection TransactionalFields: TransactionalField identity FieldId many
+    collection TxGroups: TxGroup identity (ClassId, TxGroupKey) many
+    collection IndexedTransactionalFields: IndexedTransactionalField identity FieldId many
+
+    resource BuildTransactionFactsBody = code $[
+        from yidl.runtime.transaction_yidl import DEFAULT_TRANSACTION
+
+        classes = sorted(
+            ctx.records(ClassesCollection),
+            key=lambda item: item.class_order,
+        )
+        fields = sorted(
+            ctx.records(FieldsCollection),
+            key=lambda item: item.field_order,
+        )
+
+        for lifecycle_class in classes:
+            seen = {DEFAULT_TRANSACTION: 0}
+            ctx.write(
+                TxGroupsCollection,
+                TxGroup(
+                    class_id=lifecycle_class.class_id,
+                    tx_group_key=DEFAULT_TRANSACTION,
+                    tx_index=0,
+                    tx_group_order=0,
+                ),
+                policy=RejectDuplicate,
+            )
+
+            for field in fields:
+                if field.field_owner != lifecycle_class.class_id:
+                    continue
+                if field.field_kind != "managed":
+                    continue
+
+                tx_group = field.tx_group_key
+                if tx_group is None:
+                    tx_group = DEFAULT_TRANSACTION
+                if tx_group not in seen:
+                    seen[tx_group] = len(seen)
+                    ctx.write(
+                        TxGroupsCollection,
+                        TxGroup(
+                            class_id=lifecycle_class.class_id,
+                            tx_group_key=tx_group,
+                            tx_index=seen[tx_group],
+                            tx_group_order=field.field_order,
+                        ),
+                        policy=RejectDuplicate,
+                    )
+
+                tx_index = seen[tx_group]
+                ctx.write(
+                    TransactionalFieldsCollection,
+                    TransactionalField(
+                        field_id=field.field_id,
+                        field_owner=field.field_owner,
+                        field_name=field.field_name,
+                        field_order=field.field_order,
+                        tx_group_key=tx_group,
+                    ),
+                    policy=RejectDuplicate,
+                )
+                ctx.write(
+                    IndexedTransactionalFieldsCollection,
+                    IndexedTransactionalField(
+                        field_id=field.field_id,
+                        field_owner=field.field_owner,
+                        field_name=field.field_name,
+                        field_order=field.field_order,
+                        tx_group_key=tx_group,
+                        tx_index=tx_index,
+                        current_slot_name=field.current_slot_name,
+                        working_slot_name=field.working_slot_name,
+                    ),
+                    policy=RejectDuplicate,
+                )
+    ]$ {
+        keep ctx, ClassesCollection, FieldsCollection
+        keep TxGroupsCollection, TransactionalFieldsCollection
+        keep IndexedTransactionalFieldsCollection
+        keep TxGroup, TransactionalField, IndexedTransactionalField
+        keep RejectDuplicate
+    }
+
+    operation BuildTransactionFacts
+        inputs(Classes, Fields)
+        outputs(TransactionalFields, TxGroups, IndexedTransactionalFields)
+        using BuildTransactionFactsBody
+
+    # -------------------------------------------------------------------------
+    # Init and generated assignment facts.
+    # -------------------------------------------------------------------------
+
+    property InitParameterId: str
+    property InitParameterOwner: str
+    property InitParameterName: str
+    property InitParameterOrder: int = 0
+    property InitParameterKind: str = "field"
+
+    property InitAssignmentId: str
+    property InitAssignmentOwner: str
+    property InitAssignmentFieldId: str
+    property InitAssignmentFieldName: str
+    property InitAssignmentOrder: int = 0
+    property InitAssignmentKind: str = "plain"
+
+    property ClassVarAssignmentId: str
+    property ClassVarAssignmentOwner: str
+    property ClassVarAssignmentName: str
+    property ClassVarAssignmentOrder: int = 0
+
+    record InitParameter {
+        InitParameterId
+        InitParameterOwner
+        InitParameterName
+        InitParameterOrder
+        InitParameterKind
+    }
+
+    record InitAssignment {
+        InitAssignmentId
+        InitAssignmentOwner
+        InitAssignmentFieldId
+        InitAssignmentFieldName
+        InitAssignmentOrder
+        InitAssignmentKind
+    }
+
+    record ClassVarAssignment {
+        ClassVarAssignmentId
+        ClassVarAssignmentOwner
+        ClassVarAssignmentName
+        ClassVarAssignmentOrder
+    }
+
+    collection InitParameters: InitParameter identity InitParameterId many
+    collection InitAssignments: InitAssignment identity InitAssignmentId many
+    collection ClassVarAssignments: ClassVarAssignment identity ClassVarAssignmentId many
+
+    # -------------------------------------------------------------------------
+    # Default-factory dependency facts.
+    # -------------------------------------------------------------------------
+
+    property DependencyOwner: str
+    property ConsumerFieldId: str
+    property ConsumerFieldName: str = ""
+    property ProviderName: str
+    property ProviderFieldId: str = ""
+    property ProviderFieldKind: str = ""
+    property ProviderInit: bool = True  # Provider availability columns are informational now and reserved for future matchers.
+    property ProviderHasDefault: bool = False
+    property ProviderHasDefaultFactory: bool = False
+    property ParamName: str
+    property ParamOrder: int = 0
+    property ConsumerEvalOrder: int = 0
+
+    property EvalStepId: str
+    property EvalOwner: str
+    property EvalFieldId: str
+    property EvalFieldName: str
+    property EvalFieldKind: str = ""
+    property EvalInit: bool = True
+    property EvalStateSlotName: str = ""
+    property EvalDefaultFactoryParamName: str = ""
+    property EvalOrder: int = 0
+    property EvalStatementOrder: int = 0  # Factory eval statements add 100000 so normal field initialization stays first; revisit if generated field counts approach that offset.
+
+    property DiagnosticId: str
+    property DiagnosticOwner: str
+    property DiagnosticFieldId: str = ""
+    property DiagnosticMessage: str
+
+    record DefaultFactoryDependency {
+        DependencyOwner
+        ConsumerFieldId
+        ConsumerFieldName
+        ProviderName
+        ProviderFieldId
+        ProviderFieldKind
+        ProviderInit
+        ProviderHasDefault
+        ProviderHasDefaultFactory
+        ParamName
+        ParamOrder
+        ConsumerEvalOrder
+    }
+
+    record DefaultFactoryEvaluationStep {
+        EvalStepId
+        EvalOwner
+        EvalFieldId
+        EvalFieldName
+        EvalFieldKind
+        EvalInit
+        EvalStateSlotName
+        EvalDefaultFactoryParamName
+        EvalOrder
+        EvalStatementOrder
+    }
+
+    record DefaultFactoryDiagnostic {
+        DiagnosticId
+        DiagnosticOwner
+        DiagnosticFieldId
+        DiagnosticMessage
+    }
+
+    collection DefaultFactoryDependencies:
+        DefaultFactoryDependency identity (ConsumerFieldId, ParamName) many
+    collection DefaultFactoryEvaluationSteps:
+        DefaultFactoryEvaluationStep identity EvalStepId many
+    collection DefaultFactoryDiagnostics:
+        DefaultFactoryDiagnostic identity DiagnosticId many
+
+    resource BuildDefaultFactoryFactsBody = code $[
+        classes = sorted(
+            ctx.records(ClassesCollection),
+            key=lambda item: item.class_order,
+        )
+        fields = sorted(
+            ctx.records(FieldsCollection),
+            key=lambda item: item.field_order,
+        )
+
+        for lifecycle_class in classes:
+            class_fields = [
+                field for field in fields
+                if field.field_owner == lifecycle_class.class_id
+            ]
+            by_name = {field.field_name: field for field in class_fields}
+            by_id = {field.field_id: field for field in class_fields}
+            factory_fields = [
+                field for field in class_fields
+                if field.has_default_factory
+            ]
+            graph = {field.field_id: set() for field in factory_fields}
+            deps = []
+            diagnostic_count = 0
+
+            def add_diagnostic(field, suffix, message):
+                nonlocal diagnostic_count
+                diagnostic_count += 1
+                ctx.write(
+                    DefaultFactoryDiagnosticsCollection,
+                    DefaultFactoryDiagnostic(
+                        diagnostic_id=(
+                            f"{field.field_id}.{suffix}.{diagnostic_count}"
+                        ),
+                        diagnostic_owner=lifecycle_class.class_id,
+                        diagnostic_field_id=field.field_id,
+                        diagnostic_message=message,
+                    ),
+                    policy=ReplaceExisting,
+                )
+
+            def provider_is_available(provider):
+                if provider.init:
+                    return True
+                return provider.has_default or provider.has_default_factory
+
+            for consumer in factory_fields:
+                for param_order, param_name in enumerate(
+                    consumer.default_factory_param_names
+                ):
+                    provider = by_name.get(param_name)
+                    if provider is None:
+                        add_diagnostic(
+                            consumer,
+                            f"unknown.{param_name}",
+                            (
+                                f"{lifecycle_class.class_name}."
+                                f"{consumer.field_name}: default_factory "
+                                f"references unknown name {param_name!r}"
+                            ),
+                        )
+                        continue
+                    if not provider_is_available(provider):
+                        add_diagnostic(
+                            consumer,
+                            f"unavailable.{param_name}",
+                            (
+                                f"{lifecycle_class.class_name}."
+                                f"{consumer.field_name}: default_factory "
+                                f"cannot reference {param_name!r} "
+                                "(value is unavailable before factory evaluation)"
+                            ),
+                        )
+                        continue
+                    deps.append((consumer, provider, param_name, param_order))
+                    if provider.field_id in graph:
+                        graph[consumer.field_id].add(provider.field_id)
+
+            field_order = {
+                field.field_id: field.field_order for field in class_fields
+            }
+            visiting = set()
+            visited = set()
+            ordered_field_ids = []
+            cycle_found = False
+
+            def visit(field_id, path):
+                nonlocal cycle_found
+                if cycle_found or field_id in visited:
+                    return
+                if field_id in visiting:
+                    cycle = path[path.index(field_id):]
+                    names = " -> ".join(by_id[item].field_name for item in cycle)
+                    add_diagnostic(
+                        by_id[field_id],
+                        "cycle",
+                        (
+                            f"{lifecycle_class.class_name}: default_factory "
+                            f"dependency cycle: {names}"
+                        ),
+                    )
+                    cycle_found = True
+                    return
+                visiting.add(field_id)
+                for provider_id in sorted(
+                    graph.get(field_id, ()),
+                    key=lambda item: field_order[item],
+                ):
+                    visit(provider_id, [*path, provider_id])
+                visiting.remove(field_id)
+                visited.add(field_id)
+                ordered_field_ids.append(field_id)
+
+            for field in factory_fields:
+                visit(field.field_id, [field.field_id])
+                if cycle_found:
+                    break
+
+            if diagnostic_count:
+                continue
+
+            eval_order_by_id = {
+                field_id: eval_order
+                for eval_order, field_id in enumerate(ordered_field_ids)
+            }
+
+            for consumer, provider, param_name, param_order in deps:
+                ctx.write(
+                    DefaultFactoryDependenciesCollection,
+                    DefaultFactoryDependency(
+                        dependency_owner=lifecycle_class.class_id,
+                        consumer_field_id=consumer.field_id,
+                        consumer_field_name=consumer.field_name,
+                        provider_name=provider.field_name,
+                        provider_field_id=provider.field_id,
+                        provider_field_kind=provider.field_kind,
+                        provider_init=provider.init,
+                        provider_has_default=provider.has_default,
+                        provider_has_default_factory=provider.has_default_factory,
+                        param_name=param_name,
+                        param_order=param_order,
+                        consumer_eval_order=eval_order_by_id[consumer.field_id],
+                    ),
+                    policy=RejectDuplicate,
+                )
+
+            for eval_order, field_id in enumerate(ordered_field_ids):
+                field = by_id[field_id]
+                state_slot = ""
+                if field.field_kind == "field":
+                    state_slot = field.value_slot_name
+                elif field.field_kind == "managed":
+                    state_slot = field.current_slot_name
+                ctx.write(
+                    DefaultFactoryEvaluationStepsCollection,
+                    DefaultFactoryEvaluationStep(
+                        eval_step_id=field.field_id,
+                        eval_owner=lifecycle_class.class_id,
+                        eval_field_id=field.field_id,
+                        eval_field_name=field.field_name,
+                        eval_field_kind=field.field_kind,
+                        eval_init=field.init,
+                        eval_state_slot_name=state_slot,
+                        eval_default_factory_param_name=(
+                            field.default_factory_param_name
+                        ),
+                        eval_order=eval_order,
+                        eval_statement_order=100000 + eval_order,
+                    ),
+                    policy=RejectDuplicate,
+                )
+    ]$ {
+        keep ctx, ClassesCollection, FieldsCollection
+        keep DefaultFactoryDependenciesCollection
+        keep DefaultFactoryEvaluationStepsCollection
+        keep DefaultFactoryDiagnosticsCollection
+        keep DefaultFactoryDependency, DefaultFactoryEvaluationStep
+        keep DefaultFactoryDiagnostic, RejectDuplicate, ReplaceExisting
+    }
+
+    operation BuildDefaultFactoryFacts
+        inputs(Classes, Fields)
+        outputs(DefaultFactoryDependencies, DefaultFactoryEvaluationSteps, DefaultFactoryDiagnostics)
+        using BuildDefaultFactoryFactsBody
+
+    resource RaiseDefaultFactoryDiagnosticsBody = code $[
+        for diagnostic in ctx.records(DefaultFactoryDiagnosticsCollection):
+            raise AssemblyDiagnosticError(diagnostic.diagnostic_message)
+    ]$ {
+        keep ctx, DefaultFactoryDiagnosticsCollection, AssemblyDiagnosticError
+    }
+
+    operation RaiseDefaultFactoryDiagnostics
+        inputs(DefaultFactoryDiagnostics)
+        outputs()
+        using RaiseDefaultFactoryDiagnosticsBody
+
+    # -------------------------------------------------------------------------
+    # A3 generated module/class skeleton.
+    # -------------------------------------------------------------------------
+
+    resource ModuleRoot = code $[
+        from __future__ import annotations
+
+        import weakref
+
+        from yidl.runtime.lifecycle import _HAS_DEFAULT_FACTORY
+        from yidl.runtime.transaction_yidl import DEFAULT_TRANSACTION
+        from yidl.runtime.transaction_yidl import TransactionManager
+
+
+        VOID = object()
+
+
+        def build_lifecycle_class(decorated_cls, builder_params__astichi_param_hole__):
+            astichi_hole(function_body)
+            astichi_hole(return_statement)
+    ]$
+
+    resource BuilderParam = template $[
+        def astichi_params(*, value_name__astichi_arg__):
+            pass
+    ]$
+
+    resource TransactionManagerParam = template $[
+        def astichi_params(*, transaction_manager=None):
+            pass
+    ]$
+
+    resource StateSlotEntry = template $[
+        astichi_bind_external(slot_name)
+    ]$
+
+    resource InitParamRequired = template $[
+        def astichi_params(param_name__astichi_arg__: astichi_bind_external(annotation)):
+            pass
+    ]$
+
+    resource InitParamDefault = template $[
+        def astichi_params(
+            param_name__astichi_arg__: astichi_bind_external(annotation)
+            = default_value_name__astichi_arg__
+        ):
+            pass
+    ]$
+
+    resource InitParamDefaultFactory = template $[
+        def astichi_params(
+            param_name__astichi_arg__: astichi_bind_external(annotation)
+            = _HAS_DEFAULT_FACTORY
+        ):
+            pass
+    ]$ {
+        keep _HAS_DEFAULT_FACTORY
+    }
+
+    resource PlainStateAssignment = template $[
+        astichi_pass(state, outer_bind=True).astichi_ref(external=state_slot)._ = astichi_pass(
+            init_value_name__astichi_arg__,
+            outer_bind=True,
+        )
+    ]$
+
+    resource InitVarLocalDefaultAssignment = template $[
+        init_value_name__astichi_arg__ = astichi_pass(
+            default_value_name__astichi_arg__,
+            outer_bind=True,
+        )
+    ]$
+
+    resource PlainProperty = template $[
+        @property
+        def property_getter_name__astichi_arg__(self):
+            return self._y_state.astichi_ref(external=state_slot)
+
+        @property_setter_target_name__astichi_arg__.setter
+        def property_setter_name__astichi_arg__(self, value):
+            self._y_state.astichi_ref(external=state_slot)._ = value
+    ]$
+
+    resource ClassVarDefaultAssignment = template $[
+        classvar_name__astichi_arg__ = astichi_pass(
+            classvar_value_name__astichi_arg__,
+            outer_bind=True,
+        )
+    ]$
+
+    resource ManagedCurrentStateAssignment = template $[
+        astichi_pass(state, outer_bind=True).astichi_ref(external=current_slot)._ = astichi_pass(
+            init_value_name__astichi_arg__,
+            outer_bind=True,
+        )
+    ]$
+
+    resource ManagedWorkingStateAssignment = template $[
+        astichi_pass(state, outer_bind=True).astichi_ref(external=working_slot)._ = VOID
+    ]$ {
+        keep VOID
+    }
+
+    resource ManagedDefaultProperty = template $[
+        @property
+        def property_getter_name__astichi_arg__(self):
+            state = self._y_state
+            if state.astichi_ref(external=working_slot) is not VOID:
+                return state.astichi_ref(external=working_slot)
+            return state.astichi_ref(external=current_slot)
+
+        @property_setter_target_name__astichi_arg__.setter
+        def property_setter_name__astichi_arg__(self, value):
+            state = self._y_state
+            state._y_ensure_working_transaction(astichi_bind_external(tx_index))
+            state.astichi_ref(external=working_slot)._ = value
+    ]$ {
+        keep VOID
+    }
+
+    resource ManagedCurrentProperty = template $[
+        @property
+        def property_getter_name__astichi_arg__(self):
+            return self._y_state.astichi_ref(external=current_slot)
+
+        @property_setter_target_name__astichi_arg__.setter
+        def property_setter_name__astichi_arg__(self, value):
+            del value
+            raise AttributeError(
+                "current facade is read-only for transactional field "
+                + astichi_bind_external(field_name)
+            )
+    ]$
+
+    resource ManagedWorkingProperty = template $[
+        @property
+        def property_getter_name__astichi_arg__(self):
+            state = self._y_state
+            if state.astichi_ref(external=working_slot) is not VOID:
+                return state.astichi_ref(external=working_slot)
+            return state.astichi_ref(external=current_slot)
+
+        @property_setter_target_name__astichi_arg__.setter
+        def property_setter_name__astichi_arg__(self, value):
+            state = self._y_state
+            state._y_ensure_working_transaction(astichi_bind_external(tx_index))
+            state.astichi_ref(external=working_slot)._ = value
+    ]$ {
+        keep VOID
+    }
+
+    resource ManagedCommitBranch = template $[
+        if astichi_pass(tx_index, outer_bind=True) == astichi_bind_external(tx_index_value):
+            if astichi_pass(self, outer_bind=True).astichi_ref(external=working_slot) is not VOID:
+                astichi_pass(self, outer_bind=True).astichi_ref(external=current_slot)._ = (
+                    astichi_pass(self, outer_bind=True).astichi_ref(external=working_slot)
+                )
+                astichi_pass(self, outer_bind=True).astichi_ref(external=working_slot)._ = VOID
+    ]$ {
+        keep VOID
+    }
+
+    resource ManagedRollbackBranch = template $[
+        if astichi_pass(tx_index, outer_bind=True) == astichi_bind_external(tx_index_value):
+            astichi_pass(self, outer_bind=True).astichi_ref(external=working_slot)._ = VOID
+    ]$ {
+        keep VOID
+    }
+
+    resource StoredDefaultFactoryEvalInit = template $[
+        if astichi_pass(field_name__astichi_arg__, outer_bind=True) is _HAS_DEFAULT_FACTORY:
+            astichi_pass(field_name__astichi_arg__, outer_bind=True)._ = (
+                default_factory_name__astichi_arg__(
+                    **astichi_hole(default_factory_args)
+                )
+            )
+        astichi_pass(state, outer_bind=True).astichi_ref(external=state_slot)._ = astichi_pass(
+            field_name__astichi_arg__,
+            outer_bind=True,
+        )
+    ]$ {
+        keep _HAS_DEFAULT_FACTORY
+    }
+
+    resource StoredDefaultFactoryEvalNoInit = template $[
+        field_name__astichi_arg__ = default_factory_name__astichi_arg__(
+            **astichi_hole(default_factory_args)
+        )
+        astichi_pass(state, outer_bind=True).astichi_ref(external=state_slot)._ = astichi_pass(
+            field_name__astichi_arg__,
+            outer_bind=True,
+        )
+    ]$
+
+    resource InitVarDefaultFactoryEvalInit = template $[
+        if astichi_pass(field_name__astichi_arg__, outer_bind=True) is _HAS_DEFAULT_FACTORY:
+            astichi_pass(field_name__astichi_arg__, outer_bind=True)._ = (
+                default_factory_name__astichi_arg__(
+                    **astichi_hole(default_factory_args)
+                )
+            )
+    ]$ {
+        keep _HAS_DEFAULT_FACTORY
+    }
+
+    resource InitVarDefaultFactoryEvalNoInit = template $[
+        field_name__astichi_arg__ = default_factory_name__astichi_arg__(
+            **astichi_hole(default_factory_args)
+        )
+    ]$
+
+    resource DefaultFactoryStoredArg = template $[
+        astichi_funcargs(
+            param_name__astichi_arg__=astichi_pass(
+                self,
+                outer_bind=True,
+            ).astichi_ref(external=provider_name)
+        )
+    ]$
+
+    resource DefaultFactoryLocalArg = template $[
+        astichi_funcargs(
+            param_name__astichi_arg__=astichi_pass(
+                provider_name__astichi_arg__,
+                outer_bind=True,
+            )
+        )
+    ]$
+
+    resource ClassBundle = template $[
+        class state_class_decl_name__astichi_arg__:
+            __slots__ = (
+                "_y_transaction_manager",
+                "_y_default_ref",
+                "_y_current_ref",
+                "_y_working_ref",
+                *astichi_hole(state_slots),
+                "_y_working_tx_ids",
+            )
+            __yidl_tx_index_to_group__ = astichi_pass(
+                tx_groups_for_index_name__astichi_arg__,
+                outer_bind=True,
+            )
+            __yidl_tx_group_to_index__ = {
+                group: index for index, group in enumerate(
+                    astichi_pass(tx_groups_for_map_name__astichi_arg__, outer_bind=True)
+                )
+            }
+
+            def _y_get_default_facade(self):
+                ref = self._y_default_ref
+                facade = None if ref is None else ref()
+                if facade is None:
+                    facade = object.__new__(default_facade_class_ref__astichi_arg__)
+                    object.__setattr__(facade, "_y_state", self)
+                    self._y_default_ref = weakref.ref(facade)
+                return facade
+
+            def _y_get_current_facade(self):
+                ref = self._y_current_ref
+                facade = None if ref is None else ref()
+                if facade is None:
+                    facade = object.__new__(current_facade_class_ref__astichi_arg__)
+                    object.__setattr__(facade, "_y_state", self)
+                    self._y_current_ref = weakref.ref(facade)
+                return facade
+
+            def _y_get_working_facade(self):
+                ref = self._y_working_ref
+                facade = None if ref is None else ref()
+                if facade is None:
+                    facade = object.__new__(working_facade_class_ref__astichi_arg__)
+                    object.__setattr__(facade, "_y_state", self)
+                    self._y_working_ref = weakref.ref(facade)
+                return facade
+
+            def _y_require_active_transaction(self, tx_index):
+                tx_group = self.__yidl_tx_index_to_group__[tx_index]
+                transaction = self._y_transaction_manager.active_transaction_for(tx_group)
+                if transaction is None:
+                    if self._y_working_tx_ids[tx_index] is not None:
+                        raise RuntimeError(
+                            "stale yidl working value without an active transaction"
+                        )
+                    raise RuntimeError("writes require an active yidl transaction")
+                existing_tx_id = self._y_working_tx_ids[tx_index]
+                if existing_tx_id is not None and existing_tx_id != transaction.tx_id:
+                    raise RuntimeError(
+                        "working value belongs to a different yidl transaction"
+                    )
+                return transaction
+
+            def _y_ensure_working_transaction(self, tx_index):
+                transaction = self._y_require_active_transaction(tx_index)
+                if self._y_working_tx_ids[tx_index] is None:
+                    tx_group = self.__yidl_tx_index_to_group__[tx_index]
+                    self._y_working_tx_ids[tx_index] = (
+                        self._y_transaction_manager.enlist(self, tx_group)
+                    )
+                return transaction
+
+            def commit_order_key_for(self, tx_group=DEFAULT_TRANSACTION):
+                del tx_group
+                return ()
+
+            def requires_validation_for(self, tx_group=DEFAULT_TRANSACTION):
+                del tx_group
+                return False
+
+            def validate_commit_for(self, tx_group=DEFAULT_TRANSACTION):
+                del tx_group
+                return True
+
+            def _commit_transaction(self, tx_id, tx_group=DEFAULT_TRANSACTION):
+                tx_index = self.__yidl_tx_group_to_index__[tx_group]
+                if self._y_working_tx_ids[tx_index] != tx_id:
+                    return self._y_get_default_facade()
+                astichi_hole(commit_transaction_body)
+                self._y_working_tx_ids[tx_index] = None
+                return self._y_get_default_facade()
+
+            def _rollback_transaction(self, tx_id, tx_group=DEFAULT_TRANSACTION):
+                tx_index = self.__yidl_tx_group_to_index__[tx_group]
+                if self._y_working_tx_ids[tx_index] != tx_id:
+                    return self._y_get_default_facade()
+                astichi_hole(rollback_transaction_body)
+                self._y_working_tx_ids[tx_index] = None
+                return self._y_get_default_facade()
+
+
+        class facade_base_decl_name__astichi_arg__(
+            astichi_pass(decorated_cls, outer_bind=True)
+        ):
+            __slots__ = ("_y_state",)
+
+            @property
+            def default(self):
+                return self._y_state._y_get_default_facade()
+
+            @property
+            def current(self):
+                return self._y_state._y_get_current_facade()
+
+            @property
+            def working(self):
+                return self._y_state._y_get_working_facade()
+
+            def begin(self, *tx_groups):
+                return self._y_state._y_transaction_manager.begin(*tx_groups)
+
+            def validate(self, *tx_groups):
+                return self._y_state._y_transaction_manager.validate(*tx_groups)
+
+            def commit_only(self, *tx_groups):
+                return self._y_state._y_transaction_manager.commit_only(*tx_groups)
+
+            def commit(self, *tx_groups):
+                return self._y_state._y_transaction_manager.commit(*tx_groups)
+
+            def rollback(self, *tx_groups):
+                return self._y_state._y_transaction_manager.rollback(*tx_groups)
+
+            astichi_hole(facade_base_body)
+            astichi_hole(facade_properties)
+
+
+        class default_facade_class_decl_name__astichi_arg__(
+            facade_base_default_base_name__astichi_arg__
+        ):
+            __slots__ = ()
+            __annotations__ = astichi_pass(
+                annotations_name__astichi_arg__,
+                outer_bind=True,
+            )
+            __yidl_lifecycle_generated__ = True
+            __yidl_lifecycle_user_class__ = astichi_pass(
+                decorated_cls,
+                outer_bind=True,
+            )
+            __yidl_lifecycle_definition__ = astichi_pass(
+                lifecycle_definition_name__astichi_arg__,
+                outer_bind=True,
+            )
+            __yidl_tx_index_to_group__ = astichi_pass(
+                tx_groups_for_class_index_name__astichi_arg__,
+                outer_bind=True,
+            )
+            __yidl_tx_group_to_index__ = {
+                group: index for index, group in enumerate(
+                    astichi_pass(
+                        tx_groups_for_class_map_name__astichi_arg__,
+                        outer_bind=True,
+                    )
+                )
+            }
+
+            astichi_hole(default_facade_properties)
+
+            def __init__(self, init_params__astichi_param_hole__):
+                state = object.__new__(state_class_ref__astichi_arg__)
+                object.__setattr__(self, "_y_state", state)
+                state._y_transaction_manager = transaction_manager or TransactionManager(
+                    tx_groups=tuple(
+                        group for group in astichi_pass(
+                            tx_groups_for_manager_name__astichi_arg__,
+                            outer_bind=True,
+                        )
+                        if group != DEFAULT_TRANSACTION
+                    )
+                )
+                state._y_default_ref = weakref.ref(self)
+                state._y_current_ref = None
+                state._y_working_ref = None
+                astichi_hole(state_init_body)
+                state._y_working_tx_ids = [
+                    None
+                    for _group in astichi_pass(
+                        tx_groups_for_slots_name__astichi_arg__,
+                        outer_bind=True,
+                    )
+                ]
+
+
+        class current_facade_class_decl_name__astichi_arg__(
+            facade_base_current_base_name__astichi_arg__
+        ):
+            __slots__ = ()
+            astichi_hole(current_facade_properties)
+
+
+        class working_facade_class_decl_name__astichi_arg__(
+            facade_base_working_base_name__astichi_arg__
+        ):
+            __slots__ = ()
+            astichi_hole(working_facade_properties)
+    ]$ {
+        keep DEFAULT_TRANSACTION, TransactionManager, VOID, weakref
+        keep _HAS_DEFAULT_FACTORY
+    }
+
+    resource ReturnClass = template $[
+        return_class_name_ref__astichi_arg__.__name__ = astichi_pass(
+            decorated_cls,
+            outer_bind=True,
+        ).__name__
+        return_class_qualname_ref__astichi_arg__.__qualname__ = astichi_pass(
+            decorated_cls,
+            outer_bind=True,
+        ).__qualname__
+        return_class_module_ref__astichi_arg__.__module__ = astichi_pass(
+            decorated_cls,
+            outer_bind=True,
+        ).__module__
+        return return_class_result_ref__astichi_arg__
+    ]$
+
+    resource PassStatement = template $[
+        pass
+    ]$
+
+    contribution LifecycleDefinitionBuilderParam = BuilderParam {
+        as LifecycleDefinitionBuilderParam
+        index ClassOrder
+        order ClassOrder
+
+        target builder_params {
+            build /Root
+        }
+
+        ident value_name = LifecycleDefinitionParamName
+    }
+
+    contribution AnnotationsBuilderParam = BuilderParam {
+        as AnnotationsBuilderParam
+        index ClassOrder
+        order ClassOrder
+
+        target builder_params {
+            build /Root
+        }
+
+        ident value_name = AnnotationsParamName
+    }
+
+    contribution TxGroupsBuilderParam = BuilderParam {
+        as TxGroupsBuilderParam
+        index ClassOrder
+        order ClassOrder
+
+        target builder_params {
+            build /Root
+        }
+
+        ident value_name = TxGroupsParamName
+    }
+
+    contribution FieldDefaultBuilderParam = BuilderParam {
+        as FieldDefaultBuilderParam
+        index FieldOrder
+        order FieldOrder
+
+        target builder_params {
+            build /Root
+        }
+
+        ident value_name = DefaultValueParamName
+    }
+
+    contribution FieldDefaultFactoryBuilderParam = BuilderParam {
+        as FieldDefaultFactoryBuilderParam
+        index FieldOrder
+        order FieldOrder
+
+        target builder_params {
+            build /Root
+        }
+
+        ident value_name = DefaultFactoryParamName
+    }
+
+    contribution ClassDefinition = ClassProduction {
+        as ClassDef
+        index ClassOrder
+        order ClassOrder
+
+        target function_body {
+            build /Root
+        }
+    }
+
+    contribution FacadeBaseBodyPass = PassStatement {
+        as FacadeBaseBodyPass
+        index 0
+        order 0
+
+        target facade_base_body {
+            build /ClassDef
+        }
+    }
+
+    contribution FacadePropertiesPass = PassStatement {
+        as FacadePropertiesPass
+        index 0
+        order 0
+
+        target facade_properties {
+            build /ClassDef
+        }
+    }
+
+    contribution DefaultFacadePropertiesPass = PassStatement {
+        as DefaultFacadePropertiesPass
+        index 0
+        order 0
+
+        target default_facade_properties {
+            build /ClassDef
+        }
+    }
+
+    contribution CurrentFacadePropertiesPass = PassStatement {
+        as CurrentFacadePropertiesPass
+        index 0
+        order 0
+
+        target current_facade_properties {
+            build /ClassDef
+        }
+    }
+
+    contribution WorkingFacadePropertiesPass = PassStatement {
+        as WorkingFacadePropertiesPass
+        index 0
+        order 0
+
+        target working_facade_properties {
+            build /ClassDef
+        }
+    }
+
+    contribution StateInitBodyPass = PassStatement {
+        as StateInitBodyPass
+        index 0
+        order 0
+
+        target state_init_body {
+            build /ClassDef
+        }
+    }
+
+    contribution CommitTransactionBodyPass = PassStatement {
+        as CommitTransactionBodyPass
+        index 0
+        order 0
+
+        target commit_transaction_body {
+            build /ClassDef
+        }
+    }
+
+    contribution RollbackTransactionBodyPass = PassStatement {
+        as RollbackTransactionBodyPass
+        index 0
+        order 0
+
+        target rollback_transaction_body {
+            build /ClassDef
+        }
+    }
+
+    contribution ReturnClassContribution = ReturnClass {
+        as ReturnClass
+        index ClassOrder
+        order ClassOrder
+
+        target return_statement {
+            build /Root
+        }
+
+        ident return_class_name_ref = ClassName
+        ident return_class_qualname_ref = ClassName
+        ident return_class_module_ref = ClassName
+        ident return_class_result_ref = ClassName
+    }
+
+    contribution TransactionManagerInitParam = TransactionManagerParam {
+        as TransactionManagerInitParam
+        index ClassOrder
+        order 0
+
+        target init_params {
+            build /ClassDef
+        }
+    }
+
+    contribution PlainStateSlot = StateSlotEntry {
+        as PlainStateSlot
+        index FieldOrder
+        order FieldOrder
+
+        target state_slots {
+            build /ClassDef
+        }
+
+        external slot_name = ValueSlotName
+    }
+
+    contribution PlainInitParamRequired = InitParamRequired {
+        as PlainInitParam
+        index FieldOrder
+        order FieldOrder
+
+        target init_params {
+            build /ClassDef
+        }
+
+        ident param_name = FieldName
+        external annotation = Annotation
+    }
+
+    contribution PlainInitParamDefault = InitParamDefault {
+        as PlainInitParam
+        index FieldOrder
+        order FieldOrder
+
+        target init_params {
+            build /ClassDef
+        }
+
+        ident param_name = FieldName
+        external annotation = Annotation
+        ident default_value_name = DefaultValueParamName
+    }
+
+    contribution PlainInitParamDefaultFactory = InitParamDefaultFactory {
+        as PlainInitParam
+        index FieldOrder
+        order FieldOrder
+
+        target init_params {
+            build /ClassDef
+        }
+
+        ident param_name = FieldName
+        external annotation = Annotation
+    }
+
+    contribution InitVarParamRequired = InitParamRequired {
+        as InitVarParam
+        index FieldOrder
+        order FieldOrder
+
+        target init_params {
+            build /ClassDef
+        }
+
+        ident param_name = FieldName
+        external annotation = Annotation
+    }
+
+    contribution InitVarParamDefault = InitParamDefault {
+        as InitVarParam
+        index FieldOrder
+        order FieldOrder
+
+        target init_params {
+            build /ClassDef
+        }
+
+        ident param_name = FieldName
+        external annotation = Annotation
+        ident default_value_name = DefaultValueParamName
+    }
+
+    contribution InitVarParamDefaultFactory = InitParamDefaultFactory {
+        as InitVarParam
+        index FieldOrder
+        order FieldOrder
+
+        target init_params {
+            build /ClassDef
+        }
+
+        ident param_name = FieldName
+        external annotation = Annotation
+    }
+
+    contribution InitVarLocalDefault = InitVarLocalDefaultAssignment {
+        as InitVarLocalDefault
+        index FieldOrder
+        order FieldOrder
+
+        target state_init_body {
+            build /ClassDef
+        }
+
+        ident init_value_name = FieldName
+        ident default_value_name = DefaultValueParamName
+    }
+
+    contribution PlainInitAssignment = PlainStateAssignment {
+        as PlainInitAssignment
+        index FieldOrder
+        order FieldOrder
+
+        target state_init_body {
+            build /ClassDef
+        }
+
+        ident init_value_name = FieldName
+        external state_slot = ValueSlotName
+    }
+
+    contribution PlainDefaultAssignment = PlainStateAssignment {
+        as PlainDefaultAssignment
+        index FieldOrder
+        order FieldOrder
+
+        target state_init_body {
+            build /ClassDef
+        }
+
+        ident init_value_name = DefaultValueParamName
+        external state_slot = ValueSlotName
+    }
+
+    contribution PlainFieldProperty = PlainProperty {
+        as PlainFieldProperty
+        index FieldOrder
+        order FieldOrder
+
+        target facade_properties {
+            build /ClassDef
+        }
+
+        ident property_getter_name = FieldName
+        ident property_setter_target_name = FieldName
+        ident property_setter_name = FieldName
+        external state_slot = ValueSlotName
+    }
+
+    contribution ClassVarDefault = ClassVarDefaultAssignment {
+        as ClassVarDefault
+        index FieldOrder
+        order FieldOrder
+
+        target facade_base_body {
+            build /ClassDef
+        }
+
+        ident classvar_name = FieldName
+        ident classvar_value_name = DefaultValueParamName
+    }
+
+    contribution ManagedCurrentStateSlot = StateSlotEntry {
+        as ManagedCurrentStateSlot
+        index FieldOrder
+        order FieldOrder
+
+        target state_slots {
+            build /ClassDef
+        }
+
+        external slot_name = CurrentSlotName
+    }
+
+    contribution ManagedWorkingStateSlot = StateSlotEntry {
+        as ManagedWorkingStateSlot
+        index FieldOrder
+        order FieldOrder
+
+        target state_slots {
+            build /ClassDef
+        }
+
+        external slot_name = WorkingSlotName
+    }
+
+    contribution ManagedInitParamDefault = InitParamDefault {
+        as ManagedInitParam
+        index FieldOrder
+        order FieldOrder
+
+        target init_params {
+            build /ClassDef
+        }
+
+        ident param_name = FieldName
+        external annotation = Annotation
+        ident default_value_name = DefaultValueParamName
+    }
+
+    contribution ManagedInitParamRequired = InitParamRequired {
+        as ManagedInitParam
+        index FieldOrder
+        order FieldOrder
+
+        target init_params {
+            build /ClassDef
+        }
+
+        ident param_name = FieldName
+        external annotation = Annotation
+    }
+
+    contribution ManagedInitParamDefaultFactory = InitParamDefaultFactory {
+        as ManagedInitParam
+        index FieldOrder
+        order FieldOrder
+
+        target init_params {
+            build /ClassDef
+        }
+
+        ident param_name = FieldName
+        external annotation = Annotation
+    }
+
+    contribution ManagedCurrentInitAssignment = ManagedCurrentStateAssignment {
+        as ManagedCurrentInitAssignment
+        index FieldOrder
+        order FieldOrder
+
+        target state_init_body {
+            build /ClassDef
+        }
+
+        ident init_value_name = FieldName
+        external current_slot = CurrentSlotName
+    }
+
+    contribution ManagedCurrentDefaultAssignment = ManagedCurrentStateAssignment {
+        as ManagedCurrentDefaultAssignment
+        index FieldOrder
+        order FieldOrder
+
+        target state_init_body {
+            build /ClassDef
+        }
+
+        ident init_value_name = DefaultValueParamName
+        external current_slot = CurrentSlotName
+    }
+
+    contribution ManagedWorkingInitAssignment = ManagedWorkingStateAssignment {
+        as ManagedWorkingInitAssignment
+        index FieldOrder
+        order FieldOrder
+
+        target state_init_body {
+            build /ClassDef
+        }
+
+        external working_slot = WorkingSlotName
+    }
+
+    contribution ManagedDefaultFacadeProperty = ManagedDefaultProperty {
+        as ManagedDefaultFacadeProperty
+        index FieldOrder
+        order FieldOrder
+
+        target default_facade_properties {
+            build /ClassDef
+        }
+
+        ident property_getter_name = FieldName
+        ident property_setter_target_name = FieldName
+        ident property_setter_name = FieldName
+        external current_slot = CurrentSlotName
+        external working_slot = WorkingSlotName
+        external tx_index = TxIndex
+    }
+
+    contribution ManagedCurrentFacadeProperty = ManagedCurrentProperty {
+        as ManagedCurrentFacadeProperty
+        index FieldOrder
+        order FieldOrder
+
+        target current_facade_properties {
+            build /ClassDef
+        }
+
+        ident property_getter_name = FieldName
+        ident property_setter_target_name = FieldName
+        ident property_setter_name = FieldName
+        external current_slot = CurrentSlotName
+        external field_name = FieldName
+    }
+
+    contribution ManagedWorkingFacadeProperty = ManagedWorkingProperty {
+        as ManagedWorkingFacadeProperty
+        index FieldOrder
+        order FieldOrder
+
+        target working_facade_properties {
+            build /ClassDef
+        }
+
+        ident property_getter_name = FieldName
+        ident property_setter_target_name = FieldName
+        ident property_setter_name = FieldName
+        external current_slot = CurrentSlotName
+        external working_slot = WorkingSlotName
+        external tx_index = TxIndex
+    }
+
+    contribution ManagedCommit = ManagedCommitBranch {
+        as ManagedCommit
+        index FieldOrder
+        order FieldOrder
+
+        target commit_transaction_body {
+            build /ClassDef
+        }
+
+        external current_slot = CurrentSlotName
+        external working_slot = WorkingSlotName
+        external tx_index_value = TxIndex
+    }
+
+    contribution ManagedRollback = ManagedRollbackBranch {
+        as ManagedRollback
+        index FieldOrder
+        order FieldOrder
+
+        target rollback_transaction_body {
+            build /ClassDef
+        }
+
+        external working_slot = WorkingSlotName
+        external tx_index_value = TxIndex
+    }
+
+    contribution StoredDefaultFactoryEvalInitContribution = StoredDefaultFactoryEvalInit {
+        as DefaultFactoryEval
+        index EvalOrder
+        order EvalStatementOrder
+
+        target state_init_body {
+            build /ClassDef
+        }
+
+        ident field_name = EvalFieldName
+        ident default_factory_name = EvalDefaultFactoryParamName
+        external state_slot = EvalStateSlotName
+    }
+
+    contribution StoredDefaultFactoryEvalNoInitContribution = StoredDefaultFactoryEvalNoInit {
+        as DefaultFactoryEval
+        index EvalOrder
+        order EvalStatementOrder
+
+        target state_init_body {
+            build /ClassDef
+        }
+
+        ident field_name = EvalFieldName
+        ident default_factory_name = EvalDefaultFactoryParamName
+        external state_slot = EvalStateSlotName
+    }
+
+    contribution InitVarDefaultFactoryEvalInitContribution = InitVarDefaultFactoryEvalInit {
+        as DefaultFactoryEval
+        index EvalOrder
+        order EvalStatementOrder
+
+        target state_init_body {
+            build /ClassDef
+        }
+
+        ident field_name = EvalFieldName
+        ident default_factory_name = EvalDefaultFactoryParamName
+    }
+
+    contribution InitVarDefaultFactoryEvalNoInitContribution = InitVarDefaultFactoryEvalNoInit {
+        as DefaultFactoryEval
+        index EvalOrder
+        order EvalStatementOrder
+
+        target state_init_body {
+            build /ClassDef
+        }
+
+        ident field_name = EvalFieldName
+        ident default_factory_name = EvalDefaultFactoryParamName
+    }
+
+    contribution DefaultFactoryStoredArgContribution = DefaultFactoryStoredArg {
+        as DefaultFactoryArg
+        index (ConsumerEvalOrder, ParamOrder)
+        order ParamOrder
+
+        target default_factory_args {
+            build /ClassDef/DefaultFactoryEval[ConsumerEvalOrder]
+        }
+
+        ident param_name = ParamName
+        external provider_name = ProviderName
+    }
+
+    contribution DefaultFactoryLocalArgContribution = DefaultFactoryLocalArg {
+        as DefaultFactoryArg
+        index (ConsumerEvalOrder, ParamOrder)
+        order ParamOrder
+
+        target default_factory_args {
+            build /ClassDef/DefaultFactoryEval[ConsumerEvalOrder]
+        }
+
+        ident param_name = ParamName
+        ident provider_name = ProviderName
+    }
+
+    matcher BuilderParamContributions(lifecycle_class: Classes) -> contribution {
+        default -> LifecycleDefinitionBuilderParam
+    }
+
+    matcher AnnotationsBuilderParamContributions(lifecycle_class: Classes) -> contribution {
+        default -> AnnotationsBuilderParam
+    }
+
+    matcher TxGroupsBuilderParamContributions(lifecycle_class: Classes) -> contribution {
+        default -> TxGroupsBuilderParam
+    }
+
+    matcher FieldDefaultBuilderParamContributions(field: Fields) -> contribution {
+        rule has_default when HasDefault == True -> FieldDefaultBuilderParam
+        rule has_default_factory when HasDefaultFactory == True -> FieldDefaultFactoryBuilderParam
+    }
+
+    matcher ClassDefinitionContributions(lifecycle_class: Classes) -> contribution {
+        default -> ClassDefinition
+    }
+
+    matcher ReturnClassContributions(lifecycle_class: Classes) -> contribution {
+        default -> ReturnClassContribution
+    }
+
+    matcher TransactionManagerInitParamContributions(lifecycle_class: Classes) -> contribution {
+        default -> TransactionManagerInitParam
+    }
+
+    matcher FacadeBaseBodyPassContributions(lifecycle_class: Classes) -> contribution {
+        default -> FacadeBaseBodyPass
+    }
+
+    matcher FacadePropertiesPassContributions(lifecycle_class: Classes) -> contribution {
+        default -> FacadePropertiesPass
+    }
+
+    matcher DefaultFacadePropertiesPassContributions(lifecycle_class: Classes) -> contribution {
+        default -> DefaultFacadePropertiesPass
+    }
+
+    matcher CurrentFacadePropertiesPassContributions(lifecycle_class: Classes) -> contribution {
+        default -> CurrentFacadePropertiesPass
+    }
+
+    matcher WorkingFacadePropertiesPassContributions(lifecycle_class: Classes) -> contribution {
+        default -> WorkingFacadePropertiesPass
+    }
+
+    matcher StateInitBodyPassContributions(lifecycle_class: Classes) -> contribution {
+        default -> StateInitBodyPass
+    }
+
+    matcher CommitTransactionBodyPassContributions(lifecycle_class: Classes) -> contribution {
+        default -> CommitTransactionBodyPass
+    }
+
+    matcher RollbackTransactionBodyPassContributions(lifecycle_class: Classes) -> contribution {
+        default -> RollbackTransactionBodyPass
+    }
+
+    matcher PlainStateSlotContributions(field: PlainFields) -> contribution {
+        default -> PlainStateSlot
+    }
+
+    matcher PlainInitParamContributions(field: PlainFields) -> contribution {
+        rule required when Init == True
+                      and HasDefault == False
+                      and HasDefaultFactory == False
+                      -> PlainInitParamRequired
+        rule default_value when Init == True
+                           and HasDefault == True
+                           and HasDefaultFactory == False
+                           -> PlainInitParamDefault
+        rule default_factory when Init == True
+                             and HasDefaultFactory == True
+                             -> PlainInitParamDefaultFactory
+    }
+
+    matcher InitVarParamContributions(field: InitVarFields) -> contribution {
+        rule required when Init == True
+                      and HasDefault == False
+                      and HasDefaultFactory == False
+                      -> InitVarParamRequired
+        rule default_value when Init == True
+                           and HasDefault == True
+                           and HasDefaultFactory == False
+                           -> InitVarParamDefault
+        rule default_factory when Init == True
+                             and HasDefaultFactory == True
+                             -> InitVarParamDefaultFactory
+    }
+
+    matcher InitVarLocalDefaultContributions(field: InitVarFields) -> contribution {
+        rule default_value when Init == False
+                           and HasDefault == True
+                           and HasDefaultFactory == False
+                           -> InitVarLocalDefault
+    }
+
+    matcher PlainInitAssignmentContributions(field: PlainFields) -> contribution {
+        rule init_field when Init == True
+                        and HasDefaultFactory == False
+                        -> PlainInitAssignment
+        rule default_value when Init == False
+                           and HasDefault == True
+                           and HasDefaultFactory == False
+                           -> PlainDefaultAssignment
+    }
+
+    matcher PlainPropertyContributions(field: PlainFields) -> contribution {
+        default -> PlainFieldProperty
+    }
+
+    matcher ClassVarDefaultContributions(field: ClassVarFields) -> contribution {
+        rule has_default when HasDefault == True -> ClassVarDefault
+    }
+
+    matcher ManagedCurrentStateSlotContributions(field: ManagedFields) -> contribution {
+        default -> ManagedCurrentStateSlot
+    }
+
+    matcher ManagedWorkingStateSlotContributions(field: ManagedFields) -> contribution {
+        default -> ManagedWorkingStateSlot
+    }
+
+    matcher ManagedInitParamContributions(field: ManagedFields) -> contribution {
+        rule required when Init == True
+                      and HasDefault == False
+                      and HasDefaultFactory == False
+                      -> ManagedInitParamRequired
+        rule default_value when Init == True
+                           and HasDefault == True
+                           and HasDefaultFactory == False
+                           -> ManagedInitParamDefault
+        rule default_factory when Init == True
+                             and HasDefaultFactory == True
+                             -> ManagedInitParamDefaultFactory
+    }
+
+    matcher ManagedCurrentInitAssignmentContributions(field: ManagedFields) -> contribution {
+        rule init_field when Init == True
+                        and HasDefaultFactory == False
+                        -> ManagedCurrentInitAssignment
+        rule default_value when Init == False
+                           and HasDefault == True
+                           and HasDefaultFactory == False
+                           -> ManagedCurrentDefaultAssignment
+    }
+
+    matcher ManagedWorkingInitAssignmentContributions(field: ManagedFields) -> contribution {
+        default -> ManagedWorkingInitAssignment
+    }
+
+    matcher ManagedDefaultFacadePropertyContributions(field: IndexedTransactionalFields) -> contribution {
+        default -> ManagedDefaultFacadeProperty
+    }
+
+    matcher ManagedCurrentFacadePropertyContributions(field: IndexedTransactionalFields) -> contribution {
+        default -> ManagedCurrentFacadeProperty
+    }
+
+    matcher ManagedWorkingFacadePropertyContributions(field: IndexedTransactionalFields) -> contribution {
+        default -> ManagedWorkingFacadeProperty
+    }
+
+    matcher ManagedCommitContributions(field: IndexedTransactionalFields) -> contribution {
+        default -> ManagedCommit
+    }
+
+    matcher ManagedRollbackContributions(field: IndexedTransactionalFields) -> contribution {
+        default -> ManagedRollback
+    }
+
+    matcher DefaultFactoryEvalContributions(step: DefaultFactoryEvaluationSteps) -> contribution {
+        rule field_init when EvalFieldKind == "field"
+                        and EvalInit == True
+                        -> StoredDefaultFactoryEvalInitContribution
+        rule field_no_init when EvalFieldKind == "field"
+                           and EvalInit == False
+                           -> StoredDefaultFactoryEvalNoInitContribution
+        rule managed_init when EvalFieldKind == "managed"
+                          and EvalInit == True
+                          -> StoredDefaultFactoryEvalInitContribution
+        rule managed_no_init when EvalFieldKind == "managed"
+                             and EvalInit == False
+                             -> StoredDefaultFactoryEvalNoInitContribution
+        rule initvar_init when EvalFieldKind == "initvar"
+                          and EvalInit == True
+                          -> InitVarDefaultFactoryEvalInitContribution
+        rule initvar_no_init when EvalFieldKind == "initvar"
+                             and EvalInit == False
+                             -> InitVarDefaultFactoryEvalNoInitContribution
+    }
+
+    matcher DefaultFactoryArgContributions(dep: DefaultFactoryDependencies) -> contribution {
+        default -> DefaultFactoryStoredArgContribution
+        rule local_provider when ProviderFieldKind == "initvar"
+                            -> DefaultFactoryLocalArgContribution
+    }
+
+    production ModuleProduction -> composable {
+        root Root = ModuleRoot
+
+        apply lifecycle_definition_params
+            from lifecycle_class: Classes
+            using BuilderParamContributions
+
+        apply annotations_params
+            from lifecycle_class: Classes
+            using AnnotationsBuilderParamContributions
+
+        apply tx_groups_params
+            from lifecycle_class: Classes
+            using TxGroupsBuilderParamContributions
+
+        apply field_default_params
+            from field: Fields
+            using FieldDefaultBuilderParamContributions
+
+        apply classes
+            from lifecycle_class: Classes
+            using ClassDefinitionContributions
+
+        apply return_class
+            from lifecycle_class: Classes
+            using ReturnClassContributions
+    }
+
+    production ClassProduction(lifecycle_class: Classes) -> composable {
+        root ClassDef = ClassBundle {
+            ident state_class_decl_name = StateClassName
+            ident state_class_ref = StateClassName
+            ident default_facade_class_decl_name = ClassName
+            ident default_facade_class_ref = ClassName
+            ident facade_base_decl_name = FacadeBaseClassName
+            ident facade_base_default_base_name = FacadeBaseClassName
+            ident facade_base_current_base_name = FacadeBaseClassName
+            ident facade_base_working_base_name = FacadeBaseClassName
+            ident current_facade_class_decl_name = CurrentFacadeClassName
+            ident current_facade_class_ref = CurrentFacadeClassName
+            ident working_facade_class_decl_name = WorkingFacadeClassName
+            ident working_facade_class_ref = WorkingFacadeClassName
+            ident tx_groups_for_index_name = TxGroupsParamName
+            ident tx_groups_for_map_name = TxGroupsParamName
+            ident tx_groups_for_class_index_name = TxGroupsParamName
+            ident tx_groups_for_class_map_name = TxGroupsParamName
+            ident tx_groups_for_manager_name = TxGroupsParamName
+            ident tx_groups_for_slots_name = TxGroupsParamName
+            ident lifecycle_definition_name = LifecycleDefinitionParamName
+            ident annotations_name = AnnotationsParamName
+        }
+
+        apply state_slots
+            from field: PlainFields
+            where FieldOwner == ClassId
+            using PlainStateSlotContributions
+
+        apply managed_current_state_slots
+            from field: ManagedFields
+            where FieldOwner == ClassId
+            using ManagedCurrentStateSlotContributions
+
+        apply managed_working_state_slots
+            from field: ManagedFields
+            where FieldOwner == ClassId
+            using ManagedWorkingStateSlotContributions
+
+        apply transaction_manager_param
+            using TransactionManagerInitParamContributions
+
+        apply facade_base_body_pass
+            using FacadeBaseBodyPassContributions
+
+        apply facade_properties_pass
+            using FacadePropertiesPassContributions
+
+        apply default_facade_properties_pass
+            using DefaultFacadePropertiesPassContributions
+
+        apply current_facade_properties_pass
+            using CurrentFacadePropertiesPassContributions
+
+        apply working_facade_properties_pass
+            using WorkingFacadePropertiesPassContributions
+
+        apply state_init_body_pass
+            using StateInitBodyPassContributions
+
+        apply commit_transaction_body_pass
+            using CommitTransactionBodyPassContributions
+
+        apply rollback_transaction_body_pass
+            using RollbackTransactionBodyPassContributions
+
+        apply classvars
+            from field: ClassVarFields
+            where FieldOwner == ClassId
+            using ClassVarDefaultContributions
+
+        apply plain_init_params
+            from field: PlainFields
+            where FieldOwner == ClassId
+            using PlainInitParamContributions
+
+        apply initvar_params
+            from field: InitVarFields
+            where FieldOwner == ClassId
+            using InitVarParamContributions
+
+        apply managed_init_params
+            from field: ManagedFields
+            where FieldOwner == ClassId
+            using ManagedInitParamContributions
+
+        apply initvar_local_defaults
+            from field: InitVarFields
+            where FieldOwner == ClassId
+            using InitVarLocalDefaultContributions
+
+        apply plain_init_assignments
+            from field: PlainFields
+            where FieldOwner == ClassId
+            using PlainInitAssignmentContributions
+
+        apply managed_current_init_assignments
+            from field: ManagedFields
+            where FieldOwner == ClassId
+            using ManagedCurrentInitAssignmentContributions
+
+        apply managed_working_init_assignments
+            from field: ManagedFields
+            where FieldOwner == ClassId
+            using ManagedWorkingInitAssignmentContributions
+
+        apply default_factory_evals
+            from step: DefaultFactoryEvaluationSteps
+            where EvalOwner == ClassId
+            using DefaultFactoryEvalContributions
+
+        apply default_factory_args
+            from dep: DefaultFactoryDependencies
+            where DependencyOwner == ClassId
+            using DefaultFactoryArgContributions
+
+        apply plain_properties
+            from field: PlainFields
+            where FieldOwner == ClassId
+            using PlainPropertyContributions
+
+        apply managed_default_properties
+            from field: IndexedTransactionalFields
+            where FieldOwner == ClassId
+            using ManagedDefaultFacadePropertyContributions
+
+        apply managed_current_properties
+            from field: IndexedTransactionalFields
+            where FieldOwner == ClassId
+            using ManagedCurrentFacadePropertyContributions
+
+        apply managed_working_properties
+            from field: IndexedTransactionalFields
+            where FieldOwner == ClassId
+            using ManagedWorkingFacadePropertyContributions
+
+        apply managed_commit
+            from field: IndexedTransactionalFields
+            where FieldOwner == ClassId
+            using ManagedCommitContributions
+
+        apply managed_rollback
+            from field: IndexedTransactionalFields
+            where FieldOwner == ClassId
+            using ManagedRollbackContributions
+    }
+
+    assembly LifecycleModule = ModuleProduction
+}
