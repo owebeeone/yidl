@@ -486,6 +486,96 @@ def test_lifecycle_decorator_freeze_failure_rolls_back_working_value() -> None:
     assert events == [("freeze", 2)]
 
 
+def test_lifecycle_decorator_thaws_working_value_for_in_place_mutation() -> None:
+    thaw_calls: list[tuple[int, ...]] = []
+    freeze_calls: list[list[int]] = []
+
+    def thaw_items(value: tuple[int, ...]) -> list[int]:
+        thaw_calls.append(value)
+        return list(value)
+
+    def freeze_items(value: list[int]) -> tuple[int, ...]:
+        freeze_calls.append(list(value))
+        return tuple(value)
+
+    class Counter:
+        items: tuple[int, ...] = managed(
+            default=(0, 0, 0),
+            thaw=thaw_items,
+            freeze=freeze_items,
+        )
+
+    item = lifecycle(Counter)()
+
+    assert item.items == (0, 0, 0)
+    assert item.working.items == (0, 0, 0)
+    assert thaw_calls == []
+
+    with item.begin(DEFAULT_TRANSACTION):
+        working_items = item.working.items
+        assert working_items == [0, 0, 0]
+        working_items[2] = 7
+        assert item.current.items == (0, 0, 0)
+
+    assert item.items == (0, 0, 7)
+    assert item.current.items == (0, 0, 7)
+    assert item.working.items == (0, 0, 7)
+    assert thaw_calls == [(0, 0, 0)]
+    assert freeze_calls == [[0, 0, 7]]
+
+
+def test_lifecycle_decorator_thaw_failure_does_not_publish_working_value() -> None:
+    calls: list[tuple[int, ...]] = []
+
+    def thaw_items(value: tuple[int, ...]) -> list[int]:
+        calls.append(value)
+        raise ValueError("thaw failed")
+
+    class Counter:
+        items: tuple[int, ...] = managed(default=(0, 0), thaw=thaw_items)
+
+    item = lifecycle(Counter)()
+
+    with item.begin(DEFAULT_TRANSACTION):
+        with pytest.raises(ValueError, match="thaw failed"):
+            item.working.items
+        assert item.current.items == (0, 0)
+
+    assert item.items == (0, 0)
+    assert item.current.items == (0, 0)
+    assert item.working.items == (0, 0)
+    assert calls == [(0, 0)]
+
+
+def test_lifecycle_decorator_optional_none_skips_thaw_and_freeze() -> None:
+    calls: list[str] = []
+
+    def thaw_items(value: tuple[int, ...]) -> list[int]:
+        calls.append("thaw")
+        return list(value)
+
+    def freeze_items(value: list[int]) -> tuple[int, ...]:
+        calls.append("freeze")
+        return tuple(value)
+
+    class Counter:
+        items: tuple[int, ...] | None = managed(
+            default=None,
+            thaw=thaw_items,
+            freeze=freeze_items,
+        )
+
+    item = lifecycle(Counter)()
+
+    with item.begin(DEFAULT_TRANSACTION):
+        assert item.working.items is None
+
+    assert item.items is None
+    assert item.current.items is None
+    assert item.working.items is None
+    assert calls == []
+
+
 def test_lifecycle_decorator_after_rollback_failure_keeps_rollback() -> None:
     events: list[tuple[str, int]] = []
 

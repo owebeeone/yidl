@@ -236,6 +236,63 @@ concept LifecycleManaged extends core.LifecycleCore {
         keep VOID
     }
 
+    resource ManagedThawWorkingProperty = template $[
+        @property
+        def property_getter_name__astichi_arg__(self):
+            state = self._y_state
+            if state.astichi_ref(external=working_slot) is not VOID:
+                return state.astichi_ref(external=working_slot)
+            tx_group = state.__yidl_tx_index_to_group__[
+                astichi_bind_external(working_tx_index)
+            ]
+            if state._y_transaction_manager.active_transaction_for(tx_group) is None:
+                return state.astichi_ref(external=current_slot)
+            state._y_ensure_working_transaction(astichi_bind_external(working_tx_index))
+            next_value = thaw_func_name__astichi_arg__(
+                state.astichi_ref(external=current_slot)
+            )
+            state.astichi_ref(external=working_slot)._ = next_value
+            return next_value
+
+        @property_setter_target_name__astichi_arg__.setter
+        def property_setter_name__astichi_arg__(self, value):
+            state = self._y_state
+            state._y_ensure_working_transaction(astichi_bind_external(working_tx_index))
+            state.astichi_ref(external=working_slot)._ = value
+    ]$ {
+        keep VOID
+    }
+
+    resource ManagedOptionalThawWorkingProperty = template $[
+        @property
+        def property_getter_name__astichi_arg__(self):
+            state = self._y_state
+            if state.astichi_ref(external=working_slot) is not VOID:
+                return state.astichi_ref(external=working_slot)
+            tx_group = state.__yidl_tx_index_to_group__[
+                astichi_bind_external(working_tx_index)
+            ]
+            if state._y_transaction_manager.active_transaction_for(tx_group) is None:
+                return state.astichi_ref(external=current_slot)
+            state._y_ensure_working_transaction(astichi_bind_external(working_tx_index))
+            current_value = state.astichi_ref(external=current_slot)
+            next_value = (
+                None
+                if current_value is None
+                else thaw_func_name__astichi_arg__(current_value)
+            )
+            state.astichi_ref(external=working_slot)._ = next_value
+            return next_value
+
+        @property_setter_target_name__astichi_arg__.setter
+        def property_setter_name__astichi_arg__(self, value):
+            state = self._y_state
+            state._y_ensure_working_transaction(astichi_bind_external(working_tx_index))
+            state.astichi_ref(external=working_slot)._ = value
+    ]$ {
+        keep VOID
+    }
+
     resource ManagedPlainPrepareBranch = template $[
         if astichi_pass(self, outer_bind=True).astichi_ref(external=working_slot) is not VOID:
             astichi_pass(self, outer_bind=True).astichi_ref(external=staged_slot)._ = (
@@ -513,6 +570,42 @@ concept LifecycleManaged extends core.LifecycleCore {
         external tx_index = TxIndex
     }
 
+    contribution ManagedThawWorkingFacadeProperty = ManagedThawWorkingProperty {
+        as ManagedWorkingFacadeProperty
+        index FieldOrder
+        order FieldOrder
+
+        target working_facade_properties {
+            build /ClassDef
+        }
+
+        ident property_getter_name = FieldName
+        ident property_setter_target_name = FieldName
+        ident property_setter_name = FieldName
+        external current_slot = CurrentSlotName
+        external working_slot = WorkingSlotName
+        external working_tx_index = TxIndex
+        ident thaw_func_name = ThawParamName
+    }
+
+    contribution ManagedOptionalThawWorkingFacadeProperty = ManagedOptionalThawWorkingProperty {
+        as ManagedWorkingFacadeProperty
+        index FieldOrder
+        order FieldOrder
+
+        target working_facade_properties {
+            build /ClassDef
+        }
+
+        ident property_getter_name = FieldName
+        ident property_setter_target_name = FieldName
+        ident property_setter_name = FieldName
+        external current_slot = CurrentSlotName
+        external working_slot = WorkingSlotName
+        external working_tx_index = TxIndex
+        ident thaw_func_name = ThawParamName
+    }
+
     contribution ManagedPlainPrepareCommit = ManagedPlainPrepareBranch {
         as ManagedPrepareCommit
         index FieldOrder
@@ -734,6 +827,10 @@ concept LifecycleManaged extends core.LifecycleCore {
 
     matcher ManagedWorkingFacadePropertyContributions(field: IndexedTransactionalFields) -> contribution {
         default -> ManagedWorkingFacadeProperty
+        rule with_optional_thaw when HasThaw == True
+                                and HasOptionalNone == True
+                                -> ManagedOptionalThawWorkingFacadeProperty
+        rule with_thaw when HasThaw == True -> ManagedThawWorkingFacadeProperty
     }
 
     matcher ManagedPrepareCommitContributions(field: IndexedTransactionalFields) -> contribution {

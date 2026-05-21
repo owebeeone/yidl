@@ -4307,6 +4307,69 @@ def property_setter_name__astichi_arg__(self, value):
             keep_names=("VOID",),
         )
     ),
+    "ManagedThawWorkingProperty": astichi_template(
+        from_astichi_code(
+            """\
+@property
+def property_getter_name__astichi_arg__(self):
+    state = self._y_state
+    if state.astichi_ref(external=working_slot) is not VOID:
+        return state.astichi_ref(external=working_slot)
+    tx_group = state.__yidl_tx_index_to_group__[
+        astichi_bind_external(working_tx_index)
+    ]
+    if state._y_transaction_manager.active_transaction_for(tx_group) is None:
+        return state.astichi_ref(external=current_slot)
+    state._y_ensure_working_transaction(astichi_bind_external(working_tx_index))
+    next_value = thaw_func_name__astichi_arg__(
+        state.astichi_ref(external=current_slot)
+    )
+    state.astichi_ref(external=working_slot)._ = next_value
+    return next_value
+
+@property_setter_target_name__astichi_arg__.setter
+def property_setter_name__astichi_arg__(self, value):
+    state = self._y_state
+    state._y_ensure_working_transaction(astichi_bind_external(working_tx_index))
+    state.astichi_ref(external=working_slot)._ = value""",
+            file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_managed.yidl",
+            line_number=240,
+            keep_names=("VOID",),
+        )
+    ),
+    "ManagedOptionalThawWorkingProperty": astichi_template(
+        from_astichi_code(
+            """\
+@property
+def property_getter_name__astichi_arg__(self):
+    state = self._y_state
+    if state.astichi_ref(external=working_slot) is not VOID:
+        return state.astichi_ref(external=working_slot)
+    tx_group = state.__yidl_tx_index_to_group__[
+        astichi_bind_external(working_tx_index)
+    ]
+    if state._y_transaction_manager.active_transaction_for(tx_group) is None:
+        return state.astichi_ref(external=current_slot)
+    state._y_ensure_working_transaction(astichi_bind_external(working_tx_index))
+    current_value = state.astichi_ref(external=current_slot)
+    next_value = (
+        None
+        if current_value is None
+        else thaw_func_name__astichi_arg__(current_value)
+    )
+    state.astichi_ref(external=working_slot)._ = next_value
+    return next_value
+
+@property_setter_target_name__astichi_arg__.setter
+def property_setter_name__astichi_arg__(self, value):
+    state = self._y_state
+    state._y_ensure_working_transaction(astichi_bind_external(working_tx_index))
+    state.astichi_ref(external=working_slot)._ = value""",
+            file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_managed.yidl",
+            line_number=267,
+            keep_names=("VOID",),
+        )
+    ),
     "ManagedPlainPrepareBranch": astichi_template(
         from_astichi_code(
             """\
@@ -4315,7 +4378,7 @@ if astichi_pass(self, outer_bind=True).astichi_ref(external=working_slot) is not
         astichi_pass(self, outer_bind=True).astichi_ref(external=working_slot)
     )""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_managed.yidl",
-            line_number=240,
+            line_number=297,
             keep_names=("VOID",),
         )
     ),
@@ -4329,7 +4392,7 @@ if astichi_pass(self, outer_bind=True).astichi_ref(external=working_slot) is not
         )
     )""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_managed.yidl",
-            line_number=249,
+            line_number=306,
             keep_names=("VOID",),
         )
     ),
@@ -4345,7 +4408,7 @@ if astichi_pass(self, outer_bind=True).astichi_ref(external=working_slot) is not
         )
     )""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_managed.yidl",
-            line_number=260,
+            line_number=317,
             keep_names=("VOID",),
         )
     ),
@@ -4359,7 +4422,7 @@ if astichi_pass(self, outer_bind=True).astichi_ref(external=staged_slot) is not 
     astichi_pass(self, outer_bind=True).astichi_ref(external=staged_slot)._ = VOID
     astichi_pass(self, outer_bind=True).astichi_ref(external=working_slot)._ = VOID""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_managed.yidl",
-            line_number=273,
+            line_number=330,
             keep_names=("VOID",),
         )
     ),
@@ -4369,7 +4432,7 @@ if astichi_pass(self, outer_bind=True).astichi_ref(external=staged_slot) is not 
 astichi_pass(self, outer_bind=True).astichi_ref(external=staged_slot)._ = VOID
 astichi_pass(self, outer_bind=True).astichi_ref(external=working_slot)._ = VOID""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_managed.yidl",
-            line_number=284,
+            line_number=341,
             keep_names=("VOID",),
         )
     ),
@@ -4379,7 +4442,7 @@ astichi_pass(self, outer_bind=True).astichi_ref(external=working_slot)._ = VOID"
 def prepare_commit_fields_function_name__astichi_arg__(self):
     astichi_hole(prepare_commit_fields_body)""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_managed.yidl",
-            line_number=291,
+            line_number=348,
         )
     ),
     "ApplyPreparedCommitFieldsFunction": astichi_template(
@@ -4388,7 +4451,7 @@ def prepare_commit_fields_function_name__astichi_arg__(self):
 def apply_prepared_commit_fields_function_name__astichi_arg__(self):
     astichi_hole(apply_prepared_commit_fields_body)""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_managed.yidl",
-            line_number=296,
+            line_number=353,
         )
     ),
     "RollbackFieldsFunction": astichi_template(
@@ -4397,7 +4460,7 @@ def apply_prepared_commit_fields_function_name__astichi_arg__(self):
 def rollback_fields_function_name__astichi_arg__(self):
     astichi_hole(rollback_fields_body)""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_managed.yidl",
-            line_number=301,
+            line_number=358,
         )
     ),
     "ApplyPreparedCommitDispatchBranch": astichi_template(
@@ -4409,7 +4472,7 @@ if astichi_pass(tx_index, outer_bind=True) == astichi_bind_external(tx_index_val
         outer_bind=True,
     ).astichi_ref(external=apply_prepared_commit_fields_function_name)()""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_managed.yidl",
-            line_number=306,
+            line_number=363,
         )
     ),
     "PrepareCommitDispatchBranch": astichi_template(
@@ -4421,7 +4484,7 @@ if astichi_pass(tx_index, outer_bind=True) == astichi_bind_external(tx_index_val
         outer_bind=True,
     ).astichi_ref(external=prepare_commit_fields_function_name)()""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_managed.yidl",
-            line_number=314,
+            line_number=371,
         )
     ),
     "RollbackDispatchBranch": astichi_template(
@@ -4433,7 +4496,7 @@ if astichi_pass(tx_index, outer_bind=True) == astichi_bind_external(tx_index_val
         outer_bind=True,
     ).astichi_ref(external=rollback_fields_function_name)()""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_managed.yidl",
-            line_number=322,
+            line_number=379,
         )
     ),
     "BuildDefaultFactoryFactsBody": from_astichi_code(
@@ -6195,6 +6258,98 @@ ASSEMBLY_CONTRIBUTIONS = {
             BindingSpec(kind="external", name="tx_index", value=ValueRef("TxIndex")),
         ),
     ),
+    "ManagedThawWorkingFacadeProperty": ContributionSpec(
+        name="ManagedThawWorkingFacadeProperty",
+        source_name="ManagedThawWorkingProperty",
+        source_kind="resource",
+        build_name="ManagedWorkingFacadeProperty",
+        index=ValueRef("FieldOrder"),
+        order=ValueRef("FieldOrder"),
+        target=TargetSpec(
+            name="working_facade_properties",
+            paths=(
+                TargetPathSpec(
+                    kind="build",
+                    path=PathSpec(
+                        segments=(
+                            PathSegmentSpec(kind="name", name="ClassDef", indexes=()),
+                        )
+                    ),
+                ),
+            ),
+        ),
+        bindings=(
+            BindingSpec(
+                kind="ident", name="property_getter_name", value=ValueRef("FieldName")
+            ),
+            BindingSpec(
+                kind="ident",
+                name="property_setter_target_name",
+                value=ValueRef("FieldName"),
+            ),
+            BindingSpec(
+                kind="ident", name="property_setter_name", value=ValueRef("FieldName")
+            ),
+            BindingSpec(
+                kind="external", name="current_slot", value=ValueRef("CurrentSlotName")
+            ),
+            BindingSpec(
+                kind="external", name="working_slot", value=ValueRef("WorkingSlotName")
+            ),
+            BindingSpec(
+                kind="external", name="working_tx_index", value=ValueRef("TxIndex")
+            ),
+            BindingSpec(
+                kind="ident", name="thaw_func_name", value=ValueRef("ThawParamName")
+            ),
+        ),
+    ),
+    "ManagedOptionalThawWorkingFacadeProperty": ContributionSpec(
+        name="ManagedOptionalThawWorkingFacadeProperty",
+        source_name="ManagedOptionalThawWorkingProperty",
+        source_kind="resource",
+        build_name="ManagedWorkingFacadeProperty",
+        index=ValueRef("FieldOrder"),
+        order=ValueRef("FieldOrder"),
+        target=TargetSpec(
+            name="working_facade_properties",
+            paths=(
+                TargetPathSpec(
+                    kind="build",
+                    path=PathSpec(
+                        segments=(
+                            PathSegmentSpec(kind="name", name="ClassDef", indexes=()),
+                        )
+                    ),
+                ),
+            ),
+        ),
+        bindings=(
+            BindingSpec(
+                kind="ident", name="property_getter_name", value=ValueRef("FieldName")
+            ),
+            BindingSpec(
+                kind="ident",
+                name="property_setter_target_name",
+                value=ValueRef("FieldName"),
+            ),
+            BindingSpec(
+                kind="ident", name="property_setter_name", value=ValueRef("FieldName")
+            ),
+            BindingSpec(
+                kind="external", name="current_slot", value=ValueRef("CurrentSlotName")
+            ),
+            BindingSpec(
+                kind="external", name="working_slot", value=ValueRef("WorkingSlotName")
+            ),
+            BindingSpec(
+                kind="external", name="working_tx_index", value=ValueRef("TxIndex")
+            ),
+            BindingSpec(
+                kind="ident", name="thaw_func_name", value=ValueRef("ThawParamName")
+            ),
+        ),
+    ),
     "ManagedPlainPrepareCommit": ContributionSpec(
         name="ManagedPlainPrepareCommit",
         source_name="ManagedPlainPrepareBranch",
@@ -7689,7 +7844,32 @@ ASSEMBLY_MATCHERS = {
             ),
         ),
         default_contribution_name="ManagedWorkingFacadeProperty",
-        rules=(),
+        rules=(
+            ContributionRuleSpec(
+                name="with_optional_thaw",
+                condition=AndConditionSpec(
+                    items=(
+                        EqConditionSpec(
+                            left=ValueRef("HasThaw"), right=LiteralValueRef(True)
+                        ),
+                        EqConditionSpec(
+                            left=ValueRef("HasOptionalNone"),
+                            right=LiteralValueRef(True),
+                        ),
+                    )
+                ),
+                contribution_name="ManagedOptionalThawWorkingFacadeProperty",
+                weight=1.0,
+            ),
+            ContributionRuleSpec(
+                name="with_thaw",
+                condition=EqConditionSpec(
+                    left=ValueRef("HasThaw"), right=LiteralValueRef(True)
+                ),
+                contribution_name="ManagedThawWorkingFacadeProperty",
+                weight=1.0,
+            ),
+        ),
     ),
     "ManagedPrepareCommitContributions": ContributionMatcherSpec(
         name="ManagedPrepareCommitContributions",
