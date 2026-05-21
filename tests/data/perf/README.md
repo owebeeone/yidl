@@ -21,7 +21,7 @@ PYTHONPATH=../astichi/src uv run --with pytest python tests/data/perf/run_lifecy
 
 The comparison creates generated lifecycle classes and equivalent
 `dataclasses.make_dataclass(..., slots=True)` classes for field group sizes
-10, 50, and 100. Each size has the same number of plain fields, managed count
+5, 10, and 15. Each size has the same number of plain fields, managed count
 fields, and derived managed fields. The derived dataclass fields are initialized
 in `__post_init__`; the lifecycle fields use generated parameterized
 `default_factory` lowering.

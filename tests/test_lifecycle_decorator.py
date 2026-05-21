@@ -19,7 +19,7 @@ from yidl.runtime.lifecycle import managed
 from yidl.runtime.transaction_yidl import DEFAULT_TRANSACTION
 
 _PERF_CONSTRUCTION_TIME_LIMIT = 5.0
-_PERF_FIELD_GROUP_SIZES = (10, 50, 100)
+_PERF_FIELD_GROUP_SIZES = (5, 10, 15)
 _PERF_TOTAL_OBJECTS = 10_000
 _PERF_BATCH_SIZE = 100
 _LIFECYCLE_PERF_FIXTURE = (

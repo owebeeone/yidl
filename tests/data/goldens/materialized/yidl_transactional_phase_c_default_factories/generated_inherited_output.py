@@ -98,6 +98,25 @@ def build_lifecycle_class(decorated_cls, *, _Derived_lifecycle_definition, _Deri
 
     class Derived_FacadeBase(decorated_cls):
         __slots__ = ('_y_state',)
+        _y_lifecycle_field_names = frozenset(('v1', 'v2'))
+
+        def __setattr__(self, name, value):
+            if name in self._y_lifecycle_field_names:
+                descriptor = getattr(type(self), name, None)
+                if descriptor is None or not hasattr(descriptor, '__set__'):
+                    raise AttributeError(f'lifecycle field {name!r} is not assignable')
+                descriptor.__set__(self, value)
+                return
+            if name.startswith('_y_') or name.startswith('__yidl_'):
+                raise AttributeError(f'{name!r} is reserved for generated lifecycle state')
+            object.__setattr__(self, name, value)
+
+        def __delattr__(self, name):
+            if name in self._y_lifecycle_field_names:
+                raise AttributeError(f'lifecycle field {name!r} cannot be deleted')
+            if name.startswith('_y_') or name.startswith('__yidl_'):
+                raise AttributeError(f'{name!r} is reserved for generated lifecycle state')
+            object.__delattr__(self, name)
 
         @property
         def default(self):

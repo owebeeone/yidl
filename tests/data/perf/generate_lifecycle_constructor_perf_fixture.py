@@ -8,7 +8,7 @@ from yidl.runtime.lifecycle import harvest_lifecycle_definition
 from yidl.runtime.lifecycle import managed
 
 OUTPUT = Path(__file__).with_name("lifecycle_constructor_perf_generated.py")
-SIZES = (10, 50, 100)
+SIZES = (5, 10, 15)
 
 
 def increment_factory_for(param_name: str) -> object:

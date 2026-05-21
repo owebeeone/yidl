@@ -57,6 +57,9 @@ _AnnotationsParamNameProperty = RuntimeProperty(
 _TxGroupsParamNameProperty = RuntimeProperty(
     "TxGroupsParamName", str, default="", storage_name="tx_groups_param_name"
 )
+_LifecycleFieldNamesProperty = RuntimeProperty(
+    "LifecycleFieldNames", object, default=(), storage_name="lifecycle_field_names"
+)
 _FieldIdProperty = RuntimeProperty(
     "FieldId", str, default=REQUIRED, storage_name="field_id"
 )
@@ -216,6 +219,7 @@ _LifecycleClassSpec = RuntimeRecord(
         _LifecycleDefinitionParamNameProperty,
         _AnnotationsParamNameProperty,
         _TxGroupsParamNameProperty,
+        _LifecycleFieldNamesProperty,
     ),
 )
 _FacadeClassSpec = RuntimeRecord(
@@ -356,6 +360,7 @@ class LifecycleClass:
         "lifecycle_definition_param_name",
         "annotations_param_name",
         "tx_groups_param_name",
+        "lifecycle_field_names",
     )
     __dds_record_spec__ = _LifecycleClassSpec
     class_id: str
@@ -369,6 +374,7 @@ class LifecycleClass:
     lifecycle_definition_param_name: str
     annotations_param_name: str
     tx_groups_param_name: str
+    lifecycle_field_names: object
 
     def __init__(
         self,
@@ -383,7 +389,8 @@ class LifecycleClass:
         working_facade_class_name: str,
         lifecycle_definition_param_name: str = "",
         annotations_param_name: str = "",
-        tx_groups_param_name: str = ""
+        tx_groups_param_name: str = "",
+        lifecycle_field_names: object = ()
     ):
         if not isinstance(class_id, str):
             raise TypeError("ClassId must be str, got " + type(class_id).__name__)
@@ -440,6 +447,7 @@ class LifecycleClass:
                 + type(tx_groups_param_name).__name__
             )
         object.__setattr__(self, "tx_groups_param_name", tx_groups_param_name)
+        object.__setattr__(self, "lifecycle_field_names", lifecycle_field_names)
 
     def __setattr__(self, name, value):
         if name in (
@@ -454,6 +462,7 @@ class LifecycleClass:
             "lifecycle_definition_param_name",
             "annotations_param_name",
             "tx_groups_param_name",
+            "lifecycle_field_names",
         ):
             raise AttributeError("LifecycleClass records are immutable")
         object.__setattr__(self, name, value)
@@ -478,6 +487,7 @@ class LifecycleClass:
         )
         pieces.append("annotations_param_name=" + repr(self.annotations_param_name))
         pieces.append("tx_groups_param_name=" + repr(self.tx_groups_param_name))
+        pieces.append("lifecycle_field_names=" + repr(self.lifecycle_field_names))
         return "LifecycleClass" + "(" + ", ".join(pieces) + ")"
 
 
@@ -1595,6 +1605,9 @@ ASSEMBLY_PROPERTIES = {
     "TxGroupsParamName": _YidlSimpleNamespace(
         name="TxGroupsParamName", storage_name="tx_groups_param_name"
     ),
+    "LifecycleFieldNames": _YidlSimpleNamespace(
+        name="LifecycleFieldNames", storage_name="lifecycle_field_names"
+    ),
     "FieldId": _YidlSimpleNamespace(name="FieldId", storage_name="field_id"),
     "FieldOwner": _YidlSimpleNamespace(name="FieldOwner", storage_name="field_owner"),
     "FieldName": _YidlSimpleNamespace(name="FieldName", storage_name="field_name"),
@@ -1717,7 +1730,7 @@ def build_lifecycle_class(decorated_cls, builder_params__astichi_param_hole__):
     astichi_hole(function_body)
     astichi_hole(return_statement)""",
         file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-        line_number=169,
+        line_number=171,
     ),
     "BuilderParam": astichi_template(
         from_astichi_code(
@@ -1725,7 +1738,7 @@ def build_lifecycle_class(decorated_cls, builder_params__astichi_param_hole__):
 def astichi_params(*, value_name__astichi_arg__):
     pass""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=187,
+            line_number=189,
         )
     ),
     "TransactionManagerParam": astichi_template(
@@ -1734,14 +1747,14 @@ def astichi_params(*, value_name__astichi_arg__):
 def astichi_params(*, transaction_manager=None):
     pass""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=192,
+            line_number=194,
         )
     ),
     "StateSlotEntry": astichi_template(
         from_astichi_code(
             "astichi_bind_external(slot_name)",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=197,
+            line_number=199,
         )
     ),
     "InitParamRequired": astichi_template(
@@ -1750,7 +1763,7 @@ def astichi_params(*, transaction_manager=None):
 def astichi_params(param_name__astichi_arg__: astichi_bind_external(annotation)):
     pass""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=201,
+            line_number=203,
         )
     ),
     "InitParamDefault": astichi_template(
@@ -1762,7 +1775,7 @@ def astichi_params(
 ):
     pass""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=206,
+            line_number=208,
         )
     ),
     "PlainStateAssignment": astichi_template(
@@ -1773,7 +1786,7 @@ astichi_pass(state, outer_bind=True).astichi_ref(external=state_slot)._ = astich
     outer_bind=True,
 )""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=214,
+            line_number=216,
         )
     ),
     "InitVarLocalDefaultAssignment": astichi_template(
@@ -1784,7 +1797,7 @@ init_value_name__astichi_arg__ = astichi_pass(
     outer_bind=True,
 )""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=221,
+            line_number=223,
         )
     ),
     "PlainProperty": astichi_template(
@@ -1798,7 +1811,7 @@ def property_getter_name__astichi_arg__(self):
 def property_setter_name__astichi_arg__(self, value):
     self._y_state.astichi_ref(external=state_slot)._ = value""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=228,
+            line_number=230,
         )
     ),
     "ClassVarDefaultAssignment": astichi_template(
@@ -1809,7 +1822,7 @@ classvar_name__astichi_arg__ = astichi_pass(
     outer_bind=True,
 )""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=238,
+            line_number=240,
         )
     ),
     "ClassBundle": astichi_template(
@@ -1919,6 +1932,33 @@ class facade_base_decl_name__astichi_arg__(
     astichi_pass(decorated_cls, outer_bind=True)
 ):
     __slots__ = ("_y_state",)
+    _y_lifecycle_field_names = frozenset(
+        astichi_bind_external(lifecycle_field_names)
+    )
+
+    def __setattr__(self, name, value):
+        if name in self._y_lifecycle_field_names:
+            descriptor = getattr(type(self), name, None)
+            if descriptor is None or not hasattr(descriptor, "__set__"):
+                raise AttributeError(
+                    f"lifecycle field {name!r} is not assignable"
+                )
+            descriptor.__set__(self, value)
+            return
+        if name.startswith("_y_") or name.startswith("__yidl_"):
+            raise AttributeError(
+                f"{name!r} is reserved for generated lifecycle state"
+            )
+        object.__setattr__(self, name, value)
+
+    def __delattr__(self, name):
+        if name in self._y_lifecycle_field_names:
+            raise AttributeError(f"lifecycle field {name!r} cannot be deleted")
+        if name.startswith("_y_") or name.startswith("__yidl_"):
+            raise AttributeError(
+                f"{name!r} is reserved for generated lifecycle state"
+            )
+        object.__delattr__(self, name)
 
     @property
     def default(self):
@@ -2021,7 +2061,7 @@ class working_facade_class_decl_name__astichi_arg__(
     __slots__ = ()
     astichi_hole(working_facade_properties)""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=245,
+            line_number=247,
             keep_names=(
                 "DEFAULT_TRANSACTION",
                 "TransactionManager",
@@ -2048,14 +2088,14 @@ return_class_module_ref__astichi_arg__.__module__ = astichi_pass(
 ).__module__
 return return_class_result_ref__astichi_arg__""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=456,
+            line_number=485,
         )
     ),
     "PassStatement": astichi_template(
         from_astichi_code(
             "pass",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=472,
+            line_number=501,
         )
     ),
 }
@@ -3593,6 +3633,11 @@ ASSEMBLY_PRODUCTIONS = {
                     kind="ident",
                     name="annotations_name",
                     value=ValueRef("AnnotationsParamName"),
+                ),
+                BindingSpec(
+                    kind="external",
+                    name="lifecycle_field_names",
+                    value=ValueRef("LifecycleFieldNames"),
                 ),
             ),
         ),

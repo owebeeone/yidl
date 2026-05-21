@@ -39,6 +39,13 @@ def test_harvests_phase_a_compatible_facts() -> None:
         "lifecycle_definition_param_name": "_Counter_lifecycle_definition",
         "annotations_param_name": "_Counter_annotations",
         "tx_groups_param_name": "_Counter_tx_groups",
+        "lifecycle_field_names": (
+            "plain",
+            "optional",
+            "tags",
+            "count",
+            "audit_count",
+        ),
     }
     assert [
         (
