@@ -7,11 +7,16 @@ import pytest
 from yidl.runtime.lifecycle import LifecycleDefinitionError
 from yidl.runtime.lifecycle import LifecycleDefinitionWarning
 from yidl.runtime.lifecycle import MISSING
+from yidl.runtime.lifecycle import after_commit
+from yidl.runtime.lifecycle import after_rollback
+from yidl.runtime.lifecycle import before_commit
 from yidl.runtime.lifecycle import classvar
+from yidl.runtime.lifecycle import commit_order_key
 from yidl.runtime.lifecycle import field
 from yidl.runtime.lifecycle import harvest_lifecycle_definition
 from yidl.runtime.lifecycle import initvar
 from yidl.runtime.lifecycle import managed
+from yidl.runtime.lifecycle import validate_commit
 from yidl.runtime.transaction_yidl import DEFAULT_TRANSACTION
 
 
@@ -403,3 +408,92 @@ def test_harvester_rejects_malformed_inherited_lifecycle_metadata() -> None:
         match="transaction group indexes are invalid",
     ):
         harvest_lifecycle_definition(Derived)
+
+
+def test_harvester_collects_transaction_method_markers() -> None:
+    class Counter:
+        count: int = managed(default=1)
+        audit_count: int = managed("audit", default=10)
+
+        @commit_order_key(DEFAULT_TRANSACTION)
+        def _default_key(self) -> tuple[int]:
+            return (self.count,)
+
+        @validate_commit(DEFAULT_TRANSACTION)
+        def _validate_default(self) -> bool:
+            return self.count >= 0
+
+        @before_commit(DEFAULT_TRANSACTION)
+        def _before_default(self) -> None:
+            return None
+
+        @after_commit(DEFAULT_TRANSACTION)
+        def _after_default(self) -> None:
+            return None
+
+        @after_rollback("audit")
+        def _after_audit_rollback(self) -> None:
+            return None
+
+    harvested = harvest_lifecycle_definition(Counter)
+
+    assert [
+        (
+            fact["method_kind"],
+            fact["method_name"],
+            fact["tx_group_key"],
+            fact["declaration_order"],
+        )
+        for fact in harvested.transaction_method_facts
+    ] == [
+        ("commit_order_key", "_default_key", DEFAULT_TRANSACTION, 10),
+        ("validate_commit", "_validate_default", DEFAULT_TRANSACTION, 20),
+        ("before_commit", "_before_default", DEFAULT_TRANSACTION, 30),
+        ("after_commit", "_after_default", DEFAULT_TRANSACTION, 40),
+        ("after_rollback", "_after_audit_rollback", "audit", 50),
+    ]
+    assert harvested.lifecycle_definition["transaction_methods"] == (
+        harvested.transaction_method_facts
+    )
+
+
+def test_harvester_rejects_transaction_marker_unknown_group() -> None:
+    class Counter:
+        count: int = managed(default=1)
+
+        @after_commit("audit")
+        def _after_audit(self) -> None:
+            return None
+
+    with pytest.raises(
+        LifecycleDefinitionError,
+        match=r"Counter\._after_audit: transaction marker references unknown group 'audit'",
+    ):
+        harvest_lifecycle_definition(Counter)
+
+
+def test_harvester_rejects_duplicate_commit_order_key_provider() -> None:
+    class Counter:
+        count: int = managed(default=1)
+
+        @commit_order_key(DEFAULT_TRANSACTION)
+        def _first_key(self) -> tuple[int]:
+            return (self.count,)
+
+        @commit_order_key(DEFAULT_TRANSACTION)
+        def _second_key(self) -> tuple[int]:
+            return (self.count,)
+
+    with pytest.raises(
+        LifecycleDefinitionError,
+        match="Counter._second_key: multiple commit order key providers",
+    ):
+        harvest_lifecycle_definition(Counter)
+
+
+def test_transaction_marker_rejects_non_callable_target() -> None:
+    with pytest.raises(
+        LifecycleDefinitionError,
+        match="transaction method marker target must be callable",
+    ):
+        after_commit(DEFAULT_TRANSACTION)(1)

@@ -8,6 +8,7 @@ from yidl.sentinel_maker import sentinels
 
 MISSING = sentinels.MISSING
 _HAS_DEFAULT_FACTORY = sentinels.HAS_DEFAULT_FACTORY
+_TRANSACTION_METHOD_MARKERS_ATTR = "__yidl_lifecycle_transaction_method_markers__"
 
 
 class LifecycleDefinitionError(ValueError):
@@ -42,6 +43,14 @@ class FieldDecl:
     has_default_factory: bool
     default_factory: object
     tx_group: object
+
+
+@dataclass(frozen=True, slots=True)
+class TransactionMethodMarker:
+    """Marker attached to transaction hook/validator methods."""
+
+    kind: str
+    tx_group: object = DEFAULT_TRANSACTION
 
 
 def field(
@@ -108,6 +117,63 @@ def managed(
     )
 
 
+def commit_order_key(
+    *args: object,
+    tx_group: object = MISSING,
+) -> object:
+    """Mark a method as the commit-order key provider for a transaction group."""
+
+    return _transaction_method_marker("commit_order_key", *args, tx_group=tx_group)
+
+
+def validate_commit(
+    *args: object,
+    tx_group: object = MISSING,
+) -> object:
+    """Mark a method as a commit validator for a transaction group."""
+
+    return _transaction_method_marker("validate_commit", *args, tx_group=tx_group)
+
+
+def before_commit(
+    *args: object,
+    tx_group: object = MISSING,
+) -> object:
+    """Mark a method as a before-commit hook for a transaction group."""
+
+    return _transaction_method_marker("before_commit", *args, tx_group=tx_group)
+
+
+def after_commit(
+    *args: object,
+    tx_group: object = MISSING,
+) -> object:
+    """Mark a method as an after-commit hook for a transaction group."""
+
+    return _transaction_method_marker("after_commit", *args, tx_group=tx_group)
+
+
+def after_rollback(
+    *args: object,
+    tx_group: object = MISSING,
+) -> object:
+    """Mark a method as an after-rollback hook for a transaction group."""
+
+    return _transaction_method_marker("after_rollback", *args, tx_group=tx_group)
+
+
+def transaction_method_markers(value: object) -> tuple[TransactionMethodMarker, ...]:
+    """Return transaction method markers attached to ``value``."""
+
+    markers = getattr(value, _TRANSACTION_METHOD_MARKERS_ATTR, ())
+    if not isinstance(markers, tuple):
+        raise LifecycleDefinitionError("transaction method marker metadata is invalid")
+    for marker in markers:
+        if not isinstance(marker, TransactionMethodMarker):
+            raise LifecycleDefinitionError("transaction method marker metadata is invalid")
+    return markers
+
+
 def normalize_marker(
     name: str,
     annotation: object,
@@ -160,6 +226,42 @@ def _marker(
         init=init,
         tx_group=tx_group,
     )
+
+
+def _transaction_method_marker(
+    kind: str,
+    *args: object,
+    tx_group: object,
+) -> object:
+    if len(args) > 1:
+        raise LifecycleDefinitionError("unsupported transaction marker call shape")
+    if args and tx_group is not MISSING:
+        raise LifecycleDefinitionError("unsupported transaction marker call shape")
+    if args:
+        selected_tx_group = args[0]
+        if callable(selected_tx_group):
+            raise LifecycleDefinitionError(
+                "transaction method marker requires an explicit transaction group",
+            )
+    else:
+        selected_tx_group = (
+            DEFAULT_TRANSACTION if tx_group is MISSING else tx_group
+        )
+
+    def decorate(target: object) -> object:
+        if not callable(target):
+            raise LifecycleDefinitionError(
+                "transaction method marker target must be callable",
+            )
+        existing = transaction_method_markers(target)
+        setattr(
+            target,
+            _TRANSACTION_METHOD_MARKERS_ATTR,
+            (*existing, TransactionMethodMarker(kind, selected_tx_group)),
+        )
+        return target
+
+    return decorate
 
 
 def _validate_name(name: str, *, context: str | None) -> None:

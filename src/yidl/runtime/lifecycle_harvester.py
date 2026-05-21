@@ -13,6 +13,7 @@ from yidl.runtime.lifecycle_markers import LifecycleMarker
 from yidl.runtime.lifecycle_markers import MISSING
 from yidl.runtime.lifecycle_markers import field
 from yidl.runtime.lifecycle_markers import normalize_marker
+from yidl.runtime.lifecycle_markers import transaction_method_markers
 from yidl.runtime.transaction_yidl import DEFAULT_TRANSACTION
 
 LIFECYCLE_METADATA_VERSION = 1
@@ -29,6 +30,7 @@ class HarvestedLifecycle:
 
     class_fact: Mapping[str, object]
     field_facts: tuple[Mapping[str, object], ...]
+    transaction_method_facts: tuple[Mapping[str, object], ...]
     lifecycle_definition: Mapping[str, object]
     annotations: Mapping[str, object]
     tx_groups: tuple[object, ...]
@@ -46,6 +48,7 @@ def harvest_lifecycle_definition(cls: type[object]) -> HarvestedLifecycle:
     class_name = str(class_fact["class_name"])
 
     field_facts_by_name: dict[str, Mapping[str, object]] = {}
+    transaction_method_facts: list[Mapping[str, object]] = []
     build_kwargs: dict[str, object] = {
         str(class_fact["lifecycle_definition_param_name"]): None,
         str(class_fact["annotations_param_name"]): MappingProxyType(dict(annotations)),
@@ -53,6 +56,7 @@ def harvest_lifecycle_definition(cls: type[object]) -> HarvestedLifecycle:
     }
     tx_groups = _TxGroupBuilder()
     next_order = ORDER_STEP
+    next_method_order = ORDER_STEP
 
     for definition in _inherited_lifecycle_definitions(cls):
         for group in _definition_tx_groups(definition):
@@ -64,6 +68,16 @@ def harvest_lifecycle_definition(cls: type[object]) -> HarvestedLifecycle:
             fact = _remap_inherited_field_fact(class_id, class_name, inherited_fact)
             field_facts_by_name[name] = MappingProxyType(fact)
             next_order = max(next_order, int(fact["field_order"]) + ORDER_STEP)
+        for inherited_fact in _definition_transaction_method_facts(definition):
+            fact = _remap_inherited_transaction_method_fact(
+                class_id,
+                inherited_fact,
+            )
+            transaction_method_facts.append(MappingProxyType(fact))
+            next_method_order = max(
+                next_method_order,
+                int(fact["declaration_order"]) + ORDER_STEP,
+            )
 
     for name, annotation in annotations.items():
         marker = _marker_for(cls, name)
@@ -112,11 +126,26 @@ def harvest_lifecycle_definition(cls: type[object]) -> HarvestedLifecycle:
             ]
 
     tx_group_values = tx_groups.values()
+    transaction_method_facts.extend(
+        _local_transaction_method_facts(
+            cls,
+            class_id,
+            tx_group_values,
+            next_order=next_method_order,
+        )
+    )
+    transaction_method_facts_tuple = tuple(transaction_method_facts)
+    _validate_transaction_method_facts(
+        class_name,
+        transaction_method_facts_tuple,
+        tx_group_values,
+    )
     lifecycle_definition = MappingProxyType(
         {
             "version": LIFECYCLE_METADATA_VERSION,
             "class": MappingProxyType(dict(class_fact)),
             "fields": field_facts,
+            "transaction_methods": transaction_method_facts_tuple,
             "tx_groups": tx_group_values,
         },
     )
@@ -128,6 +157,7 @@ def harvest_lifecycle_definition(cls: type[object]) -> HarvestedLifecycle:
     return HarvestedLifecycle(
         class_fact=MappingProxyType(dict(class_fact)),
         field_facts=field_facts,
+        transaction_method_facts=transaction_method_facts_tuple,
         lifecycle_definition=lifecycle_definition,
         annotations=MappingProxyType(dict(annotations)),
         tx_groups=tx_group_values,
@@ -230,6 +260,77 @@ def _remap_inherited_field_fact(
         fact["current_slot_name"] = f"_y_{name}_current"
         fact["working_slot_name"] = f"_y_{name}_working"
     return fact
+
+
+def _local_transaction_method_facts(
+    cls: type[object],
+    class_id: str,
+    tx_groups: tuple[object, ...],
+    *,
+    next_order: int,
+) -> tuple[Mapping[str, object], ...]:
+    facts: list[Mapping[str, object]] = []
+    for name, value in cls.__dict__.items():
+        markers = transaction_method_markers(value)
+        for marker in markers:
+            if marker.tx_group not in tx_groups:
+                raise LifecycleDefinitionError(
+                    f"{cls.__name__}.{name}: transaction marker references "
+                    f"unknown group {marker.tx_group!r}",
+                )
+            facts.append(
+                MappingProxyType(
+                    {
+                        "method_id": f"{class_id}.{name}.{marker.kind}",
+                        "method_owner": class_id,
+                        "method_name": name,
+                        "method_kind": marker.kind,
+                        "tx_group_key": marker.tx_group,
+                        "declaration_order": next_order,
+                    },
+                ),
+            )
+            next_order += ORDER_STEP
+    return tuple(facts)
+
+
+def _remap_inherited_transaction_method_fact(
+    class_id: str,
+    inherited: Mapping[str, object],
+) -> dict[str, object]:
+    fact = dict(inherited)
+    name = str(fact["method_name"])
+    kind = str(fact["method_kind"])
+    fact.update(
+        {
+            "method_id": f"{class_id}.{name}.{kind}",
+            "method_owner": class_id,
+        },
+    )
+    return fact
+
+
+def _validate_transaction_method_facts(
+    class_name: str,
+    facts: tuple[Mapping[str, object], ...],
+    tx_groups: tuple[object, ...],
+) -> None:
+    commit_order_groups: set[object] = set()
+    for fact in facts:
+        tx_group = fact["tx_group_key"]
+        if tx_group not in tx_groups:
+            raise LifecycleDefinitionError(
+                f"{class_name}.{fact['method_name']}: transaction marker references "
+                f"unknown group {tx_group!r}",
+            )
+        if fact["method_kind"] != "commit_order_key":
+            continue
+        if tx_group in commit_order_groups:
+            raise LifecycleDefinitionError(
+                f"{class_name}.{fact['method_name']}: multiple commit order key "
+                f"providers for transaction group {tx_group!r}",
+            )
+        commit_order_groups.add(tx_group)
 
 
 def _default_factory_param_names(
@@ -356,6 +457,12 @@ def _validate_inherited_definition(
                 f"{cls.__name__}: inherited managed field references an unknown "
                 "transaction group",
             )
+    for method_fact in _definition_transaction_method_facts(definition):
+        if method_fact["tx_group_key"] not in tx_groups:
+            raise LifecycleDefinitionError(
+                f"{cls.__name__}: inherited transaction method references an "
+                "unknown transaction group",
+            )
 
 
 def _definition_field_facts(
@@ -370,6 +477,22 @@ def _definition_field_facts(
                 "inherited lifecycle field metadata is invalid",
             )
     return fields
+
+
+def _definition_transaction_method_facts(
+    definition: Mapping[str, object],
+) -> tuple[Mapping[str, object], ...]:
+    methods = definition.get("transaction_methods", ())
+    if not isinstance(methods, tuple):
+        raise LifecycleDefinitionError(
+            "inherited lifecycle transaction method metadata must be a tuple",
+        )
+    for method_fact in methods:
+        if not isinstance(method_fact, Mapping):
+            raise LifecycleDefinitionError(
+                "inherited lifecycle transaction method metadata is invalid",
+            )
+    return methods
 
 
 def _definition_tx_groups(definition: Mapping[str, object]) -> tuple[object, ...]:
