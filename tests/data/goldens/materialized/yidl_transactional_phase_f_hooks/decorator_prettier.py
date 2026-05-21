@@ -3646,22 +3646,37 @@ class state_class_decl_name__astichi_arg__:
         astichi_hole(validate_commit_body)
         return True
 
-    def _commit_transaction(self, tx_id, tx_group=DEFAULT_TRANSACTION):
+    def _prepare_commit_tx_by_key(self, tx_group=DEFAULT_TRANSACTION, tx_token=None):
         tx_index = self.__yidl_tx_group_to_index__[tx_group]
-        if self._y_working_tx_ids[tx_index] != tx_id:
-            return self._y_get_default_facade()
+        if self._y_working_tx_ids[tx_index] != tx_token:
+            raise RuntimeError("stale yidl transaction token")
         astichi_hole(before_commit_body)
+        return self._y_get_default_facade()
+
+    def _apply_prepared_commit_tx_by_key(self, tx_group=DEFAULT_TRANSACTION, tx_token=None):
+        tx_index = self.__yidl_tx_group_to_index__[tx_group]
+        if self._y_working_tx_ids[tx_index] != tx_token:
+            raise RuntimeError("stale yidl transaction token")
         astichi_hole(commit_transaction_body)
         self._y_working_tx_ids[tx_index] = None
+        return self._y_get_default_facade()
+
+    def _after_commit_tx_by_key(self, tx_group=DEFAULT_TRANSACTION, tx_token=None):
+        del tx_token
+        tx_index = self.__yidl_tx_group_to_index__[tx_group]
         astichi_hole(after_commit_body)
         return self._y_get_default_facade()
 
-    def _rollback_transaction(self, tx_id, tx_group=DEFAULT_TRANSACTION):
+    def _rollback_tx_by_key(self, tx_group=DEFAULT_TRANSACTION, tx_token=None):
         tx_index = self.__yidl_tx_group_to_index__[tx_group]
-        if self._y_working_tx_ids[tx_index] != tx_id:
-            return self._y_get_default_facade()
+        del tx_token
         astichi_hole(rollback_transaction_body)
         self._y_working_tx_ids[tx_index] = None
+        return self._y_get_default_facade()
+
+    def _after_rollback_tx_by_key(self, tx_group=DEFAULT_TRANSACTION, tx_token=None):
+        del tx_token
+        tx_index = self.__yidl_tx_group_to_index__[tx_group]
         astichi_hole(after_rollback_body)
         return self._y_get_default_facade()
 
@@ -3826,14 +3841,14 @@ return_class_module_ref__astichi_arg__.__module__ = astichi_pass(
 ).__module__
 return return_class_result_ref__astichi_arg__""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=554,
+            line_number=569,
         )
     ),
     "PassStatement": astichi_template(
         from_astichi_code(
             "pass",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=570,
+            line_number=585,
         )
     ),
     "BuildTransactionFactsBody": from_astichi_code(

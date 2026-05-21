@@ -22,10 +22,39 @@ class TransactionContext(Protocol):
     def validate_commit_for(self, tx_group: Hashable = DEFAULT_TRANSACTION) -> bool:
         ...
 
-    def _commit_transaction(self, tx_id: int, tx_group: Hashable = DEFAULT_TRANSACTION) -> object:
+    def _prepare_commit_tx_by_key(
+        self,
+        tx_group: Hashable = DEFAULT_TRANSACTION,
+        tx_token: int | None = None,
+    ) -> object:
         ...
 
-    def _rollback_transaction(self, tx_id: int, tx_group: Hashable = DEFAULT_TRANSACTION) -> object:
+    def _apply_prepared_commit_tx_by_key(
+        self,
+        tx_group: Hashable = DEFAULT_TRANSACTION,
+        tx_token: int | None = None,
+    ) -> object:
+        ...
+
+    def _after_commit_tx_by_key(
+        self,
+        tx_group: Hashable = DEFAULT_TRANSACTION,
+        tx_token: int | None = None,
+    ) -> object:
+        ...
+
+    def _rollback_tx_by_key(
+        self,
+        tx_group: Hashable = DEFAULT_TRANSACTION,
+        tx_token: int | None = None,
+    ) -> object:
+        ...
+
+    def _after_rollback_tx_by_key(
+        self,
+        tx_group: Hashable = DEFAULT_TRANSACTION,
+        tx_token: int | None = None,
+    ) -> object:
         ...
 
 
@@ -55,7 +84,11 @@ class LifecycleTransaction:
 
     def rollback_dirty(self) -> None:
         for context in list(self.dirty_contexts.values()):
-            context._rollback_transaction(self.tx_id, self.tx_group)
+            context._rollback_tx_by_key(self.tx_group, self.tx_id)
+
+    def after_rollbacks(self) -> None:
+        for context in list(self.dirty_contexts.values()):
+            context._after_rollback_tx_by_key(self.tx_group, self.tx_id)
 
     def validate_commit(self) -> None:
         failures: list[BaseException] = []
@@ -70,9 +103,17 @@ class LifecycleTransaction:
         if failures:
             raise ExceptionGroup("yidl commit validation failed", failures)
 
-    def apply_commits(self) -> None:
+    def prepare_commits(self) -> None:
         for context in self.commit_order():
-            context._commit_transaction(self.tx_id, self.tx_group)
+            context._prepare_commit_tx_by_key(self.tx_group, self.tx_id)
+
+    def apply_prepared_commits(self) -> None:
+        for context in self.commit_order():
+            context._apply_prepared_commit_tx_by_key(self.tx_group, self.tx_id)
+
+    def after_commits(self) -> None:
+        for context in self.commit_order():
+            context._after_commit_tx_by_key(self.tx_group, self.tx_id)
 
     def bind_scope(
         self,
@@ -155,10 +196,13 @@ class GroupTransactionManager:
         tx_id = transaction.tx_id
         try:
             try:
-                transaction.apply_commits()
+                transaction.prepare_commits()
             except BaseException:
                 transaction.rollback_dirty()
+                transaction.after_rollbacks()
                 raise
+            transaction.apply_prepared_commits()
+            transaction.after_commits()
         finally:
             self.active_transaction = None
             self.begin_count = 0
@@ -188,6 +232,7 @@ class GroupTransactionManager:
         tx_id = transaction.tx_id
         try:
             transaction.rollback_dirty()
+            transaction.after_rollbacks()
         finally:
             self.active_transaction = None
             self.begin_count = 0

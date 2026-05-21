@@ -18,17 +18,26 @@ class FakeContext:
     rank: tuple[object, ...] = ()
     validate_ok: bool = True
     require_validation: bool = False
+    prepared: list[tuple[int | None, object]] | None = None
     committed: list[tuple[int, object]] | None = None
     rolled_back: list[tuple[int, object]] | None = None
+    after_committed: list[tuple[int | None, object]] | None = None
+    after_rolled_back: list[tuple[int | None, object]] | None = None
     validations: list[object] | None = None
     commit_error: BaseException | None = None
     rollback_error: BaseException | None = None
 
     def __post_init__(self) -> None:
+        if self.prepared is None:
+            self.prepared = []
         if self.committed is None:
             self.committed = []
         if self.rolled_back is None:
             self.rolled_back = []
+        if self.after_committed is None:
+            self.after_committed = []
+        if self.after_rolled_back is None:
+            self.after_rolled_back = []
         if self.validations is None:
             self.validations = []
 
@@ -45,18 +54,55 @@ class FakeContext:
         self.validations.append(tx_group)
         return self.validate_ok
 
-    def _commit_transaction(self, tx_id: int, tx_group: object = DEFAULT_TRANSACTION) -> object:
+    def _prepare_commit_tx_by_key(
+        self,
+        tx_group: object = DEFAULT_TRANSACTION,
+        tx_token: int | None = None,
+    ) -> object:
         if self.commit_error is not None:
             raise self.commit_error
-        assert self.committed is not None
-        self.committed.append((tx_id, tx_group))
+        assert self.prepared is not None
+        self.prepared.append((tx_token, tx_group))
         return None
 
-    def _rollback_transaction(self, tx_id: int, tx_group: object = DEFAULT_TRANSACTION) -> object:
+    def _apply_prepared_commit_tx_by_key(
+        self,
+        tx_group: object = DEFAULT_TRANSACTION,
+        tx_token: int | None = None,
+    ) -> object:
+        assert self.committed is not None
+        assert tx_token is not None
+        self.committed.append((tx_token, tx_group))
+        return None
+
+    def _after_commit_tx_by_key(
+        self,
+        tx_group: object = DEFAULT_TRANSACTION,
+        tx_token: int | None = None,
+    ) -> object:
+        assert self.after_committed is not None
+        self.after_committed.append((tx_token, tx_group))
+        return None
+
+    def _rollback_tx_by_key(
+        self,
+        tx_group: object = DEFAULT_TRANSACTION,
+        tx_token: int | None = None,
+    ) -> object:
         if self.rollback_error is not None:
             raise self.rollback_error
         assert self.rolled_back is not None
-        self.rolled_back.append((tx_id, tx_group))
+        assert tx_token is not None
+        self.rolled_back.append((tx_token, tx_group))
+        return None
+
+    def _after_rollback_tx_by_key(
+        self,
+        tx_group: object = DEFAULT_TRANSACTION,
+        tx_token: int | None = None,
+    ) -> object:
+        assert self.after_rolled_back is not None
+        self.after_rolled_back.append((tx_token, tx_group))
         return None
 
 

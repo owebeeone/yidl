@@ -188,6 +188,13 @@ def _assert_source_shape(sources: Mapping[str, str]) -> None:
         assert 'if tx_group == "audit":' not in generated
         assert "if tx_index == 0:" in generated
         assert "if tx_index == 1:" in generated
+        assert "def _prepare_commit_tx_by_key(" in generated
+        assert "def _apply_prepared_commit_tx_by_key(" in generated
+        assert "def _after_commit_tx_by_key(" in generated
+        assert "def _rollback_tx_by_key(" in generated
+        assert "def _after_rollback_tx_by_key(" in generated
+        assert "def _commit_transaction(" not in generated
+        assert "def _rollback_transaction(" not in generated
         assert "getattr(\n            self._y_get_default_facade()" not in generated
 
 

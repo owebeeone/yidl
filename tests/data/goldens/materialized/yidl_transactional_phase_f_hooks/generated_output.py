@@ -78,12 +78,18 @@ def build_lifecycle_class(decorated_cls, *, _Counter_lifecycle_definition, _Coun
                     return False
             return True
 
-        def _commit_transaction(self, tx_id, tx_group=DEFAULT_TRANSACTION):
+        def _prepare_commit_tx_by_key(self, tx_group=DEFAULT_TRANSACTION, tx_token=None):
             tx_index = self.__yidl_tx_group_to_index__[tx_group]
-            if self._y_working_tx_ids[tx_index] != tx_id:
-                return self._y_get_default_facade()
+            if self._y_working_tx_ids[tx_index] != tx_token:
+                raise RuntimeError('stale yidl transaction token')
             if tx_index == 0:
                 self._y_get_default_facade()._before_default()
+            return self._y_get_default_facade()
+
+        def _apply_prepared_commit_tx_by_key(self, tx_group=DEFAULT_TRANSACTION, tx_token=None):
+            tx_index = self.__yidl_tx_group_to_index__[tx_group]
+            if self._y_working_tx_ids[tx_index] != tx_token:
+                raise RuntimeError('stale yidl transaction token')
             if tx_index == 0:
                 if self._y_count_working is not VOID:
                     self._y_count_current = self._y_count_working
@@ -93,19 +99,28 @@ def build_lifecycle_class(decorated_cls, *, _Counter_lifecycle_definition, _Coun
                     self._y_audit_count_current = self._y_audit_count_working
                     self._y_audit_count_working = VOID
             self._y_working_tx_ids[tx_index] = None
+            return self._y_get_default_facade()
+
+        def _after_commit_tx_by_key(self, tx_group=DEFAULT_TRANSACTION, tx_token=None):
+            del tx_token
+            tx_index = self.__yidl_tx_group_to_index__[tx_group]
             if tx_index == 0:
                 self._y_get_default_facade()._after_default()
             return self._y_get_default_facade()
 
-        def _rollback_transaction(self, tx_id, tx_group=DEFAULT_TRANSACTION):
+        def _rollback_tx_by_key(self, tx_group=DEFAULT_TRANSACTION, tx_token=None):
             tx_index = self.__yidl_tx_group_to_index__[tx_group]
-            if self._y_working_tx_ids[tx_index] != tx_id:
-                return self._y_get_default_facade()
+            del tx_token
             if tx_index == 0:
                 self._y_count_working = VOID
             if tx_index == 1:
                 self._y_audit_count_working = VOID
             self._y_working_tx_ids[tx_index] = None
+            return self._y_get_default_facade()
+
+        def _after_rollback_tx_by_key(self, tx_group=DEFAULT_TRANSACTION, tx_token=None):
+            del tx_token
+            tx_index = self.__yidl_tx_group_to_index__[tx_group]
             if tx_index == 1:
                 self._y_get_default_facade()._after_audit_rollback()
             return self._y_get_default_facade()
