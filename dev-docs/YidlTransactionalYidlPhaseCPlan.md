@@ -1,436 +1,354 @@
 # YIDL Transactional Base Phase C Plan
 
-## Status
+## Scope
 
-Draft high-level plan.
+Phase C is only parameterized lifecycle `default_factory` support.
 
-Phase C begins lifecycle feature expansion after Phase A proves generated
-transactional behavior and Phase B proves the decorator frontend plus
-inheritance path. Phase C should move toward `pyrolyze.lifecycle` parity, but
-it should still advance in narrow slices. The main rule is that each new
-semantic feature must be expressed as facts, computed facts, matchers,
-contributions, and generated source, not as a generic runtime descriptor
-engine.
+Phase A proved generated transactional behavior. Phase B proved the decorator
+frontend, inheritance harvesting, generated-base peeling, and decorator-path
+goldens. Phase C should stabilize constructor value evaluation before adding
+more field kinds or transaction hook behavior.
 
 ## Goals
 
-1. Add lifecycle field kinds and hooks intentionally excluded from Phase A/B.
-2. Preserve generated-code performance characteristics.
-3. Keep transaction behavior source-specialized to known fields and groups.
-4. Extend the fact model without breaking Phase B decorator harvesting.
-5. Add feature-level diagnostics before adding broad runtime behavior.
-6. Decide whether transaction support should split into feature YIDL layers.
+1. Support lifecycle field factories whose callable parameters name other
+   constructor-visible values.
+2. Generate direct keyword calls, not `locals()`-based binding.
+3. Compute dependency order before source generation.
+4. Reject unknown providers and dependency cycles at decorator time.
+5. Preserve the Phase B unpacked generated boundary.
+
+## Design Note: Future Feature YIDL
+
+Phase C is not itself a feature-YIDL split. It should still be authored so the
+default-factory dependency feature can move into a later
+`lifecycle_default_factories.yidl` layer without changing semantics. Keep the
+new schema rows, computed operation, matchers, contributions, and diagnostics
+bounded to default-factory dependency evaluation. Phase D owns physically
+splitting the YIDL files and proving merge behavior.
 
 ## Non-Goals
 
-1. Do not do all lifecycle parity in one slice.
-2. Do not patch `pyrolyze.lifecycle`.
-3. Do not replace generated properties with descriptor tables.
-4. Do not introduce broad user `__init__` / `__post_init__` chaining unless
-   parameterized default factories are proven insufficient.
-5. Do not optimize with JIT/cache machinery before the generated source shape
-   is stable.
+1. Do not add new field kinds.
+2. Do not split lifecycle into feature YIDL files in this phase.
+3. Do not add validator, hook, owned, binding, or transient semantics.
+4. Do not introduce `__post_init__` or user `__init__` chaining.
+5. Do not solve general dependency language features beyond factory parameter
+   names.
 
-## Phase C Feature Order
-
-Recommended order:
-
-1. parameterized default factories for lifecycle fields
-2. strict reserved-name and attribute-write diagnostics
-3. transaction validators, commit order keys, and transaction hooks
-4. `transient` fields
-5. `owned` fields
-6. `binding` fields
-7. optional current-setter policy
-8. feature-YIDL split and composition proof
-
-The order keeps the constructor/evaluation model stable before adding more
-field kinds and transaction hook semantics.
-
-## C1: Parameterized Default Factories
-
-Phase B may support zero-argument default factories. Phase C should add
-parameterized factories for lifecycle construction:
+## User Surface
 
 ```python
 @lifecycle
 class Example:
+    SCALE: int = classvar(default=10)
     v1: int
+    seed: int = initvar(init=False, default=4)
+    temp: int = initvar(init=False, default_factory=lambda seed, v1: seed + v1)
     v2: int = managed(default_factory=lambda v1: v1 + 2)
     v3: int = managed(default_factory=lambda v2, v1: v1 + v2 + 2)
+    v4: int = managed(init=False, default_factory=lambda v3: v3 * 2)
+    v5: int = managed(init=False, default_factory=lambda SCALE, v4: SCALE + v4)
 ```
 
-Requirements:
+The generated constructor should evaluate `v2` before `v3` even though the
+field declaration order is `v1`, `v2`, `v3` only accidentally compatible here.
+It should then evaluate `v4` after `v3`.
 
-- discover factory parameter names
-- determine provider availability from init parameters, initvars, and earlier
-  computed values
-- topologically order default evaluations
-- reject unknown providers
-- reject cycles
-- support inherited provider fields where semantics are clear
-- keep the generated boundary unpacked:
+Generated source should first assign every non-`default_factory` value into the
+backing state. It should also assign caller-provided values for
+`default_factory` fields into state before any later factory can read them.
+After that, factory providers that are stored fields or classvars should be
+read uniformly through `self.<name>`. Initvars remain locals because they are
+not stored on `self` in Phase C.
+
+`initvar(init=False)` has no constructor parameter. In Phase C it is still
+allowed to be a provider if it has a `default` or `default_factory`; it lowers
+to a local value before dependent factories run:
+
+```python
+seed = _Example_seed_default
+temp = _Example_temp_default_factory(seed=seed, v1=self.v1)
+```
+
+`initvar(init=False)` with no `default` and no `default_factory` is rejected
+because it has no value source. Phase C does not store initvars in state. If
+the transient phase needs reusable temporary provider state, that storage
+policy belongs to Phase G.
+
+Init fields keep the sentinel guard because the caller can provide a value.
+When the caller omits the value, the factory call uses `self.<name>` for stored
+providers:
+
+```python
+state._y_v1_current = v1
+
+if v2 is _HAS_DEFAULT_FACTORY:
+    v2 = _Example_v2_default_factory(v1=self.v1)
+state._y_v2_current = v2
+
+if v3 is _HAS_DEFAULT_FACTORY:
+    v3 = _Example_v3_default_factory(v2=self.v2, v1=self.v1)
+state._y_v3_current = v3
+```
+
+For an `init=False` field, the constructor has no `v4` parameter, so there is
+no sentinel to test. The generated source should assign the computed value
+unconditionally at the correct dependency point:
+
+```python
+v4 = _Example_v4_default_factory(v3=self.v3)
+state._y_v4_current = v4
+```
+
+No generated code should use `locals()` for factory argument binding.
+
+Classvars follow the same stored-provider lowering: the provider parameter name
+stays identical to the classvar name and the value is read through `self`.
+
+```python
+v5 = _Example_v5_default_factory(SCALE=self.SCALE)
+state._y_v5_current = v5
+```
+
+Do not rename classvar provider parameters to lowercase aliases.
+
+Initvars are the exception. Both `init=True` and `init=False` initvars remain
+local constructor values and are passed directly by local name:
+
+```python
+v6 = _Example_v6_default_factory(seed=seed, v3=self.v3)
+```
+
+Expected runtime values for `Example(v1=1)`:
+
+```text
+seed = 4
+temp = 5
+v2 = 3
+v3 = 6
+v4 = 12
+v5 = 22
+```
+
+Factory `self.<name>` reads use the generated lifecycle property. During
+construction, this is the first user-visible access and no transaction is in
+flight, so the property reads the initialized current value. No
+transaction-staleness path is triggered during construction.
+
+## Fact Model
+
+Phase C should add computed facts rather than pushing dependency logic into
+templates:
+
+```text
+DefaultFactoryDependency
+DefaultFactoryEvaluationStep
+DefaultFactoryDiagnostic
+```
+
+Candidate properties:
+
+```text
+DependencyOwner
+ConsumerFieldId
+ConsumerFieldName
+ProviderName
+ProviderFieldId
+ParamName
+ParamOrder
+EvalOrder
+```
+
+The harvester can collect primitive facts:
+
+- whether a field has `default_factory`
+- the callable object
+- the callable parameter names
+
+The YIDL-generated computed operation should derive dependency rows and
+evaluation steps.
+
+The dependency graph and topological sort operate on the merged field set after
+Phase B inheritance remapping. Evaluation steps are emitted across the local
+and inherited union.
+
+## Provider Rules
+
+Allowed providers:
+
+- stored plain, managed, and classvar values readable as `self.<name>` after
+  assignment into state/class-visible storage
+- caller-provided values for default-factory fields after they have been
+  assigned into state
+- inherited fields after Phase B remapping, if they are visible in the merged
+  field set
+- initvars with `init=True`, passed as local variables rather than `self.<name>`
+- initvars with `init=False` when they have a `default` or `default_factory`;
+  they lower to local provider values and are not stored in state in Phase C
+
+Rejected providers:
+
+- unknown names
+- fields whose value cannot exist before the factory call
+- `initvar(init=False)` with no `default` and no `default_factory`
+- dependency cycles
+
+Validation runs while materializing the generated lifecycle source for the
+decorated class. Failures surface as `LifecycleDefinitionError` from the
+decorator with the offending class, field, and provider when available.
+
+Diagnostic examples:
+
+```text
+Example: default_factory dependency cycle: v2 -> v3 -> v2
+Example.v2: default_factory references unknown name 'vX'
+Example.v2: default_factory cannot reference 'temp' (initvar has no default or default_factory)
+```
+
+## Generated Boundary
+
+The build function continues to receive unpacked keyword-only values:
 
 ```python
 _Example_v2_default_factory=<callable>
 _Example_v3_default_factory=<callable>
 ```
 
-Generated code should call factories directly with named arguments:
-
-```python
-v2 = _Example_v2_default_factory(v1=v1)
-v3 = _Example_v3_default_factory(v2=v2, v1=v1)
-```
-
-Do not use `locals()` for factory argument binding.
-
-## C2: Reserved Names And Attribute Discipline
-
-Phase A/B intentionally avoid solving arbitrary writes to user-class
-`__dict__`. Phase C should make the policy explicit.
-
-Diagnostics:
-
-- decorated class declares `_y_state`
-- decorated class declares generated state/helper names
-- field name collides with facade exposure name (`default`, `current`,
-  `working`) unless explicitly allowed
-- generated slot name collision
-- generated method/property collision
-
-Runtime enforcement options:
-
-1. strict generated `__setattr__` / `__delattr__` gates on facade classes
-2. diagnostics only for classes with `__dict__`
-3. hybrid: strict for known lifecycle fields, permissive for unrelated attrs
-
-The first Phase C slice should pick one policy and test it directly.
-
-## C3: Transaction Validators, Order Keys, And Hooks
-
-Phase A emits protocol stubs:
-
-```python
-commit_order_key_for
-requires_validation_for
-validate_commit_for
-_commit_transaction
-_rollback_transaction
-```
-
-Phase C should make those protocol methods fact-driven.
-
-Candidate facts:
-
-```text
-CommitOrderKeyProvider
-CommitValidator
-BeforeCommitHook
-AfterCommitHook
-AfterRollbackHook
-```
-
-Generated behavior:
-
-- `commit_order_key_for(tx_group)` returns generated tuple values for the
-  active group
-- `requires_validation_for(tx_group)` is true when validators exist for that
-  group
-- `validate_commit_for(tx_group)` calls generated validators
-- before/after hooks run in deterministic order
-- hook failures follow the transaction runtime's existing exception strategy
-
-Diagnostics:
-
-- validator references unknown field/facade
-- hook targets unknown transaction group
-- hook order collision if deterministic ordering cannot be established
-
-## C4: `transient` Fields
-
-`transient` fields are state-backed but not committed transaction state.
-
-Questions to lock before implementation:
-
-- Is transient state per backing state object or per facade?
-- Does transient state reset on rollback?
-- Does transient state participate in default_factory providers?
-- Is transient visible from current and working facades?
-
-Likely Phase C policy:
-
-- transient fields live in the backing state
-- reads/writes are visible through all facades
-- they do not enlist transactions
-- they are excluded from commit/rollback
-- they can be constructor/default_factory providers
-
-This makes them close to plain fields, but semantically marked for later
-diagnostics and generated API documentation.
-
-## C5: `owned` Fields
-
-`owned` fields likely need lifecycle-aware child object management.
-
-Requirements:
-
-- owner field facts
-- child lifecycle detection
-- weak/strong ownership policy
-- transaction propagation policy
-- commit/rollback interaction
-
-Initial slice should be conservative:
-
-- support owned values that are already lifecycle-generated instances
-- reject ambiguous ownership cycles
-- do not auto-wrap arbitrary child objects
-
-Useful proof:
-
-```python
-@lifecycle
-class Child:
-    value: int = managed(default=1)
-
-@lifecycle
-class Parent:
-    child: Child = owned(default_factory=Child)
-```
-
-Open design point: whether parent transaction begin should implicitly begin
-child transactions or whether the child should enlist independently.
-
-## C6: `binding` Fields
-
-`binding` fields connect values across objects or facades.
-
-This is the most likely Phase C feature to require extra design before code.
-It should not be started until owned field ownership semantics are clear.
-
-Requirements to define:
-
-- binding source and target facts
-- read-through vs copied value semantics
-- transaction group mapping between source and target
-- cycle detection
-- diagnostic reporting for reference loops
-
-The implementation should prefer computed facts that resolve binding graphs
-before code generation.
-
-## C7: Current Setter Policy Option
-
-Phase A uses:
-
-```python
-obj.current.count = 5  # raises
-```
-
-Phase C can add a class-wide or field-level option:
-
-```text
-current_setter_policy = "raise" | "stage_working"
-```
-
-Generated behavior for `"stage_working"`:
-
-- current setter delegates to the working/default setter path
-- active transaction is still required
-- current getter remains committed-only
-
-Diagnostics:
-
-- invalid policy name
-- policy set where no managed fields exist, if considered suspicious
-
-## C8: Feature-YIDL Split
-
-After Phase B proves the decorator path and Phase C has at least one extension
-feature, split the monolithic lifecycle concept if it helps maintainability.
-
-Candidate files:
-
-```text
-tests/data/yidl/yidl_transactional_lifecycle/lifecycle_base.yidl
-tests/data/yidl/yidl_transactional_lifecycle/lifecycle_transactions.yidl
-tests/data/yidl/yidl_transactional_lifecycle/lifecycle_default_factories.yidl
-tests/data/yidl/yidl_transactional_lifecycle/lifecycle_hooks.yidl
-tests/data/yidl/yidl_transactional_lifecycle/lifecycle_combined.yidl
-```
-
-The split should prove that:
-
-- base plain/init/classvar semantics remain usable alone
-- managed transaction support can layer over base fields
-- default-factory dependency facts can refine the base init model
-- hook features can add matcher rules without replacing base productions
-
-Do not split just for aesthetics. Split when feature-level override/merge
-behavior needs to be demonstrated.
-
-## Test Strategy
-
-Use the existing successful coverage shape:
-
-- golden-source tests for successful end-to-end behavior
-- focused tests for parser/frontend/diagnostic mechanics
-- no duplicate success-path assertions in unit tests and goldens
-
-Suggested goldens:
-
-```text
-tests/data/gold_src/yidl_transactional_phase_c_default_factories.py
-tests/data/gold_src/yidl_transactional_phase_c_hooks.py
-tests/data/gold_src/yidl_transactional_phase_c_owned.py
-```
-
-Each golden should produce:
-
-```text
-decorator.py
-decorator_prettier.py
-generated_output.py
-generated_output_prettier.py
-```
-
-Focused diagnostic tests should cover:
-
-- default_factory cycle
-- unknown factory provider
-- reserved generated name
-- invalid current setter policy
-- invalid hook group
-- owned/binding cycle
+`_HAS_DEFAULT_FACTORY` is a generated-source-private sentinel imported from the
+YIDL runtime sentinel surface. It must be a single shared object for all
+generated lifecycle classes so `is` checks are stable across inheritance
+chains. The generated source should import it rather than create a per-class
+`object()` sentinel. It is analogous to the existing generated `VOID`
+identity-sentinel usage but belongs in runtime because constructor defaults may
+cross generated-class boundaries.
+
+Do not introduce generic `defaults` or `default_factories` dictionaries.
 
 ## Implementation Slices
 
-### Slice C1: Parameterized Factory Facts
+### C1: Harvester Parameter Discovery
 
 Deliverables:
 
-- dependency fact schema
-- computed operation for dependency graph and evaluation order
-- generated constructor assignments without `locals()`
+- inspect factory callable signatures
+- store parameter names as primitive harvested facts
+- preserve existing zero-argument factories
+- refine the Phase B `initvar(init=False)` skip: carry through initvars with a
+  `default` or `default_factory` as local providers, and reject initvars with
+  neither using a targeted diagnostic
 
 Verification:
 
-- factories run in topological order
-- unknown provider diagnostic
-- cycle diagnostic
+- focused harvester tests for zero-arg and parameterized factories
+- focused harvester tests for `initvar(init=False, default=...)` and
+  `initvar(init=False, default_factory=...)`
+- unsupported callable signature diagnostics: reject positional-only
+  parameters, `*args`, and `**kwargs` because provider binding is by name
+- decide and document whether default values on factory parameters are ignored
+  or treated as callable-local defaults when no provider exists
 
-### Slice C2: Reserved Name Diagnostics
+### C2: Computed Dependency Operation
 
 Deliverables:
 
-- frontend/generated-name registry
-- reserved-name diagnostic tests
-- optional strict facade `__setattr__` policy decision
+- dependency and evaluation-step collections
+- computed operation for provider resolution and topological sort
+- diagnostics for unknown provider and cycle
 
 Verification:
 
-- `_y_state` collision rejects
-- generated slot/helper collision rejects
+- operation-level tests for graph order, unknown provider, and cycle
 
-### Slice C3: Validators And Hooks
+### C3: Generated Constructor Rewire
 
 Deliverables:
 
-- validator/hook facts
-- generated protocol method bodies
-- hook ordering
+- YIDL contributions that emit direct factory calls with named arguments
+- constructor assignments ordered by computed evaluation steps
+- inherited provider support
 
 Verification:
 
-- validation failure rolls back
-- before/after hooks fire in expected order
-- multi-group hook isolation
+- decorator-path golden with `v1`, `v2`, `v3` dependency chain
+- generated source assertions: direct keyword calls, no `locals()`
 
-### Slice C4: Transient Fields
+## Golden Shape
 
-Deliverables:
+Suggested fixture:
 
-- transient field facts
-- generated slots/properties
-- constructor/default support
+```text
+tests/data/gold_src/yidl_transactional_phase_c_default_factories.py
+```
 
-Verification:
+Suggested materialized outputs:
 
-- transient writes do not enlist transactions
-- rollback does not alter transient value under the chosen policy
+```text
+tests/data/goldens/materialized/yidl_transactional_phase_c_default_factories/decorator.py
+tests/data/goldens/materialized/yidl_transactional_phase_c_default_factories/decorator_prettier.py
+tests/data/goldens/materialized/yidl_transactional_phase_c_default_factories/generated_output.py
+tests/data/goldens/materialized/yidl_transactional_phase_c_default_factories/generated_output_prettier.py
+```
 
-### Slice C5: Owned Fields
+## Roll-Build
 
-Deliverables:
+Phase C is a roll-build candidate after the source shape is reviewed.
 
-- owned field facts
-- generated ownership accessors
-- initial lifecycle-child support
-
-Verification:
-
-- owned child creation
-- ownership cycle diagnostic
-- transaction interaction according to the selected policy
-
-### Slice C6: Binding Fields
-
-Deliverables:
-
-- binding graph facts
-- graph validation operation
-- generated read/write behavior for a narrow binding case
-
-Verification:
-
-- simple binding works
-- cycle rejects
-- transaction group mismatch reports clearly
-
-### Slice C7: Feature Split Proof
-
-Deliverables:
-
-- split YIDL files for at least one extension feature
-- combined fixture importing/merging the feature
-- docs update describing the layering model
-
-Verification:
-
-- base-only fixture still works
-- combined fixture matches monolithic behavior
-- inherited/merged matcher rules select the intended behavior
-
-## Roll-Build Candidate Assessment
-
-Phase C should not be one roll-build. Each feature should be its own
-roll-build candidate after its source shape is reviewed.
-
-Suggested tag prefixes by feature:
+Suggested tag prefix:
 
 ```text
 txphaseC-factories/
-txphaseC-diagnostics/
-txphaseC-hooks/
-txphaseC-transient/
-txphaseC-owned/
-txphaseC-binding/
-txphaseC-split/
 ```
 
-Stop after any feature that reveals a mismatch in the fact model or
-transaction protocol.
+Recommended slices:
 
-## Open Questions
+1. `start`
+   - clean-tree tag before work begins
+2. `C1-harvester-factory-params`
+   - discover callable parameter names
+   - reject positional-only, `*args`, and `**kwargs`
+   - add `_HAS_DEFAULT_FACTORY` runtime sentinel
+   - refine `initvar(init=False)` handling so default/factory initvars become
+     local providers and no-source initvars reject
+   - focused harvester/marker tests
+3. `C2-factory-fact-schema`
+   - add dependency, evaluation-step, and diagnostic fact schema
+   - add primitive harvested fields needed by generated runtime
+   - verify parser/compiler/golden source still materializes without behavior
+     change
+4. `C3-dependency-operation`
+   - implement provider resolution and topological sort operation
+   - emit diagnostics for unknown providers and cycles
+   - focused operation-level tests
+5. `C4-constructor-rewire`
+   - assign non-factory values into state before factory reads
+   - sentinel-gate `init=True` factory fields
+   - always compute `init=False` factory fields
+   - pass stored providers as `self.<name>`
+   - pass initvars as locals
+   - verify direct keyword calls and no `locals()`
+6. `C5-decorator-golden`
+   - add end-to-end decorator-path golden for the canonical fixture
+   - assert runtime values for `v1`, `seed`, `temp`, `v2`, `v3`, `v4`, and
+     `v5`
+   - cover classvar provider lowering as `SCALE=self.SCALE`
+   - cover inherited provider behavior if it was not already proven in C4
+7. `C6-boundary-cleanup`
+   - update docs for implementation drift
+   - full regression
+   - confirm no generic `defaults` / `default_factories` dictionaries
+   - confirm `_HAS_DEFAULT_FACTORY` is runtime-imported and shared
 
-1. Does parameterized default_factory support eliminate the need for
-   post-init-like hooks?
-2. Should `transient` be transaction-local, state-local, or facade-local?
-3. Should owned child transactions be implicit or explicit?
-4. Can binding semantics stay generic enough, or does binding need a narrower
-   lifecycle-specific feature design?
-5. Should lifecycle transaction support become a feature YIDL before or after
-   hooks land?
-6. What compatibility target with `pyrolyze.lifecycle` is required before the
-   old implementation can be replaced?
+Stop if the computed-operation model needs new YIDL grammar.
+
+## Follow-On Phases
+
+The former umbrella Phase C has been split:
+
+- Phase D: lifecycle feature-YIDL layering
+- Phase E: diagnostics and attribute discipline
+- Phase F: transaction validators, order keys, hooks, and current setter policy
+- Phase G: transient fields
+- Phase H: owned fields
+- Phase I: binding fields
+- Phase J: productionization and replacement readiness
