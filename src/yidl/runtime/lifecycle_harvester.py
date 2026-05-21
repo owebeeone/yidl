@@ -68,6 +68,7 @@ def harvest_lifecycle_definition(cls: type[object]) -> HarvestedLifecycle:
             order = next_order
             next_order += ORDER_STEP
         else:
+            _validate_override(class_name, decl, existing)
             order = int(existing["field_order"])
         fact = _field_fact(class_id, class_name, decl, order)
         field_facts_by_name[name] = MappingProxyType(fact)
@@ -223,14 +224,67 @@ def _inherited_lifecycle_definitions(
             raise LifecycleDefinitionError(
                 f"{cls.__name__}: unsupported lifecycle metadata version {version!r}",
             )
+        _validate_inherited_definition(cls, definition)
         definitions.append(definition)
     return tuple(definitions)
+
+
+def _validate_override(
+    class_name: str,
+    decl: FieldDecl,
+    inherited: Mapping[str, object],
+) -> None:
+    inherited_kind = inherited["field_kind"]
+    if inherited_kind != "managed":
+        return
+    if decl.kind != "managed":
+        raise LifecycleDefinitionError(
+            f"{class_name}.{decl.name}: managed lifecycle field cannot be "
+            f"overridden as {decl.kind}",
+        )
+    inherited_tx_group = inherited["tx_group_key"]
+    if inherited_tx_group != decl.tx_group:
+        raise LifecycleDefinitionError(
+            f"{class_name}.{decl.name}: managed lifecycle field cannot change "
+            "transaction group",
+        )
+
+
+def _validate_inherited_definition(
+    cls: type[object],
+    definition: Mapping[str, object],
+) -> None:
+    if "fields" not in definition:
+        raise LifecycleDefinitionError(
+            f"{cls.__name__}: inherited lifecycle metadata is missing fields",
+        )
+    if "tx_groups" not in definition:
+        raise LifecycleDefinitionError(
+            f"{cls.__name__}: inherited lifecycle metadata is missing tx_groups",
+        )
+    tx_groups = _definition_tx_groups(definition)
+    if not tx_groups or tx_groups[0] != DEFAULT_TRANSACTION:
+        raise LifecycleDefinitionError(
+            f"{cls.__name__}: inherited transaction group indexes are invalid",
+        )
+    if len(set(tx_groups)) != len(tx_groups):
+        raise LifecycleDefinitionError(
+            f"{cls.__name__}: inherited transaction group indexes contain duplicates",
+        )
+    for field_fact in _definition_field_facts(definition):
+        if field_fact["field_kind"] != "managed":
+            continue
+        if field_fact["tx_group_key"] not in tx_groups:
+            raise LifecycleDefinitionError(
+                f"{cls.__name__}: inherited managed field references an unknown "
+                "transaction group",
+            )
 
 
 def _definition_field_facts(
     definition: Mapping[str, object],
 ) -> tuple[Mapping[str, object], ...]:
-    fields = definition.get("fields", ())
+    fields = definition["fields"]
     if not isinstance(fields, tuple):
         raise LifecycleDefinitionError("inherited lifecycle fields must be a tuple")
     for field_fact in fields:

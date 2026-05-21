@@ -179,3 +179,62 @@ def test_harvester_merges_inherited_generated_lifecycle_facts() -> None:
     ]
     assert harvested.tx_groups == (DEFAULT_TRANSACTION, "audit", "other")
     assert harvested.build_kwargs["_Derived_v1_default"] == 2
+
+
+def test_harvester_rejects_managed_to_unmanaged_override() -> None:
+    class BaseOriginal:
+        value: int = managed(default=1)
+
+    class GeneratedBase:
+        __yidl_lifecycle_generated__ = True
+        __yidl_lifecycle_definition__ = harvest_lifecycle_definition(
+            BaseOriginal,
+        ).lifecycle_definition
+
+    class Derived(GeneratedBase):
+        value: int = field(default=2)
+
+    with pytest.raises(
+        LifecycleDefinitionError,
+        match="managed lifecycle field cannot be overridden as field",
+    ):
+        harvest_lifecycle_definition(Derived)
+
+
+def test_harvester_rejects_managed_transaction_group_change() -> None:
+    class BaseOriginal:
+        value: int = managed("audit", default=1)
+
+    class GeneratedBase:
+        __yidl_lifecycle_generated__ = True
+        __yidl_lifecycle_definition__ = harvest_lifecycle_definition(
+            BaseOriginal,
+        ).lifecycle_definition
+
+    class Derived(GeneratedBase):
+        value: int = managed("other", default=2)
+
+    with pytest.raises(
+        LifecycleDefinitionError,
+        match="cannot change transaction group",
+    ):
+        harvest_lifecycle_definition(Derived)
+
+
+def test_harvester_rejects_malformed_inherited_lifecycle_metadata() -> None:
+    class GeneratedBase:
+        __yidl_lifecycle_generated__ = True
+        __yidl_lifecycle_definition__ = {
+            "version": 1,
+            "fields": (),
+            "tx_groups": ("audit", DEFAULT_TRANSACTION),
+        }
+
+    class Derived(GeneratedBase):
+        value: int = field(default=1)
+
+    with pytest.raises(
+        LifecycleDefinitionError,
+        match="transaction group indexes are invalid",
+    ):
+        harvest_lifecycle_definition(Derived)
