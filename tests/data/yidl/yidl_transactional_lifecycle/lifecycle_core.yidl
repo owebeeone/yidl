@@ -68,8 +68,6 @@ concept LifecycleCore {
         variant ClassVarField {
         }
 
-        variant ManagedField {
-        }
     }
 
     collection Classes: LifecycleClass identity ClassId many

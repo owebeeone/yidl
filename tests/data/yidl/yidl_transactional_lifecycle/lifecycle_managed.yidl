@@ -5,4 +5,8 @@ import "lifecycle_core.yidl" as core
 export concept LifecycleManaged
 
 concept LifecycleManaged extends core.LifecycleCore {
+    family core.LifecycleFieldSpec {
+        variant ManagedField {
+        }
+    }
 }
