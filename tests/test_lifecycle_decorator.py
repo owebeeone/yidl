@@ -1,5 +1,11 @@
 from __future__ import annotations
 
+import dataclasses
+import os
+from pathlib import Path
+import runpy
+from time import perf_counter
+
 import pytest
 
 from yidl.runtime.lifecycle import _generate_lifecycle_source
@@ -11,6 +17,14 @@ from yidl.runtime.lifecycle import initvar
 from yidl.runtime.lifecycle import lifecycle
 from yidl.runtime.lifecycle import managed
 from yidl.runtime.transaction_yidl import DEFAULT_TRANSACTION
+
+_PERF_CONSTRUCTION_TIME_LIMIT = 5.0
+_PERF_FIELD_GROUP_SIZES = (10, 50, 100)
+_PERF_TOTAL_OBJECTS = 10_000
+_PERF_BATCH_SIZE = 100
+_LIFECYCLE_PERF_FIXTURE = (
+    Path(__file__).parent / "data" / "perf" / "lifecycle_constructor_perf_generated.py"
+)
 
 
 def test_lifecycle_decorator_builds_phase_a_generated_class() -> None:
@@ -216,6 +230,110 @@ def test_lifecycle_decorator_merges_generated_base_facts() -> None:
     assert child.v1 == 1
     assert child.v2 == 2
     assert child.v3 == 5
+
+
+@pytest.mark.skipif(
+    os.environ.get("YIDL_PERF_TESTS") != "1",
+    reason="set YIDL_PERF_TESTS=1 to run constructor throughput comparison",
+)
+def test_lifecycle_generated_class_constructor_throughput_comparison() -> None:
+    deadline = perf_counter() + _PERF_CONSTRUCTION_TIME_LIMIT
+    lifecycle_classes = _load_lifecycle_perf_classes()
+    completed_sizes = 0
+
+    for field_group_size in _PERF_FIELD_GROUP_SIZES:
+        if perf_counter() >= deadline:
+            break
+
+        lifecycle_type = lifecycle_classes[field_group_size]
+        dataclass_type = _make_dataclass_perf_class(field_group_size)
+
+        lifecycle_sample = lifecycle_type()
+        dataclass_sample = dataclass_type()
+        assert getattr(lifecycle_sample, "derived_0") == (
+            getattr(lifecycle_sample, "count_0") + 1
+        )
+        assert getattr(dataclass_sample, "derived_0") == (
+            getattr(dataclass_sample, "count_0") + 1
+        )
+        assert getattr(lifecycle_sample, f"derived_{field_group_size - 1}") == (
+            getattr(lifecycle_sample, f"count_{field_group_size - 1}") + 1
+        )
+        assert getattr(dataclass_sample, f"derived_{field_group_size - 1}") == (
+            getattr(dataclass_sample, f"count_{field_group_size - 1}") + 1
+        )
+
+        lifecycle_result = _measure_constructor_throughput(
+            lifecycle_type,
+            deadline=deadline,
+        )
+        dataclass_result = _measure_constructor_throughput(
+            dataclass_type,
+            deadline=deadline,
+        )
+        print(
+            "constructor throughput comparison: "
+            f"{field_group_size} plain + {field_group_size} count + "
+            f"{field_group_size} derived fields; "
+            f"lifecycle {lifecycle_result[0]} in {lifecycle_result[1]:.6f}s "
+            f"({lifecycle_result[2]:,.0f}/s); "
+            f"dataclass {dataclass_result[0]} in {dataclass_result[1]:.6f}s "
+            f"({dataclass_result[2]:,.0f}/s)"
+        )
+        completed_sizes += 1
+
+    assert completed_sizes > 0
+
+
+def _load_lifecycle_perf_classes() -> dict[int, type[object]]:
+    namespace = runpy.run_path(_LIFECYCLE_PERF_FIXTURE)
+    return namespace["LIFECYCLE_PERF_CLASSES"]
+
+
+def _make_dataclass_perf_class(field_group_size: int) -> type[object]:
+    def __post_init__(self: object) -> None:
+        for index in range(field_group_size):
+            setattr(
+                self,
+                f"derived_{index}",
+                getattr(self, f"count_{index}") + 1,
+            )
+
+    fields: list[tuple[str, type[object], object]] = []
+    for index in range(field_group_size):
+        fields.append((f"plain_{index}", int, dataclasses.field(default=index)))
+    for index in range(field_group_size):
+        fields.append((f"count_{index}", int, dataclasses.field(default=index)))
+    for index in range(field_group_size):
+        fields.append((f"derived_{index}", int, dataclasses.field(init=False)))
+    return dataclasses.make_dataclass(
+        f"PerfDataclass{field_group_size}",
+        fields,
+        namespace={"__post_init__": __post_init__, "__module__": __name__},
+        slots=True,
+    )
+
+
+def _measure_constructor_throughput(
+    cls: type[object],
+    *,
+    deadline: float,
+) -> tuple[int, float, float]:
+    total_created = 0
+    live_batch: list[object] = []
+
+    # Keep the last batch alive while constructing the next one, then drop it.
+    # This keeps roughly 100-200 generated objects live during the timed loop.
+    start = perf_counter()
+    while total_created < _PERF_TOTAL_OBJECTS and perf_counter() < deadline:
+        next_count = min(_PERF_BATCH_SIZE, _PERF_TOTAL_OBJECTS - total_created)
+        next_batch = [cls() for _ in range(next_count)]
+        total_created += len(next_batch)
+        live_batch = next_batch
+    live_batch = []
+    elapsed = perf_counter() - start
+    objects_per_second = total_created / elapsed if elapsed else float("inf")
+    return total_created, elapsed, objects_per_second
 
 
 def test_lifecycle_wraps_generation_failure_with_class_context(monkeypatch) -> None:
