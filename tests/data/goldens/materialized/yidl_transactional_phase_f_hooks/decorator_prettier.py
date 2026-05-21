@@ -120,6 +120,9 @@ _CurrentSlotNameProperty = RuntimeProperty(
 _WorkingSlotNameProperty = RuntimeProperty(
     "WorkingSlotName", str, default="", storage_name="working_slot_name"
 )
+_StagedSlotNameProperty = RuntimeProperty(
+    "StagedSlotName", str, default="", storage_name="staged_slot_name"
+)
 _HasFreezeProperty = RuntimeProperty(
     "HasFreeze", bool, default=False, storage_name="has_freeze"
 )
@@ -244,6 +247,12 @@ _TxGroupOrderProperty = RuntimeProperty(
     "TxGroupOrder", int, default=0, storage_name="tx_group_order"
 )
 _TxOwnerProperty = RuntimeProperty("TxOwner", str, default="", storage_name="tx_owner")
+_PrepareCommitFieldsFunctionNameProperty = RuntimeProperty(
+    "PrepareCommitFieldsFunctionName",
+    str,
+    default="",
+    storage_name="prepare_commit_fields_function_name",
+)
 _ApplyPreparedCommitFieldsFunctionNameProperty = RuntimeProperty(
     "ApplyPreparedCommitFieldsFunctionName",
     str,
@@ -441,6 +450,7 @@ _PlainFieldSpec = RuntimeRecord(
         _ValueSlotNameProperty,
         _CurrentSlotNameProperty,
         _WorkingSlotNameProperty,
+        _StagedSlotNameProperty,
         _HasFreezeProperty,
         _FreezeProperty,
         _FreezeParamNameProperty,
@@ -471,6 +481,7 @@ _InitVarFieldSpec = RuntimeRecord(
         _ValueSlotNameProperty,
         _CurrentSlotNameProperty,
         _WorkingSlotNameProperty,
+        _StagedSlotNameProperty,
         _HasFreezeProperty,
         _FreezeProperty,
         _FreezeParamNameProperty,
@@ -501,6 +512,7 @@ _ClassVarFieldSpec = RuntimeRecord(
         _ValueSlotNameProperty,
         _CurrentSlotNameProperty,
         _WorkingSlotNameProperty,
+        _StagedSlotNameProperty,
         _HasFreezeProperty,
         _FreezeProperty,
         _FreezeParamNameProperty,
@@ -527,6 +539,7 @@ _TxGroupSpec = RuntimeRecord(
         _TxGroupKeyProperty,
         _TxIndexProperty,
         _TxGroupOrderProperty,
+        _PrepareCommitFieldsFunctionNameProperty,
         _ApplyPreparedCommitFieldsFunctionNameProperty,
         _RollbackFieldsFunctionNameProperty,
     ),
@@ -542,6 +555,12 @@ _IndexedTransactionalFieldSpec = RuntimeRecord(
         _TxIndexProperty,
         _CurrentSlotNameProperty,
         _WorkingSlotNameProperty,
+        _StagedSlotNameProperty,
+        _HasFreezeProperty,
+        _FreezeParamNameProperty,
+        _HasThawProperty,
+        _ThawParamNameProperty,
+        _HasOptionalNoneProperty,
     ),
 )
 _ManagedFieldSpec = RuntimeRecord(
@@ -565,6 +584,7 @@ _ManagedFieldSpec = RuntimeRecord(
         _ValueSlotNameProperty,
         _CurrentSlotNameProperty,
         _WorkingSlotNameProperty,
+        _StagedSlotNameProperty,
         _HasFreezeProperty,
         _FreezeProperty,
         _FreezeParamNameProperty,
@@ -1269,6 +1289,7 @@ class PlainField:
         "value_slot_name",
         "current_slot_name",
         "working_slot_name",
+        "staged_slot_name",
         "has_freeze",
         "freeze",
         "freeze_param_name",
@@ -1296,6 +1317,7 @@ class PlainField:
     value_slot_name: str
     current_slot_name: str
     working_slot_name: str
+    staged_slot_name: str
     has_freeze: bool
     freeze: object
     freeze_param_name: str
@@ -1325,6 +1347,7 @@ class PlainField:
         value_slot_name: str = "",
         current_slot_name: str = "",
         working_slot_name: str = "",
+        staged_slot_name: str = "",
         has_freeze: bool = False,
         freeze: object = None,
         freeze_param_name: str = "",
@@ -1398,6 +1421,11 @@ class PlainField:
                 "WorkingSlotName must be str, got " + type(working_slot_name).__name__
             )
         object.__setattr__(self, "working_slot_name", working_slot_name)
+        if not isinstance(staged_slot_name, str):
+            raise TypeError(
+                "StagedSlotName must be str, got " + type(staged_slot_name).__name__
+            )
+        object.__setattr__(self, "staged_slot_name", staged_slot_name)
         if not isinstance(has_freeze, bool):
             raise TypeError("HasFreeze must be bool, got " + type(has_freeze).__name__)
         object.__setattr__(self, "has_freeze", has_freeze)
@@ -1442,6 +1470,7 @@ class PlainField:
             "value_slot_name",
             "current_slot_name",
             "working_slot_name",
+            "staged_slot_name",
             "has_freeze",
             "freeze",
             "freeze_param_name",
@@ -1477,6 +1506,7 @@ class PlainField:
         pieces.append("value_slot_name=" + repr(self.value_slot_name))
         pieces.append("current_slot_name=" + repr(self.current_slot_name))
         pieces.append("working_slot_name=" + repr(self.working_slot_name))
+        pieces.append("staged_slot_name=" + repr(self.staged_slot_name))
         pieces.append("has_freeze=" + repr(self.has_freeze))
         pieces.append("freeze=" + repr(self.freeze))
         pieces.append("freeze_param_name=" + repr(self.freeze_param_name))
@@ -1510,6 +1540,7 @@ class InitVarField:
         "value_slot_name",
         "current_slot_name",
         "working_slot_name",
+        "staged_slot_name",
         "has_freeze",
         "freeze",
         "freeze_param_name",
@@ -1537,6 +1568,7 @@ class InitVarField:
     value_slot_name: str
     current_slot_name: str
     working_slot_name: str
+    staged_slot_name: str
     has_freeze: bool
     freeze: object
     freeze_param_name: str
@@ -1566,6 +1598,7 @@ class InitVarField:
         value_slot_name: str = "",
         current_slot_name: str = "",
         working_slot_name: str = "",
+        staged_slot_name: str = "",
         has_freeze: bool = False,
         freeze: object = None,
         freeze_param_name: str = "",
@@ -1639,6 +1672,11 @@ class InitVarField:
                 "WorkingSlotName must be str, got " + type(working_slot_name).__name__
             )
         object.__setattr__(self, "working_slot_name", working_slot_name)
+        if not isinstance(staged_slot_name, str):
+            raise TypeError(
+                "StagedSlotName must be str, got " + type(staged_slot_name).__name__
+            )
+        object.__setattr__(self, "staged_slot_name", staged_slot_name)
         if not isinstance(has_freeze, bool):
             raise TypeError("HasFreeze must be bool, got " + type(has_freeze).__name__)
         object.__setattr__(self, "has_freeze", has_freeze)
@@ -1683,6 +1721,7 @@ class InitVarField:
             "value_slot_name",
             "current_slot_name",
             "working_slot_name",
+            "staged_slot_name",
             "has_freeze",
             "freeze",
             "freeze_param_name",
@@ -1718,6 +1757,7 @@ class InitVarField:
         pieces.append("value_slot_name=" + repr(self.value_slot_name))
         pieces.append("current_slot_name=" + repr(self.current_slot_name))
         pieces.append("working_slot_name=" + repr(self.working_slot_name))
+        pieces.append("staged_slot_name=" + repr(self.staged_slot_name))
         pieces.append("has_freeze=" + repr(self.has_freeze))
         pieces.append("freeze=" + repr(self.freeze))
         pieces.append("freeze_param_name=" + repr(self.freeze_param_name))
@@ -1751,6 +1791,7 @@ class ClassVarField:
         "value_slot_name",
         "current_slot_name",
         "working_slot_name",
+        "staged_slot_name",
         "has_freeze",
         "freeze",
         "freeze_param_name",
@@ -1778,6 +1819,7 @@ class ClassVarField:
     value_slot_name: str
     current_slot_name: str
     working_slot_name: str
+    staged_slot_name: str
     has_freeze: bool
     freeze: object
     freeze_param_name: str
@@ -1807,6 +1849,7 @@ class ClassVarField:
         value_slot_name: str = "",
         current_slot_name: str = "",
         working_slot_name: str = "",
+        staged_slot_name: str = "",
         has_freeze: bool = False,
         freeze: object = None,
         freeze_param_name: str = "",
@@ -1880,6 +1923,11 @@ class ClassVarField:
                 "WorkingSlotName must be str, got " + type(working_slot_name).__name__
             )
         object.__setattr__(self, "working_slot_name", working_slot_name)
+        if not isinstance(staged_slot_name, str):
+            raise TypeError(
+                "StagedSlotName must be str, got " + type(staged_slot_name).__name__
+            )
+        object.__setattr__(self, "staged_slot_name", staged_slot_name)
         if not isinstance(has_freeze, bool):
             raise TypeError("HasFreeze must be bool, got " + type(has_freeze).__name__)
         object.__setattr__(self, "has_freeze", has_freeze)
@@ -1924,6 +1972,7 @@ class ClassVarField:
             "value_slot_name",
             "current_slot_name",
             "working_slot_name",
+            "staged_slot_name",
             "has_freeze",
             "freeze",
             "freeze_param_name",
@@ -1959,6 +2008,7 @@ class ClassVarField:
         pieces.append("value_slot_name=" + repr(self.value_slot_name))
         pieces.append("current_slot_name=" + repr(self.current_slot_name))
         pieces.append("working_slot_name=" + repr(self.working_slot_name))
+        pieces.append("staged_slot_name=" + repr(self.staged_slot_name))
         pieces.append("has_freeze=" + repr(self.has_freeze))
         pieces.append("freeze=" + repr(self.freeze))
         pieces.append("freeze_param_name=" + repr(self.freeze_param_name))
@@ -2034,6 +2084,7 @@ class TxGroup:
         "tx_group_key",
         "tx_index",
         "tx_group_order",
+        "prepare_commit_fields_function_name",
         "apply_prepared_commit_fields_function_name",
         "rollback_fields_function_name",
     )
@@ -2042,6 +2093,7 @@ class TxGroup:
     tx_group_key: object
     tx_index: int
     tx_group_order: int
+    prepare_commit_fields_function_name: str
     apply_prepared_commit_fields_function_name: str
     rollback_fields_function_name: str
 
@@ -2052,6 +2104,7 @@ class TxGroup:
         tx_group_key: object = None,
         tx_index: int = 0,
         tx_group_order: int = 0,
+        prepare_commit_fields_function_name: str = "",
         apply_prepared_commit_fields_function_name: str = "",
         rollback_fields_function_name: str = "",
     ):
@@ -2067,6 +2120,16 @@ class TxGroup:
                 "TxGroupOrder must be int, got " + type(tx_group_order).__name__
             )
         object.__setattr__(self, "tx_group_order", tx_group_order)
+        if not isinstance(prepare_commit_fields_function_name, str):
+            raise TypeError(
+                "PrepareCommitFieldsFunctionName must be str, got "
+                + type(prepare_commit_fields_function_name).__name__
+            )
+        object.__setattr__(
+            self,
+            "prepare_commit_fields_function_name",
+            prepare_commit_fields_function_name,
+        )
         if not isinstance(apply_prepared_commit_fields_function_name, str):
             raise TypeError(
                 "ApplyPreparedCommitFieldsFunctionName must be str, got "
@@ -2092,6 +2155,7 @@ class TxGroup:
             "tx_group_key",
             "tx_index",
             "tx_group_order",
+            "prepare_commit_fields_function_name",
             "apply_prepared_commit_fields_function_name",
             "rollback_fields_function_name",
         ):
@@ -2104,6 +2168,10 @@ class TxGroup:
         pieces.append("tx_group_key=" + repr(self.tx_group_key))
         pieces.append("tx_index=" + repr(self.tx_index))
         pieces.append("tx_group_order=" + repr(self.tx_group_order))
+        pieces.append(
+            "prepare_commit_fields_function_name="
+            + repr(self.prepare_commit_fields_function_name)
+        )
         pieces.append(
             "apply_prepared_commit_fields_function_name="
             + repr(self.apply_prepared_commit_fields_function_name)
@@ -2127,6 +2195,12 @@ class IndexedTransactionalField:
         "tx_index",
         "current_slot_name",
         "working_slot_name",
+        "staged_slot_name",
+        "has_freeze",
+        "freeze_param_name",
+        "has_thaw",
+        "thaw_param_name",
+        "has_optional_none",
     )
     __dds_record_spec__ = _IndexedTransactionalFieldSpec
     field_id: str
@@ -2137,6 +2211,12 @@ class IndexedTransactionalField:
     tx_index: int
     current_slot_name: str
     working_slot_name: str
+    staged_slot_name: str
+    has_freeze: bool
+    freeze_param_name: str
+    has_thaw: bool
+    thaw_param_name: str
+    has_optional_none: bool
 
     def __init__(
         self,
@@ -2149,6 +2229,12 @@ class IndexedTransactionalField:
         tx_index: int = 0,
         current_slot_name: str = "",
         working_slot_name: str = "",
+        staged_slot_name: str = "",
+        has_freeze: bool = False,
+        freeze_param_name: str = "",
+        has_thaw: bool = False,
+        thaw_param_name: str = "",
+        has_optional_none: bool = False,
     ):
         if not isinstance(field_id, str):
             raise TypeError("FieldId must be str, got " + type(field_id).__name__)
@@ -2176,6 +2262,32 @@ class IndexedTransactionalField:
                 "WorkingSlotName must be str, got " + type(working_slot_name).__name__
             )
         object.__setattr__(self, "working_slot_name", working_slot_name)
+        if not isinstance(staged_slot_name, str):
+            raise TypeError(
+                "StagedSlotName must be str, got " + type(staged_slot_name).__name__
+            )
+        object.__setattr__(self, "staged_slot_name", staged_slot_name)
+        if not isinstance(has_freeze, bool):
+            raise TypeError("HasFreeze must be bool, got " + type(has_freeze).__name__)
+        object.__setattr__(self, "has_freeze", has_freeze)
+        if not isinstance(freeze_param_name, str):
+            raise TypeError(
+                "FreezeParamName must be str, got " + type(freeze_param_name).__name__
+            )
+        object.__setattr__(self, "freeze_param_name", freeze_param_name)
+        if not isinstance(has_thaw, bool):
+            raise TypeError("HasThaw must be bool, got " + type(has_thaw).__name__)
+        object.__setattr__(self, "has_thaw", has_thaw)
+        if not isinstance(thaw_param_name, str):
+            raise TypeError(
+                "ThawParamName must be str, got " + type(thaw_param_name).__name__
+            )
+        object.__setattr__(self, "thaw_param_name", thaw_param_name)
+        if not isinstance(has_optional_none, bool):
+            raise TypeError(
+                "HasOptionalNone must be bool, got " + type(has_optional_none).__name__
+            )
+        object.__setattr__(self, "has_optional_none", has_optional_none)
 
     def __setattr__(self, name, value):
         if name in (
@@ -2187,6 +2299,12 @@ class IndexedTransactionalField:
             "tx_index",
             "current_slot_name",
             "working_slot_name",
+            "staged_slot_name",
+            "has_freeze",
+            "freeze_param_name",
+            "has_thaw",
+            "thaw_param_name",
+            "has_optional_none",
         ):
             raise AttributeError("IndexedTransactionalField records are immutable")
         object.__setattr__(self, name, value)
@@ -2201,6 +2319,12 @@ class IndexedTransactionalField:
         pieces.append("tx_index=" + repr(self.tx_index))
         pieces.append("current_slot_name=" + repr(self.current_slot_name))
         pieces.append("working_slot_name=" + repr(self.working_slot_name))
+        pieces.append("staged_slot_name=" + repr(self.staged_slot_name))
+        pieces.append("has_freeze=" + repr(self.has_freeze))
+        pieces.append("freeze_param_name=" + repr(self.freeze_param_name))
+        pieces.append("has_thaw=" + repr(self.has_thaw))
+        pieces.append("thaw_param_name=" + repr(self.thaw_param_name))
+        pieces.append("has_optional_none=" + repr(self.has_optional_none))
         return "IndexedTransactionalField" + "(" + ", ".join(pieces) + ")"
 
 
@@ -2227,6 +2351,7 @@ class ManagedField:
         "value_slot_name",
         "current_slot_name",
         "working_slot_name",
+        "staged_slot_name",
         "has_freeze",
         "freeze",
         "freeze_param_name",
@@ -2254,6 +2379,7 @@ class ManagedField:
     value_slot_name: str
     current_slot_name: str
     working_slot_name: str
+    staged_slot_name: str
     has_freeze: bool
     freeze: object
     freeze_param_name: str
@@ -2283,6 +2409,7 @@ class ManagedField:
         value_slot_name: str = "",
         current_slot_name: str = "",
         working_slot_name: str = "",
+        staged_slot_name: str = "",
         has_freeze: bool = False,
         freeze: object = None,
         freeze_param_name: str = "",
@@ -2356,6 +2483,11 @@ class ManagedField:
                 "WorkingSlotName must be str, got " + type(working_slot_name).__name__
             )
         object.__setattr__(self, "working_slot_name", working_slot_name)
+        if not isinstance(staged_slot_name, str):
+            raise TypeError(
+                "StagedSlotName must be str, got " + type(staged_slot_name).__name__
+            )
+        object.__setattr__(self, "staged_slot_name", staged_slot_name)
         if not isinstance(has_freeze, bool):
             raise TypeError("HasFreeze must be bool, got " + type(has_freeze).__name__)
         object.__setattr__(self, "has_freeze", has_freeze)
@@ -2400,6 +2532,7 @@ class ManagedField:
             "value_slot_name",
             "current_slot_name",
             "working_slot_name",
+            "staged_slot_name",
             "has_freeze",
             "freeze",
             "freeze_param_name",
@@ -2435,6 +2568,7 @@ class ManagedField:
         pieces.append("value_slot_name=" + repr(self.value_slot_name))
         pieces.append("current_slot_name=" + repr(self.current_slot_name))
         pieces.append("working_slot_name=" + repr(self.working_slot_name))
+        pieces.append("staged_slot_name=" + repr(self.staged_slot_name))
         pieces.append("has_freeze=" + repr(self.has_freeze))
         pieces.append("freeze=" + repr(self.freeze))
         pieces.append("freeze_param_name=" + repr(self.freeze_param_name))
@@ -2950,6 +3084,7 @@ def run_build_transaction_facts(builder):
                 tx_group_key=DEFAULT_TRANSACTION,
                 tx_index=0,
                 tx_group_order=0,
+                prepare_commit_fields_function_name="_prepare_commit_tx_0_fields",
                 apply_prepared_commit_fields_function_name="_apply_prepared_commit_tx_0_fields",
                 rollback_fields_function_name="_rollback_tx_0_fields",
             ),
@@ -2972,6 +3107,7 @@ def run_build_transaction_facts(builder):
                         tx_group_key=tx_group,
                         tx_index=seen[tx_group],
                         tx_group_order=field.field_order,
+                        prepare_commit_fields_function_name=f"_prepare_commit_tx_{seen[tx_group]}_fields",
                         apply_prepared_commit_fields_function_name=f"_apply_prepared_commit_tx_{seen[tx_group]}_fields",
                         rollback_fields_function_name=f"_rollback_tx_{seen[tx_group]}_fields",
                     ),
@@ -3000,6 +3136,12 @@ def run_build_transaction_facts(builder):
                     tx_index=tx_index,
                     current_slot_name=field.current_slot_name,
                     working_slot_name=field.working_slot_name,
+                    staged_slot_name=field.staged_slot_name,
+                    has_freeze=field.has_freeze,
+                    freeze_param_name=field.freeze_param_name,
+                    has_thaw=field.has_thaw,
+                    thaw_param_name=field.thaw_param_name,
+                    has_optional_none=field.has_optional_none,
                 ),
                 policy=RejectDuplicate,
             )
@@ -3303,6 +3445,9 @@ ASSEMBLY_PROPERTIES = {
     "WorkingSlotName": _YidlSimpleNamespace(
         name="WorkingSlotName", storage_name="working_slot_name"
     ),
+    "StagedSlotName": _YidlSimpleNamespace(
+        name="StagedSlotName", storage_name="staged_slot_name"
+    ),
     "HasFreeze": _YidlSimpleNamespace(name="HasFreeze", storage_name="has_freeze"),
     "Freeze": _YidlSimpleNamespace(name="Freeze", storage_name="freeze"),
     "FreezeParamName": _YidlSimpleNamespace(
@@ -3396,6 +3541,10 @@ ASSEMBLY_PROPERTIES = {
         name="TxGroupOrder", storage_name="tx_group_order"
     ),
     "TxOwner": _YidlSimpleNamespace(name="TxOwner", storage_name="tx_owner"),
+    "PrepareCommitFieldsFunctionName": _YidlSimpleNamespace(
+        name="PrepareCommitFieldsFunctionName",
+        storage_name="prepare_commit_fields_function_name",
+    ),
     "ApplyPreparedCommitFieldsFunctionName": _YidlSimpleNamespace(
         name="ApplyPreparedCommitFieldsFunctionName",
         storage_name="apply_prepared_commit_fields_function_name",
@@ -3490,7 +3639,7 @@ def build_lifecycle_class(decorated_cls, builder_params__astichi_param_hole__):
     astichi_hole(function_body)
     astichi_hole(return_statement)""",
         file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-        line_number=203,
+        line_number=205,
     ),
     "BuilderParam": astichi_template(
         from_astichi_code(
@@ -3498,7 +3647,7 @@ def build_lifecycle_class(decorated_cls, builder_params__astichi_param_hole__):
 def astichi_params(*, value_name__astichi_arg__):
     pass""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=221,
+            line_number=223,
         )
     ),
     "TransactionManagerParam": astichi_template(
@@ -3507,14 +3656,14 @@ def astichi_params(*, value_name__astichi_arg__):
 def astichi_params(*, transaction_manager=None):
     pass""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=226,
+            line_number=228,
         )
     ),
     "StateSlotEntry": astichi_template(
         from_astichi_code(
             "astichi_bind_external(slot_name)",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=231,
+            line_number=233,
         )
     ),
     "InitParamRequired": astichi_template(
@@ -3523,7 +3672,7 @@ def astichi_params(*, transaction_manager=None):
 def astichi_params(param_name__astichi_arg__: astichi_bind_external(annotation)):
     pass""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=235,
+            line_number=237,
         )
     ),
     "InitParamDefault": astichi_template(
@@ -3535,7 +3684,7 @@ def astichi_params(
 ):
     pass""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=240,
+            line_number=242,
         )
     ),
     "PlainStateAssignment": astichi_template(
@@ -3546,7 +3695,7 @@ astichi_pass(state, outer_bind=True).astichi_ref(external=state_slot)._ = astich
     outer_bind=True,
 )""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=248,
+            line_number=250,
         )
     ),
     "InitVarLocalDefaultAssignment": astichi_template(
@@ -3557,7 +3706,7 @@ init_value_name__astichi_arg__ = astichi_pass(
     outer_bind=True,
 )""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=255,
+            line_number=257,
         )
     ),
     "PlainProperty": astichi_template(
@@ -3571,7 +3720,7 @@ def property_getter_name__astichi_arg__(self):
 def property_setter_name__astichi_arg__(self, value):
     self._y_state.astichi_ref(external=state_slot)._ = value""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=262,
+            line_number=264,
         )
     ),
     "ClassVarDefaultAssignment": astichi_template(
@@ -3582,7 +3731,7 @@ classvar_name__astichi_arg__ = astichi_pass(
     outer_bind=True,
 )""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=272,
+            line_number=274,
         )
     ),
     "CommitOrderKeyBranch": astichi_template(
@@ -3594,7 +3743,7 @@ if astichi_pass(tx_index, outer_bind=True) == astichi_bind_external(tx_index_val
         outer_bind=True,
     )._y_get_default_facade().astichi_ref(external=method_name)()""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=279,
+            line_number=281,
         )
     ),
     "RequiresValidationBranch": astichi_template(
@@ -3603,7 +3752,7 @@ if astichi_pass(tx_index, outer_bind=True) == astichi_bind_external(tx_index_val
 if astichi_pass(tx_index, outer_bind=True) == astichi_bind_external(tx_index_value):
     return True""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=287,
+            line_number=289,
         )
     ),
     "ValidateCommitBranch": astichi_template(
@@ -3617,7 +3766,7 @@ if astichi_pass(tx_index, outer_bind=True) == astichi_bind_external(tx_index_val
     if result is False:
         return False""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=292,
+            line_number=294,
         )
     ),
     "TransactionHookCall": astichi_template(
@@ -3629,7 +3778,7 @@ if astichi_pass(tx_index, outer_bind=True) == astichi_bind_external(tx_index_val
         outer_bind=True,
     )._y_get_default_facade().astichi_ref(external=method_name)()""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=302,
+            line_number=304,
         )
     ),
     "ClassBundle": astichi_template(
@@ -3758,6 +3907,7 @@ class state_class_decl_name__astichi_arg__:
         if self._y_working_tx_ids[tx_index] != tx_token:
             raise RuntimeError("stale yidl transaction token")
         astichi_hole(before_commit_body)
+        astichi_hole(prepare_commit_transaction_dispatch_body)
         return self._y_get_default_facade()
 
     def _apply_prepared_commit_tx_by_key(self, tx_group=DEFAULT_TRANSACTION, tx_token=None):
@@ -3928,7 +4078,7 @@ class working_facade_class_decl_name__astichi_arg__(
     __slots__ = ()
     astichi_hole(working_facade_properties)""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=310,
+            line_number=312,
             keep_names=(
                 "DEFAULT_TRANSACTION",
                 "TransactionManager",
@@ -3955,14 +4105,14 @@ return_class_module_ref__astichi_arg__.__module__ = astichi_pass(
 ).__module__
 return return_class_result_ref__astichi_arg__""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=608,
+            line_number=611,
         )
     ),
     "PassStatement": astichi_template(
         from_astichi_code(
             "pass",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=624,
+            line_number=627,
         )
     ),
     "BuildTransactionFactsBody": from_astichi_code(
@@ -3987,6 +4137,7 @@ for lifecycle_class in classes:
             tx_group_key=DEFAULT_TRANSACTION,
             tx_index=0,
             tx_group_order=0,
+            prepare_commit_fields_function_name="_prepare_commit_tx_0_fields",
             apply_prepared_commit_fields_function_name="_apply_prepared_commit_tx_0_fields",
             rollback_fields_function_name="_rollback_tx_0_fields",
         ),
@@ -4011,6 +4162,9 @@ for lifecycle_class in classes:
                     tx_group_key=tx_group,
                     tx_index=seen[tx_group],
                     tx_group_order=field.field_order,
+                    prepare_commit_fields_function_name=(
+                        f"_prepare_commit_tx_{seen[tx_group]}_fields"
+                    ),
                     apply_prepared_commit_fields_function_name=(
                         f"_apply_prepared_commit_tx_{seen[tx_group]}_fields"
                     ),
@@ -4044,11 +4198,17 @@ for lifecycle_class in classes:
                 tx_index=tx_index,
                 current_slot_name=field.current_slot_name,
                 working_slot_name=field.working_slot_name,
+                staged_slot_name=field.staged_slot_name,
+                has_freeze=field.has_freeze,
+                freeze_param_name=field.freeze_param_name,
+                has_thaw=field.has_thaw,
+                thaw_param_name=field.thaw_param_name,
+                has_optional_none=field.has_optional_none,
             ),
             policy=RejectDuplicate,
         )""",
         file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_managed.yidl",
-        line_number=57,
+        line_number=65,
         keep_names=(
             "ctx",
             "ClassesCollection",
@@ -4070,14 +4230,22 @@ astichi_pass(state, outer_bind=True).astichi_ref(external=current_slot)._ = asti
     outer_bind=True,
 )""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_managed.yidl",
-            line_number=155,
+            line_number=173,
         )
     ),
     "ManagedWorkingStateAssignment": astichi_template(
         from_astichi_code(
             "astichi_pass(state, outer_bind=True).astichi_ref(external=working_slot)._ = VOID",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_managed.yidl",
-            line_number=162,
+            line_number=180,
+            keep_names=("VOID",),
+        )
+    ),
+    "ManagedStagedStateAssignment": astichi_template(
+        from_astichi_code(
+            "astichi_pass(state, outer_bind=True).astichi_ref(external=staged_slot)._ = VOID",
+            file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_managed.yidl",
+            line_number=186,
             keep_names=("VOID",),
         )
     ),
@@ -4097,7 +4265,7 @@ def property_setter_name__astichi_arg__(self, value):
     state._y_ensure_working_transaction(astichi_bind_external(tx_index))
     state.astichi_ref(external=working_slot)._ = value""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_managed.yidl",
-            line_number=168,
+            line_number=192,
             keep_names=("VOID",),
         )
     ),
@@ -4116,7 +4284,7 @@ def property_setter_name__astichi_arg__(self, value):
         + astichi_bind_external(field_name)
     )""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_managed.yidl",
-            line_number=185,
+            line_number=209,
         )
     ),
     "ManagedWorkingProperty": astichi_template(
@@ -4135,29 +4303,83 @@ def property_setter_name__astichi_arg__(self, value):
     state._y_ensure_working_transaction(astichi_bind_external(tx_index))
     state.astichi_ref(external=working_slot)._ = value""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_managed.yidl",
-            line_number=199,
+            line_number=223,
             keep_names=("VOID",),
         )
     ),
-    "ManagedCommitBranch": astichi_template(
+    "ManagedPlainPrepareBranch": astichi_template(
         from_astichi_code(
             """\
 if astichi_pass(self, outer_bind=True).astichi_ref(external=working_slot) is not VOID:
-    astichi_pass(self, outer_bind=True).astichi_ref(external=current_slot)._ = (
+    astichi_pass(self, outer_bind=True).astichi_ref(external=staged_slot)._ = (
         astichi_pass(self, outer_bind=True).astichi_ref(external=working_slot)
+    )""",
+            file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_managed.yidl",
+            line_number=240,
+            keep_names=("VOID",),
+        )
+    ),
+    "ManagedFreezePrepareBranch": astichi_template(
+        from_astichi_code(
+            """\
+if astichi_pass(self, outer_bind=True).astichi_ref(external=working_slot) is not VOID:
+    astichi_pass(self, outer_bind=True).astichi_ref(external=staged_slot)._ = (
+        freeze_func_name__astichi_arg__(
+            astichi_pass(self, outer_bind=True).astichi_ref(external=working_slot)
+        )
+    )""",
+            file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_managed.yidl",
+            line_number=249,
+            keep_names=("VOID",),
+        )
+    ),
+    "ManagedOptionalFreezePrepareBranch": astichi_template(
+        from_astichi_code(
+            """\
+if astichi_pass(self, outer_bind=True).astichi_ref(external=working_slot) is not VOID:
+    astichi_pass(self, outer_bind=True).astichi_ref(external=staged_slot)._ = (
+        None
+        if astichi_pass(self, outer_bind=True).astichi_ref(external=working_slot) is None
+        else freeze_func_name__astichi_arg__(
+            astichi_pass(self, outer_bind=True).astichi_ref(external=working_slot)
+        )
+    )""",
+            file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_managed.yidl",
+            line_number=260,
+            keep_names=("VOID",),
+        )
+    ),
+    "ManagedApplyPreparedCommitBranch": astichi_template(
+        from_astichi_code(
+            """\
+if astichi_pass(self, outer_bind=True).astichi_ref(external=staged_slot) is not VOID:
+    astichi_pass(self, outer_bind=True).astichi_ref(external=current_slot)._ = (
+        astichi_pass(self, outer_bind=True).astichi_ref(external=staged_slot)
     )
+    astichi_pass(self, outer_bind=True).astichi_ref(external=staged_slot)._ = VOID
     astichi_pass(self, outer_bind=True).astichi_ref(external=working_slot)._ = VOID""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_managed.yidl",
-            line_number=216,
+            line_number=273,
             keep_names=("VOID",),
         )
     ),
     "ManagedRollbackBranch": astichi_template(
         from_astichi_code(
-            "astichi_pass(self, outer_bind=True).astichi_ref(external=working_slot)._ = VOID",
+            """\
+astichi_pass(self, outer_bind=True).astichi_ref(external=staged_slot)._ = VOID
+astichi_pass(self, outer_bind=True).astichi_ref(external=working_slot)._ = VOID""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_managed.yidl",
-            line_number=226,
+            line_number=284,
             keep_names=("VOID",),
+        )
+    ),
+    "PrepareCommitFieldsFunction": astichi_template(
+        from_astichi_code(
+            """\
+def prepare_commit_fields_function_name__astichi_arg__(self):
+    astichi_hole(prepare_commit_fields_body)""",
+            file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_managed.yidl",
+            line_number=291,
         )
     ),
     "ApplyPreparedCommitFieldsFunction": astichi_template(
@@ -4166,7 +4388,7 @@ if astichi_pass(self, outer_bind=True).astichi_ref(external=working_slot) is not
 def apply_prepared_commit_fields_function_name__astichi_arg__(self):
     astichi_hole(apply_prepared_commit_fields_body)""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_managed.yidl",
-            line_number=232,
+            line_number=296,
         )
     ),
     "RollbackFieldsFunction": astichi_template(
@@ -4175,7 +4397,7 @@ def apply_prepared_commit_fields_function_name__astichi_arg__(self):
 def rollback_fields_function_name__astichi_arg__(self):
     astichi_hole(rollback_fields_body)""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_managed.yidl",
-            line_number=237,
+            line_number=301,
         )
     ),
     "ApplyPreparedCommitDispatchBranch": astichi_template(
@@ -4187,7 +4409,19 @@ if astichi_pass(tx_index, outer_bind=True) == astichi_bind_external(tx_index_val
         outer_bind=True,
     ).astichi_ref(external=apply_prepared_commit_fields_function_name)()""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_managed.yidl",
-            line_number=242,
+            line_number=306,
+        )
+    ),
+    "PrepareCommitDispatchBranch": astichi_template(
+        from_astichi_code(
+            """\
+if astichi_pass(tx_index, outer_bind=True) == astichi_bind_external(tx_index_value):
+    astichi_pass(
+        self,
+        outer_bind=True,
+    ).astichi_ref(external=prepare_commit_fields_function_name)()""",
+            file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_managed.yidl",
+            line_number=314,
         )
     ),
     "RollbackDispatchBranch": astichi_template(
@@ -4199,7 +4433,7 @@ if astichi_pass(tx_index, outer_bind=True) == astichi_bind_external(tx_index_val
         outer_bind=True,
     ).astichi_ref(external=rollback_fields_function_name)()""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_managed.yidl",
-            line_number=250,
+            line_number=322,
         )
     ),
     "BuildDefaultFactoryFactsBody": from_astichi_code(
@@ -4768,6 +5002,28 @@ ASSEMBLY_CONTRIBUTIONS = {
         order=LiteralValueRef(0),
         target=TargetSpec(
             name="commit_transaction_dispatch_body",
+            paths=(
+                TargetPathSpec(
+                    kind="build",
+                    path=PathSpec(
+                        segments=(
+                            PathSegmentSpec(kind="name", name="ClassDef", indexes=()),
+                        )
+                    ),
+                ),
+            ),
+        ),
+        bindings=(),
+    ),
+    "PrepareCommitTransactionDispatchBodyPass": ContributionSpec(
+        name="PrepareCommitTransactionDispatchBodyPass",
+        source_name="PassStatement",
+        source_kind="resource",
+        build_name="PrepareCommitTransactionDispatchBodyPass",
+        index=LiteralValueRef(0),
+        order=LiteralValueRef(0),
+        target=TargetSpec(
+            name="prepare_commit_transaction_dispatch_body",
             paths=(
                 TargetPathSpec(
                     kind="build",
@@ -5568,6 +5824,84 @@ ASSEMBLY_CONTRIBUTIONS = {
             ),
         ),
     ),
+    "ManagedStagedStateSlot": ContributionSpec(
+        name="ManagedStagedStateSlot",
+        source_name="StateSlotEntry",
+        source_kind="resource",
+        build_name="ManagedStagedStateSlot",
+        index=ValueRef("FieldOrder"),
+        order=ValueRef("FieldOrder"),
+        target=TargetSpec(
+            name="state_slots",
+            paths=(
+                TargetPathSpec(
+                    kind="build",
+                    path=PathSpec(
+                        segments=(
+                            PathSegmentSpec(kind="name", name="ClassDef", indexes=()),
+                        )
+                    ),
+                ),
+            ),
+        ),
+        bindings=(
+            BindingSpec(
+                kind="external", name="slot_name", value=ValueRef("StagedSlotName")
+            ),
+        ),
+    ),
+    "ManagedFreezeBuilderParam": ContributionSpec(
+        name="ManagedFreezeBuilderParam",
+        source_name="BuilderParam",
+        source_kind="resource",
+        build_name="ManagedFreezeBuilderParam",
+        index=ValueRef("FieldOrder"),
+        order=ValueRef("FieldOrder"),
+        target=TargetSpec(
+            name="builder_params",
+            paths=(
+                TargetPathSpec(
+                    kind="build",
+                    path=PathSpec(
+                        segments=(
+                            PathSegmentSpec(kind="name", name="Root", indexes=()),
+                        )
+                    ),
+                ),
+            ),
+        ),
+        bindings=(
+            BindingSpec(
+                kind="ident", name="value_name", value=ValueRef("FreezeParamName")
+            ),
+        ),
+    ),
+    "ManagedThawBuilderParam": ContributionSpec(
+        name="ManagedThawBuilderParam",
+        source_name="BuilderParam",
+        source_kind="resource",
+        build_name="ManagedThawBuilderParam",
+        index=ValueRef("FieldOrder"),
+        order=ValueRef("FieldOrder"),
+        target=TargetSpec(
+            name="builder_params",
+            paths=(
+                TargetPathSpec(
+                    kind="build",
+                    path=PathSpec(
+                        segments=(
+                            PathSegmentSpec(kind="name", name="Root", indexes=()),
+                        )
+                    ),
+                ),
+            ),
+        ),
+        bindings=(
+            BindingSpec(
+                kind="ident", name="value_name", value=ValueRef("ThawParamName")
+            ),
+        ),
+    ),
     "ManagedInitParamDefault": ContributionSpec(
         name="ManagedInitParamDefault",
         source_name="InitParamDefault",
@@ -5713,6 +6047,32 @@ ASSEMBLY_CONTRIBUTIONS = {
             ),
         ),
     ),
+    "ManagedStagedInitAssignment": ContributionSpec(
+        name="ManagedStagedInitAssignment",
+        source_name="ManagedStagedStateAssignment",
+        source_kind="resource",
+        build_name="ManagedStagedInitAssignment",
+        index=ValueRef("FieldOrder"),
+        order=ValueRef("FieldOrder"),
+        target=TargetSpec(
+            name="state_init_body",
+            paths=(
+                TargetPathSpec(
+                    kind="build",
+                    path=PathSpec(
+                        segments=(
+                            PathSegmentSpec(kind="name", name="ClassDef", indexes=()),
+                        )
+                    ),
+                ),
+            ),
+        ),
+        bindings=(
+            BindingSpec(
+                kind="external", name="staged_slot", value=ValueRef("StagedSlotName")
+            ),
+        ),
+    ),
     "ManagedDefaultFacadeProperty": ContributionSpec(
         name="ManagedDefaultFacadeProperty",
         source_name="ManagedDefaultProperty",
@@ -5835,11 +6195,119 @@ ASSEMBLY_CONTRIBUTIONS = {
             BindingSpec(kind="external", name="tx_index", value=ValueRef("TxIndex")),
         ),
     ),
-    "ManagedCommit": ContributionSpec(
-        name="ManagedCommit",
-        source_name="ManagedCommitBranch",
+    "ManagedPlainPrepareCommit": ContributionSpec(
+        name="ManagedPlainPrepareCommit",
+        source_name="ManagedPlainPrepareBranch",
         source_kind="resource",
-        build_name="ManagedCommit",
+        build_name="ManagedPrepareCommit",
+        index=ValueRef("FieldOrder"),
+        order=ValueRef("FieldOrder"),
+        target=TargetSpec(
+            name="prepare_commit_fields_body",
+            paths=(
+                TargetPathSpec(
+                    kind="build",
+                    path=PathSpec(
+                        segments=(
+                            PathSegmentSpec(kind="name", name="ClassDef", indexes=()),
+                            PathSegmentSpec(
+                                kind="name",
+                                name="PrepareCommitFields",
+                                indexes=(ValueRef("TxIndex"),),
+                            ),
+                        )
+                    ),
+                ),
+            ),
+        ),
+        bindings=(
+            BindingSpec(
+                kind="external", name="working_slot", value=ValueRef("WorkingSlotName")
+            ),
+            BindingSpec(
+                kind="external", name="staged_slot", value=ValueRef("StagedSlotName")
+            ),
+        ),
+    ),
+    "ManagedFreezePrepareCommit": ContributionSpec(
+        name="ManagedFreezePrepareCommit",
+        source_name="ManagedFreezePrepareBranch",
+        source_kind="resource",
+        build_name="ManagedPrepareCommit",
+        index=ValueRef("FieldOrder"),
+        order=ValueRef("FieldOrder"),
+        target=TargetSpec(
+            name="prepare_commit_fields_body",
+            paths=(
+                TargetPathSpec(
+                    kind="build",
+                    path=PathSpec(
+                        segments=(
+                            PathSegmentSpec(kind="name", name="ClassDef", indexes=()),
+                            PathSegmentSpec(
+                                kind="name",
+                                name="PrepareCommitFields",
+                                indexes=(ValueRef("TxIndex"),),
+                            ),
+                        )
+                    ),
+                ),
+            ),
+        ),
+        bindings=(
+            BindingSpec(
+                kind="external", name="working_slot", value=ValueRef("WorkingSlotName")
+            ),
+            BindingSpec(
+                kind="external", name="staged_slot", value=ValueRef("StagedSlotName")
+            ),
+            BindingSpec(
+                kind="ident", name="freeze_func_name", value=ValueRef("FreezeParamName")
+            ),
+        ),
+    ),
+    "ManagedOptionalFreezePrepareCommit": ContributionSpec(
+        name="ManagedOptionalFreezePrepareCommit",
+        source_name="ManagedOptionalFreezePrepareBranch",
+        source_kind="resource",
+        build_name="ManagedPrepareCommit",
+        index=ValueRef("FieldOrder"),
+        order=ValueRef("FieldOrder"),
+        target=TargetSpec(
+            name="prepare_commit_fields_body",
+            paths=(
+                TargetPathSpec(
+                    kind="build",
+                    path=PathSpec(
+                        segments=(
+                            PathSegmentSpec(kind="name", name="ClassDef", indexes=()),
+                            PathSegmentSpec(
+                                kind="name",
+                                name="PrepareCommitFields",
+                                indexes=(ValueRef("TxIndex"),),
+                            ),
+                        )
+                    ),
+                ),
+            ),
+        ),
+        bindings=(
+            BindingSpec(
+                kind="external", name="working_slot", value=ValueRef("WorkingSlotName")
+            ),
+            BindingSpec(
+                kind="external", name="staged_slot", value=ValueRef("StagedSlotName")
+            ),
+            BindingSpec(
+                kind="ident", name="freeze_func_name", value=ValueRef("FreezeParamName")
+            ),
+        ),
+    ),
+    "ManagedApplyPreparedCommit": ContributionSpec(
+        name="ManagedApplyPreparedCommit",
+        source_name="ManagedApplyPreparedCommitBranch",
+        source_kind="resource",
+        build_name="ManagedApplyPreparedCommit",
         index=ValueRef("FieldOrder"),
         order=ValueRef("FieldOrder"),
         target=TargetSpec(
@@ -5866,6 +6334,9 @@ ASSEMBLY_CONTRIBUTIONS = {
             ),
             BindingSpec(
                 kind="external", name="working_slot", value=ValueRef("WorkingSlotName")
+            ),
+            BindingSpec(
+                kind="external", name="staged_slot", value=ValueRef("StagedSlotName")
             ),
         ),
     ),
@@ -5898,7 +6369,37 @@ ASSEMBLY_CONTRIBUTIONS = {
             BindingSpec(
                 kind="external", name="working_slot", value=ValueRef("WorkingSlotName")
             ),
+            BindingSpec(
+                kind="external", name="staged_slot", value=ValueRef("StagedSlotName")
+            ),
         ),
+    ),
+    "PrepareCommitFieldsBodyPass": ContributionSpec(
+        name="PrepareCommitFieldsBodyPass",
+        source_name="PassStatement",
+        source_kind="resource",
+        build_name="PrepareCommitFieldsBodyPass",
+        index=ValueRef("TxIndex"),
+        order=LiteralValueRef(0),
+        target=TargetSpec(
+            name="prepare_commit_fields_body",
+            paths=(
+                TargetPathSpec(
+                    kind="build",
+                    path=PathSpec(
+                        segments=(
+                            PathSegmentSpec(kind="name", name="ClassDef", indexes=()),
+                            PathSegmentSpec(
+                                kind="name",
+                                name="PrepareCommitFields",
+                                indexes=(ValueRef("TxIndex"),),
+                            ),
+                        )
+                    ),
+                ),
+            ),
+        ),
+        bindings=(),
     ),
     "ApplyPreparedCommitFieldsBodyPass": ContributionSpec(
         name="ApplyPreparedCommitFieldsBodyPass",
@@ -5954,6 +6455,34 @@ ASSEMBLY_CONTRIBUTIONS = {
         ),
         bindings=(),
     ),
+    "PrepareCommitFields": ContributionSpec(
+        name="PrepareCommitFields",
+        source_name="PrepareCommitFieldsFunction",
+        source_kind="resource",
+        build_name="PrepareCommitFields",
+        index=ValueRef("TxIndex"),
+        order=ValueRef("TxIndex"),
+        target=TargetSpec(
+            name="commit_transaction_helpers",
+            paths=(
+                TargetPathSpec(
+                    kind="build",
+                    path=PathSpec(
+                        segments=(
+                            PathSegmentSpec(kind="name", name="ClassDef", indexes=()),
+                        )
+                    ),
+                ),
+            ),
+        ),
+        bindings=(
+            BindingSpec(
+                kind="ident",
+                name="prepare_commit_fields_function_name",
+                value=ValueRef("PrepareCommitFieldsFunctionName"),
+            ),
+        ),
+    ),
     "ApplyPreparedCommitFields": ContributionSpec(
         name="ApplyPreparedCommitFields",
         source_name="ApplyPreparedCommitFieldsFunction",
@@ -6007,6 +6536,37 @@ ASSEMBLY_CONTRIBUTIONS = {
                 kind="ident",
                 name="rollback_fields_function_name",
                 value=ValueRef("RollbackFieldsFunctionName"),
+            ),
+        ),
+    ),
+    "PrepareCommitDispatch": ContributionSpec(
+        name="PrepareCommitDispatch",
+        source_name="PrepareCommitDispatchBranch",
+        source_kind="resource",
+        build_name="PrepareCommitDispatch",
+        index=ValueRef("TxIndex"),
+        order=ValueRef("TxIndex"),
+        target=TargetSpec(
+            name="prepare_commit_transaction_dispatch_body",
+            paths=(
+                TargetPathSpec(
+                    kind="build",
+                    path=PathSpec(
+                        segments=(
+                            PathSegmentSpec(kind="name", name="ClassDef", indexes=()),
+                        )
+                    ),
+                ),
+            ),
+        ),
+        bindings=(
+            BindingSpec(
+                kind="external",
+                name="prepare_commit_fields_function_name",
+                value=ValueRef("PrepareCommitFieldsFunctionName"),
+            ),
+            BindingSpec(
+                kind="external", name="tx_index_value", value=ValueRef("TxIndex")
             ),
         ),
     ),
@@ -6529,6 +7089,16 @@ ASSEMBLY_MATCHERS = {
         default_contribution_name="CommitTransactionDispatchBodyPass",
         rules=(),
     ),
+    "PrepareCommitTransactionDispatchBodyPassContributions": ContributionMatcherSpec(
+        name="PrepareCommitTransactionDispatchBodyPassContributions",
+        inputs=(
+            AssemblyInputSpec(
+                name="lifecycle_class", collection_name="Classes", collection=None
+            ),
+        ),
+        default_contribution_name="PrepareCommitTransactionDispatchBodyPass",
+        rules=(),
+    ),
     "RollbackTransactionBodyPassContributions": ContributionMatcherSpec(
         name="RollbackTransactionBodyPassContributions",
         inputs=(
@@ -6971,6 +7541,54 @@ ASSEMBLY_MATCHERS = {
         default_contribution_name="ManagedWorkingStateSlot",
         rules=(),
     ),
+    "ManagedStagedStateSlotContributions": ContributionMatcherSpec(
+        name="ManagedStagedStateSlotContributions",
+        inputs=(
+            AssemblyInputSpec(
+                name="field", collection_name="ManagedFields", collection=None
+            ),
+        ),
+        default_contribution_name="ManagedStagedStateSlot",
+        rules=(),
+    ),
+    "ManagedFreezeBuilderParamContributions": ContributionMatcherSpec(
+        name="ManagedFreezeBuilderParamContributions",
+        inputs=(
+            AssemblyInputSpec(
+                name="field", collection_name="ManagedFields", collection=None
+            ),
+        ),
+        default_contribution_name=None,
+        rules=(
+            ContributionRuleSpec(
+                name="has_freeze",
+                condition=EqConditionSpec(
+                    left=ValueRef("HasFreeze"), right=LiteralValueRef(True)
+                ),
+                contribution_name="ManagedFreezeBuilderParam",
+                weight=1.0,
+            ),
+        ),
+    ),
+    "ManagedThawBuilderParamContributions": ContributionMatcherSpec(
+        name="ManagedThawBuilderParamContributions",
+        inputs=(
+            AssemblyInputSpec(
+                name="field", collection_name="ManagedFields", collection=None
+            ),
+        ),
+        default_contribution_name=None,
+        rules=(
+            ContributionRuleSpec(
+                name="has_thaw",
+                condition=EqConditionSpec(
+                    left=ValueRef("HasThaw"), right=LiteralValueRef(True)
+                ),
+                contribution_name="ManagedThawBuilderParam",
+                weight=1.0,
+            ),
+        ),
+    ),
     "ManagedCurrentInitAssignmentContributions": ContributionMatcherSpec(
         name="ManagedCurrentInitAssignmentContributions",
         inputs=(
@@ -7027,6 +7645,16 @@ ASSEMBLY_MATCHERS = {
         default_contribution_name="ManagedWorkingInitAssignment",
         rules=(),
     ),
+    "ManagedStagedInitAssignmentContributions": ContributionMatcherSpec(
+        name="ManagedStagedInitAssignmentContributions",
+        inputs=(
+            AssemblyInputSpec(
+                name="field", collection_name="ManagedFields", collection=None
+            ),
+        ),
+        default_contribution_name="ManagedStagedInitAssignment",
+        rules=(),
+    ),
     "ManagedDefaultFacadePropertyContributions": ContributionMatcherSpec(
         name="ManagedDefaultFacadePropertyContributions",
         inputs=(
@@ -7063,8 +7691,8 @@ ASSEMBLY_MATCHERS = {
         default_contribution_name="ManagedWorkingFacadeProperty",
         rules=(),
     ),
-    "ManagedCommitContributions": ContributionMatcherSpec(
-        name="ManagedCommitContributions",
+    "ManagedPrepareCommitContributions": ContributionMatcherSpec(
+        name="ManagedPrepareCommitContributions",
         inputs=(
             AssemblyInputSpec(
                 name="field",
@@ -7072,7 +7700,44 @@ ASSEMBLY_MATCHERS = {
                 collection=None,
             ),
         ),
-        default_contribution_name="ManagedCommit",
+        default_contribution_name="ManagedPlainPrepareCommit",
+        rules=(
+            ContributionRuleSpec(
+                name="with_optional_freeze",
+                condition=AndConditionSpec(
+                    items=(
+                        EqConditionSpec(
+                            left=ValueRef("HasFreeze"), right=LiteralValueRef(True)
+                        ),
+                        EqConditionSpec(
+                            left=ValueRef("HasOptionalNone"),
+                            right=LiteralValueRef(True),
+                        ),
+                    )
+                ),
+                contribution_name="ManagedOptionalFreezePrepareCommit",
+                weight=1.0,
+            ),
+            ContributionRuleSpec(
+                name="with_freeze",
+                condition=EqConditionSpec(
+                    left=ValueRef("HasFreeze"), right=LiteralValueRef(True)
+                ),
+                contribution_name="ManagedFreezePrepareCommit",
+                weight=1.0,
+            ),
+        ),
+    ),
+    "ManagedApplyPreparedCommitContributions": ContributionMatcherSpec(
+        name="ManagedApplyPreparedCommitContributions",
+        inputs=(
+            AssemblyInputSpec(
+                name="field",
+                collection_name="IndexedTransactionalFields",
+                collection=None,
+            ),
+        ),
+        default_contribution_name="ManagedApplyPreparedCommit",
         rules=(),
     ),
     "ManagedRollbackContributions": ContributionMatcherSpec(
@@ -7085,6 +7750,16 @@ ASSEMBLY_MATCHERS = {
             ),
         ),
         default_contribution_name="ManagedRollback",
+        rules=(),
+    ),
+    "PrepareCommitFieldsBodyPassContributions": ContributionMatcherSpec(
+        name="PrepareCommitFieldsBodyPassContributions",
+        inputs=(
+            AssemblyInputSpec(
+                name="tx_group", collection_name="TxGroups", collection=None
+            ),
+        ),
+        default_contribution_name="PrepareCommitFieldsBodyPass",
         rules=(),
     ),
     "ApplyPreparedCommitFieldsBodyPassContributions": ContributionMatcherSpec(
@@ -7117,6 +7792,16 @@ ASSEMBLY_MATCHERS = {
         default_contribution_name="ApplyPreparedCommitFields",
         rules=(),
     ),
+    "PrepareCommitFieldsContributions": ContributionMatcherSpec(
+        name="PrepareCommitFieldsContributions",
+        inputs=(
+            AssemblyInputSpec(
+                name="tx_group", collection_name="TxGroups", collection=None
+            ),
+        ),
+        default_contribution_name="PrepareCommitFields",
+        rules=(),
+    ),
     "RollbackFieldsContributions": ContributionMatcherSpec(
         name="RollbackFieldsContributions",
         inputs=(
@@ -7125,6 +7810,16 @@ ASSEMBLY_MATCHERS = {
             ),
         ),
         default_contribution_name="RollbackFields",
+        rules=(),
+    ),
+    "PrepareCommitDispatchContributions": ContributionMatcherSpec(
+        name="PrepareCommitDispatchContributions",
+        inputs=(
+            AssemblyInputSpec(
+                name="tx_group", collection_name="TxGroups", collection=None
+            ),
+        ),
+        default_contribution_name="PrepareCommitDispatch",
         rules=(),
     ),
     "ApplyPreparedCommitDispatchContributions": ContributionMatcherSpec(
@@ -7534,6 +8229,17 @@ ASSEMBLY_EDGES = {
         condition=None,
         matcher_name="CommitTransactionDispatchBodyPassContributions",
     ),
+    "CoreClassProduction.prepare_commit_transaction_dispatch_body_pass": AssemblyEdgeSpec(
+        name="CoreClassProduction.prepare_commit_transaction_dispatch_body_pass",
+        context_inputs=(
+            AssemblyInputSpec(
+                name="lifecycle_class", collection_name="Classes", collection=None
+            ),
+        ),
+        from_inputs=(),
+        condition=None,
+        matcher_name="PrepareCommitTransactionDispatchBodyPassContributions",
+    ),
     "CoreClassProduction.rollback_transaction_body_pass": AssemblyEdgeSpec(
         name="CoreClassProduction.rollback_transaction_body_pass",
         context_inputs=(
@@ -7870,6 +8576,28 @@ ASSEMBLY_EDGES = {
         condition=None,
         matcher_name="FieldDefaultBuilderParamContributions",
     ),
+    "ModuleProduction.managed_freeze_params": AssemblyEdgeSpec(
+        name="ModuleProduction.managed_freeze_params",
+        context_inputs=(),
+        from_inputs=(
+            AssemblyInputSpec(
+                name="field", collection_name="ManagedFields", collection=None
+            ),
+        ),
+        condition=None,
+        matcher_name="ManagedFreezeBuilderParamContributions",
+    ),
+    "ModuleProduction.managed_thaw_params": AssemblyEdgeSpec(
+        name="ModuleProduction.managed_thaw_params",
+        context_inputs=(),
+        from_inputs=(
+            AssemblyInputSpec(
+                name="field", collection_name="ManagedFields", collection=None
+            ),
+        ),
+        condition=None,
+        matcher_name="ManagedThawBuilderParamContributions",
+    ),
     "ModuleProduction.classes": AssemblyEdgeSpec(
         name="ModuleProduction.classes",
         context_inputs=(),
@@ -7942,6 +8670,23 @@ ASSEMBLY_EDGES = {
             left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
         ),
         matcher_name="ManagedWorkingStateSlotContributions",
+    ),
+    "ClassProduction.managed_staged_state_slots": AssemblyEdgeSpec(
+        name="ClassProduction.managed_staged_state_slots",
+        context_inputs=(
+            AssemblyInputSpec(
+                name="lifecycle_class", collection_name="Classes", collection=None
+            ),
+        ),
+        from_inputs=(
+            AssemblyInputSpec(
+                name="field", collection_name="ManagedFields", collection=None
+            ),
+        ),
+        condition=EqConditionSpec(
+            left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
+        ),
+        matcher_name="ManagedStagedStateSlotContributions",
     ),
     "ClassProduction.transaction_manager_param": AssemblyEdgeSpec(
         name="ClassProduction.transaction_manager_param",
@@ -8041,6 +8786,17 @@ ASSEMBLY_EDGES = {
         from_inputs=(),
         condition=None,
         matcher_name="CommitTransactionDispatchBodyPassContributions",
+    ),
+    "ClassProduction.prepare_commit_transaction_dispatch_body_pass": AssemblyEdgeSpec(
+        name="ClassProduction.prepare_commit_transaction_dispatch_body_pass",
+        context_inputs=(
+            AssemblyInputSpec(
+                name="lifecycle_class", collection_name="Classes", collection=None
+            ),
+        ),
+        from_inputs=(),
+        condition=None,
+        matcher_name="PrepareCommitTransactionDispatchBodyPassContributions",
     ),
     "ClassProduction.rollback_transaction_body_pass": AssemblyEdgeSpec(
         name="ClassProduction.rollback_transaction_body_pass",
@@ -8370,6 +9126,23 @@ ASSEMBLY_EDGES = {
         ),
         matcher_name="ManagedWorkingInitAssignmentContributions",
     ),
+    "ClassProduction.managed_staged_init_assignments": AssemblyEdgeSpec(
+        name="ClassProduction.managed_staged_init_assignments",
+        context_inputs=(
+            AssemblyInputSpec(
+                name="lifecycle_class", collection_name="Classes", collection=None
+            ),
+        ),
+        from_inputs=(
+            AssemblyInputSpec(
+                name="field", collection_name="ManagedFields", collection=None
+            ),
+        ),
+        condition=EqConditionSpec(
+            left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
+        ),
+        matcher_name="ManagedStagedInitAssignmentContributions",
+    ),
     "ClassProduction.default_factory_evals": AssemblyEdgeSpec(
         name="ClassProduction.default_factory_evals",
         context_inputs=(
@@ -8497,6 +9270,21 @@ ASSEMBLY_EDGES = {
         condition=EqConditionSpec(left=ValueRef("TxOwner"), right=ValueRef("ClassId")),
         matcher_name="ApplyPreparedCommitFieldsContributions",
     ),
+    "ClassProduction.prepare_commit_helpers": AssemblyEdgeSpec(
+        name="ClassProduction.prepare_commit_helpers",
+        context_inputs=(
+            AssemblyInputSpec(
+                name="lifecycle_class", collection_name="Classes", collection=None
+            ),
+        ),
+        from_inputs=(
+            AssemblyInputSpec(
+                name="tx_group", collection_name="TxGroups", collection=None
+            ),
+        ),
+        condition=EqConditionSpec(left=ValueRef("TxOwner"), right=ValueRef("ClassId")),
+        matcher_name="PrepareCommitFieldsContributions",
+    ),
     "ClassProduction.rollback_helpers": AssemblyEdgeSpec(
         name="ClassProduction.rollback_helpers",
         context_inputs=(
@@ -8527,6 +9315,21 @@ ASSEMBLY_EDGES = {
         condition=EqConditionSpec(left=ValueRef("TxOwner"), right=ValueRef("ClassId")),
         matcher_name="ApplyPreparedCommitFieldsBodyPassContributions",
     ),
+    "ClassProduction.prepare_commit_helper_body_pass": AssemblyEdgeSpec(
+        name="ClassProduction.prepare_commit_helper_body_pass",
+        context_inputs=(
+            AssemblyInputSpec(
+                name="lifecycle_class", collection_name="Classes", collection=None
+            ),
+        ),
+        from_inputs=(
+            AssemblyInputSpec(
+                name="tx_group", collection_name="TxGroups", collection=None
+            ),
+        ),
+        condition=EqConditionSpec(left=ValueRef("TxOwner"), right=ValueRef("ClassId")),
+        matcher_name="PrepareCommitFieldsBodyPassContributions",
+    ),
     "ClassProduction.rollback_helper_body_pass": AssemblyEdgeSpec(
         name="ClassProduction.rollback_helper_body_pass",
         context_inputs=(
@@ -8541,6 +9344,21 @@ ASSEMBLY_EDGES = {
         ),
         condition=EqConditionSpec(left=ValueRef("TxOwner"), right=ValueRef("ClassId")),
         matcher_name="RollbackFieldsBodyPassContributions",
+    ),
+    "ClassProduction.prepare_commit_dispatch": AssemblyEdgeSpec(
+        name="ClassProduction.prepare_commit_dispatch",
+        context_inputs=(
+            AssemblyInputSpec(
+                name="lifecycle_class", collection_name="Classes", collection=None
+            ),
+        ),
+        from_inputs=(
+            AssemblyInputSpec(
+                name="tx_group", collection_name="TxGroups", collection=None
+            ),
+        ),
+        condition=EqConditionSpec(left=ValueRef("TxOwner"), right=ValueRef("ClassId")),
+        matcher_name="PrepareCommitDispatchContributions",
     ),
     "ClassProduction.apply_prepared_commit_dispatch": AssemblyEdgeSpec(
         name="ClassProduction.apply_prepared_commit_dispatch",
@@ -8572,8 +9390,8 @@ ASSEMBLY_EDGES = {
         condition=EqConditionSpec(left=ValueRef("TxOwner"), right=ValueRef("ClassId")),
         matcher_name="RollbackDispatchContributions",
     ),
-    "ClassProduction.managed_commit": AssemblyEdgeSpec(
-        name="ClassProduction.managed_commit",
+    "ClassProduction.managed_prepare_commit": AssemblyEdgeSpec(
+        name="ClassProduction.managed_prepare_commit",
         context_inputs=(
             AssemblyInputSpec(
                 name="lifecycle_class", collection_name="Classes", collection=None
@@ -8589,7 +9407,26 @@ ASSEMBLY_EDGES = {
         condition=EqConditionSpec(
             left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
         ),
-        matcher_name="ManagedCommitContributions",
+        matcher_name="ManagedPrepareCommitContributions",
+    ),
+    "ClassProduction.managed_apply_prepared_commit": AssemblyEdgeSpec(
+        name="ClassProduction.managed_apply_prepared_commit",
+        context_inputs=(
+            AssemblyInputSpec(
+                name="lifecycle_class", collection_name="Classes", collection=None
+            ),
+        ),
+        from_inputs=(
+            AssemblyInputSpec(
+                name="field",
+                collection_name="IndexedTransactionalFields",
+                collection=None,
+            ),
+        ),
+        condition=EqConditionSpec(
+            left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
+        ),
+        matcher_name="ManagedApplyPreparedCommitContributions",
     ),
     "ClassProduction.managed_rollback": AssemblyEdgeSpec(
         name="ClassProduction.managed_rollback",
@@ -8980,6 +9817,21 @@ ASSEMBLY_PRODUCTIONS = {
                     from_inputs=(),
                     condition=None,
                     matcher_name="CommitTransactionDispatchBodyPassContributions",
+                )
+            ),
+            InlineApplySpec(
+                edge=AssemblyEdgeSpec(
+                    name="CoreClassProduction.prepare_commit_transaction_dispatch_body_pass",
+                    context_inputs=(
+                        AssemblyInputSpec(
+                            name="lifecycle_class",
+                            collection_name="Classes",
+                            collection=None,
+                        ),
+                    ),
+                    from_inputs=(),
+                    condition=None,
+                    matcher_name="PrepareCommitTransactionDispatchBodyPassContributions",
                 )
             ),
             InlineApplySpec(
@@ -9439,6 +10291,36 @@ ASSEMBLY_PRODUCTIONS = {
             ),
             InlineApplySpec(
                 edge=AssemblyEdgeSpec(
+                    name="ModuleProduction.managed_freeze_params",
+                    context_inputs=(),
+                    from_inputs=(
+                        AssemblyInputSpec(
+                            name="field",
+                            collection_name="ManagedFields",
+                            collection=None,
+                        ),
+                    ),
+                    condition=None,
+                    matcher_name="ManagedFreezeBuilderParamContributions",
+                )
+            ),
+            InlineApplySpec(
+                edge=AssemblyEdgeSpec(
+                    name="ModuleProduction.managed_thaw_params",
+                    context_inputs=(),
+                    from_inputs=(
+                        AssemblyInputSpec(
+                            name="field",
+                            collection_name="ManagedFields",
+                            collection=None,
+                        ),
+                    ),
+                    condition=None,
+                    matcher_name="ManagedThawBuilderParamContributions",
+                )
+            ),
+            InlineApplySpec(
+                edge=AssemblyEdgeSpec(
                     name="ModuleProduction.classes",
                     context_inputs=(),
                     from_inputs=(
@@ -9657,6 +10539,29 @@ ASSEMBLY_PRODUCTIONS = {
             ),
             InlineApplySpec(
                 edge=AssemblyEdgeSpec(
+                    name="ClassProduction.managed_staged_state_slots",
+                    context_inputs=(
+                        AssemblyInputSpec(
+                            name="lifecycle_class",
+                            collection_name="Classes",
+                            collection=None,
+                        ),
+                    ),
+                    from_inputs=(
+                        AssemblyInputSpec(
+                            name="field",
+                            collection_name="ManagedFields",
+                            collection=None,
+                        ),
+                    ),
+                    condition=EqConditionSpec(
+                        left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
+                    ),
+                    matcher_name="ManagedStagedStateSlotContributions",
+                )
+            ),
+            InlineApplySpec(
+                edge=AssemblyEdgeSpec(
                     name="ClassProduction.transaction_manager_param",
                     context_inputs=(
                         AssemblyInputSpec(
@@ -9788,6 +10693,21 @@ ASSEMBLY_PRODUCTIONS = {
                     from_inputs=(),
                     condition=None,
                     matcher_name="CommitTransactionDispatchBodyPassContributions",
+                )
+            ),
+            InlineApplySpec(
+                edge=AssemblyEdgeSpec(
+                    name="ClassProduction.prepare_commit_transaction_dispatch_body_pass",
+                    context_inputs=(
+                        AssemblyInputSpec(
+                            name="lifecycle_class",
+                            collection_name="Classes",
+                            collection=None,
+                        ),
+                    ),
+                    from_inputs=(),
+                    condition=None,
+                    matcher_name="PrepareCommitTransactionDispatchBodyPassContributions",
                 )
             ),
             InlineApplySpec(
@@ -10230,6 +11150,29 @@ ASSEMBLY_PRODUCTIONS = {
             ),
             InlineApplySpec(
                 edge=AssemblyEdgeSpec(
+                    name="ClassProduction.managed_staged_init_assignments",
+                    context_inputs=(
+                        AssemblyInputSpec(
+                            name="lifecycle_class",
+                            collection_name="Classes",
+                            collection=None,
+                        ),
+                    ),
+                    from_inputs=(
+                        AssemblyInputSpec(
+                            name="field",
+                            collection_name="ManagedFields",
+                            collection=None,
+                        ),
+                    ),
+                    condition=EqConditionSpec(
+                        left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
+                    ),
+                    matcher_name="ManagedStagedInitAssignmentContributions",
+                )
+            ),
+            InlineApplySpec(
+                edge=AssemblyEdgeSpec(
                     name="ClassProduction.default_factory_evals",
                     context_inputs=(
                         AssemblyInputSpec(
@@ -10387,6 +11330,27 @@ ASSEMBLY_PRODUCTIONS = {
             ),
             InlineApplySpec(
                 edge=AssemblyEdgeSpec(
+                    name="ClassProduction.prepare_commit_helpers",
+                    context_inputs=(
+                        AssemblyInputSpec(
+                            name="lifecycle_class",
+                            collection_name="Classes",
+                            collection=None,
+                        ),
+                    ),
+                    from_inputs=(
+                        AssemblyInputSpec(
+                            name="tx_group", collection_name="TxGroups", collection=None
+                        ),
+                    ),
+                    condition=EqConditionSpec(
+                        left=ValueRef("TxOwner"), right=ValueRef("ClassId")
+                    ),
+                    matcher_name="PrepareCommitFieldsContributions",
+                )
+            ),
+            InlineApplySpec(
+                edge=AssemblyEdgeSpec(
                     name="ClassProduction.rollback_helpers",
                     context_inputs=(
                         AssemblyInputSpec(
@@ -10429,6 +11393,27 @@ ASSEMBLY_PRODUCTIONS = {
             ),
             InlineApplySpec(
                 edge=AssemblyEdgeSpec(
+                    name="ClassProduction.prepare_commit_helper_body_pass",
+                    context_inputs=(
+                        AssemblyInputSpec(
+                            name="lifecycle_class",
+                            collection_name="Classes",
+                            collection=None,
+                        ),
+                    ),
+                    from_inputs=(
+                        AssemblyInputSpec(
+                            name="tx_group", collection_name="TxGroups", collection=None
+                        ),
+                    ),
+                    condition=EqConditionSpec(
+                        left=ValueRef("TxOwner"), right=ValueRef("ClassId")
+                    ),
+                    matcher_name="PrepareCommitFieldsBodyPassContributions",
+                )
+            ),
+            InlineApplySpec(
+                edge=AssemblyEdgeSpec(
                     name="ClassProduction.rollback_helper_body_pass",
                     context_inputs=(
                         AssemblyInputSpec(
@@ -10446,6 +11431,27 @@ ASSEMBLY_PRODUCTIONS = {
                         left=ValueRef("TxOwner"), right=ValueRef("ClassId")
                     ),
                     matcher_name="RollbackFieldsBodyPassContributions",
+                )
+            ),
+            InlineApplySpec(
+                edge=AssemblyEdgeSpec(
+                    name="ClassProduction.prepare_commit_dispatch",
+                    context_inputs=(
+                        AssemblyInputSpec(
+                            name="lifecycle_class",
+                            collection_name="Classes",
+                            collection=None,
+                        ),
+                    ),
+                    from_inputs=(
+                        AssemblyInputSpec(
+                            name="tx_group", collection_name="TxGroups", collection=None
+                        ),
+                    ),
+                    condition=EqConditionSpec(
+                        left=ValueRef("TxOwner"), right=ValueRef("ClassId")
+                    ),
+                    matcher_name="PrepareCommitDispatchContributions",
                 )
             ),
             InlineApplySpec(
@@ -10492,7 +11498,7 @@ ASSEMBLY_PRODUCTIONS = {
             ),
             InlineApplySpec(
                 edge=AssemblyEdgeSpec(
-                    name="ClassProduction.managed_commit",
+                    name="ClassProduction.managed_prepare_commit",
                     context_inputs=(
                         AssemblyInputSpec(
                             name="lifecycle_class",
@@ -10510,7 +11516,30 @@ ASSEMBLY_PRODUCTIONS = {
                     condition=EqConditionSpec(
                         left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
                     ),
-                    matcher_name="ManagedCommitContributions",
+                    matcher_name="ManagedPrepareCommitContributions",
+                )
+            ),
+            InlineApplySpec(
+                edge=AssemblyEdgeSpec(
+                    name="ClassProduction.managed_apply_prepared_commit",
+                    context_inputs=(
+                        AssemblyInputSpec(
+                            name="lifecycle_class",
+                            collection_name="Classes",
+                            collection=None,
+                        ),
+                    ),
+                    from_inputs=(
+                        AssemblyInputSpec(
+                            name="field",
+                            collection_name="IndexedTransactionalFields",
+                            collection=None,
+                        ),
+                    ),
+                    condition=EqConditionSpec(
+                        left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
+                    ),
+                    matcher_name="ManagedApplyPreparedCommitContributions",
                 )
             ),
             InlineApplySpec(

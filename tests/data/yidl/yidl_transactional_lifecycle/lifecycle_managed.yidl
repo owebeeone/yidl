@@ -19,6 +19,7 @@ concept LifecycleManaged extends core.LifecycleCore {
 
     property TxGroupOrder: int = 0
     property TxOwner: str = ""
+    property PrepareCommitFieldsFunctionName: str = ""
     property ApplyPreparedCommitFieldsFunctionName: str = ""
     property RollbackFieldsFunctionName: str = ""
     record TransactionalField {
@@ -34,6 +35,7 @@ concept LifecycleManaged extends core.LifecycleCore {
         TxGroupKey
         TxIndex
         TxGroupOrder
+        PrepareCommitFieldsFunctionName
         ApplyPreparedCommitFieldsFunctionName
         RollbackFieldsFunctionName
     }
@@ -47,6 +49,12 @@ concept LifecycleManaged extends core.LifecycleCore {
         TxIndex
         CurrentSlotName
         WorkingSlotName
+        StagedSlotName
+        HasFreeze
+        FreezeParamName
+        HasThaw
+        ThawParamName
+        HasOptionalNone
     }
 
     collection TransactionalFields: TransactionalField identity FieldId many
@@ -74,6 +82,7 @@ concept LifecycleManaged extends core.LifecycleCore {
                     tx_group_key=DEFAULT_TRANSACTION,
                     tx_index=0,
                     tx_group_order=0,
+                    prepare_commit_fields_function_name="_prepare_commit_tx_0_fields",
                     apply_prepared_commit_fields_function_name="_apply_prepared_commit_tx_0_fields",
                     rollback_fields_function_name="_rollback_tx_0_fields",
                 ),
@@ -98,6 +107,9 @@ concept LifecycleManaged extends core.LifecycleCore {
                             tx_group_key=tx_group,
                             tx_index=seen[tx_group],
                             tx_group_order=field.field_order,
+                            prepare_commit_fields_function_name=(
+                                f"_prepare_commit_tx_{seen[tx_group]}_fields"
+                            ),
                             apply_prepared_commit_fields_function_name=(
                                 f"_apply_prepared_commit_tx_{seen[tx_group]}_fields"
                             ),
@@ -131,6 +143,12 @@ concept LifecycleManaged extends core.LifecycleCore {
                         tx_index=tx_index,
                         current_slot_name=field.current_slot_name,
                         working_slot_name=field.working_slot_name,
+                        staged_slot_name=field.staged_slot_name,
+                        has_freeze=field.has_freeze,
+                        freeze_param_name=field.freeze_param_name,
+                        has_thaw=field.has_thaw,
+                        thaw_param_name=field.thaw_param_name,
+                        has_optional_none=field.has_optional_none,
                     ),
                     policy=RejectDuplicate,
                 )
@@ -160,6 +178,12 @@ concept LifecycleManaged extends core.LifecycleCore {
 
     resource ManagedWorkingStateAssignment = template $[
         astichi_pass(state, outer_bind=True).astichi_ref(external=working_slot)._ = VOID
+    ]$ {
+        keep VOID
+    }
+
+    resource ManagedStagedStateAssignment = template $[
+        astichi_pass(state, outer_bind=True).astichi_ref(external=staged_slot)._ = VOID
     ]$ {
         keep VOID
     }
@@ -212,21 +236,61 @@ concept LifecycleManaged extends core.LifecycleCore {
         keep VOID
     }
 
-    resource ManagedCommitBranch = template $[
+    resource ManagedPlainPrepareBranch = template $[
         if astichi_pass(self, outer_bind=True).astichi_ref(external=working_slot) is not VOID:
-            astichi_pass(self, outer_bind=True).astichi_ref(external=current_slot)._ = (
+            astichi_pass(self, outer_bind=True).astichi_ref(external=staged_slot)._ = (
                 astichi_pass(self, outer_bind=True).astichi_ref(external=working_slot)
             )
+    ]$ {
+        keep VOID
+    }
+
+    resource ManagedFreezePrepareBranch = template $[
+        if astichi_pass(self, outer_bind=True).astichi_ref(external=working_slot) is not VOID:
+            astichi_pass(self, outer_bind=True).astichi_ref(external=staged_slot)._ = (
+                freeze_func_name__astichi_arg__(
+                    astichi_pass(self, outer_bind=True).astichi_ref(external=working_slot)
+                )
+            )
+    ]$ {
+        keep VOID
+    }
+
+    resource ManagedOptionalFreezePrepareBranch = template $[
+        if astichi_pass(self, outer_bind=True).astichi_ref(external=working_slot) is not VOID:
+            astichi_pass(self, outer_bind=True).astichi_ref(external=staged_slot)._ = (
+                None
+                if astichi_pass(self, outer_bind=True).astichi_ref(external=working_slot) is None
+                else freeze_func_name__astichi_arg__(
+                    astichi_pass(self, outer_bind=True).astichi_ref(external=working_slot)
+                )
+            )
+    ]$ {
+        keep VOID
+    }
+
+    resource ManagedApplyPreparedCommitBranch = template $[
+        if astichi_pass(self, outer_bind=True).astichi_ref(external=staged_slot) is not VOID:
+            astichi_pass(self, outer_bind=True).astichi_ref(external=current_slot)._ = (
+                astichi_pass(self, outer_bind=True).astichi_ref(external=staged_slot)
+            )
+            astichi_pass(self, outer_bind=True).astichi_ref(external=staged_slot)._ = VOID
             astichi_pass(self, outer_bind=True).astichi_ref(external=working_slot)._ = VOID
     ]$ {
         keep VOID
     }
 
     resource ManagedRollbackBranch = template $[
+        astichi_pass(self, outer_bind=True).astichi_ref(external=staged_slot)._ = VOID
         astichi_pass(self, outer_bind=True).astichi_ref(external=working_slot)._ = VOID
     ]$ {
         keep VOID
     }
+
+    resource PrepareCommitFieldsFunction = template $[
+        def prepare_commit_fields_function_name__astichi_arg__(self):
+            astichi_hole(prepare_commit_fields_body)
+    ]$
 
     resource ApplyPreparedCommitFieldsFunction = template $[
         def apply_prepared_commit_fields_function_name__astichi_arg__(self):
@@ -244,6 +308,14 @@ concept LifecycleManaged extends core.LifecycleCore {
                 self,
                 outer_bind=True,
             ).astichi_ref(external=apply_prepared_commit_fields_function_name)()
+    ]$
+
+    resource PrepareCommitDispatchBranch = template $[
+        if astichi_pass(tx_index, outer_bind=True) == astichi_bind_external(tx_index_value):
+            astichi_pass(
+                self,
+                outer_bind=True,
+            ).astichi_ref(external=prepare_commit_fields_function_name)()
     ]$
 
     resource RollbackDispatchBranch = template $[
@@ -276,6 +348,42 @@ concept LifecycleManaged extends core.LifecycleCore {
         }
 
         external slot_name = WorkingSlotName
+    }
+
+    contribution ManagedStagedStateSlot = StateSlotEntry {
+        as ManagedStagedStateSlot
+        index FieldOrder
+        order FieldOrder
+
+        target state_slots {
+            build /ClassDef
+        }
+
+        external slot_name = StagedSlotName
+    }
+
+    contribution ManagedFreezeBuilderParam = BuilderParam {
+        as ManagedFreezeBuilderParam
+        index FieldOrder
+        order FieldOrder
+
+        target builder_params {
+            build /Root
+        }
+
+        ident value_name = FreezeParamName
+    }
+
+    contribution ManagedThawBuilderParam = BuilderParam {
+        as ManagedThawBuilderParam
+        index FieldOrder
+        order FieldOrder
+
+        target builder_params {
+            build /Root
+        }
+
+        ident value_name = ThawParamName
     }
 
     contribution ManagedInitParamDefault = InitParamDefault {
@@ -343,6 +451,18 @@ concept LifecycleManaged extends core.LifecycleCore {
         external working_slot = WorkingSlotName
     }
 
+    contribution ManagedStagedInitAssignment = ManagedStagedStateAssignment {
+        as ManagedStagedInitAssignment
+        index FieldOrder
+        order FieldOrder
+
+        target state_init_body {
+            build /ClassDef
+        }
+
+        external staged_slot = StagedSlotName
+    }
+
     contribution ManagedDefaultFacadeProperty = ManagedDefaultProperty {
         as ManagedDefaultFacadeProperty
         index FieldOrder
@@ -393,8 +513,49 @@ concept LifecycleManaged extends core.LifecycleCore {
         external tx_index = TxIndex
     }
 
-    contribution ManagedCommit = ManagedCommitBranch {
-        as ManagedCommit
+    contribution ManagedPlainPrepareCommit = ManagedPlainPrepareBranch {
+        as ManagedPrepareCommit
+        index FieldOrder
+        order FieldOrder
+
+        target prepare_commit_fields_body {
+            build /ClassDef/PrepareCommitFields[TxIndex]
+        }
+
+        external working_slot = WorkingSlotName
+        external staged_slot = StagedSlotName
+    }
+
+    contribution ManagedFreezePrepareCommit = ManagedFreezePrepareBranch {
+        as ManagedPrepareCommit
+        index FieldOrder
+        order FieldOrder
+
+        target prepare_commit_fields_body {
+            build /ClassDef/PrepareCommitFields[TxIndex]
+        }
+
+        external working_slot = WorkingSlotName
+        external staged_slot = StagedSlotName
+        ident freeze_func_name = FreezeParamName
+    }
+
+    contribution ManagedOptionalFreezePrepareCommit = ManagedOptionalFreezePrepareBranch {
+        as ManagedPrepareCommit
+        index FieldOrder
+        order FieldOrder
+
+        target prepare_commit_fields_body {
+            build /ClassDef/PrepareCommitFields[TxIndex]
+        }
+
+        external working_slot = WorkingSlotName
+        external staged_slot = StagedSlotName
+        ident freeze_func_name = FreezeParamName
+    }
+
+    contribution ManagedApplyPreparedCommit = ManagedApplyPreparedCommitBranch {
+        as ManagedApplyPreparedCommit
         index FieldOrder
         order FieldOrder
 
@@ -404,6 +565,7 @@ concept LifecycleManaged extends core.LifecycleCore {
 
         external current_slot = CurrentSlotName
         external working_slot = WorkingSlotName
+        external staged_slot = StagedSlotName
     }
 
     contribution ManagedRollback = ManagedRollbackBranch {
@@ -416,6 +578,17 @@ concept LifecycleManaged extends core.LifecycleCore {
         }
 
         external working_slot = WorkingSlotName
+        external staged_slot = StagedSlotName
+    }
+
+    contribution PrepareCommitFieldsBodyPass = PassStatement {
+        as PrepareCommitFieldsBodyPass
+        index TxIndex
+        order 0
+
+        target prepare_commit_fields_body {
+            build /ClassDef/PrepareCommitFields[TxIndex]
+        }
     }
 
     contribution ApplyPreparedCommitFieldsBodyPass = PassStatement {
@@ -436,6 +609,18 @@ concept LifecycleManaged extends core.LifecycleCore {
         target rollback_fields_body {
             build /ClassDef/RollbackFields[TxIndex]
         }
+    }
+
+    contribution PrepareCommitFields = PrepareCommitFieldsFunction {
+        as PrepareCommitFields
+        index TxIndex
+        order TxIndex
+
+        target commit_transaction_helpers {
+            build /ClassDef
+        }
+
+        ident prepare_commit_fields_function_name = PrepareCommitFieldsFunctionName
     }
 
     contribution ApplyPreparedCommitFields = ApplyPreparedCommitFieldsFunction {
@@ -460,6 +645,19 @@ concept LifecycleManaged extends core.LifecycleCore {
         }
 
         ident rollback_fields_function_name = RollbackFieldsFunctionName
+    }
+
+    contribution PrepareCommitDispatch = PrepareCommitDispatchBranch {
+        as PrepareCommitDispatch
+        index TxIndex
+        order TxIndex
+
+        target prepare_commit_transaction_dispatch_body {
+            build /ClassDef
+        }
+
+        external prepare_commit_fields_function_name = PrepareCommitFieldsFunctionName
+        external tx_index_value = TxIndex
     }
 
     contribution ApplyPreparedCommitDispatch = ApplyPreparedCommitDispatchBranch {
@@ -496,6 +694,18 @@ concept LifecycleManaged extends core.LifecycleCore {
         default -> ManagedWorkingStateSlot
     }
 
+    matcher ManagedStagedStateSlotContributions(field: ManagedFields) -> contribution {
+        default -> ManagedStagedStateSlot
+    }
+
+    matcher ManagedFreezeBuilderParamContributions(field: ManagedFields) -> contribution {
+        rule has_freeze when HasFreeze == True -> ManagedFreezeBuilderParam
+    }
+
+    matcher ManagedThawBuilderParamContributions(field: ManagedFields) -> contribution {
+        rule has_thaw when HasThaw == True -> ManagedThawBuilderParam
+    }
+
     matcher ManagedCurrentInitAssignmentContributions(field: ManagedFields) -> contribution {
         rule init_field when Init == True
                         and HasDefaultFactory == False
@@ -510,6 +720,10 @@ concept LifecycleManaged extends core.LifecycleCore {
         default -> ManagedWorkingInitAssignment
     }
 
+    matcher ManagedStagedInitAssignmentContributions(field: ManagedFields) -> contribution {
+        default -> ManagedStagedInitAssignment
+    }
+
     matcher ManagedDefaultFacadePropertyContributions(field: IndexedTransactionalFields) -> contribution {
         default -> ManagedDefaultFacadeProperty
     }
@@ -522,12 +736,24 @@ concept LifecycleManaged extends core.LifecycleCore {
         default -> ManagedWorkingFacadeProperty
     }
 
-    matcher ManagedCommitContributions(field: IndexedTransactionalFields) -> contribution {
-        default -> ManagedCommit
+    matcher ManagedPrepareCommitContributions(field: IndexedTransactionalFields) -> contribution {
+        default -> ManagedPlainPrepareCommit
+        rule with_optional_freeze when HasFreeze == True
+                                  and HasOptionalNone == True
+                                  -> ManagedOptionalFreezePrepareCommit
+        rule with_freeze when HasFreeze == True -> ManagedFreezePrepareCommit
+    }
+
+    matcher ManagedApplyPreparedCommitContributions(field: IndexedTransactionalFields) -> contribution {
+        default -> ManagedApplyPreparedCommit
     }
 
     matcher ManagedRollbackContributions(field: IndexedTransactionalFields) -> contribution {
         default -> ManagedRollback
+    }
+
+    matcher PrepareCommitFieldsBodyPassContributions(tx_group: TxGroups) -> contribution {
+        default -> PrepareCommitFieldsBodyPass
     }
 
     matcher ApplyPreparedCommitFieldsBodyPassContributions(tx_group: TxGroups) -> contribution {
@@ -542,8 +768,16 @@ concept LifecycleManaged extends core.LifecycleCore {
         default -> ApplyPreparedCommitFields
     }
 
+    matcher PrepareCommitFieldsContributions(tx_group: TxGroups) -> contribution {
+        default -> PrepareCommitFields
+    }
+
     matcher RollbackFieldsContributions(tx_group: TxGroups) -> contribution {
         default -> RollbackFields
+    }
+
+    matcher PrepareCommitDispatchContributions(tx_group: TxGroups) -> contribution {
+        default -> PrepareCommitDispatch
     }
 
     matcher ApplyPreparedCommitDispatchContributions(tx_group: TxGroups) -> contribution {

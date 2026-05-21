@@ -79,6 +79,7 @@ def test_harvests_phase_a_compatible_facts() -> None:
     assert harvested.field_facts[0]["value_slot_name"] == "_y_plain_value"
     assert harvested.field_facts[5]["current_slot_name"] == "_y_count_current"
     assert harvested.field_facts[5]["working_slot_name"] == "_y_count_working"
+    assert harvested.field_facts[5]["staged_slot_name"] == "_y_count_staged"
     assert harvested.field_facts[5]["has_freeze"] is True
     assert harvested.field_facts[5]["freeze"] is freeze_count
     assert harvested.field_facts[5]["freeze_param_name"] == "_Counter_count_freeze"

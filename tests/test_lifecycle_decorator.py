@@ -441,6 +441,51 @@ def test_lifecycle_decorator_after_commit_failure_keeps_commit() -> None:
     assert events == [("after", 2)]
 
 
+def test_lifecycle_decorator_freezes_working_value_during_prepare() -> None:
+    events: list[tuple[str, int]] = []
+
+    def freeze_count(value: int) -> int:
+        events.append(("freeze", value))
+        return value * 10
+
+    class Counter:
+        count: int = managed(default=1, freeze=freeze_count)
+
+    item = lifecycle(Counter)()
+
+    with item.begin(DEFAULT_TRANSACTION):
+        item.count = 2
+        assert item.current.count == 1
+        assert item.working.count == 2
+
+    assert item.count == 20
+    assert item.current.count == 20
+    assert item.working.count == 20
+    assert events == [("freeze", 2)]
+
+
+def test_lifecycle_decorator_freeze_failure_rolls_back_working_value() -> None:
+    events: list[tuple[str, int]] = []
+
+    def freeze_count(value: int) -> int:
+        events.append(("freeze", value))
+        raise ValueError("freeze failed")
+
+    class Counter:
+        count: int = managed(default=1, freeze=freeze_count)
+
+    item = lifecycle(Counter)()
+
+    with pytest.raises(ValueError, match="freeze failed"):
+        with item.begin(DEFAULT_TRANSACTION):
+            item.count = 2
+
+    assert item.count == 1
+    assert item.current.count == 1
+    assert item.working.count == 1
+    assert events == [("freeze", 2)]
+
+
 def test_lifecycle_decorator_after_rollback_failure_keeps_rollback() -> None:
     events: list[tuple[str, int]] = []
 

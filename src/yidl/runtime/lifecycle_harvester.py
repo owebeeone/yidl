@@ -227,6 +227,7 @@ def _field_fact(
         "value_slot_name": "",
         "current_slot_name": "",
         "working_slot_name": "",
+        "staged_slot_name": "",
         "has_freeze": False,
         "freeze": MISSING,
         "freeze_param_name": "",
@@ -241,6 +242,7 @@ def _field_fact(
         fact["tx_group_key"] = decl.tx_group
         fact["current_slot_name"] = f"_y_{name}_current"
         fact["working_slot_name"] = f"_y_{name}_working"
+        fact["staged_slot_name"] = f"_y_{name}_staged"
         fact["has_freeze"] = decl.has_freeze
         fact["freeze"] = decl.freeze
         fact["freeze_param_name"] = (
@@ -285,6 +287,7 @@ def _remap_inherited_field_fact(
             "value_slot_name": "",
             "current_slot_name": "",
             "working_slot_name": "",
+            "staged_slot_name": "",
             "freeze_param_name": f"_{class_name}_{name}_freeze" if has_freeze else "",
             "thaw_param_name": f"_{class_name}_{name}_thaw" if has_thaw else "",
         },
@@ -294,6 +297,7 @@ def _remap_inherited_field_fact(
     elif kind == "managed":
         fact["current_slot_name"] = f"_y_{name}_current"
         fact["working_slot_name"] = f"_y_{name}_working"
+        fact["staged_slot_name"] = f"_y_{name}_staged"
     return fact
 
 

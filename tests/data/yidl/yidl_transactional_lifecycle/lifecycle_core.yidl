@@ -38,6 +38,7 @@ concept LifecycleCore {
     property ValueSlotName: str = ""
     property CurrentSlotName: str = ""
     property WorkingSlotName: str = ""
+    property StagedSlotName: str = ""
     property HasFreeze: bool = False
     property Freeze: object = None
     property FreezeParamName: str = ""
@@ -74,6 +75,7 @@ concept LifecycleCore {
         common HasDefaultFactory, DefaultFactory, DefaultFactoryParamName
         common DefaultFactoryParamNames
         common TxGroupKey, ValueSlotName, CurrentSlotName, WorkingSlotName
+        common StagedSlotName
         common HasFreeze, Freeze, FreezeParamName, HasThaw, Thaw, ThawParamName
         common HasOptionalNone
 
@@ -430,6 +432,7 @@ concept LifecycleCore {
                 if self._y_working_tx_ids[tx_index] != tx_token:
                     raise RuntimeError("stale yidl transaction token")
                 astichi_hole(before_commit_body)
+                astichi_hole(prepare_commit_transaction_dispatch_body)
                 return self._y_get_default_facade()
 
             def _apply_prepared_commit_tx_by_key(self, tx_group=DEFAULT_TRANSACTION, tx_token=None):
@@ -748,6 +751,16 @@ concept LifecycleCore {
         order 0
 
         target commit_transaction_dispatch_body {
+            build /ClassDef
+        }
+    }
+
+    contribution PrepareCommitTransactionDispatchBodyPass = PassStatement {
+        as PrepareCommitTransactionDispatchBodyPass
+        index 0
+        order 0
+
+        target prepare_commit_transaction_dispatch_body {
             build /ClassDef
         }
     }
@@ -1129,6 +1142,10 @@ concept LifecycleCore {
         default -> CommitTransactionDispatchBodyPass
     }
 
+    matcher PrepareCommitTransactionDispatchBodyPassContributions(lifecycle_class: Classes) -> contribution {
+        default -> PrepareCommitTransactionDispatchBodyPass
+    }
+
     matcher RollbackTransactionBodyPassContributions(lifecycle_class: Classes) -> contribution {
         default -> RollbackTransactionBodyPass
     }
@@ -1328,6 +1345,9 @@ concept LifecycleCore {
 
         apply commit_transaction_dispatch_body_pass
             using CommitTransactionDispatchBodyPassContributions
+
+        apply prepare_commit_transaction_dispatch_body_pass
+            using PrepareCommitTransactionDispatchBodyPassContributions
 
         apply rollback_transaction_body_pass
             using RollbackTransactionBodyPassContributions

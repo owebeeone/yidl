@@ -43,6 +43,14 @@ concept LifecycleBase extends default_factories.LifecycleDefaultFactories {
             from field: Fields
             using FieldDefaultBuilderParamContributions
 
+        apply managed_freeze_params
+            from field: ManagedFields
+            using ManagedFreezeBuilderParamContributions
+
+        apply managed_thaw_params
+            from field: ManagedFields
+            using ManagedThawBuilderParamContributions
+
         apply classes
             from lifecycle_class: Classes
             using ClassDefinitionContributions
@@ -92,6 +100,11 @@ concept LifecycleBase extends default_factories.LifecycleDefaultFactories {
             where FieldOwner == ClassId
             using ManagedWorkingStateSlotContributions
 
+        apply managed_staged_state_slots
+            from field: ManagedFields
+            where FieldOwner == ClassId
+            using ManagedStagedStateSlotContributions
+
         apply transaction_manager_param
             using TransactionManagerInitParamContributions
 
@@ -118,6 +131,9 @@ concept LifecycleBase extends default_factories.LifecycleDefaultFactories {
 
         apply commit_transaction_dispatch_body_pass
             using CommitTransactionDispatchBodyPassContributions
+
+        apply prepare_commit_transaction_dispatch_body_pass
+            using PrepareCommitTransactionDispatchBodyPassContributions
 
         apply rollback_transaction_body_pass
             using RollbackTransactionBodyPassContributions
@@ -213,6 +229,11 @@ concept LifecycleBase extends default_factories.LifecycleDefaultFactories {
             where FieldOwner == ClassId
             using ManagedWorkingInitAssignmentContributions
 
+        apply managed_staged_init_assignments
+            from field: ManagedFields
+            where FieldOwner == ClassId
+            using ManagedStagedInitAssignmentContributions
+
         apply default_factory_evals
             from step: DefaultFactoryEvaluationSteps
             where EvalOwner == ClassId
@@ -248,6 +269,11 @@ concept LifecycleBase extends default_factories.LifecycleDefaultFactories {
             where TxOwner == ClassId
             using ApplyPreparedCommitFieldsContributions
 
+        apply prepare_commit_helpers
+            from tx_group: TxGroups
+            where TxOwner == ClassId
+            using PrepareCommitFieldsContributions
+
         apply rollback_helpers
             from tx_group: TxGroups
             where TxOwner == ClassId
@@ -258,10 +284,20 @@ concept LifecycleBase extends default_factories.LifecycleDefaultFactories {
             where TxOwner == ClassId
             using ApplyPreparedCommitFieldsBodyPassContributions
 
+        apply prepare_commit_helper_body_pass
+            from tx_group: TxGroups
+            where TxOwner == ClassId
+            using PrepareCommitFieldsBodyPassContributions
+
         apply rollback_helper_body_pass
             from tx_group: TxGroups
             where TxOwner == ClassId
             using RollbackFieldsBodyPassContributions
+
+        apply prepare_commit_dispatch
+            from tx_group: TxGroups
+            where TxOwner == ClassId
+            using PrepareCommitDispatchContributions
 
         apply apply_prepared_commit_dispatch
             from tx_group: TxGroups
@@ -273,10 +309,15 @@ concept LifecycleBase extends default_factories.LifecycleDefaultFactories {
             where TxOwner == ClassId
             using RollbackDispatchContributions
 
-        apply managed_commit
+        apply managed_prepare_commit
             from field: IndexedTransactionalFields
             where FieldOwner == ClassId
-            using ManagedCommitContributions
+            using ManagedPrepareCommitContributions
+
+        apply managed_apply_prepared_commit
+            from field: IndexedTransactionalFields
+            where FieldOwner == ClassId
+            using ManagedApplyPreparedCommitContributions
 
         apply managed_rollback
             from field: IndexedTransactionalFields

@@ -27,8 +27,10 @@ def build_lifecycle_class(
             "_y_rank_value",
             "_y_count_current",
             "_y_count_working",
+            "_y_count_staged",
             "_y_audit_count_current",
             "_y_audit_count_working",
+            "_y_audit_count_staged",
             "_y_working_tx_ids",
         )
         __yidl_tx_index_to_group__ = _Counter_tx_groups
@@ -148,6 +150,10 @@ def build_lifecycle_class(
                 raise RuntimeError("stale yidl transaction token")
             if tx_index == 0:
                 self._y_get_default_facade()._before_default()
+            if tx_index == 0:
+                self._prepare_commit_tx_0_fields()
+            if tx_index == 1:
+                self._prepare_commit_tx_1_fields()
             return self._y_get_default_facade()
 
         def _apply_prepared_commit_tx_by_key(
@@ -190,19 +196,31 @@ def build_lifecycle_class(
             return self._y_get_default_facade()
 
         def _apply_prepared_commit_tx_0_fields(self):
-            if self._y_count_working is not VOID:
-                self._y_count_current = self._y_count_working
+            if self._y_count_staged is not VOID:
+                self._y_count_current = self._y_count_staged
+                self._y_count_staged = VOID
                 self._y_count_working = VOID
 
+        def _prepare_commit_tx_0_fields(self):
+            if self._y_count_working is not VOID:
+                self._y_count_staged = self._y_count_working
+
         def _apply_prepared_commit_tx_1_fields(self):
-            if self._y_audit_count_working is not VOID:
-                self._y_audit_count_current = self._y_audit_count_working
+            if self._y_audit_count_staged is not VOID:
+                self._y_audit_count_current = self._y_audit_count_staged
+                self._y_audit_count_staged = VOID
                 self._y_audit_count_working = VOID
 
+        def _prepare_commit_tx_1_fields(self):
+            if self._y_audit_count_working is not VOID:
+                self._y_audit_count_staged = self._y_audit_count_working
+
         def _rollback_tx_0_fields(self):
+            self._y_count_staged = VOID
             self._y_count_working = VOID
 
         def _rollback_tx_1_fields(self):
+            self._y_audit_count_staged = VOID
             self._y_audit_count_working = VOID
 
     class Counter_FacadeBase(decorated_cls):
@@ -330,8 +348,10 @@ def build_lifecycle_class(
             state._y_rank_value = rank
             state._y_count_current = count
             state._y_count_working = VOID
+            state._y_count_staged = VOID
             state._y_audit_count_current = audit_count
             state._y_audit_count_working = VOID
+            state._y_audit_count_staged = VOID
             state._y_working_tx_ids = [None for _group in _Counter_tx_groups]
 
     class Counter_Current(Counter_FacadeBase):
