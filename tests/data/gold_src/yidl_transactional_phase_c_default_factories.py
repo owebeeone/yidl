@@ -2,26 +2,39 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from pathlib import Path
+from types import SimpleNamespace
 
 import black
 
 from support.golden_case import run_multi_source_case
-from yidl.runtime.lifecycle import _generate_lifecycle_source
+from yidl.concept_parser import compile_yidl_files
+from yidl.generation.data_def_sys import emit_concept_runtime_source
+from yidl.runtime.lifecycle import _build_lifecycle_container
+from yidl.runtime.lifecycle import _strip_redundant_pass_statements
 from yidl.runtime.lifecycle import classvar
 from yidl.runtime.lifecycle import harvest_lifecycle_definition
 from yidl.runtime.lifecycle import initvar
 from yidl.runtime.lifecycle import lifecycle
 from yidl.runtime.lifecycle import managed
 
-DECORATOR_PATH = Path("src/yidl/runtime/_generated_lifecycle_base.py")
+YIDL_FIXTURE_DIR = Path("tests/data/yidl/yidl_transactional_lifecycle")
+YIDL_PATHS = (
+    YIDL_FIXTURE_DIR / "lifecycle_core.yidl",
+    YIDL_FIXTURE_DIR / "lifecycle_managed.yidl",
+    YIDL_FIXTURE_DIR / "lifecycle_default_factories.yidl",
+    YIDL_FIXTURE_DIR / "lifecycle_base.yidl",
+)
+ENTRY_PATH = YIDL_FIXTURE_DIR / "lifecycle_base.yidl"
 
 
 def render_case() -> Mapping[str, str]:
-    decorator_source = DECORATOR_PATH.read_text(encoding="utf-8")
+    decorator_source = _decorator_source()
     output_source = _generate_lifecycle_source(
+        decorator_source,
         harvest_lifecycle_definition(_fixture_class()),
     )
     inherited_output_source = _generate_lifecycle_source(
+        decorator_source,
         harvest_lifecycle_definition(_derived_fixture_class()),
     )
     return {
@@ -60,6 +73,31 @@ def validate_case(sources: Mapping[str, str]) -> None:
     _assert_inherited_generated_class(inherited_output_prettier_namespace)
     _assert_decorator_frontend()
     _assert_source_shape(sources)
+
+
+def _decorator_source() -> str:
+    concept = compile_yidl_files(
+        {path.as_posix(): path.read_text(encoding="utf-8") for path in YIDL_PATHS},
+        ENTRY_PATH.as_posix(),
+    ).concepts["LifecycleBase"]
+    return emit_concept_runtime_source(
+        concept.plan.build_data_definition(),
+        resources=concept.resources,
+        assembly_plan=concept,
+    )
+
+
+def _generate_lifecycle_source(
+    decorator_source: str,
+    harvested: object,
+) -> str:
+    namespace: dict[str, object] = {}
+    exec(decorator_source, namespace)
+    generated = SimpleNamespace(**namespace)
+    source = namespace["build_LifecycleModule"](
+        _build_lifecycle_container(generated, harvested),
+    ).emit_commented()
+    return _strip_redundant_pass_statements(source)
 
 
 def _fixture_class() -> type[object]:
