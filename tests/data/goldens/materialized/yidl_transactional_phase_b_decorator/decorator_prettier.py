@@ -144,10 +144,6 @@ _TargetFacadeIdProperty = RuntimeProperty(
 _ExposureOrderProperty = RuntimeProperty(
     "ExposureOrder", int, default=0, storage_name="exposure_order"
 )
-_TxGroupOrderProperty = RuntimeProperty(
-    "TxGroupOrder", int, default=0, storage_name="tx_group_order"
-)
-_TxIndexProperty = RuntimeProperty("TxIndex", int, default=0, storage_name="tx_index")
 _InitParameterIdProperty = RuntimeProperty(
     "InitParameterId", str, default=REQUIRED, storage_name="init_parameter_id"
 )
@@ -208,6 +204,10 @@ _ClassVarAssignmentNameProperty = RuntimeProperty(
 _ClassVarAssignmentOrderProperty = RuntimeProperty(
     "ClassVarAssignmentOrder", int, default=0, storage_name="class_var_assignment_order"
 )
+_TxGroupOrderProperty = RuntimeProperty(
+    "TxGroupOrder", int, default=0, storage_name="tx_group_order"
+)
+_TxIndexProperty = RuntimeProperty("TxIndex", int, default=0, storage_name="tx_index")
 _DependencyOwnerProperty = RuntimeProperty(
     "DependencyOwner", str, default=REQUIRED, storage_name="dependency_owner"
 )
@@ -329,33 +329,6 @@ _FacadeExposureSpec = RuntimeRecord(
         _ExposureOrderProperty,
     ),
 )
-_TransactionalFieldSpec = RuntimeRecord(
-    "TransactionalField",
-    (
-        _FieldIdProperty,
-        _FieldOwnerProperty,
-        _FieldNameProperty,
-        _FieldOrderProperty,
-        _TxGroupKeyProperty,
-    ),
-)
-_TxGroupSpec = RuntimeRecord(
-    "TxGroup",
-    (_ClassIdProperty, _TxGroupKeyProperty, _TxIndexProperty, _TxGroupOrderProperty),
-)
-_IndexedTransactionalFieldSpec = RuntimeRecord(
-    "IndexedTransactionalField",
-    (
-        _FieldIdProperty,
-        _FieldOwnerProperty,
-        _FieldNameProperty,
-        _FieldOrderProperty,
-        _TxGroupKeyProperty,
-        _TxIndexProperty,
-        _CurrentSlotNameProperty,
-        _WorkingSlotNameProperty,
-    ),
-)
 _InitParameterSpec = RuntimeRecord(
     "InitParameter",
     (
@@ -384,47 +357,6 @@ _ClassVarAssignmentSpec = RuntimeRecord(
         _ClassVarAssignmentOwnerProperty,
         _ClassVarAssignmentNameProperty,
         _ClassVarAssignmentOrderProperty,
-    ),
-)
-_DefaultFactoryDependencySpec = RuntimeRecord(
-    "DefaultFactoryDependency",
-    (
-        _DependencyOwnerProperty,
-        _ConsumerFieldIdProperty,
-        _ConsumerFieldNameProperty,
-        _ProviderNameProperty,
-        _ProviderFieldIdProperty,
-        _ProviderFieldKindProperty,
-        _ProviderInitProperty,
-        _ProviderHasDefaultProperty,
-        _ProviderHasDefaultFactoryProperty,
-        _ParamNameProperty,
-        _ParamOrderProperty,
-        _ConsumerEvalOrderProperty,
-    ),
-)
-_DefaultFactoryEvaluationStepSpec = RuntimeRecord(
-    "DefaultFactoryEvaluationStep",
-    (
-        _EvalStepIdProperty,
-        _EvalOwnerProperty,
-        _EvalFieldIdProperty,
-        _EvalFieldNameProperty,
-        _EvalFieldKindProperty,
-        _EvalInitProperty,
-        _EvalStateSlotNameProperty,
-        _EvalDefaultFactoryParamNameProperty,
-        _EvalOrderProperty,
-        _EvalStatementOrderProperty,
-    ),
-)
-_DefaultFactoryDiagnosticSpec = RuntimeRecord(
-    "DefaultFactoryDiagnostic",
-    (
-        _DiagnosticIdProperty,
-        _DiagnosticOwnerProperty,
-        _DiagnosticFieldIdProperty,
-        _DiagnosticMessageProperty,
     ),
 )
 _PlainFieldSpec = RuntimeRecord(
@@ -496,6 +428,33 @@ _ClassVarFieldSpec = RuntimeRecord(
         _WorkingSlotNameProperty,
     ),
 )
+_TransactionalFieldSpec = RuntimeRecord(
+    "TransactionalField",
+    (
+        _FieldIdProperty,
+        _FieldOwnerProperty,
+        _FieldNameProperty,
+        _FieldOrderProperty,
+        _TxGroupKeyProperty,
+    ),
+)
+_TxGroupSpec = RuntimeRecord(
+    "TxGroup",
+    (_ClassIdProperty, _TxGroupKeyProperty, _TxIndexProperty, _TxGroupOrderProperty),
+)
+_IndexedTransactionalFieldSpec = RuntimeRecord(
+    "IndexedTransactionalField",
+    (
+        _FieldIdProperty,
+        _FieldOwnerProperty,
+        _FieldNameProperty,
+        _FieldOrderProperty,
+        _TxGroupKeyProperty,
+        _TxIndexProperty,
+        _CurrentSlotNameProperty,
+        _WorkingSlotNameProperty,
+    ),
+)
 _ManagedFieldSpec = RuntimeRecord(
     "ManagedField",
     (
@@ -517,6 +476,47 @@ _ManagedFieldSpec = RuntimeRecord(
         _ValueSlotNameProperty,
         _CurrentSlotNameProperty,
         _WorkingSlotNameProperty,
+    ),
+)
+_DefaultFactoryDependencySpec = RuntimeRecord(
+    "DefaultFactoryDependency",
+    (
+        _DependencyOwnerProperty,
+        _ConsumerFieldIdProperty,
+        _ConsumerFieldNameProperty,
+        _ProviderNameProperty,
+        _ProviderFieldIdProperty,
+        _ProviderFieldKindProperty,
+        _ProviderInitProperty,
+        _ProviderHasDefaultProperty,
+        _ProviderHasDefaultFactoryProperty,
+        _ParamNameProperty,
+        _ParamOrderProperty,
+        _ConsumerEvalOrderProperty,
+    ),
+)
+_DefaultFactoryEvaluationStepSpec = RuntimeRecord(
+    "DefaultFactoryEvaluationStep",
+    (
+        _EvalStepIdProperty,
+        _EvalOwnerProperty,
+        _EvalFieldIdProperty,
+        _EvalFieldNameProperty,
+        _EvalFieldKindProperty,
+        _EvalInitProperty,
+        _EvalStateSlotNameProperty,
+        _EvalDefaultFactoryParamNameProperty,
+        _EvalOrderProperty,
+        _EvalStatementOrderProperty,
+    ),
+)
+_DefaultFactoryDiagnosticSpec = RuntimeRecord(
+    "DefaultFactoryDiagnostic",
+    (
+        _DiagnosticIdProperty,
+        _DiagnosticOwnerProperty,
+        _DiagnosticFieldIdProperty,
+        _DiagnosticMessageProperty,
     ),
 )
 _LifecycleFieldSpecUnion = RuntimeUnion(
@@ -816,198 +816,6 @@ class FacadeExposure:
 _FacadeExposureSpec.bind_record_class(FacadeExposure)
 
 
-class TransactionalField:
-    __slots__ = ("field_id", "field_owner", "field_name", "field_order", "tx_group_key")
-    __dds_record_spec__ = _TransactionalFieldSpec
-    field_id: str
-    field_owner: str
-    field_name: str
-    field_order: int
-    tx_group_key: object
-
-    def __init__(
-        self,
-        *,
-        field_id: str,
-        field_owner: str,
-        field_name: str,
-        field_order: int,
-        tx_group_key: object = None,
-    ):
-        if not isinstance(field_id, str):
-            raise TypeError("FieldId must be str, got " + type(field_id).__name__)
-        object.__setattr__(self, "field_id", field_id)
-        if not isinstance(field_owner, str):
-            raise TypeError("FieldOwner must be str, got " + type(field_owner).__name__)
-        object.__setattr__(self, "field_owner", field_owner)
-        if not isinstance(field_name, str):
-            raise TypeError("FieldName must be str, got " + type(field_name).__name__)
-        object.__setattr__(self, "field_name", field_name)
-        if not isinstance(field_order, int):
-            raise TypeError("FieldOrder must be int, got " + type(field_order).__name__)
-        object.__setattr__(self, "field_order", field_order)
-        object.__setattr__(self, "tx_group_key", tx_group_key)
-
-    def __setattr__(self, name, value):
-        if name in (
-            "field_id",
-            "field_owner",
-            "field_name",
-            "field_order",
-            "tx_group_key",
-        ):
-            raise AttributeError("TransactionalField records are immutable")
-        object.__setattr__(self, name, value)
-
-    def __repr__(self):
-        pieces = []
-        pieces.append("field_id=" + repr(self.field_id))
-        pieces.append("field_owner=" + repr(self.field_owner))
-        pieces.append("field_name=" + repr(self.field_name))
-        pieces.append("field_order=" + repr(self.field_order))
-        pieces.append("tx_group_key=" + repr(self.tx_group_key))
-        return "TransactionalField" + "(" + ", ".join(pieces) + ")"
-
-
-_TransactionalFieldSpec.bind_record_class(TransactionalField)
-
-
-class TxGroup:
-    __slots__ = ("class_id", "tx_group_key", "tx_index", "tx_group_order")
-    __dds_record_spec__ = _TxGroupSpec
-    class_id: str
-    tx_group_key: object
-    tx_index: int
-    tx_group_order: int
-
-    def __init__(
-        self,
-        *,
-        class_id: str,
-        tx_group_key: object = None,
-        tx_index: int = 0,
-        tx_group_order: int = 0,
-    ):
-        if not isinstance(class_id, str):
-            raise TypeError("ClassId must be str, got " + type(class_id).__name__)
-        object.__setattr__(self, "class_id", class_id)
-        object.__setattr__(self, "tx_group_key", tx_group_key)
-        if not isinstance(tx_index, int):
-            raise TypeError("TxIndex must be int, got " + type(tx_index).__name__)
-        object.__setattr__(self, "tx_index", tx_index)
-        if not isinstance(tx_group_order, int):
-            raise TypeError(
-                "TxGroupOrder must be int, got " + type(tx_group_order).__name__
-            )
-        object.__setattr__(self, "tx_group_order", tx_group_order)
-
-    def __setattr__(self, name, value):
-        if name in ("class_id", "tx_group_key", "tx_index", "tx_group_order"):
-            raise AttributeError("TxGroup records are immutable")
-        object.__setattr__(self, name, value)
-
-    def __repr__(self):
-        pieces = []
-        pieces.append("class_id=" + repr(self.class_id))
-        pieces.append("tx_group_key=" + repr(self.tx_group_key))
-        pieces.append("tx_index=" + repr(self.tx_index))
-        pieces.append("tx_group_order=" + repr(self.tx_group_order))
-        return "TxGroup" + "(" + ", ".join(pieces) + ")"
-
-
-_TxGroupSpec.bind_record_class(TxGroup)
-
-
-class IndexedTransactionalField:
-    __slots__ = (
-        "field_id",
-        "field_owner",
-        "field_name",
-        "field_order",
-        "tx_group_key",
-        "tx_index",
-        "current_slot_name",
-        "working_slot_name",
-    )
-    __dds_record_spec__ = _IndexedTransactionalFieldSpec
-    field_id: str
-    field_owner: str
-    field_name: str
-    field_order: int
-    tx_group_key: object
-    tx_index: int
-    current_slot_name: str
-    working_slot_name: str
-
-    def __init__(
-        self,
-        *,
-        field_id: str,
-        field_owner: str,
-        field_name: str,
-        field_order: int,
-        tx_group_key: object = None,
-        tx_index: int = 0,
-        current_slot_name: str = "",
-        working_slot_name: str = "",
-    ):
-        if not isinstance(field_id, str):
-            raise TypeError("FieldId must be str, got " + type(field_id).__name__)
-        object.__setattr__(self, "field_id", field_id)
-        if not isinstance(field_owner, str):
-            raise TypeError("FieldOwner must be str, got " + type(field_owner).__name__)
-        object.__setattr__(self, "field_owner", field_owner)
-        if not isinstance(field_name, str):
-            raise TypeError("FieldName must be str, got " + type(field_name).__name__)
-        object.__setattr__(self, "field_name", field_name)
-        if not isinstance(field_order, int):
-            raise TypeError("FieldOrder must be int, got " + type(field_order).__name__)
-        object.__setattr__(self, "field_order", field_order)
-        object.__setattr__(self, "tx_group_key", tx_group_key)
-        if not isinstance(tx_index, int):
-            raise TypeError("TxIndex must be int, got " + type(tx_index).__name__)
-        object.__setattr__(self, "tx_index", tx_index)
-        if not isinstance(current_slot_name, str):
-            raise TypeError(
-                "CurrentSlotName must be str, got " + type(current_slot_name).__name__
-            )
-        object.__setattr__(self, "current_slot_name", current_slot_name)
-        if not isinstance(working_slot_name, str):
-            raise TypeError(
-                "WorkingSlotName must be str, got " + type(working_slot_name).__name__
-            )
-        object.__setattr__(self, "working_slot_name", working_slot_name)
-
-    def __setattr__(self, name, value):
-        if name in (
-            "field_id",
-            "field_owner",
-            "field_name",
-            "field_order",
-            "tx_group_key",
-            "tx_index",
-            "current_slot_name",
-            "working_slot_name",
-        ):
-            raise AttributeError("IndexedTransactionalField records are immutable")
-        object.__setattr__(self, name, value)
-
-    def __repr__(self):
-        pieces = []
-        pieces.append("field_id=" + repr(self.field_id))
-        pieces.append("field_owner=" + repr(self.field_owner))
-        pieces.append("field_name=" + repr(self.field_name))
-        pieces.append("field_order=" + repr(self.field_order))
-        pieces.append("tx_group_key=" + repr(self.tx_group_key))
-        pieces.append("tx_index=" + repr(self.tx_index))
-        pieces.append("current_slot_name=" + repr(self.current_slot_name))
-        pieces.append("working_slot_name=" + repr(self.working_slot_name))
-        return "IndexedTransactionalField" + "(" + ", ".join(pieces) + ")"
-
-
-_IndexedTransactionalFieldSpec.bind_record_class(IndexedTransactionalField)
-
-
 class InitParameter:
     __slots__ = (
         "init_parameter_id",
@@ -1255,347 +1063,6 @@ class ClassVarAssignment:
 
 
 _ClassVarAssignmentSpec.bind_record_class(ClassVarAssignment)
-
-
-class DefaultFactoryDependency:
-    __slots__ = (
-        "dependency_owner",
-        "consumer_field_id",
-        "consumer_field_name",
-        "provider_name",
-        "provider_field_id",
-        "provider_field_kind",
-        "provider_init",
-        "provider_has_default",
-        "provider_has_default_factory",
-        "param_name",
-        "param_order",
-        "consumer_eval_order",
-    )
-    __dds_record_spec__ = _DefaultFactoryDependencySpec
-    dependency_owner: str
-    consumer_field_id: str
-    consumer_field_name: str
-    provider_name: str
-    provider_field_id: str
-    provider_field_kind: str
-    provider_init: bool
-    provider_has_default: bool
-    provider_has_default_factory: bool
-    param_name: str
-    param_order: int
-    consumer_eval_order: int
-
-    def __init__(
-        self,
-        *,
-        dependency_owner: str,
-        consumer_field_id: str,
-        consumer_field_name: str = "",
-        provider_name: str,
-        provider_field_id: str = "",
-        provider_field_kind: str = "",
-        provider_init: bool = True,
-        provider_has_default: bool = False,
-        provider_has_default_factory: bool = False,
-        param_name: str,
-        param_order: int = 0,
-        consumer_eval_order: int = 0,
-    ):
-        if not isinstance(dependency_owner, str):
-            raise TypeError(
-                "DependencyOwner must be str, got " + type(dependency_owner).__name__
-            )
-        object.__setattr__(self, "dependency_owner", dependency_owner)
-        if not isinstance(consumer_field_id, str):
-            raise TypeError(
-                "ConsumerFieldId must be str, got " + type(consumer_field_id).__name__
-            )
-        object.__setattr__(self, "consumer_field_id", consumer_field_id)
-        if not isinstance(consumer_field_name, str):
-            raise TypeError(
-                "ConsumerFieldName must be str, got "
-                + type(consumer_field_name).__name__
-            )
-        object.__setattr__(self, "consumer_field_name", consumer_field_name)
-        if not isinstance(provider_name, str):
-            raise TypeError(
-                "ProviderName must be str, got " + type(provider_name).__name__
-            )
-        object.__setattr__(self, "provider_name", provider_name)
-        if not isinstance(provider_field_id, str):
-            raise TypeError(
-                "ProviderFieldId must be str, got " + type(provider_field_id).__name__
-            )
-        object.__setattr__(self, "provider_field_id", provider_field_id)
-        if not isinstance(provider_field_kind, str):
-            raise TypeError(
-                "ProviderFieldKind must be str, got "
-                + type(provider_field_kind).__name__
-            )
-        object.__setattr__(self, "provider_field_kind", provider_field_kind)
-        if not isinstance(provider_init, bool):
-            raise TypeError(
-                "ProviderInit must be bool, got " + type(provider_init).__name__
-            )
-        object.__setattr__(self, "provider_init", provider_init)
-        if not isinstance(provider_has_default, bool):
-            raise TypeError(
-                "ProviderHasDefault must be bool, got "
-                + type(provider_has_default).__name__
-            )
-        object.__setattr__(self, "provider_has_default", provider_has_default)
-        if not isinstance(provider_has_default_factory, bool):
-            raise TypeError(
-                "ProviderHasDefaultFactory must be bool, got "
-                + type(provider_has_default_factory).__name__
-            )
-        object.__setattr__(
-            self, "provider_has_default_factory", provider_has_default_factory
-        )
-        if not isinstance(param_name, str):
-            raise TypeError("ParamName must be str, got " + type(param_name).__name__)
-        object.__setattr__(self, "param_name", param_name)
-        if not isinstance(param_order, int):
-            raise TypeError("ParamOrder must be int, got " + type(param_order).__name__)
-        object.__setattr__(self, "param_order", param_order)
-        if not isinstance(consumer_eval_order, int):
-            raise TypeError(
-                "ConsumerEvalOrder must be int, got "
-                + type(consumer_eval_order).__name__
-            )
-        object.__setattr__(self, "consumer_eval_order", consumer_eval_order)
-
-    def __setattr__(self, name, value):
-        if name in (
-            "dependency_owner",
-            "consumer_field_id",
-            "consumer_field_name",
-            "provider_name",
-            "provider_field_id",
-            "provider_field_kind",
-            "provider_init",
-            "provider_has_default",
-            "provider_has_default_factory",
-            "param_name",
-            "param_order",
-            "consumer_eval_order",
-        ):
-            raise AttributeError("DefaultFactoryDependency records are immutable")
-        object.__setattr__(self, name, value)
-
-    def __repr__(self):
-        pieces = []
-        pieces.append("dependency_owner=" + repr(self.dependency_owner))
-        pieces.append("consumer_field_id=" + repr(self.consumer_field_id))
-        pieces.append("consumer_field_name=" + repr(self.consumer_field_name))
-        pieces.append("provider_name=" + repr(self.provider_name))
-        pieces.append("provider_field_id=" + repr(self.provider_field_id))
-        pieces.append("provider_field_kind=" + repr(self.provider_field_kind))
-        pieces.append("provider_init=" + repr(self.provider_init))
-        pieces.append("provider_has_default=" + repr(self.provider_has_default))
-        pieces.append(
-            "provider_has_default_factory=" + repr(self.provider_has_default_factory)
-        )
-        pieces.append("param_name=" + repr(self.param_name))
-        pieces.append("param_order=" + repr(self.param_order))
-        pieces.append("consumer_eval_order=" + repr(self.consumer_eval_order))
-        return "DefaultFactoryDependency" + "(" + ", ".join(pieces) + ")"
-
-
-_DefaultFactoryDependencySpec.bind_record_class(DefaultFactoryDependency)
-
-
-class DefaultFactoryEvaluationStep:
-    __slots__ = (
-        "eval_step_id",
-        "eval_owner",
-        "eval_field_id",
-        "eval_field_name",
-        "eval_field_kind",
-        "eval_init",
-        "eval_state_slot_name",
-        "eval_default_factory_param_name",
-        "eval_order",
-        "eval_statement_order",
-    )
-    __dds_record_spec__ = _DefaultFactoryEvaluationStepSpec
-    eval_step_id: str
-    eval_owner: str
-    eval_field_id: str
-    eval_field_name: str
-    eval_field_kind: str
-    eval_init: bool
-    eval_state_slot_name: str
-    eval_default_factory_param_name: str
-    eval_order: int
-    eval_statement_order: int
-
-    def __init__(
-        self,
-        *,
-        eval_step_id: str,
-        eval_owner: str,
-        eval_field_id: str,
-        eval_field_name: str,
-        eval_field_kind: str = "",
-        eval_init: bool = True,
-        eval_state_slot_name: str = "",
-        eval_default_factory_param_name: str = "",
-        eval_order: int = 0,
-        eval_statement_order: int = 0,
-    ):
-        if not isinstance(eval_step_id, str):
-            raise TypeError(
-                "EvalStepId must be str, got " + type(eval_step_id).__name__
-            )
-        object.__setattr__(self, "eval_step_id", eval_step_id)
-        if not isinstance(eval_owner, str):
-            raise TypeError("EvalOwner must be str, got " + type(eval_owner).__name__)
-        object.__setattr__(self, "eval_owner", eval_owner)
-        if not isinstance(eval_field_id, str):
-            raise TypeError(
-                "EvalFieldId must be str, got " + type(eval_field_id).__name__
-            )
-        object.__setattr__(self, "eval_field_id", eval_field_id)
-        if not isinstance(eval_field_name, str):
-            raise TypeError(
-                "EvalFieldName must be str, got " + type(eval_field_name).__name__
-            )
-        object.__setattr__(self, "eval_field_name", eval_field_name)
-        if not isinstance(eval_field_kind, str):
-            raise TypeError(
-                "EvalFieldKind must be str, got " + type(eval_field_kind).__name__
-            )
-        object.__setattr__(self, "eval_field_kind", eval_field_kind)
-        if not isinstance(eval_init, bool):
-            raise TypeError("EvalInit must be bool, got " + type(eval_init).__name__)
-        object.__setattr__(self, "eval_init", eval_init)
-        if not isinstance(eval_state_slot_name, str):
-            raise TypeError(
-                "EvalStateSlotName must be str, got "
-                + type(eval_state_slot_name).__name__
-            )
-        object.__setattr__(self, "eval_state_slot_name", eval_state_slot_name)
-        if not isinstance(eval_default_factory_param_name, str):
-            raise TypeError(
-                "EvalDefaultFactoryParamName must be str, got "
-                + type(eval_default_factory_param_name).__name__
-            )
-        object.__setattr__(
-            self, "eval_default_factory_param_name", eval_default_factory_param_name
-        )
-        if not isinstance(eval_order, int):
-            raise TypeError("EvalOrder must be int, got " + type(eval_order).__name__)
-        object.__setattr__(self, "eval_order", eval_order)
-        if not isinstance(eval_statement_order, int):
-            raise TypeError(
-                "EvalStatementOrder must be int, got "
-                + type(eval_statement_order).__name__
-            )
-        object.__setattr__(self, "eval_statement_order", eval_statement_order)
-
-    def __setattr__(self, name, value):
-        if name in (
-            "eval_step_id",
-            "eval_owner",
-            "eval_field_id",
-            "eval_field_name",
-            "eval_field_kind",
-            "eval_init",
-            "eval_state_slot_name",
-            "eval_default_factory_param_name",
-            "eval_order",
-            "eval_statement_order",
-        ):
-            raise AttributeError("DefaultFactoryEvaluationStep records are immutable")
-        object.__setattr__(self, name, value)
-
-    def __repr__(self):
-        pieces = []
-        pieces.append("eval_step_id=" + repr(self.eval_step_id))
-        pieces.append("eval_owner=" + repr(self.eval_owner))
-        pieces.append("eval_field_id=" + repr(self.eval_field_id))
-        pieces.append("eval_field_name=" + repr(self.eval_field_name))
-        pieces.append("eval_field_kind=" + repr(self.eval_field_kind))
-        pieces.append("eval_init=" + repr(self.eval_init))
-        pieces.append("eval_state_slot_name=" + repr(self.eval_state_slot_name))
-        pieces.append(
-            "eval_default_factory_param_name="
-            + repr(self.eval_default_factory_param_name)
-        )
-        pieces.append("eval_order=" + repr(self.eval_order))
-        pieces.append("eval_statement_order=" + repr(self.eval_statement_order))
-        return "DefaultFactoryEvaluationStep" + "(" + ", ".join(pieces) + ")"
-
-
-_DefaultFactoryEvaluationStepSpec.bind_record_class(DefaultFactoryEvaluationStep)
-
-
-class DefaultFactoryDiagnostic:
-    __slots__ = (
-        "diagnostic_id",
-        "diagnostic_owner",
-        "diagnostic_field_id",
-        "diagnostic_message",
-    )
-    __dds_record_spec__ = _DefaultFactoryDiagnosticSpec
-    diagnostic_id: str
-    diagnostic_owner: str
-    diagnostic_field_id: str
-    diagnostic_message: str
-
-    def __init__(
-        self,
-        *,
-        diagnostic_id: str,
-        diagnostic_owner: str,
-        diagnostic_field_id: str = "",
-        diagnostic_message: str,
-    ):
-        if not isinstance(diagnostic_id, str):
-            raise TypeError(
-                "DiagnosticId must be str, got " + type(diagnostic_id).__name__
-            )
-        object.__setattr__(self, "diagnostic_id", diagnostic_id)
-        if not isinstance(diagnostic_owner, str):
-            raise TypeError(
-                "DiagnosticOwner must be str, got " + type(diagnostic_owner).__name__
-            )
-        object.__setattr__(self, "diagnostic_owner", diagnostic_owner)
-        if not isinstance(diagnostic_field_id, str):
-            raise TypeError(
-                "DiagnosticFieldId must be str, got "
-                + type(diagnostic_field_id).__name__
-            )
-        object.__setattr__(self, "diagnostic_field_id", diagnostic_field_id)
-        if not isinstance(diagnostic_message, str):
-            raise TypeError(
-                "DiagnosticMessage must be str, got "
-                + type(diagnostic_message).__name__
-            )
-        object.__setattr__(self, "diagnostic_message", diagnostic_message)
-
-    def __setattr__(self, name, value):
-        if name in (
-            "diagnostic_id",
-            "diagnostic_owner",
-            "diagnostic_field_id",
-            "diagnostic_message",
-        ):
-            raise AttributeError("DefaultFactoryDiagnostic records are immutable")
-        object.__setattr__(self, name, value)
-
-    def __repr__(self):
-        pieces = []
-        pieces.append("diagnostic_id=" + repr(self.diagnostic_id))
-        pieces.append("diagnostic_owner=" + repr(self.diagnostic_owner))
-        pieces.append("diagnostic_field_id=" + repr(self.diagnostic_field_id))
-        pieces.append("diagnostic_message=" + repr(self.diagnostic_message))
-        return "DefaultFactoryDiagnostic" + "(" + ", ".join(pieces) + ")"
-
-
-_DefaultFactoryDiagnosticSpec.bind_record_class(DefaultFactoryDiagnostic)
 
 
 class PlainField:
@@ -2147,6 +1614,198 @@ class ClassVarField:
 _ClassVarFieldSpec.bind_record_class(ClassVarField)
 
 
+class TransactionalField:
+    __slots__ = ("field_id", "field_owner", "field_name", "field_order", "tx_group_key")
+    __dds_record_spec__ = _TransactionalFieldSpec
+    field_id: str
+    field_owner: str
+    field_name: str
+    field_order: int
+    tx_group_key: object
+
+    def __init__(
+        self,
+        *,
+        field_id: str,
+        field_owner: str,
+        field_name: str,
+        field_order: int,
+        tx_group_key: object = None,
+    ):
+        if not isinstance(field_id, str):
+            raise TypeError("FieldId must be str, got " + type(field_id).__name__)
+        object.__setattr__(self, "field_id", field_id)
+        if not isinstance(field_owner, str):
+            raise TypeError("FieldOwner must be str, got " + type(field_owner).__name__)
+        object.__setattr__(self, "field_owner", field_owner)
+        if not isinstance(field_name, str):
+            raise TypeError("FieldName must be str, got " + type(field_name).__name__)
+        object.__setattr__(self, "field_name", field_name)
+        if not isinstance(field_order, int):
+            raise TypeError("FieldOrder must be int, got " + type(field_order).__name__)
+        object.__setattr__(self, "field_order", field_order)
+        object.__setattr__(self, "tx_group_key", tx_group_key)
+
+    def __setattr__(self, name, value):
+        if name in (
+            "field_id",
+            "field_owner",
+            "field_name",
+            "field_order",
+            "tx_group_key",
+        ):
+            raise AttributeError("TransactionalField records are immutable")
+        object.__setattr__(self, name, value)
+
+    def __repr__(self):
+        pieces = []
+        pieces.append("field_id=" + repr(self.field_id))
+        pieces.append("field_owner=" + repr(self.field_owner))
+        pieces.append("field_name=" + repr(self.field_name))
+        pieces.append("field_order=" + repr(self.field_order))
+        pieces.append("tx_group_key=" + repr(self.tx_group_key))
+        return "TransactionalField" + "(" + ", ".join(pieces) + ")"
+
+
+_TransactionalFieldSpec.bind_record_class(TransactionalField)
+
+
+class TxGroup:
+    __slots__ = ("class_id", "tx_group_key", "tx_index", "tx_group_order")
+    __dds_record_spec__ = _TxGroupSpec
+    class_id: str
+    tx_group_key: object
+    tx_index: int
+    tx_group_order: int
+
+    def __init__(
+        self,
+        *,
+        class_id: str,
+        tx_group_key: object = None,
+        tx_index: int = 0,
+        tx_group_order: int = 0,
+    ):
+        if not isinstance(class_id, str):
+            raise TypeError("ClassId must be str, got " + type(class_id).__name__)
+        object.__setattr__(self, "class_id", class_id)
+        object.__setattr__(self, "tx_group_key", tx_group_key)
+        if not isinstance(tx_index, int):
+            raise TypeError("TxIndex must be int, got " + type(tx_index).__name__)
+        object.__setattr__(self, "tx_index", tx_index)
+        if not isinstance(tx_group_order, int):
+            raise TypeError(
+                "TxGroupOrder must be int, got " + type(tx_group_order).__name__
+            )
+        object.__setattr__(self, "tx_group_order", tx_group_order)
+
+    def __setattr__(self, name, value):
+        if name in ("class_id", "tx_group_key", "tx_index", "tx_group_order"):
+            raise AttributeError("TxGroup records are immutable")
+        object.__setattr__(self, name, value)
+
+    def __repr__(self):
+        pieces = []
+        pieces.append("class_id=" + repr(self.class_id))
+        pieces.append("tx_group_key=" + repr(self.tx_group_key))
+        pieces.append("tx_index=" + repr(self.tx_index))
+        pieces.append("tx_group_order=" + repr(self.tx_group_order))
+        return "TxGroup" + "(" + ", ".join(pieces) + ")"
+
+
+_TxGroupSpec.bind_record_class(TxGroup)
+
+
+class IndexedTransactionalField:
+    __slots__ = (
+        "field_id",
+        "field_owner",
+        "field_name",
+        "field_order",
+        "tx_group_key",
+        "tx_index",
+        "current_slot_name",
+        "working_slot_name",
+    )
+    __dds_record_spec__ = _IndexedTransactionalFieldSpec
+    field_id: str
+    field_owner: str
+    field_name: str
+    field_order: int
+    tx_group_key: object
+    tx_index: int
+    current_slot_name: str
+    working_slot_name: str
+
+    def __init__(
+        self,
+        *,
+        field_id: str,
+        field_owner: str,
+        field_name: str,
+        field_order: int,
+        tx_group_key: object = None,
+        tx_index: int = 0,
+        current_slot_name: str = "",
+        working_slot_name: str = "",
+    ):
+        if not isinstance(field_id, str):
+            raise TypeError("FieldId must be str, got " + type(field_id).__name__)
+        object.__setattr__(self, "field_id", field_id)
+        if not isinstance(field_owner, str):
+            raise TypeError("FieldOwner must be str, got " + type(field_owner).__name__)
+        object.__setattr__(self, "field_owner", field_owner)
+        if not isinstance(field_name, str):
+            raise TypeError("FieldName must be str, got " + type(field_name).__name__)
+        object.__setattr__(self, "field_name", field_name)
+        if not isinstance(field_order, int):
+            raise TypeError("FieldOrder must be int, got " + type(field_order).__name__)
+        object.__setattr__(self, "field_order", field_order)
+        object.__setattr__(self, "tx_group_key", tx_group_key)
+        if not isinstance(tx_index, int):
+            raise TypeError("TxIndex must be int, got " + type(tx_index).__name__)
+        object.__setattr__(self, "tx_index", tx_index)
+        if not isinstance(current_slot_name, str):
+            raise TypeError(
+                "CurrentSlotName must be str, got " + type(current_slot_name).__name__
+            )
+        object.__setattr__(self, "current_slot_name", current_slot_name)
+        if not isinstance(working_slot_name, str):
+            raise TypeError(
+                "WorkingSlotName must be str, got " + type(working_slot_name).__name__
+            )
+        object.__setattr__(self, "working_slot_name", working_slot_name)
+
+    def __setattr__(self, name, value):
+        if name in (
+            "field_id",
+            "field_owner",
+            "field_name",
+            "field_order",
+            "tx_group_key",
+            "tx_index",
+            "current_slot_name",
+            "working_slot_name",
+        ):
+            raise AttributeError("IndexedTransactionalField records are immutable")
+        object.__setattr__(self, name, value)
+
+    def __repr__(self):
+        pieces = []
+        pieces.append("field_id=" + repr(self.field_id))
+        pieces.append("field_owner=" + repr(self.field_owner))
+        pieces.append("field_name=" + repr(self.field_name))
+        pieces.append("field_order=" + repr(self.field_order))
+        pieces.append("tx_group_key=" + repr(self.tx_group_key))
+        pieces.append("tx_index=" + repr(self.tx_index))
+        pieces.append("current_slot_name=" + repr(self.current_slot_name))
+        pieces.append("working_slot_name=" + repr(self.working_slot_name))
+        return "IndexedTransactionalField" + "(" + ", ".join(pieces) + ")"
+
+
+_IndexedTransactionalFieldSpec.bind_record_class(IndexedTransactionalField)
+
+
 class ManagedField:
     __slots__ = (
         "field_id",
@@ -2328,6 +1987,347 @@ class ManagedField:
 
 
 _ManagedFieldSpec.bind_record_class(ManagedField)
+
+
+class DefaultFactoryDependency:
+    __slots__ = (
+        "dependency_owner",
+        "consumer_field_id",
+        "consumer_field_name",
+        "provider_name",
+        "provider_field_id",
+        "provider_field_kind",
+        "provider_init",
+        "provider_has_default",
+        "provider_has_default_factory",
+        "param_name",
+        "param_order",
+        "consumer_eval_order",
+    )
+    __dds_record_spec__ = _DefaultFactoryDependencySpec
+    dependency_owner: str
+    consumer_field_id: str
+    consumer_field_name: str
+    provider_name: str
+    provider_field_id: str
+    provider_field_kind: str
+    provider_init: bool
+    provider_has_default: bool
+    provider_has_default_factory: bool
+    param_name: str
+    param_order: int
+    consumer_eval_order: int
+
+    def __init__(
+        self,
+        *,
+        dependency_owner: str,
+        consumer_field_id: str,
+        consumer_field_name: str = "",
+        provider_name: str,
+        provider_field_id: str = "",
+        provider_field_kind: str = "",
+        provider_init: bool = True,
+        provider_has_default: bool = False,
+        provider_has_default_factory: bool = False,
+        param_name: str,
+        param_order: int = 0,
+        consumer_eval_order: int = 0,
+    ):
+        if not isinstance(dependency_owner, str):
+            raise TypeError(
+                "DependencyOwner must be str, got " + type(dependency_owner).__name__
+            )
+        object.__setattr__(self, "dependency_owner", dependency_owner)
+        if not isinstance(consumer_field_id, str):
+            raise TypeError(
+                "ConsumerFieldId must be str, got " + type(consumer_field_id).__name__
+            )
+        object.__setattr__(self, "consumer_field_id", consumer_field_id)
+        if not isinstance(consumer_field_name, str):
+            raise TypeError(
+                "ConsumerFieldName must be str, got "
+                + type(consumer_field_name).__name__
+            )
+        object.__setattr__(self, "consumer_field_name", consumer_field_name)
+        if not isinstance(provider_name, str):
+            raise TypeError(
+                "ProviderName must be str, got " + type(provider_name).__name__
+            )
+        object.__setattr__(self, "provider_name", provider_name)
+        if not isinstance(provider_field_id, str):
+            raise TypeError(
+                "ProviderFieldId must be str, got " + type(provider_field_id).__name__
+            )
+        object.__setattr__(self, "provider_field_id", provider_field_id)
+        if not isinstance(provider_field_kind, str):
+            raise TypeError(
+                "ProviderFieldKind must be str, got "
+                + type(provider_field_kind).__name__
+            )
+        object.__setattr__(self, "provider_field_kind", provider_field_kind)
+        if not isinstance(provider_init, bool):
+            raise TypeError(
+                "ProviderInit must be bool, got " + type(provider_init).__name__
+            )
+        object.__setattr__(self, "provider_init", provider_init)
+        if not isinstance(provider_has_default, bool):
+            raise TypeError(
+                "ProviderHasDefault must be bool, got "
+                + type(provider_has_default).__name__
+            )
+        object.__setattr__(self, "provider_has_default", provider_has_default)
+        if not isinstance(provider_has_default_factory, bool):
+            raise TypeError(
+                "ProviderHasDefaultFactory must be bool, got "
+                + type(provider_has_default_factory).__name__
+            )
+        object.__setattr__(
+            self, "provider_has_default_factory", provider_has_default_factory
+        )
+        if not isinstance(param_name, str):
+            raise TypeError("ParamName must be str, got " + type(param_name).__name__)
+        object.__setattr__(self, "param_name", param_name)
+        if not isinstance(param_order, int):
+            raise TypeError("ParamOrder must be int, got " + type(param_order).__name__)
+        object.__setattr__(self, "param_order", param_order)
+        if not isinstance(consumer_eval_order, int):
+            raise TypeError(
+                "ConsumerEvalOrder must be int, got "
+                + type(consumer_eval_order).__name__
+            )
+        object.__setattr__(self, "consumer_eval_order", consumer_eval_order)
+
+    def __setattr__(self, name, value):
+        if name in (
+            "dependency_owner",
+            "consumer_field_id",
+            "consumer_field_name",
+            "provider_name",
+            "provider_field_id",
+            "provider_field_kind",
+            "provider_init",
+            "provider_has_default",
+            "provider_has_default_factory",
+            "param_name",
+            "param_order",
+            "consumer_eval_order",
+        ):
+            raise AttributeError("DefaultFactoryDependency records are immutable")
+        object.__setattr__(self, name, value)
+
+    def __repr__(self):
+        pieces = []
+        pieces.append("dependency_owner=" + repr(self.dependency_owner))
+        pieces.append("consumer_field_id=" + repr(self.consumer_field_id))
+        pieces.append("consumer_field_name=" + repr(self.consumer_field_name))
+        pieces.append("provider_name=" + repr(self.provider_name))
+        pieces.append("provider_field_id=" + repr(self.provider_field_id))
+        pieces.append("provider_field_kind=" + repr(self.provider_field_kind))
+        pieces.append("provider_init=" + repr(self.provider_init))
+        pieces.append("provider_has_default=" + repr(self.provider_has_default))
+        pieces.append(
+            "provider_has_default_factory=" + repr(self.provider_has_default_factory)
+        )
+        pieces.append("param_name=" + repr(self.param_name))
+        pieces.append("param_order=" + repr(self.param_order))
+        pieces.append("consumer_eval_order=" + repr(self.consumer_eval_order))
+        return "DefaultFactoryDependency" + "(" + ", ".join(pieces) + ")"
+
+
+_DefaultFactoryDependencySpec.bind_record_class(DefaultFactoryDependency)
+
+
+class DefaultFactoryEvaluationStep:
+    __slots__ = (
+        "eval_step_id",
+        "eval_owner",
+        "eval_field_id",
+        "eval_field_name",
+        "eval_field_kind",
+        "eval_init",
+        "eval_state_slot_name",
+        "eval_default_factory_param_name",
+        "eval_order",
+        "eval_statement_order",
+    )
+    __dds_record_spec__ = _DefaultFactoryEvaluationStepSpec
+    eval_step_id: str
+    eval_owner: str
+    eval_field_id: str
+    eval_field_name: str
+    eval_field_kind: str
+    eval_init: bool
+    eval_state_slot_name: str
+    eval_default_factory_param_name: str
+    eval_order: int
+    eval_statement_order: int
+
+    def __init__(
+        self,
+        *,
+        eval_step_id: str,
+        eval_owner: str,
+        eval_field_id: str,
+        eval_field_name: str,
+        eval_field_kind: str = "",
+        eval_init: bool = True,
+        eval_state_slot_name: str = "",
+        eval_default_factory_param_name: str = "",
+        eval_order: int = 0,
+        eval_statement_order: int = 0,
+    ):
+        if not isinstance(eval_step_id, str):
+            raise TypeError(
+                "EvalStepId must be str, got " + type(eval_step_id).__name__
+            )
+        object.__setattr__(self, "eval_step_id", eval_step_id)
+        if not isinstance(eval_owner, str):
+            raise TypeError("EvalOwner must be str, got " + type(eval_owner).__name__)
+        object.__setattr__(self, "eval_owner", eval_owner)
+        if not isinstance(eval_field_id, str):
+            raise TypeError(
+                "EvalFieldId must be str, got " + type(eval_field_id).__name__
+            )
+        object.__setattr__(self, "eval_field_id", eval_field_id)
+        if not isinstance(eval_field_name, str):
+            raise TypeError(
+                "EvalFieldName must be str, got " + type(eval_field_name).__name__
+            )
+        object.__setattr__(self, "eval_field_name", eval_field_name)
+        if not isinstance(eval_field_kind, str):
+            raise TypeError(
+                "EvalFieldKind must be str, got " + type(eval_field_kind).__name__
+            )
+        object.__setattr__(self, "eval_field_kind", eval_field_kind)
+        if not isinstance(eval_init, bool):
+            raise TypeError("EvalInit must be bool, got " + type(eval_init).__name__)
+        object.__setattr__(self, "eval_init", eval_init)
+        if not isinstance(eval_state_slot_name, str):
+            raise TypeError(
+                "EvalStateSlotName must be str, got "
+                + type(eval_state_slot_name).__name__
+            )
+        object.__setattr__(self, "eval_state_slot_name", eval_state_slot_name)
+        if not isinstance(eval_default_factory_param_name, str):
+            raise TypeError(
+                "EvalDefaultFactoryParamName must be str, got "
+                + type(eval_default_factory_param_name).__name__
+            )
+        object.__setattr__(
+            self, "eval_default_factory_param_name", eval_default_factory_param_name
+        )
+        if not isinstance(eval_order, int):
+            raise TypeError("EvalOrder must be int, got " + type(eval_order).__name__)
+        object.__setattr__(self, "eval_order", eval_order)
+        if not isinstance(eval_statement_order, int):
+            raise TypeError(
+                "EvalStatementOrder must be int, got "
+                + type(eval_statement_order).__name__
+            )
+        object.__setattr__(self, "eval_statement_order", eval_statement_order)
+
+    def __setattr__(self, name, value):
+        if name in (
+            "eval_step_id",
+            "eval_owner",
+            "eval_field_id",
+            "eval_field_name",
+            "eval_field_kind",
+            "eval_init",
+            "eval_state_slot_name",
+            "eval_default_factory_param_name",
+            "eval_order",
+            "eval_statement_order",
+        ):
+            raise AttributeError("DefaultFactoryEvaluationStep records are immutable")
+        object.__setattr__(self, name, value)
+
+    def __repr__(self):
+        pieces = []
+        pieces.append("eval_step_id=" + repr(self.eval_step_id))
+        pieces.append("eval_owner=" + repr(self.eval_owner))
+        pieces.append("eval_field_id=" + repr(self.eval_field_id))
+        pieces.append("eval_field_name=" + repr(self.eval_field_name))
+        pieces.append("eval_field_kind=" + repr(self.eval_field_kind))
+        pieces.append("eval_init=" + repr(self.eval_init))
+        pieces.append("eval_state_slot_name=" + repr(self.eval_state_slot_name))
+        pieces.append(
+            "eval_default_factory_param_name="
+            + repr(self.eval_default_factory_param_name)
+        )
+        pieces.append("eval_order=" + repr(self.eval_order))
+        pieces.append("eval_statement_order=" + repr(self.eval_statement_order))
+        return "DefaultFactoryEvaluationStep" + "(" + ", ".join(pieces) + ")"
+
+
+_DefaultFactoryEvaluationStepSpec.bind_record_class(DefaultFactoryEvaluationStep)
+
+
+class DefaultFactoryDiagnostic:
+    __slots__ = (
+        "diagnostic_id",
+        "diagnostic_owner",
+        "diagnostic_field_id",
+        "diagnostic_message",
+    )
+    __dds_record_spec__ = _DefaultFactoryDiagnosticSpec
+    diagnostic_id: str
+    diagnostic_owner: str
+    diagnostic_field_id: str
+    diagnostic_message: str
+
+    def __init__(
+        self,
+        *,
+        diagnostic_id: str,
+        diagnostic_owner: str,
+        diagnostic_field_id: str = "",
+        diagnostic_message: str,
+    ):
+        if not isinstance(diagnostic_id, str):
+            raise TypeError(
+                "DiagnosticId must be str, got " + type(diagnostic_id).__name__
+            )
+        object.__setattr__(self, "diagnostic_id", diagnostic_id)
+        if not isinstance(diagnostic_owner, str):
+            raise TypeError(
+                "DiagnosticOwner must be str, got " + type(diagnostic_owner).__name__
+            )
+        object.__setattr__(self, "diagnostic_owner", diagnostic_owner)
+        if not isinstance(diagnostic_field_id, str):
+            raise TypeError(
+                "DiagnosticFieldId must be str, got "
+                + type(diagnostic_field_id).__name__
+            )
+        object.__setattr__(self, "diagnostic_field_id", diagnostic_field_id)
+        if not isinstance(diagnostic_message, str):
+            raise TypeError(
+                "DiagnosticMessage must be str, got "
+                + type(diagnostic_message).__name__
+            )
+        object.__setattr__(self, "diagnostic_message", diagnostic_message)
+
+    def __setattr__(self, name, value):
+        if name in (
+            "diagnostic_id",
+            "diagnostic_owner",
+            "diagnostic_field_id",
+            "diagnostic_message",
+        ):
+            raise AttributeError("DefaultFactoryDiagnostic records are immutable")
+        object.__setattr__(self, name, value)
+
+    def __repr__(self):
+        pieces = []
+        pieces.append("diagnostic_id=" + repr(self.diagnostic_id))
+        pieces.append("diagnostic_owner=" + repr(self.diagnostic_owner))
+        pieces.append("diagnostic_field_id=" + repr(self.diagnostic_field_id))
+        pieces.append("diagnostic_message=" + repr(self.diagnostic_message))
+        return "DefaultFactoryDiagnostic" + "(" + ", ".join(pieces) + ")"
+
+
+_DefaultFactoryDiagnosticSpec.bind_record_class(DefaultFactoryDiagnostic)
 ClassesCollection = RuntimeCollection(
     "Classes", _LifecycleClassSpec, allows_multiple=True, identity=_ClassIdProperty
 )
@@ -2346,24 +2346,6 @@ FacadeExposuresCollection = RuntimeCollection(
     allows_multiple=True,
     identity=(_FacadeOwnerProperty, _OwnerFacadeIdProperty, _FieldNameProperty),
 )
-TransactionalFieldsCollection = RuntimeCollection(
-    "TransactionalFields",
-    _TransactionalFieldSpec,
-    allows_multiple=True,
-    identity=_FieldIdProperty,
-)
-TxGroupsCollection = RuntimeCollection(
-    "TxGroups",
-    _TxGroupSpec,
-    allows_multiple=True,
-    identity=(_ClassIdProperty, _TxGroupKeyProperty),
-)
-IndexedTransactionalFieldsCollection = RuntimeCollection(
-    "IndexedTransactionalFields",
-    _IndexedTransactionalFieldSpec,
-    allows_multiple=True,
-    identity=_FieldIdProperty,
-)
 InitParametersCollection = RuntimeCollection(
     "InitParameters",
     _InitParameterSpec,
@@ -2381,6 +2363,24 @@ ClassVarAssignmentsCollection = RuntimeCollection(
     _ClassVarAssignmentSpec,
     allows_multiple=True,
     identity=_ClassVarAssignmentIdProperty,
+)
+TransactionalFieldsCollection = RuntimeCollection(
+    "TransactionalFields",
+    _TransactionalFieldSpec,
+    allows_multiple=True,
+    identity=_FieldIdProperty,
+)
+TxGroupsCollection = RuntimeCollection(
+    "TxGroups",
+    _TxGroupSpec,
+    allows_multiple=True,
+    identity=(_ClassIdProperty, _TxGroupKeyProperty),
+)
+IndexedTransactionalFieldsCollection = RuntimeCollection(
+    "IndexedTransactionalFields",
+    _IndexedTransactionalFieldSpec,
+    allows_multiple=True,
+    identity=_FieldIdProperty,
 )
 DefaultFactoryDependenciesCollection = RuntimeCollection(
     "DefaultFactoryDependencies",
@@ -2418,12 +2418,12 @@ _RUNTIME_SPEC = RuntimeContainerSpec(
         FieldsCollection,
         FacadeClassesCollection,
         FacadeExposuresCollection,
-        TransactionalFieldsCollection,
-        TxGroupsCollection,
-        IndexedTransactionalFieldsCollection,
         InitParametersCollection,
         InitAssignmentsCollection,
         ClassVarAssignmentsCollection,
+        TransactionalFieldsCollection,
+        TxGroupsCollection,
+        IndexedTransactionalFieldsCollection,
         DefaultFactoryDependenciesCollection,
         DefaultFactoryEvaluationStepsCollection,
         DefaultFactoryDiagnosticsCollection,
@@ -2821,10 +2821,6 @@ ASSEMBLY_PROPERTIES = {
     "ExposureOrder": _YidlSimpleNamespace(
         name="ExposureOrder", storage_name="exposure_order"
     ),
-    "TxGroupOrder": _YidlSimpleNamespace(
-        name="TxGroupOrder", storage_name="tx_group_order"
-    ),
-    "TxIndex": _YidlSimpleNamespace(name="TxIndex", storage_name="tx_index"),
     "InitParameterId": _YidlSimpleNamespace(
         name="InitParameterId", storage_name="init_parameter_id"
     ),
@@ -2870,6 +2866,10 @@ ASSEMBLY_PROPERTIES = {
     "ClassVarAssignmentOrder": _YidlSimpleNamespace(
         name="ClassVarAssignmentOrder", storage_name="class_var_assignment_order"
     ),
+    "TxGroupOrder": _YidlSimpleNamespace(
+        name="TxGroupOrder", storage_name="tx_group_order"
+    ),
+    "TxIndex": _YidlSimpleNamespace(name="TxIndex", storage_name="tx_index"),
     "DependencyOwner": _YidlSimpleNamespace(
         name="DependencyOwner", storage_name="dependency_owner"
     ),
@@ -2939,295 +2939,6 @@ ASSEMBLY_PROPERTIES = {
     ),
 }
 ASSEMBLY_RESOURCES = {
-    "BuildTransactionFactsBody": from_astichi_code(
-        """\
-from yidl.runtime.transaction_yidl import DEFAULT_TRANSACTION
-
-classes = sorted(
-    ctx.records(ClassesCollection),
-    key=lambda item: item.class_order,
-)
-fields = sorted(
-    ctx.records(FieldsCollection),
-    key=lambda item: item.field_order,
-)
-
-for lifecycle_class in classes:
-    seen = {DEFAULT_TRANSACTION: 0}
-    ctx.write(
-        TxGroupsCollection,
-        TxGroup(
-            class_id=lifecycle_class.class_id,
-            tx_group_key=DEFAULT_TRANSACTION,
-            tx_index=0,
-            tx_group_order=0,
-        ),
-        policy=RejectDuplicate,
-    )
-
-    for field in fields:
-        if field.field_owner != lifecycle_class.class_id:
-            continue
-        if field.field_kind != "managed":
-            continue
-
-        tx_group = field.tx_group_key
-        if tx_group is None:
-            tx_group = DEFAULT_TRANSACTION
-        if tx_group not in seen:
-            seen[tx_group] = len(seen)
-            ctx.write(
-                TxGroupsCollection,
-                TxGroup(
-                    class_id=lifecycle_class.class_id,
-                    tx_group_key=tx_group,
-                    tx_index=seen[tx_group],
-                    tx_group_order=field.field_order,
-                ),
-                policy=RejectDuplicate,
-            )
-
-        tx_index = seen[tx_group]
-        ctx.write(
-            TransactionalFieldsCollection,
-            TransactionalField(
-                field_id=field.field_id,
-                field_owner=field.field_owner,
-                field_name=field.field_name,
-                field_order=field.field_order,
-                tx_group_key=tx_group,
-            ),
-            policy=RejectDuplicate,
-        )
-        ctx.write(
-            IndexedTransactionalFieldsCollection,
-            IndexedTransactionalField(
-                field_id=field.field_id,
-                field_owner=field.field_owner,
-                field_name=field.field_name,
-                field_order=field.field_order,
-                tx_group_key=tx_group,
-                tx_index=tx_index,
-                current_slot_name=field.current_slot_name,
-                working_slot_name=field.working_slot_name,
-            ),
-            policy=RejectDuplicate,
-        )""",
-        file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-        line_number=153,
-        keep_names=(
-            "ctx",
-            "ClassesCollection",
-            "FieldsCollection",
-            "TxGroupsCollection",
-            "TransactionalFieldsCollection",
-            "IndexedTransactionalFieldsCollection",
-            "TxGroup",
-            "TransactionalField",
-            "IndexedTransactionalField",
-            "RejectDuplicate",
-        ),
-    ),
-    "BuildDefaultFactoryFactsBody": from_astichi_code(
-        """\
-classes = sorted(
-    ctx.records(ClassesCollection),
-    key=lambda item: item.class_order,
-)
-fields = sorted(
-    ctx.records(FieldsCollection),
-    key=lambda item: item.field_order,
-)
-
-for lifecycle_class in classes:
-    class_fields = [
-        field for field in fields
-        if field.field_owner == lifecycle_class.class_id
-    ]
-    by_name = {field.field_name: field for field in class_fields}
-    by_id = {field.field_id: field for field in class_fields}
-    factory_fields = [
-        field for field in class_fields
-        if field.has_default_factory
-    ]
-    graph = {field.field_id: set() for field in factory_fields}
-    deps = []
-    diagnostic_count = 0
-
-    def add_diagnostic(field, suffix, message):
-        nonlocal diagnostic_count
-        diagnostic_count += 1
-        ctx.write(
-            DefaultFactoryDiagnosticsCollection,
-            DefaultFactoryDiagnostic(
-                diagnostic_id=(
-                    f"{field.field_id}.{suffix}.{diagnostic_count}"
-                ),
-                diagnostic_owner=lifecycle_class.class_id,
-                diagnostic_field_id=field.field_id,
-                diagnostic_message=message,
-            ),
-            policy=ReplaceExisting,
-        )
-
-    def provider_is_available(provider):
-        if provider.init:
-            return True
-        return provider.has_default or provider.has_default_factory
-
-    for consumer in factory_fields:
-        for param_order, param_name in enumerate(
-            consumer.default_factory_param_names
-        ):
-            provider = by_name.get(param_name)
-            if provider is None:
-                add_diagnostic(
-                    consumer,
-                    f"unknown.{param_name}",
-                    (
-                        f"{lifecycle_class.class_name}."
-                        f"{consumer.field_name}: default_factory "
-                        f"references unknown name {param_name!r}"
-                    ),
-                )
-                continue
-            if not provider_is_available(provider):
-                add_diagnostic(
-                    consumer,
-                    f"unavailable.{param_name}",
-                    (
-                        f"{lifecycle_class.class_name}."
-                        f"{consumer.field_name}: default_factory "
-                        f"cannot reference {param_name!r} "
-                        "(value is unavailable before factory evaluation)"
-                    ),
-                )
-                continue
-            deps.append((consumer, provider, param_name, param_order))
-            if provider.field_id in graph:
-                graph[consumer.field_id].add(provider.field_id)
-
-    field_order = {
-        field.field_id: field.field_order for field in class_fields
-    }
-    visiting = set()
-    visited = set()
-    ordered_field_ids = []
-    cycle_found = False
-
-    def visit(field_id, path):
-        nonlocal cycle_found
-        if cycle_found or field_id in visited:
-            return
-        if field_id in visiting:
-            cycle = path[path.index(field_id):]
-            names = " -> ".join(by_id[item].field_name for item in cycle)
-            add_diagnostic(
-                by_id[field_id],
-                "cycle",
-                (
-                    f"{lifecycle_class.class_name}: default_factory "
-                    f"dependency cycle: {names}"
-                ),
-            )
-            cycle_found = True
-            return
-        visiting.add(field_id)
-        for provider_id in sorted(
-            graph.get(field_id, ()),
-            key=lambda item: field_order[item],
-        ):
-            visit(provider_id, [*path, provider_id])
-        visiting.remove(field_id)
-        visited.add(field_id)
-        ordered_field_ids.append(field_id)
-
-    for field in factory_fields:
-        visit(field.field_id, [field.field_id])
-        if cycle_found:
-            break
-
-    if diagnostic_count:
-        continue
-
-    eval_order_by_id = {
-        field_id: eval_order
-        for eval_order, field_id in enumerate(ordered_field_ids)
-    }
-
-    for consumer, provider, param_name, param_order in deps:
-        ctx.write(
-            DefaultFactoryDependenciesCollection,
-            DefaultFactoryDependency(
-                dependency_owner=lifecycle_class.class_id,
-                consumer_field_id=consumer.field_id,
-                consumer_field_name=consumer.field_name,
-                provider_name=provider.field_name,
-                provider_field_id=provider.field_id,
-                provider_field_kind=provider.field_kind,
-                provider_init=provider.init,
-                provider_has_default=provider.has_default,
-                provider_has_default_factory=provider.has_default_factory,
-                param_name=param_name,
-                param_order=param_order,
-                consumer_eval_order=eval_order_by_id[consumer.field_id],
-            ),
-            policy=RejectDuplicate,
-        )
-
-    for eval_order, field_id in enumerate(ordered_field_ids):
-        field = by_id[field_id]
-        state_slot = ""
-        if field.field_kind == "field":
-            state_slot = field.value_slot_name
-        elif field.field_kind == "managed":
-            state_slot = field.current_slot_name
-        ctx.write(
-            DefaultFactoryEvaluationStepsCollection,
-            DefaultFactoryEvaluationStep(
-                eval_step_id=field.field_id,
-                eval_owner=lifecycle_class.class_id,
-                eval_field_id=field.field_id,
-                eval_field_name=field.field_name,
-                eval_field_kind=field.field_kind,
-                eval_init=field.init,
-                eval_state_slot_name=state_slot,
-                eval_default_factory_param_name=(
-                    field.default_factory_param_name
-                ),
-                eval_order=eval_order,
-                eval_statement_order=100000 + eval_order,
-            ),
-            policy=RejectDuplicate,
-        )""",
-        file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-        line_number=364,
-        keep_names=(
-            "ctx",
-            "ClassesCollection",
-            "FieldsCollection",
-            "DefaultFactoryDependenciesCollection",
-            "DefaultFactoryEvaluationStepsCollection",
-            "DefaultFactoryDiagnosticsCollection",
-            "DefaultFactoryDependency",
-            "DefaultFactoryEvaluationStep",
-            "DefaultFactoryDiagnostic",
-            "RejectDuplicate",
-            "ReplaceExisting",
-        ),
-    ),
-    "RaiseDefaultFactoryDiagnosticsBody": from_astichi_code(
-        """\
-for diagnostic in ctx.records(DefaultFactoryDiagnosticsCollection):
-    raise AssemblyDiagnosticError(diagnostic.diagnostic_message)""",
-        file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-        line_number=549,
-        keep_names=(
-            "ctx",
-            "DefaultFactoryDiagnosticsCollection",
-            "AssemblyDiagnosticError",
-        ),
-    ),
     "ModuleRoot": from_astichi_code(
         """\
 from __future__ import annotations
@@ -3246,7 +2957,7 @@ def build_lifecycle_class(decorated_cls, builder_params__astichi_param_hole__):
     astichi_hole(function_body)
     astichi_hole(return_statement)""",
         file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-        line_number=565,
+        line_number=169,
     ),
     "BuilderParam": astichi_template(
         from_astichi_code(
@@ -3254,7 +2965,7 @@ def build_lifecycle_class(decorated_cls, builder_params__astichi_param_hole__):
 def astichi_params(*, value_name__astichi_arg__):
     pass""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=583,
+            line_number=187,
         )
     ),
     "TransactionManagerParam": astichi_template(
@@ -3263,14 +2974,14 @@ def astichi_params(*, value_name__astichi_arg__):
 def astichi_params(*, transaction_manager=None):
     pass""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=588,
+            line_number=192,
         )
     ),
     "StateSlotEntry": astichi_template(
         from_astichi_code(
             "astichi_bind_external(slot_name)",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=593,
+            line_number=197,
         )
     ),
     "InitParamRequired": astichi_template(
@@ -3279,7 +2990,7 @@ def astichi_params(*, transaction_manager=None):
 def astichi_params(param_name__astichi_arg__: astichi_bind_external(annotation)):
     pass""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=597,
+            line_number=201,
         )
     ),
     "InitParamDefault": astichi_template(
@@ -3291,20 +3002,7 @@ def astichi_params(
 ):
     pass""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=602,
-        )
-    ),
-    "InitParamDefaultFactory": astichi_template(
-        from_astichi_code(
-            """\
-def astichi_params(
-    param_name__astichi_arg__: astichi_bind_external(annotation)
-    = _HAS_DEFAULT_FACTORY
-):
-    pass""",
-            file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=610,
-            keep_names=("_HAS_DEFAULT_FACTORY",),
+            line_number=206,
         )
     ),
     "PlainStateAssignment": astichi_template(
@@ -3315,7 +3013,7 @@ astichi_pass(state, outer_bind=True).astichi_ref(external=state_slot)._ = astich
     outer_bind=True,
 )""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=620,
+            line_number=214,
         )
     ),
     "InitVarLocalDefaultAssignment": astichi_template(
@@ -3326,7 +3024,7 @@ init_value_name__astichi_arg__ = astichi_pass(
     outer_bind=True,
 )""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=627,
+            line_number=221,
         )
     ),
     "PlainProperty": astichi_template(
@@ -3340,7 +3038,7 @@ def property_getter_name__astichi_arg__(self):
 def property_setter_name__astichi_arg__(self, value):
     self._y_state.astichi_ref(external=state_slot)._ = value""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=634,
+            line_number=228,
         )
     ),
     "ClassVarDefaultAssignment": astichi_template(
@@ -3351,190 +3049,7 @@ classvar_name__astichi_arg__ = astichi_pass(
     outer_bind=True,
 )""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=644,
-        )
-    ),
-    "ManagedCurrentStateAssignment": astichi_template(
-        from_astichi_code(
-            """\
-astichi_pass(state, outer_bind=True).astichi_ref(external=current_slot)._ = astichi_pass(
-    init_value_name__astichi_arg__,
-    outer_bind=True,
-)""",
-            file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=651,
-        )
-    ),
-    "ManagedWorkingStateAssignment": astichi_template(
-        from_astichi_code(
-            "astichi_pass(state, outer_bind=True).astichi_ref(external=working_slot)._ = VOID",
-            file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=658,
-            keep_names=("VOID",),
-        )
-    ),
-    "ManagedDefaultProperty": astichi_template(
-        from_astichi_code(
-            """\
-@property
-def property_getter_name__astichi_arg__(self):
-    state = self._y_state
-    if state.astichi_ref(external=working_slot) is not VOID:
-        return state.astichi_ref(external=working_slot)
-    return state.astichi_ref(external=current_slot)
-
-@property_setter_target_name__astichi_arg__.setter
-def property_setter_name__astichi_arg__(self, value):
-    state = self._y_state
-    state._y_ensure_working_transaction(astichi_bind_external(tx_index))
-    state.astichi_ref(external=working_slot)._ = value""",
-            file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=664,
-            keep_names=("VOID",),
-        )
-    ),
-    "ManagedCurrentProperty": astichi_template(
-        from_astichi_code(
-            """\
-@property
-def property_getter_name__astichi_arg__(self):
-    return self._y_state.astichi_ref(external=current_slot)
-
-@property_setter_target_name__astichi_arg__.setter
-def property_setter_name__astichi_arg__(self, value):
-    del value
-    raise AttributeError(
-        "current facade is read-only for transactional field "
-        + astichi_bind_external(field_name)
-    )""",
-            file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=681,
-        )
-    ),
-    "ManagedWorkingProperty": astichi_template(
-        from_astichi_code(
-            """\
-@property
-def property_getter_name__astichi_arg__(self):
-    state = self._y_state
-    if state.astichi_ref(external=working_slot) is not VOID:
-        return state.astichi_ref(external=working_slot)
-    return state.astichi_ref(external=current_slot)
-
-@property_setter_target_name__astichi_arg__.setter
-def property_setter_name__astichi_arg__(self, value):
-    state = self._y_state
-    state._y_ensure_working_transaction(astichi_bind_external(tx_index))
-    state.astichi_ref(external=working_slot)._ = value""",
-            file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=695,
-            keep_names=("VOID",),
-        )
-    ),
-    "ManagedCommitBranch": astichi_template(
-        from_astichi_code(
-            """\
-if astichi_pass(tx_index, outer_bind=True) == astichi_bind_external(tx_index_value):
-    if astichi_pass(self, outer_bind=True).astichi_ref(external=working_slot) is not VOID:
-        astichi_pass(self, outer_bind=True).astichi_ref(external=current_slot)._ = (
-            astichi_pass(self, outer_bind=True).astichi_ref(external=working_slot)
-        )
-        astichi_pass(self, outer_bind=True).astichi_ref(external=working_slot)._ = VOID""",
-            file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=712,
-            keep_names=("VOID",),
-        )
-    ),
-    "ManagedRollbackBranch": astichi_template(
-        from_astichi_code(
-            """\
-if astichi_pass(tx_index, outer_bind=True) == astichi_bind_external(tx_index_value):
-    astichi_pass(self, outer_bind=True).astichi_ref(external=working_slot)._ = VOID""",
-            file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=723,
-            keep_names=("VOID",),
-        )
-    ),
-    "StoredDefaultFactoryEvalInit": astichi_template(
-        from_astichi_code(
-            """\
-if astichi_pass(field_name__astichi_arg__, outer_bind=True) is _HAS_DEFAULT_FACTORY:
-    astichi_pass(field_name__astichi_arg__, outer_bind=True)._ = (
-        default_factory_name__astichi_arg__(
-            **astichi_hole(default_factory_args)
-        )
-    )
-astichi_pass(state, outer_bind=True).astichi_ref(external=state_slot)._ = astichi_pass(
-    field_name__astichi_arg__,
-    outer_bind=True,
-)""",
-            file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=730,
-            keep_names=("_HAS_DEFAULT_FACTORY",),
-        )
-    ),
-    "StoredDefaultFactoryEvalNoInit": astichi_template(
-        from_astichi_code(
-            """\
-field_name__astichi_arg__ = default_factory_name__astichi_arg__(
-    **astichi_hole(default_factory_args)
-)
-astichi_pass(state, outer_bind=True).astichi_ref(external=state_slot)._ = astichi_pass(
-    field_name__astichi_arg__,
-    outer_bind=True,
-)""",
-            file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=745,
-        )
-    ),
-    "InitVarDefaultFactoryEvalInit": astichi_template(
-        from_astichi_code(
-            """\
-if astichi_pass(field_name__astichi_arg__, outer_bind=True) is _HAS_DEFAULT_FACTORY:
-    astichi_pass(field_name__astichi_arg__, outer_bind=True)._ = (
-        default_factory_name__astichi_arg__(
-            **astichi_hole(default_factory_args)
-        )
-    )""",
-            file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=755,
-            keep_names=("_HAS_DEFAULT_FACTORY",),
-        )
-    ),
-    "InitVarDefaultFactoryEvalNoInit": astichi_template(
-        from_astichi_code(
-            """\
-field_name__astichi_arg__ = default_factory_name__astichi_arg__(
-    **astichi_hole(default_factory_args)
-)""",
-            file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=766,
-        )
-    ),
-    "DefaultFactoryStoredArg": astichi_template(
-        from_astichi_code(
-            """\
-astichi_funcargs(
-    param_name__astichi_arg__=astichi_pass(
-        self,
-        outer_bind=True,
-    ).astichi_ref(external=provider_name)
-)""",
-            file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=772,
-        )
-    ),
-    "DefaultFactoryLocalArg": astichi_template(
-        from_astichi_code(
-            """\
-astichi_funcargs(
-    param_name__astichi_arg__=astichi_pass(
-        provider_name__astichi_arg__,
-        outer_bind=True,
-    )
-)""",
-            file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=781,
+            line_number=238,
         )
     ),
     "ClassBundle": astichi_template(
@@ -3746,7 +3261,7 @@ class working_facade_class_decl_name__astichi_arg__(
     __slots__ = ()
     astichi_hole(working_facade_properties)""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=790,
+            line_number=245,
             keep_names=(
                 "DEFAULT_TRANSACTION",
                 "TransactionManager",
@@ -3773,14 +3288,499 @@ return_class_module_ref__astichi_arg__.__module__ = astichi_pass(
 ).__module__
 return return_class_result_ref__astichi_arg__""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=1001,
+            line_number=456,
         )
     ),
     "PassStatement": astichi_template(
         from_astichi_code(
             "pass",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=1017,
+            line_number=472,
+        )
+    ),
+    "BuildTransactionFactsBody": from_astichi_code(
+        """\
+from yidl.runtime.transaction_yidl import DEFAULT_TRANSACTION
+
+classes = sorted(
+    ctx.records(ClassesCollection),
+    key=lambda item: item.class_order,
+)
+fields = sorted(
+    ctx.records(FieldsCollection),
+    key=lambda item: item.field_order,
+)
+
+for lifecycle_class in classes:
+    seen = {DEFAULT_TRANSACTION: 0}
+    ctx.write(
+        TxGroupsCollection,
+        TxGroup(
+            class_id=lifecycle_class.class_id,
+            tx_group_key=DEFAULT_TRANSACTION,
+            tx_index=0,
+            tx_group_order=0,
+        ),
+        policy=RejectDuplicate,
+    )
+
+    for field in fields:
+        if field.field_owner != lifecycle_class.class_id:
+            continue
+        if field.field_kind != "managed":
+            continue
+
+        tx_group = field.tx_group_key
+        if tx_group is None:
+            tx_group = DEFAULT_TRANSACTION
+        if tx_group not in seen:
+            seen[tx_group] = len(seen)
+            ctx.write(
+                TxGroupsCollection,
+                TxGroup(
+                    class_id=lifecycle_class.class_id,
+                    tx_group_key=tx_group,
+                    tx_index=seen[tx_group],
+                    tx_group_order=field.field_order,
+                ),
+                policy=RejectDuplicate,
+            )
+
+        tx_index = seen[tx_group]
+        ctx.write(
+            TransactionalFieldsCollection,
+            TransactionalField(
+                field_id=field.field_id,
+                field_owner=field.field_owner,
+                field_name=field.field_name,
+                field_order=field.field_order,
+                tx_group_key=tx_group,
+            ),
+            policy=RejectDuplicate,
+        )
+        ctx.write(
+            IndexedTransactionalFieldsCollection,
+            IndexedTransactionalField(
+                field_id=field.field_id,
+                field_owner=field.field_owner,
+                field_name=field.field_name,
+                field_order=field.field_order,
+                tx_group_key=tx_group,
+                tx_index=tx_index,
+                current_slot_name=field.current_slot_name,
+                working_slot_name=field.working_slot_name,
+            ),
+            policy=RejectDuplicate,
+        )""",
+        file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_managed.yidl",
+        line_number=54,
+        keep_names=(
+            "ctx",
+            "ClassesCollection",
+            "FieldsCollection",
+            "TxGroupsCollection",
+            "TransactionalFieldsCollection",
+            "IndexedTransactionalFieldsCollection",
+            "TxGroup",
+            "TransactionalField",
+            "IndexedTransactionalField",
+            "RejectDuplicate",
+        ),
+    ),
+    "ManagedCurrentStateAssignment": astichi_template(
+        from_astichi_code(
+            """\
+astichi_pass(state, outer_bind=True).astichi_ref(external=current_slot)._ = astichi_pass(
+    init_value_name__astichi_arg__,
+    outer_bind=True,
+)""",
+            file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_managed.yidl",
+            line_number=144,
+        )
+    ),
+    "ManagedWorkingStateAssignment": astichi_template(
+        from_astichi_code(
+            "astichi_pass(state, outer_bind=True).astichi_ref(external=working_slot)._ = VOID",
+            file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_managed.yidl",
+            line_number=151,
+            keep_names=("VOID",),
+        )
+    ),
+    "ManagedDefaultProperty": astichi_template(
+        from_astichi_code(
+            """\
+@property
+def property_getter_name__astichi_arg__(self):
+    state = self._y_state
+    if state.astichi_ref(external=working_slot) is not VOID:
+        return state.astichi_ref(external=working_slot)
+    return state.astichi_ref(external=current_slot)
+
+@property_setter_target_name__astichi_arg__.setter
+def property_setter_name__astichi_arg__(self, value):
+    state = self._y_state
+    state._y_ensure_working_transaction(astichi_bind_external(tx_index))
+    state.astichi_ref(external=working_slot)._ = value""",
+            file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_managed.yidl",
+            line_number=157,
+            keep_names=("VOID",),
+        )
+    ),
+    "ManagedCurrentProperty": astichi_template(
+        from_astichi_code(
+            """\
+@property
+def property_getter_name__astichi_arg__(self):
+    return self._y_state.astichi_ref(external=current_slot)
+
+@property_setter_target_name__astichi_arg__.setter
+def property_setter_name__astichi_arg__(self, value):
+    del value
+    raise AttributeError(
+        "current facade is read-only for transactional field "
+        + astichi_bind_external(field_name)
+    )""",
+            file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_managed.yidl",
+            line_number=174,
+        )
+    ),
+    "ManagedWorkingProperty": astichi_template(
+        from_astichi_code(
+            """\
+@property
+def property_getter_name__astichi_arg__(self):
+    state = self._y_state
+    if state.astichi_ref(external=working_slot) is not VOID:
+        return state.astichi_ref(external=working_slot)
+    return state.astichi_ref(external=current_slot)
+
+@property_setter_target_name__astichi_arg__.setter
+def property_setter_name__astichi_arg__(self, value):
+    state = self._y_state
+    state._y_ensure_working_transaction(astichi_bind_external(tx_index))
+    state.astichi_ref(external=working_slot)._ = value""",
+            file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_managed.yidl",
+            line_number=188,
+            keep_names=("VOID",),
+        )
+    ),
+    "ManagedCommitBranch": astichi_template(
+        from_astichi_code(
+            """\
+if astichi_pass(tx_index, outer_bind=True) == astichi_bind_external(tx_index_value):
+    if astichi_pass(self, outer_bind=True).astichi_ref(external=working_slot) is not VOID:
+        astichi_pass(self, outer_bind=True).astichi_ref(external=current_slot)._ = (
+            astichi_pass(self, outer_bind=True).astichi_ref(external=working_slot)
+        )
+        astichi_pass(self, outer_bind=True).astichi_ref(external=working_slot)._ = VOID""",
+            file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_managed.yidl",
+            line_number=205,
+            keep_names=("VOID",),
+        )
+    ),
+    "ManagedRollbackBranch": astichi_template(
+        from_astichi_code(
+            """\
+if astichi_pass(tx_index, outer_bind=True) == astichi_bind_external(tx_index_value):
+    astichi_pass(self, outer_bind=True).astichi_ref(external=working_slot)._ = VOID""",
+            file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_managed.yidl",
+            line_number=216,
+            keep_names=("VOID",),
+        )
+    ),
+    "BuildDefaultFactoryFactsBody": from_astichi_code(
+        """\
+classes = sorted(
+    ctx.records(ClassesCollection),
+    key=lambda item: item.class_order,
+)
+fields = sorted(
+    ctx.records(FieldsCollection),
+    key=lambda item: item.field_order,
+)
+
+for lifecycle_class in classes:
+    class_fields = [
+        field for field in fields
+        if field.field_owner == lifecycle_class.class_id
+    ]
+    by_name = {field.field_name: field for field in class_fields}
+    by_id = {field.field_id: field for field in class_fields}
+    factory_fields = [
+        field for field in class_fields
+        if field.has_default_factory
+    ]
+    graph = {field.field_id: set() for field in factory_fields}
+    deps = []
+    diagnostic_count = 0
+
+    def add_diagnostic(field, suffix, message):
+        nonlocal diagnostic_count
+        diagnostic_count += 1
+        ctx.write(
+            DefaultFactoryDiagnosticsCollection,
+            DefaultFactoryDiagnostic(
+                diagnostic_id=(
+                    f"{field.field_id}.{suffix}.{diagnostic_count}"
+                ),
+                diagnostic_owner=lifecycle_class.class_id,
+                diagnostic_field_id=field.field_id,
+                diagnostic_message=message,
+            ),
+            policy=ReplaceExisting,
+        )
+
+    def provider_is_available(provider):
+        if provider.init:
+            return True
+        return provider.has_default or provider.has_default_factory
+
+    for consumer in factory_fields:
+        for param_order, param_name in enumerate(
+            consumer.default_factory_param_names
+        ):
+            provider = by_name.get(param_name)
+            if provider is None:
+                add_diagnostic(
+                    consumer,
+                    f"unknown.{param_name}",
+                    (
+                        f"{lifecycle_class.class_name}."
+                        f"{consumer.field_name}: default_factory "
+                        f"references unknown name {param_name!r}"
+                    ),
+                )
+                continue
+            if not provider_is_available(provider):
+                add_diagnostic(
+                    consumer,
+                    f"unavailable.{param_name}",
+                    (
+                        f"{lifecycle_class.class_name}."
+                        f"{consumer.field_name}: default_factory "
+                        f"cannot reference {param_name!r} "
+                        "(value is unavailable before factory evaluation)"
+                    ),
+                )
+                continue
+            deps.append((consumer, provider, param_name, param_order))
+            if provider.field_id in graph:
+                graph[consumer.field_id].add(provider.field_id)
+
+    field_order = {
+        field.field_id: field.field_order for field in class_fields
+    }
+    visiting = set()
+    visited = set()
+    ordered_field_ids = []
+    cycle_found = False
+
+    def visit(field_id, path):
+        nonlocal cycle_found
+        if cycle_found or field_id in visited:
+            return
+        if field_id in visiting:
+            cycle = path[path.index(field_id):]
+            names = " -> ".join(by_id[item].field_name for item in cycle)
+            add_diagnostic(
+                by_id[field_id],
+                "cycle",
+                (
+                    f"{lifecycle_class.class_name}: default_factory "
+                    f"dependency cycle: {names}"
+                ),
+            )
+            cycle_found = True
+            return
+        visiting.add(field_id)
+        for provider_id in sorted(
+            graph.get(field_id, ()),
+            key=lambda item: field_order[item],
+        ):
+            visit(provider_id, [*path, provider_id])
+        visiting.remove(field_id)
+        visited.add(field_id)
+        ordered_field_ids.append(field_id)
+
+    for field in factory_fields:
+        visit(field.field_id, [field.field_id])
+        if cycle_found:
+            break
+
+    if diagnostic_count:
+        continue
+
+    eval_order_by_id = {
+        field_id: eval_order
+        for eval_order, field_id in enumerate(ordered_field_ids)
+    }
+
+    for consumer, provider, param_name, param_order in deps:
+        ctx.write(
+            DefaultFactoryDependenciesCollection,
+            DefaultFactoryDependency(
+                dependency_owner=lifecycle_class.class_id,
+                consumer_field_id=consumer.field_id,
+                consumer_field_name=consumer.field_name,
+                provider_name=provider.field_name,
+                provider_field_id=provider.field_id,
+                provider_field_kind=provider.field_kind,
+                provider_init=provider.init,
+                provider_has_default=provider.has_default,
+                provider_has_default_factory=provider.has_default_factory,
+                param_name=param_name,
+                param_order=param_order,
+                consumer_eval_order=eval_order_by_id[consumer.field_id],
+            ),
+            policy=RejectDuplicate,
+        )
+
+    for eval_order, field_id in enumerate(ordered_field_ids):
+        field = by_id[field_id]
+        state_slot = ""
+        if field.field_kind == "field":
+            state_slot = field.value_slot_name
+        elif field.field_kind == "managed":
+            state_slot = field.current_slot_name
+        ctx.write(
+            DefaultFactoryEvaluationStepsCollection,
+            DefaultFactoryEvaluationStep(
+                eval_step_id=field.field_id,
+                eval_owner=lifecycle_class.class_id,
+                eval_field_id=field.field_id,
+                eval_field_name=field.field_name,
+                eval_field_kind=field.field_kind,
+                eval_init=field.init,
+                eval_state_slot_name=state_slot,
+                eval_default_factory_param_name=(
+                    field.default_factory_param_name
+                ),
+                eval_order=eval_order,
+                eval_statement_order=100000 + eval_order,
+            ),
+            policy=RejectDuplicate,
+        )""",
+        file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_default_factories.yidl",
+        line_number=85,
+        keep_names=(
+            "ctx",
+            "ClassesCollection",
+            "FieldsCollection",
+            "DefaultFactoryDependenciesCollection",
+            "DefaultFactoryEvaluationStepsCollection",
+            "DefaultFactoryDiagnosticsCollection",
+            "DefaultFactoryDependency",
+            "DefaultFactoryEvaluationStep",
+            "DefaultFactoryDiagnostic",
+            "RejectDuplicate",
+            "ReplaceExisting",
+        ),
+    ),
+    "RaiseDefaultFactoryDiagnosticsBody": from_astichi_code(
+        """\
+for diagnostic in ctx.records(DefaultFactoryDiagnosticsCollection):
+    raise AssemblyDiagnosticError(diagnostic.diagnostic_message)""",
+        file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_default_factories.yidl",
+        line_number=270,
+        keep_names=(
+            "ctx",
+            "DefaultFactoryDiagnosticsCollection",
+            "AssemblyDiagnosticError",
+        ),
+    ),
+    "InitParamDefaultFactory": astichi_template(
+        from_astichi_code(
+            """\
+def astichi_params(
+    param_name__astichi_arg__: astichi_bind_external(annotation)
+    = _HAS_DEFAULT_FACTORY
+):
+    pass""",
+            file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_default_factories.yidl",
+            line_number=286,
+            keep_names=("_HAS_DEFAULT_FACTORY",),
+        )
+    ),
+    "StoredDefaultFactoryEvalInit": astichi_template(
+        from_astichi_code(
+            """\
+if astichi_pass(field_name__astichi_arg__, outer_bind=True) is _HAS_DEFAULT_FACTORY:
+    astichi_pass(field_name__astichi_arg__, outer_bind=True)._ = (
+        default_factory_name__astichi_arg__(
+            **astichi_hole(default_factory_args)
+        )
+    )
+astichi_pass(state, outer_bind=True).astichi_ref(external=state_slot)._ = astichi_pass(
+    field_name__astichi_arg__,
+    outer_bind=True,
+)""",
+            file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_default_factories.yidl",
+            line_number=296,
+            keep_names=("_HAS_DEFAULT_FACTORY",),
+        )
+    ),
+    "StoredDefaultFactoryEvalNoInit": astichi_template(
+        from_astichi_code(
+            """\
+field_name__astichi_arg__ = default_factory_name__astichi_arg__(
+    **astichi_hole(default_factory_args)
+)
+astichi_pass(state, outer_bind=True).astichi_ref(external=state_slot)._ = astichi_pass(
+    field_name__astichi_arg__,
+    outer_bind=True,
+)""",
+            file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_default_factories.yidl",
+            line_number=311,
+        )
+    ),
+    "InitVarDefaultFactoryEvalInit": astichi_template(
+        from_astichi_code(
+            """\
+if astichi_pass(field_name__astichi_arg__, outer_bind=True) is _HAS_DEFAULT_FACTORY:
+    astichi_pass(field_name__astichi_arg__, outer_bind=True)._ = (
+        default_factory_name__astichi_arg__(
+            **astichi_hole(default_factory_args)
+        )
+    )""",
+            file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_default_factories.yidl",
+            line_number=321,
+            keep_names=("_HAS_DEFAULT_FACTORY",),
+        )
+    ),
+    "InitVarDefaultFactoryEvalNoInit": astichi_template(
+        from_astichi_code(
+            """\
+field_name__astichi_arg__ = default_factory_name__astichi_arg__(
+    **astichi_hole(default_factory_args)
+)""",
+            file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_default_factories.yidl",
+            line_number=332,
+        )
+    ),
+    "DefaultFactoryStoredArg": astichi_template(
+        from_astichi_code(
+            """\
+astichi_funcargs(
+    param_name__astichi_arg__=astichi_pass(
+        self,
+        outer_bind=True,
+    ).astichi_ref(external=provider_name)
+)""",
+            file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_default_factories.yidl",
+            line_number=338,
+        )
+    ),
+    "DefaultFactoryLocalArg": astichi_template(
+        from_astichi_code(
+            """\
+astichi_funcargs(
+    param_name__astichi_arg__=astichi_pass(
+        provider_name__astichi_arg__,
+        outer_bind=True,
+    )
+)""",
+            file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_default_factories.yidl",
+            line_number=347,
         )
     ),
 }
@@ -3890,56 +3890,6 @@ ASSEMBLY_CONTRIBUTIONS = {
                 kind="ident", name="value_name", value=ValueRef("DefaultValueParamName")
             ),
         ),
-    ),
-    "FieldDefaultFactoryBuilderParam": ContributionSpec(
-        name="FieldDefaultFactoryBuilderParam",
-        source_name="BuilderParam",
-        source_kind="resource",
-        build_name="FieldDefaultFactoryBuilderParam",
-        index=ValueRef("FieldOrder"),
-        order=ValueRef("FieldOrder"),
-        target=TargetSpec(
-            name="builder_params",
-            paths=(
-                TargetPathSpec(
-                    kind="build",
-                    path=PathSpec(
-                        segments=(
-                            PathSegmentSpec(kind="name", name="Root", indexes=()),
-                        )
-                    ),
-                ),
-            ),
-        ),
-        bindings=(
-            BindingSpec(
-                kind="ident",
-                name="value_name",
-                value=ValueRef("DefaultFactoryParamName"),
-            ),
-        ),
-    ),
-    "ClassDefinition": ContributionSpec(
-        name="ClassDefinition",
-        source_name="ClassProduction",
-        source_kind="production",
-        build_name="ClassDef",
-        index=ValueRef("ClassOrder"),
-        order=ValueRef("ClassOrder"),
-        target=TargetSpec(
-            name="function_body",
-            paths=(
-                TargetPathSpec(
-                    kind="build",
-                    path=PathSpec(
-                        segments=(
-                            PathSegmentSpec(kind="name", name="Root", indexes=()),
-                        )
-                    ),
-                ),
-            ),
-        ),
-        bindings=(),
     ),
     "FacadeBaseBodyPass": ContributionSpec(
         name="FacadeBaseBodyPass",
@@ -4265,33 +4215,6 @@ ASSEMBLY_CONTRIBUTIONS = {
             ),
         ),
     ),
-    "PlainInitParamDefaultFactory": ContributionSpec(
-        name="PlainInitParamDefaultFactory",
-        source_name="InitParamDefaultFactory",
-        source_kind="resource",
-        build_name="PlainInitParam",
-        index=ValueRef("FieldOrder"),
-        order=ValueRef("FieldOrder"),
-        target=TargetSpec(
-            name="init_params",
-            paths=(
-                TargetPathSpec(
-                    kind="build",
-                    path=PathSpec(
-                        segments=(
-                            PathSegmentSpec(kind="name", name="ClassDef", indexes=()),
-                        )
-                    ),
-                ),
-            ),
-        ),
-        bindings=(
-            BindingSpec(kind="ident", name="param_name", value=ValueRef("FieldName")),
-            BindingSpec(
-                kind="external", name="annotation", value=ValueRef("Annotation")
-            ),
-        ),
-    ),
     "InitVarParamRequired": ContributionSpec(
         name="InitVarParamRequired",
         source_name="InitParamRequired",
@@ -4348,33 +4271,6 @@ ASSEMBLY_CONTRIBUTIONS = {
                 kind="ident",
                 name="default_value_name",
                 value=ValueRef("DefaultValueParamName"),
-            ),
-        ),
-    ),
-    "InitVarParamDefaultFactory": ContributionSpec(
-        name="InitVarParamDefaultFactory",
-        source_name="InitParamDefaultFactory",
-        source_kind="resource",
-        build_name="InitVarParam",
-        index=ValueRef("FieldOrder"),
-        order=ValueRef("FieldOrder"),
-        target=TargetSpec(
-            name="init_params",
-            paths=(
-                TargetPathSpec(
-                    kind="build",
-                    path=PathSpec(
-                        segments=(
-                            PathSegmentSpec(kind="name", name="ClassDef", indexes=()),
-                        )
-                    ),
-                ),
-            ),
-        ),
-        bindings=(
-            BindingSpec(kind="ident", name="param_name", value=ValueRef("FieldName")),
-            BindingSpec(
-                kind="external", name="annotation", value=ValueRef("Annotation")
             ),
         ),
     ),
@@ -4537,6 +4433,28 @@ ASSEMBLY_CONTRIBUTIONS = {
             ),
         ),
     ),
+    "CoreClassDefinition": ContributionSpec(
+        name="CoreClassDefinition",
+        source_name="CoreClassProduction",
+        source_kind="production",
+        build_name="ClassDef",
+        index=ValueRef("ClassOrder"),
+        order=ValueRef("ClassOrder"),
+        target=TargetSpec(
+            name="function_body",
+            paths=(
+                TargetPathSpec(
+                    kind="build",
+                    path=PathSpec(
+                        segments=(
+                            PathSegmentSpec(kind="name", name="Root", indexes=()),
+                        )
+                    ),
+                ),
+            ),
+        ),
+        bindings=(),
+    ),
     "ManagedCurrentStateSlot": ContributionSpec(
         name="ManagedCurrentStateSlot",
         source_name="StateSlotEntry",
@@ -4624,33 +4542,6 @@ ASSEMBLY_CONTRIBUTIONS = {
     "ManagedInitParamRequired": ContributionSpec(
         name="ManagedInitParamRequired",
         source_name="InitParamRequired",
-        source_kind="resource",
-        build_name="ManagedInitParam",
-        index=ValueRef("FieldOrder"),
-        order=ValueRef("FieldOrder"),
-        target=TargetSpec(
-            name="init_params",
-            paths=(
-                TargetPathSpec(
-                    kind="build",
-                    path=PathSpec(
-                        segments=(
-                            PathSegmentSpec(kind="name", name="ClassDef", indexes=()),
-                        )
-                    ),
-                ),
-            ),
-        ),
-        bindings=(
-            BindingSpec(kind="ident", name="param_name", value=ValueRef("FieldName")),
-            BindingSpec(
-                kind="external", name="annotation", value=ValueRef("Annotation")
-            ),
-        ),
-    ),
-    "ManagedInitParamDefaultFactory": ContributionSpec(
-        name="ManagedInitParamDefaultFactory",
-        source_name="InitParamDefaultFactory",
         source_kind="resource",
         build_name="ManagedInitParam",
         index=ValueRef("FieldOrder"),
@@ -4944,6 +4835,115 @@ ASSEMBLY_CONTRIBUTIONS = {
             ),
         ),
     ),
+    "FieldDefaultFactoryBuilderParam": ContributionSpec(
+        name="FieldDefaultFactoryBuilderParam",
+        source_name="BuilderParam",
+        source_kind="resource",
+        build_name="FieldDefaultFactoryBuilderParam",
+        index=ValueRef("FieldOrder"),
+        order=ValueRef("FieldOrder"),
+        target=TargetSpec(
+            name="builder_params",
+            paths=(
+                TargetPathSpec(
+                    kind="build",
+                    path=PathSpec(
+                        segments=(
+                            PathSegmentSpec(kind="name", name="Root", indexes=()),
+                        )
+                    ),
+                ),
+            ),
+        ),
+        bindings=(
+            BindingSpec(
+                kind="ident",
+                name="value_name",
+                value=ValueRef("DefaultFactoryParamName"),
+            ),
+        ),
+    ),
+    "PlainInitParamDefaultFactory": ContributionSpec(
+        name="PlainInitParamDefaultFactory",
+        source_name="InitParamDefaultFactory",
+        source_kind="resource",
+        build_name="PlainInitParam",
+        index=ValueRef("FieldOrder"),
+        order=ValueRef("FieldOrder"),
+        target=TargetSpec(
+            name="init_params",
+            paths=(
+                TargetPathSpec(
+                    kind="build",
+                    path=PathSpec(
+                        segments=(
+                            PathSegmentSpec(kind="name", name="ClassDef", indexes=()),
+                        )
+                    ),
+                ),
+            ),
+        ),
+        bindings=(
+            BindingSpec(kind="ident", name="param_name", value=ValueRef("FieldName")),
+            BindingSpec(
+                kind="external", name="annotation", value=ValueRef("Annotation")
+            ),
+        ),
+    ),
+    "InitVarParamDefaultFactory": ContributionSpec(
+        name="InitVarParamDefaultFactory",
+        source_name="InitParamDefaultFactory",
+        source_kind="resource",
+        build_name="InitVarParam",
+        index=ValueRef("FieldOrder"),
+        order=ValueRef("FieldOrder"),
+        target=TargetSpec(
+            name="init_params",
+            paths=(
+                TargetPathSpec(
+                    kind="build",
+                    path=PathSpec(
+                        segments=(
+                            PathSegmentSpec(kind="name", name="ClassDef", indexes=()),
+                        )
+                    ),
+                ),
+            ),
+        ),
+        bindings=(
+            BindingSpec(kind="ident", name="param_name", value=ValueRef("FieldName")),
+            BindingSpec(
+                kind="external", name="annotation", value=ValueRef("Annotation")
+            ),
+        ),
+    ),
+    "ManagedInitParamDefaultFactory": ContributionSpec(
+        name="ManagedInitParamDefaultFactory",
+        source_name="InitParamDefaultFactory",
+        source_kind="resource",
+        build_name="ManagedInitParam",
+        index=ValueRef("FieldOrder"),
+        order=ValueRef("FieldOrder"),
+        target=TargetSpec(
+            name="init_params",
+            paths=(
+                TargetPathSpec(
+                    kind="build",
+                    path=PathSpec(
+                        segments=(
+                            PathSegmentSpec(kind="name", name="ClassDef", indexes=()),
+                        )
+                    ),
+                ),
+            ),
+        ),
+        bindings=(
+            BindingSpec(kind="ident", name="param_name", value=ValueRef("FieldName")),
+            BindingSpec(
+                kind="external", name="annotation", value=ValueRef("Annotation")
+            ),
+        ),
+    ),
     "StoredDefaultFactoryEvalInitContribution": ContributionSpec(
         name="StoredDefaultFactoryEvalInitContribution",
         source_name="StoredDefaultFactoryEvalInit",
@@ -5138,6 +5138,28 @@ ASSEMBLY_CONTRIBUTIONS = {
             ),
         ),
     ),
+    "ClassDefinition": ContributionSpec(
+        name="ClassDefinition",
+        source_name="ClassProduction",
+        source_kind="production",
+        build_name="ClassDef",
+        index=ValueRef("ClassOrder"),
+        order=ValueRef("ClassOrder"),
+        target=TargetSpec(
+            name="function_body",
+            paths=(
+                TargetPathSpec(
+                    kind="build",
+                    path=PathSpec(
+                        segments=(
+                            PathSegmentSpec(kind="name", name="Root", indexes=()),
+                        )
+                    ),
+                ),
+            ),
+        ),
+        bindings=(),
+    ),
 }
 ASSEMBLY_MATCHERS = {
     "BuilderParamContributions": ContributionMatcherSpec(
@@ -5168,41 +5190,6 @@ ASSEMBLY_MATCHERS = {
             ),
         ),
         default_contribution_name="TxGroupsBuilderParam",
-        rules=(),
-    ),
-    "FieldDefaultBuilderParamContributions": ContributionMatcherSpec(
-        name="FieldDefaultBuilderParamContributions",
-        inputs=(
-            AssemblyInputSpec(name="field", collection_name="Fields", collection=None),
-        ),
-        default_contribution_name=None,
-        rules=(
-            ContributionRuleSpec(
-                name="has_default",
-                condition=EqConditionSpec(
-                    left=ValueRef("HasDefault"), right=LiteralValueRef(True)
-                ),
-                contribution_name="FieldDefaultBuilderParam",
-                weight=1.0,
-            ),
-            ContributionRuleSpec(
-                name="has_default_factory",
-                condition=EqConditionSpec(
-                    left=ValueRef("HasDefaultFactory"), right=LiteralValueRef(True)
-                ),
-                contribution_name="FieldDefaultFactoryBuilderParam",
-                weight=1.0,
-            ),
-        ),
-    ),
-    "ClassDefinitionContributions": ContributionMatcherSpec(
-        name="ClassDefinitionContributions",
-        inputs=(
-            AssemblyInputSpec(
-                name="lifecycle_class", collection_name="Classes", collection=None
-            ),
-        ),
-        default_contribution_name="ClassDefinition",
         rules=(),
     ),
     "ReturnClassContributions": ContributionMatcherSpec(
@@ -5313,6 +5300,146 @@ ASSEMBLY_MATCHERS = {
             ),
         ),
         default_contribution_name="PlainStateSlot",
+        rules=(),
+    ),
+    "InitVarLocalDefaultContributions": ContributionMatcherSpec(
+        name="InitVarLocalDefaultContributions",
+        inputs=(
+            AssemblyInputSpec(
+                name="field", collection_name="InitVarFields", collection=None
+            ),
+        ),
+        default_contribution_name=None,
+        rules=(
+            ContributionRuleSpec(
+                name="default_value",
+                condition=AndConditionSpec(
+                    items=(
+                        EqConditionSpec(
+                            left=ValueRef("Init"), right=LiteralValueRef(False)
+                        ),
+                        EqConditionSpec(
+                            left=ValueRef("HasDefault"), right=LiteralValueRef(True)
+                        ),
+                        EqConditionSpec(
+                            left=ValueRef("HasDefaultFactory"),
+                            right=LiteralValueRef(False),
+                        ),
+                    )
+                ),
+                contribution_name="InitVarLocalDefault",
+                weight=1.0,
+            ),
+        ),
+    ),
+    "PlainInitAssignmentContributions": ContributionMatcherSpec(
+        name="PlainInitAssignmentContributions",
+        inputs=(
+            AssemblyInputSpec(
+                name="field", collection_name="PlainFields", collection=None
+            ),
+        ),
+        default_contribution_name=None,
+        rules=(
+            ContributionRuleSpec(
+                name="init_field",
+                condition=AndConditionSpec(
+                    items=(
+                        EqConditionSpec(
+                            left=ValueRef("Init"), right=LiteralValueRef(True)
+                        ),
+                        EqConditionSpec(
+                            left=ValueRef("HasDefaultFactory"),
+                            right=LiteralValueRef(False),
+                        ),
+                    )
+                ),
+                contribution_name="PlainInitAssignment",
+                weight=1.0,
+            ),
+            ContributionRuleSpec(
+                name="default_value",
+                condition=AndConditionSpec(
+                    items=(
+                        EqConditionSpec(
+                            left=ValueRef("Init"), right=LiteralValueRef(False)
+                        ),
+                        EqConditionSpec(
+                            left=ValueRef("HasDefault"), right=LiteralValueRef(True)
+                        ),
+                        EqConditionSpec(
+                            left=ValueRef("HasDefaultFactory"),
+                            right=LiteralValueRef(False),
+                        ),
+                    )
+                ),
+                contribution_name="PlainDefaultAssignment",
+                weight=1.0,
+            ),
+        ),
+    ),
+    "PlainPropertyContributions": ContributionMatcherSpec(
+        name="PlainPropertyContributions",
+        inputs=(
+            AssemblyInputSpec(
+                name="field", collection_name="PlainFields", collection=None
+            ),
+        ),
+        default_contribution_name="PlainFieldProperty",
+        rules=(),
+    ),
+    "ClassVarDefaultContributions": ContributionMatcherSpec(
+        name="ClassVarDefaultContributions",
+        inputs=(
+            AssemblyInputSpec(
+                name="field", collection_name="ClassVarFields", collection=None
+            ),
+        ),
+        default_contribution_name=None,
+        rules=(
+            ContributionRuleSpec(
+                name="has_default",
+                condition=EqConditionSpec(
+                    left=ValueRef("HasDefault"), right=LiteralValueRef(True)
+                ),
+                contribution_name="ClassVarDefault",
+                weight=1.0,
+            ),
+        ),
+    ),
+    "FieldDefaultBuilderParamContributions": ContributionMatcherSpec(
+        name="FieldDefaultBuilderParamContributions",
+        inputs=(
+            AssemblyInputSpec(name="field", collection_name="Fields", collection=None),
+        ),
+        default_contribution_name=None,
+        rules=(
+            ContributionRuleSpec(
+                name="has_default",
+                condition=EqConditionSpec(
+                    left=ValueRef("HasDefault"), right=LiteralValueRef(True)
+                ),
+                contribution_name="FieldDefaultBuilderParam",
+                weight=1.0,
+            ),
+            ContributionRuleSpec(
+                name="has_default_factory",
+                condition=EqConditionSpec(
+                    left=ValueRef("HasDefaultFactory"), right=LiteralValueRef(True)
+                ),
+                contribution_name="FieldDefaultFactoryBuilderParam",
+                weight=1.0,
+            ),
+        ),
+    ),
+    "CoreClassDefinitionContributions": ContributionMatcherSpec(
+        name="CoreClassDefinitionContributions",
+        inputs=(
+            AssemblyInputSpec(
+                name="lifecycle_class", collection_name="Classes", collection=None
+            ),
+        ),
+        default_contribution_name="CoreClassDefinition",
         rules=(),
     ),
     "PlainInitParamContributions": ContributionMatcherSpec(
@@ -5445,111 +5572,6 @@ ASSEMBLY_MATCHERS = {
             ),
         ),
     ),
-    "InitVarLocalDefaultContributions": ContributionMatcherSpec(
-        name="InitVarLocalDefaultContributions",
-        inputs=(
-            AssemblyInputSpec(
-                name="field", collection_name="InitVarFields", collection=None
-            ),
-        ),
-        default_contribution_name=None,
-        rules=(
-            ContributionRuleSpec(
-                name="default_value",
-                condition=AndConditionSpec(
-                    items=(
-                        EqConditionSpec(
-                            left=ValueRef("Init"), right=LiteralValueRef(False)
-                        ),
-                        EqConditionSpec(
-                            left=ValueRef("HasDefault"), right=LiteralValueRef(True)
-                        ),
-                        EqConditionSpec(
-                            left=ValueRef("HasDefaultFactory"),
-                            right=LiteralValueRef(False),
-                        ),
-                    )
-                ),
-                contribution_name="InitVarLocalDefault",
-                weight=1.0,
-            ),
-        ),
-    ),
-    "PlainInitAssignmentContributions": ContributionMatcherSpec(
-        name="PlainInitAssignmentContributions",
-        inputs=(
-            AssemblyInputSpec(
-                name="field", collection_name="PlainFields", collection=None
-            ),
-        ),
-        default_contribution_name=None,
-        rules=(
-            ContributionRuleSpec(
-                name="init_field",
-                condition=AndConditionSpec(
-                    items=(
-                        EqConditionSpec(
-                            left=ValueRef("Init"), right=LiteralValueRef(True)
-                        ),
-                        EqConditionSpec(
-                            left=ValueRef("HasDefaultFactory"),
-                            right=LiteralValueRef(False),
-                        ),
-                    )
-                ),
-                contribution_name="PlainInitAssignment",
-                weight=1.0,
-            ),
-            ContributionRuleSpec(
-                name="default_value",
-                condition=AndConditionSpec(
-                    items=(
-                        EqConditionSpec(
-                            left=ValueRef("Init"), right=LiteralValueRef(False)
-                        ),
-                        EqConditionSpec(
-                            left=ValueRef("HasDefault"), right=LiteralValueRef(True)
-                        ),
-                        EqConditionSpec(
-                            left=ValueRef("HasDefaultFactory"),
-                            right=LiteralValueRef(False),
-                        ),
-                    )
-                ),
-                contribution_name="PlainDefaultAssignment",
-                weight=1.0,
-            ),
-        ),
-    ),
-    "PlainPropertyContributions": ContributionMatcherSpec(
-        name="PlainPropertyContributions",
-        inputs=(
-            AssemblyInputSpec(
-                name="field", collection_name="PlainFields", collection=None
-            ),
-        ),
-        default_contribution_name="PlainFieldProperty",
-        rules=(),
-    ),
-    "ClassVarDefaultContributions": ContributionMatcherSpec(
-        name="ClassVarDefaultContributions",
-        inputs=(
-            AssemblyInputSpec(
-                name="field", collection_name="ClassVarFields", collection=None
-            ),
-        ),
-        default_contribution_name=None,
-        rules=(
-            ContributionRuleSpec(
-                name="has_default",
-                condition=EqConditionSpec(
-                    left=ValueRef("HasDefault"), right=LiteralValueRef(True)
-                ),
-                contribution_name="ClassVarDefault",
-                weight=1.0,
-            ),
-        ),
-    ),
     "ManagedCurrentStateSlotContributions": ContributionMatcherSpec(
         name="ManagedCurrentStateSlotContributions",
         inputs=(
@@ -5569,71 +5591,6 @@ ASSEMBLY_MATCHERS = {
         ),
         default_contribution_name="ManagedWorkingStateSlot",
         rules=(),
-    ),
-    "ManagedInitParamContributions": ContributionMatcherSpec(
-        name="ManagedInitParamContributions",
-        inputs=(
-            AssemblyInputSpec(
-                name="field", collection_name="ManagedFields", collection=None
-            ),
-        ),
-        default_contribution_name=None,
-        rules=(
-            ContributionRuleSpec(
-                name="required",
-                condition=AndConditionSpec(
-                    items=(
-                        EqConditionSpec(
-                            left=ValueRef("Init"), right=LiteralValueRef(True)
-                        ),
-                        EqConditionSpec(
-                            left=ValueRef("HasDefault"), right=LiteralValueRef(False)
-                        ),
-                        EqConditionSpec(
-                            left=ValueRef("HasDefaultFactory"),
-                            right=LiteralValueRef(False),
-                        ),
-                    )
-                ),
-                contribution_name="ManagedInitParamRequired",
-                weight=1.0,
-            ),
-            ContributionRuleSpec(
-                name="default_value",
-                condition=AndConditionSpec(
-                    items=(
-                        EqConditionSpec(
-                            left=ValueRef("Init"), right=LiteralValueRef(True)
-                        ),
-                        EqConditionSpec(
-                            left=ValueRef("HasDefault"), right=LiteralValueRef(True)
-                        ),
-                        EqConditionSpec(
-                            left=ValueRef("HasDefaultFactory"),
-                            right=LiteralValueRef(False),
-                        ),
-                    )
-                ),
-                contribution_name="ManagedInitParamDefault",
-                weight=1.0,
-            ),
-            ContributionRuleSpec(
-                name="default_factory",
-                condition=AndConditionSpec(
-                    items=(
-                        EqConditionSpec(
-                            left=ValueRef("Init"), right=LiteralValueRef(True)
-                        ),
-                        EqConditionSpec(
-                            left=ValueRef("HasDefaultFactory"),
-                            right=LiteralValueRef(True),
-                        ),
-                    )
-                ),
-                contribution_name="ManagedInitParamDefaultFactory",
-                weight=1.0,
-            ),
-        ),
     ),
     "ManagedCurrentInitAssignmentContributions": ContributionMatcherSpec(
         name="ManagedCurrentInitAssignmentContributions",
@@ -5750,6 +5707,71 @@ ASSEMBLY_MATCHERS = {
         ),
         default_contribution_name="ManagedRollback",
         rules=(),
+    ),
+    "ManagedInitParamContributions": ContributionMatcherSpec(
+        name="ManagedInitParamContributions",
+        inputs=(
+            AssemblyInputSpec(
+                name="field", collection_name="ManagedFields", collection=None
+            ),
+        ),
+        default_contribution_name=None,
+        rules=(
+            ContributionRuleSpec(
+                name="required",
+                condition=AndConditionSpec(
+                    items=(
+                        EqConditionSpec(
+                            left=ValueRef("Init"), right=LiteralValueRef(True)
+                        ),
+                        EqConditionSpec(
+                            left=ValueRef("HasDefault"), right=LiteralValueRef(False)
+                        ),
+                        EqConditionSpec(
+                            left=ValueRef("HasDefaultFactory"),
+                            right=LiteralValueRef(False),
+                        ),
+                    )
+                ),
+                contribution_name="ManagedInitParamRequired",
+                weight=1.0,
+            ),
+            ContributionRuleSpec(
+                name="default_value",
+                condition=AndConditionSpec(
+                    items=(
+                        EqConditionSpec(
+                            left=ValueRef("Init"), right=LiteralValueRef(True)
+                        ),
+                        EqConditionSpec(
+                            left=ValueRef("HasDefault"), right=LiteralValueRef(True)
+                        ),
+                        EqConditionSpec(
+                            left=ValueRef("HasDefaultFactory"),
+                            right=LiteralValueRef(False),
+                        ),
+                    )
+                ),
+                contribution_name="ManagedInitParamDefault",
+                weight=1.0,
+            ),
+            ContributionRuleSpec(
+                name="default_factory",
+                condition=AndConditionSpec(
+                    items=(
+                        EqConditionSpec(
+                            left=ValueRef("Init"), right=LiteralValueRef(True)
+                        ),
+                        EqConditionSpec(
+                            left=ValueRef("HasDefaultFactory"),
+                            right=LiteralValueRef(True),
+                        ),
+                    )
+                ),
+                contribution_name="ManagedInitParamDefaultFactory",
+                weight=1.0,
+            ),
+        ),
     ),
     "DefaultFactoryEvalContributions": ContributionMatcherSpec(
         name="DefaultFactoryEvalContributions",
@@ -5881,8 +5903,300 @@ ASSEMBLY_MATCHERS = {
             ),
         ),
     ),
+    "ClassDefinitionContributions": ContributionMatcherSpec(
+        name="ClassDefinitionContributions",
+        inputs=(
+            AssemblyInputSpec(
+                name="lifecycle_class", collection_name="Classes", collection=None
+            ),
+        ),
+        default_contribution_name="ClassDefinition",
+        rules=(),
+    ),
 }
 ASSEMBLY_EDGES = {
+    "CoreModuleProduction.lifecycle_definition_params": AssemblyEdgeSpec(
+        name="CoreModuleProduction.lifecycle_definition_params",
+        context_inputs=(),
+        from_inputs=(
+            AssemblyInputSpec(
+                name="lifecycle_class", collection_name="Classes", collection=None
+            ),
+        ),
+        condition=None,
+        matcher_name="BuilderParamContributions",
+    ),
+    "CoreModuleProduction.annotations_params": AssemblyEdgeSpec(
+        name="CoreModuleProduction.annotations_params",
+        context_inputs=(),
+        from_inputs=(
+            AssemblyInputSpec(
+                name="lifecycle_class", collection_name="Classes", collection=None
+            ),
+        ),
+        condition=None,
+        matcher_name="AnnotationsBuilderParamContributions",
+    ),
+    "CoreModuleProduction.tx_groups_params": AssemblyEdgeSpec(
+        name="CoreModuleProduction.tx_groups_params",
+        context_inputs=(),
+        from_inputs=(
+            AssemblyInputSpec(
+                name="lifecycle_class", collection_name="Classes", collection=None
+            ),
+        ),
+        condition=None,
+        matcher_name="TxGroupsBuilderParamContributions",
+    ),
+    "CoreModuleProduction.field_default_params": AssemblyEdgeSpec(
+        name="CoreModuleProduction.field_default_params",
+        context_inputs=(),
+        from_inputs=(
+            AssemblyInputSpec(name="field", collection_name="Fields", collection=None),
+        ),
+        condition=None,
+        matcher_name="FieldDefaultBuilderParamContributions",
+    ),
+    "CoreModuleProduction.classes": AssemblyEdgeSpec(
+        name="CoreModuleProduction.classes",
+        context_inputs=(),
+        from_inputs=(
+            AssemblyInputSpec(
+                name="lifecycle_class", collection_name="Classes", collection=None
+            ),
+        ),
+        condition=None,
+        matcher_name="CoreClassDefinitionContributions",
+    ),
+    "CoreModuleProduction.return_class": AssemblyEdgeSpec(
+        name="CoreModuleProduction.return_class",
+        context_inputs=(),
+        from_inputs=(
+            AssemblyInputSpec(
+                name="lifecycle_class", collection_name="Classes", collection=None
+            ),
+        ),
+        condition=None,
+        matcher_name="ReturnClassContributions",
+    ),
+    "CoreClassProduction.state_slots": AssemblyEdgeSpec(
+        name="CoreClassProduction.state_slots",
+        context_inputs=(
+            AssemblyInputSpec(
+                name="lifecycle_class", collection_name="Classes", collection=None
+            ),
+        ),
+        from_inputs=(
+            AssemblyInputSpec(
+                name="field", collection_name="PlainFields", collection=None
+            ),
+        ),
+        condition=EqConditionSpec(
+            left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
+        ),
+        matcher_name="PlainStateSlotContributions",
+    ),
+    "CoreClassProduction.transaction_manager_param": AssemblyEdgeSpec(
+        name="CoreClassProduction.transaction_manager_param",
+        context_inputs=(
+            AssemblyInputSpec(
+                name="lifecycle_class", collection_name="Classes", collection=None
+            ),
+        ),
+        from_inputs=(),
+        condition=None,
+        matcher_name="TransactionManagerInitParamContributions",
+    ),
+    "CoreClassProduction.facade_base_body_pass": AssemblyEdgeSpec(
+        name="CoreClassProduction.facade_base_body_pass",
+        context_inputs=(
+            AssemblyInputSpec(
+                name="lifecycle_class", collection_name="Classes", collection=None
+            ),
+        ),
+        from_inputs=(),
+        condition=None,
+        matcher_name="FacadeBaseBodyPassContributions",
+    ),
+    "CoreClassProduction.facade_properties_pass": AssemblyEdgeSpec(
+        name="CoreClassProduction.facade_properties_pass",
+        context_inputs=(
+            AssemblyInputSpec(
+                name="lifecycle_class", collection_name="Classes", collection=None
+            ),
+        ),
+        from_inputs=(),
+        condition=None,
+        matcher_name="FacadePropertiesPassContributions",
+    ),
+    "CoreClassProduction.default_facade_properties_pass": AssemblyEdgeSpec(
+        name="CoreClassProduction.default_facade_properties_pass",
+        context_inputs=(
+            AssemblyInputSpec(
+                name="lifecycle_class", collection_name="Classes", collection=None
+            ),
+        ),
+        from_inputs=(),
+        condition=None,
+        matcher_name="DefaultFacadePropertiesPassContributions",
+    ),
+    "CoreClassProduction.current_facade_properties_pass": AssemblyEdgeSpec(
+        name="CoreClassProduction.current_facade_properties_pass",
+        context_inputs=(
+            AssemblyInputSpec(
+                name="lifecycle_class", collection_name="Classes", collection=None
+            ),
+        ),
+        from_inputs=(),
+        condition=None,
+        matcher_name="CurrentFacadePropertiesPassContributions",
+    ),
+    "CoreClassProduction.working_facade_properties_pass": AssemblyEdgeSpec(
+        name="CoreClassProduction.working_facade_properties_pass",
+        context_inputs=(
+            AssemblyInputSpec(
+                name="lifecycle_class", collection_name="Classes", collection=None
+            ),
+        ),
+        from_inputs=(),
+        condition=None,
+        matcher_name="WorkingFacadePropertiesPassContributions",
+    ),
+    "CoreClassProduction.state_init_body_pass": AssemblyEdgeSpec(
+        name="CoreClassProduction.state_init_body_pass",
+        context_inputs=(
+            AssemblyInputSpec(
+                name="lifecycle_class", collection_name="Classes", collection=None
+            ),
+        ),
+        from_inputs=(),
+        condition=None,
+        matcher_name="StateInitBodyPassContributions",
+    ),
+    "CoreClassProduction.commit_transaction_body_pass": AssemblyEdgeSpec(
+        name="CoreClassProduction.commit_transaction_body_pass",
+        context_inputs=(
+            AssemblyInputSpec(
+                name="lifecycle_class", collection_name="Classes", collection=None
+            ),
+        ),
+        from_inputs=(),
+        condition=None,
+        matcher_name="CommitTransactionBodyPassContributions",
+    ),
+    "CoreClassProduction.rollback_transaction_body_pass": AssemblyEdgeSpec(
+        name="CoreClassProduction.rollback_transaction_body_pass",
+        context_inputs=(
+            AssemblyInputSpec(
+                name="lifecycle_class", collection_name="Classes", collection=None
+            ),
+        ),
+        from_inputs=(),
+        condition=None,
+        matcher_name="RollbackTransactionBodyPassContributions",
+    ),
+    "CoreClassProduction.classvars": AssemblyEdgeSpec(
+        name="CoreClassProduction.classvars",
+        context_inputs=(
+            AssemblyInputSpec(
+                name="lifecycle_class", collection_name="Classes", collection=None
+            ),
+        ),
+        from_inputs=(
+            AssemblyInputSpec(
+                name="field", collection_name="ClassVarFields", collection=None
+            ),
+        ),
+        condition=EqConditionSpec(
+            left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
+        ),
+        matcher_name="ClassVarDefaultContributions",
+    ),
+    "CoreClassProduction.plain_init_params": AssemblyEdgeSpec(
+        name="CoreClassProduction.plain_init_params",
+        context_inputs=(
+            AssemblyInputSpec(
+                name="lifecycle_class", collection_name="Classes", collection=None
+            ),
+        ),
+        from_inputs=(
+            AssemblyInputSpec(
+                name="field", collection_name="PlainFields", collection=None
+            ),
+        ),
+        condition=EqConditionSpec(
+            left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
+        ),
+        matcher_name="PlainInitParamContributions",
+    ),
+    "CoreClassProduction.initvar_params": AssemblyEdgeSpec(
+        name="CoreClassProduction.initvar_params",
+        context_inputs=(
+            AssemblyInputSpec(
+                name="lifecycle_class", collection_name="Classes", collection=None
+            ),
+        ),
+        from_inputs=(
+            AssemblyInputSpec(
+                name="field", collection_name="InitVarFields", collection=None
+            ),
+        ),
+        condition=EqConditionSpec(
+            left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
+        ),
+        matcher_name="InitVarParamContributions",
+    ),
+    "CoreClassProduction.initvar_local_defaults": AssemblyEdgeSpec(
+        name="CoreClassProduction.initvar_local_defaults",
+        context_inputs=(
+            AssemblyInputSpec(
+                name="lifecycle_class", collection_name="Classes", collection=None
+            ),
+        ),
+        from_inputs=(
+            AssemblyInputSpec(
+                name="field", collection_name="InitVarFields", collection=None
+            ),
+        ),
+        condition=EqConditionSpec(
+            left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
+        ),
+        matcher_name="InitVarLocalDefaultContributions",
+    ),
+    "CoreClassProduction.plain_init_assignments": AssemblyEdgeSpec(
+        name="CoreClassProduction.plain_init_assignments",
+        context_inputs=(
+            AssemblyInputSpec(
+                name="lifecycle_class", collection_name="Classes", collection=None
+            ),
+        ),
+        from_inputs=(
+            AssemblyInputSpec(
+                name="field", collection_name="PlainFields", collection=None
+            ),
+        ),
+        condition=EqConditionSpec(
+            left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
+        ),
+        matcher_name="PlainInitAssignmentContributions",
+    ),
+    "CoreClassProduction.plain_properties": AssemblyEdgeSpec(
+        name="CoreClassProduction.plain_properties",
+        context_inputs=(
+            AssemblyInputSpec(
+                name="lifecycle_class", collection_name="Classes", collection=None
+            ),
+        ),
+        from_inputs=(
+            AssemblyInputSpec(
+                name="field", collection_name="PlainFields", collection=None
+            ),
+        ),
+        condition=EqConditionSpec(
+            left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
+        ),
+        matcher_name="PlainPropertyContributions",
+    ),
     "ModuleProduction.lifecycle_definition_params": AssemblyEdgeSpec(
         name="ModuleProduction.lifecycle_definition_params",
         context_inputs=(),
@@ -6385,6 +6699,505 @@ ASSEMBLY_EDGES = {
     ),
 }
 ASSEMBLY_PRODUCTIONS = {
+    "CoreModuleProduction": ComposableProductionSpec(
+        name="CoreModuleProduction",
+        inputs=(),
+        root=RootSpec(build_name="Root", resource_name="ModuleRoot", bindings=()),
+        applies=(
+            InlineApplySpec(
+                edge=AssemblyEdgeSpec(
+                    name="CoreModuleProduction.lifecycle_definition_params",
+                    context_inputs=(),
+                    from_inputs=(
+                        AssemblyInputSpec(
+                            name="lifecycle_class",
+                            collection_name="Classes",
+                            collection=None,
+                        ),
+                    ),
+                    condition=None,
+                    matcher_name="BuilderParamContributions",
+                )
+            ),
+            InlineApplySpec(
+                edge=AssemblyEdgeSpec(
+                    name="CoreModuleProduction.annotations_params",
+                    context_inputs=(),
+                    from_inputs=(
+                        AssemblyInputSpec(
+                            name="lifecycle_class",
+                            collection_name="Classes",
+                            collection=None,
+                        ),
+                    ),
+                    condition=None,
+                    matcher_name="AnnotationsBuilderParamContributions",
+                )
+            ),
+            InlineApplySpec(
+                edge=AssemblyEdgeSpec(
+                    name="CoreModuleProduction.tx_groups_params",
+                    context_inputs=(),
+                    from_inputs=(
+                        AssemblyInputSpec(
+                            name="lifecycle_class",
+                            collection_name="Classes",
+                            collection=None,
+                        ),
+                    ),
+                    condition=None,
+                    matcher_name="TxGroupsBuilderParamContributions",
+                )
+            ),
+            InlineApplySpec(
+                edge=AssemblyEdgeSpec(
+                    name="CoreModuleProduction.field_default_params",
+                    context_inputs=(),
+                    from_inputs=(
+                        AssemblyInputSpec(
+                            name="field", collection_name="Fields", collection=None
+                        ),
+                    ),
+                    condition=None,
+                    matcher_name="FieldDefaultBuilderParamContributions",
+                )
+            ),
+            InlineApplySpec(
+                edge=AssemblyEdgeSpec(
+                    name="CoreModuleProduction.classes",
+                    context_inputs=(),
+                    from_inputs=(
+                        AssemblyInputSpec(
+                            name="lifecycle_class",
+                            collection_name="Classes",
+                            collection=None,
+                        ),
+                    ),
+                    condition=None,
+                    matcher_name="CoreClassDefinitionContributions",
+                )
+            ),
+            InlineApplySpec(
+                edge=AssemblyEdgeSpec(
+                    name="CoreModuleProduction.return_class",
+                    context_inputs=(),
+                    from_inputs=(
+                        AssemblyInputSpec(
+                            name="lifecycle_class",
+                            collection_name="Classes",
+                            collection=None,
+                        ),
+                    ),
+                    condition=None,
+                    matcher_name="ReturnClassContributions",
+                )
+            ),
+        ),
+    ),
+    "CoreClassProduction": ComposableProductionSpec(
+        name="CoreClassProduction",
+        inputs=(
+            AssemblyInputSpec(
+                name="lifecycle_class", collection_name="Classes", collection=None
+            ),
+        ),
+        root=RootSpec(
+            build_name="ClassDef",
+            resource_name="ClassBundle",
+            bindings=(
+                BindingSpec(
+                    kind="ident",
+                    name="state_class_decl_name",
+                    value=ValueRef("StateClassName"),
+                ),
+                BindingSpec(
+                    kind="ident",
+                    name="state_class_ref",
+                    value=ValueRef("StateClassName"),
+                ),
+                BindingSpec(
+                    kind="ident",
+                    name="default_facade_class_decl_name",
+                    value=ValueRef("ClassName"),
+                ),
+                BindingSpec(
+                    kind="ident",
+                    name="default_facade_class_ref",
+                    value=ValueRef("ClassName"),
+                ),
+                BindingSpec(
+                    kind="ident",
+                    name="facade_base_decl_name",
+                    value=ValueRef("FacadeBaseClassName"),
+                ),
+                BindingSpec(
+                    kind="ident",
+                    name="facade_base_default_base_name",
+                    value=ValueRef("FacadeBaseClassName"),
+                ),
+                BindingSpec(
+                    kind="ident",
+                    name="facade_base_current_base_name",
+                    value=ValueRef("FacadeBaseClassName"),
+                ),
+                BindingSpec(
+                    kind="ident",
+                    name="facade_base_working_base_name",
+                    value=ValueRef("FacadeBaseClassName"),
+                ),
+                BindingSpec(
+                    kind="ident",
+                    name="current_facade_class_decl_name",
+                    value=ValueRef("CurrentFacadeClassName"),
+                ),
+                BindingSpec(
+                    kind="ident",
+                    name="current_facade_class_ref",
+                    value=ValueRef("CurrentFacadeClassName"),
+                ),
+                BindingSpec(
+                    kind="ident",
+                    name="working_facade_class_decl_name",
+                    value=ValueRef("WorkingFacadeClassName"),
+                ),
+                BindingSpec(
+                    kind="ident",
+                    name="working_facade_class_ref",
+                    value=ValueRef("WorkingFacadeClassName"),
+                ),
+                BindingSpec(
+                    kind="ident",
+                    name="tx_groups_for_index_name",
+                    value=ValueRef("TxGroupsParamName"),
+                ),
+                BindingSpec(
+                    kind="ident",
+                    name="tx_groups_for_map_name",
+                    value=ValueRef("TxGroupsParamName"),
+                ),
+                BindingSpec(
+                    kind="ident",
+                    name="tx_groups_for_class_index_name",
+                    value=ValueRef("TxGroupsParamName"),
+                ),
+                BindingSpec(
+                    kind="ident",
+                    name="tx_groups_for_class_map_name",
+                    value=ValueRef("TxGroupsParamName"),
+                ),
+                BindingSpec(
+                    kind="ident",
+                    name="tx_groups_for_manager_name",
+                    value=ValueRef("TxGroupsParamName"),
+                ),
+                BindingSpec(
+                    kind="ident",
+                    name="tx_groups_for_slots_name",
+                    value=ValueRef("TxGroupsParamName"),
+                ),
+                BindingSpec(
+                    kind="ident",
+                    name="lifecycle_definition_name",
+                    value=ValueRef("LifecycleDefinitionParamName"),
+                ),
+                BindingSpec(
+                    kind="ident",
+                    name="annotations_name",
+                    value=ValueRef("AnnotationsParamName"),
+                ),
+            ),
+        ),
+        applies=(
+            InlineApplySpec(
+                edge=AssemblyEdgeSpec(
+                    name="CoreClassProduction.state_slots",
+                    context_inputs=(
+                        AssemblyInputSpec(
+                            name="lifecycle_class",
+                            collection_name="Classes",
+                            collection=None,
+                        ),
+                    ),
+                    from_inputs=(
+                        AssemblyInputSpec(
+                            name="field", collection_name="PlainFields", collection=None
+                        ),
+                    ),
+                    condition=EqConditionSpec(
+                        left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
+                    ),
+                    matcher_name="PlainStateSlotContributions",
+                )
+            ),
+            InlineApplySpec(
+                edge=AssemblyEdgeSpec(
+                    name="CoreClassProduction.transaction_manager_param",
+                    context_inputs=(
+                        AssemblyInputSpec(
+                            name="lifecycle_class",
+                            collection_name="Classes",
+                            collection=None,
+                        ),
+                    ),
+                    from_inputs=(),
+                    condition=None,
+                    matcher_name="TransactionManagerInitParamContributions",
+                )
+            ),
+            InlineApplySpec(
+                edge=AssemblyEdgeSpec(
+                    name="CoreClassProduction.facade_base_body_pass",
+                    context_inputs=(
+                        AssemblyInputSpec(
+                            name="lifecycle_class",
+                            collection_name="Classes",
+                            collection=None,
+                        ),
+                    ),
+                    from_inputs=(),
+                    condition=None,
+                    matcher_name="FacadeBaseBodyPassContributions",
+                )
+            ),
+            InlineApplySpec(
+                edge=AssemblyEdgeSpec(
+                    name="CoreClassProduction.facade_properties_pass",
+                    context_inputs=(
+                        AssemblyInputSpec(
+                            name="lifecycle_class",
+                            collection_name="Classes",
+                            collection=None,
+                        ),
+                    ),
+                    from_inputs=(),
+                    condition=None,
+                    matcher_name="FacadePropertiesPassContributions",
+                )
+            ),
+            InlineApplySpec(
+                edge=AssemblyEdgeSpec(
+                    name="CoreClassProduction.default_facade_properties_pass",
+                    context_inputs=(
+                        AssemblyInputSpec(
+                            name="lifecycle_class",
+                            collection_name="Classes",
+                            collection=None,
+                        ),
+                    ),
+                    from_inputs=(),
+                    condition=None,
+                    matcher_name="DefaultFacadePropertiesPassContributions",
+                )
+            ),
+            InlineApplySpec(
+                edge=AssemblyEdgeSpec(
+                    name="CoreClassProduction.current_facade_properties_pass",
+                    context_inputs=(
+                        AssemblyInputSpec(
+                            name="lifecycle_class",
+                            collection_name="Classes",
+                            collection=None,
+                        ),
+                    ),
+                    from_inputs=(),
+                    condition=None,
+                    matcher_name="CurrentFacadePropertiesPassContributions",
+                )
+            ),
+            InlineApplySpec(
+                edge=AssemblyEdgeSpec(
+                    name="CoreClassProduction.working_facade_properties_pass",
+                    context_inputs=(
+                        AssemblyInputSpec(
+                            name="lifecycle_class",
+                            collection_name="Classes",
+                            collection=None,
+                        ),
+                    ),
+                    from_inputs=(),
+                    condition=None,
+                    matcher_name="WorkingFacadePropertiesPassContributions",
+                )
+            ),
+            InlineApplySpec(
+                edge=AssemblyEdgeSpec(
+                    name="CoreClassProduction.state_init_body_pass",
+                    context_inputs=(
+                        AssemblyInputSpec(
+                            name="lifecycle_class",
+                            collection_name="Classes",
+                            collection=None,
+                        ),
+                    ),
+                    from_inputs=(),
+                    condition=None,
+                    matcher_name="StateInitBodyPassContributions",
+                )
+            ),
+            InlineApplySpec(
+                edge=AssemblyEdgeSpec(
+                    name="CoreClassProduction.commit_transaction_body_pass",
+                    context_inputs=(
+                        AssemblyInputSpec(
+                            name="lifecycle_class",
+                            collection_name="Classes",
+                            collection=None,
+                        ),
+                    ),
+                    from_inputs=(),
+                    condition=None,
+                    matcher_name="CommitTransactionBodyPassContributions",
+                )
+            ),
+            InlineApplySpec(
+                edge=AssemblyEdgeSpec(
+                    name="CoreClassProduction.rollback_transaction_body_pass",
+                    context_inputs=(
+                        AssemblyInputSpec(
+                            name="lifecycle_class",
+                            collection_name="Classes",
+                            collection=None,
+                        ),
+                    ),
+                    from_inputs=(),
+                    condition=None,
+                    matcher_name="RollbackTransactionBodyPassContributions",
+                )
+            ),
+            InlineApplySpec(
+                edge=AssemblyEdgeSpec(
+                    name="CoreClassProduction.classvars",
+                    context_inputs=(
+                        AssemblyInputSpec(
+                            name="lifecycle_class",
+                            collection_name="Classes",
+                            collection=None,
+                        ),
+                    ),
+                    from_inputs=(
+                        AssemblyInputSpec(
+                            name="field",
+                            collection_name="ClassVarFields",
+                            collection=None,
+                        ),
+                    ),
+                    condition=EqConditionSpec(
+                        left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
+                    ),
+                    matcher_name="ClassVarDefaultContributions",
+                )
+            ),
+            InlineApplySpec(
+                edge=AssemblyEdgeSpec(
+                    name="CoreClassProduction.plain_init_params",
+                    context_inputs=(
+                        AssemblyInputSpec(
+                            name="lifecycle_class",
+                            collection_name="Classes",
+                            collection=None,
+                        ),
+                    ),
+                    from_inputs=(
+                        AssemblyInputSpec(
+                            name="field", collection_name="PlainFields", collection=None
+                        ),
+                    ),
+                    condition=EqConditionSpec(
+                        left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
+                    ),
+                    matcher_name="PlainInitParamContributions",
+                )
+            ),
+            InlineApplySpec(
+                edge=AssemblyEdgeSpec(
+                    name="CoreClassProduction.initvar_params",
+                    context_inputs=(
+                        AssemblyInputSpec(
+                            name="lifecycle_class",
+                            collection_name="Classes",
+                            collection=None,
+                        ),
+                    ),
+                    from_inputs=(
+                        AssemblyInputSpec(
+                            name="field",
+                            collection_name="InitVarFields",
+                            collection=None,
+                        ),
+                    ),
+                    condition=EqConditionSpec(
+                        left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
+                    ),
+                    matcher_name="InitVarParamContributions",
+                )
+            ),
+            InlineApplySpec(
+                edge=AssemblyEdgeSpec(
+                    name="CoreClassProduction.initvar_local_defaults",
+                    context_inputs=(
+                        AssemblyInputSpec(
+                            name="lifecycle_class",
+                            collection_name="Classes",
+                            collection=None,
+                        ),
+                    ),
+                    from_inputs=(
+                        AssemblyInputSpec(
+                            name="field",
+                            collection_name="InitVarFields",
+                            collection=None,
+                        ),
+                    ),
+                    condition=EqConditionSpec(
+                        left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
+                    ),
+                    matcher_name="InitVarLocalDefaultContributions",
+                )
+            ),
+            InlineApplySpec(
+                edge=AssemblyEdgeSpec(
+                    name="CoreClassProduction.plain_init_assignments",
+                    context_inputs=(
+                        AssemblyInputSpec(
+                            name="lifecycle_class",
+                            collection_name="Classes",
+                            collection=None,
+                        ),
+                    ),
+                    from_inputs=(
+                        AssemblyInputSpec(
+                            name="field", collection_name="PlainFields", collection=None
+                        ),
+                    ),
+                    condition=EqConditionSpec(
+                        left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
+                    ),
+                    matcher_name="PlainInitAssignmentContributions",
+                )
+            ),
+            InlineApplySpec(
+                edge=AssemblyEdgeSpec(
+                    name="CoreClassProduction.plain_properties",
+                    context_inputs=(
+                        AssemblyInputSpec(
+                            name="lifecycle_class",
+                            collection_name="Classes",
+                            collection=None,
+                        ),
+                    ),
+                    from_inputs=(
+                        AssemblyInputSpec(
+                            name="field", collection_name="PlainFields", collection=None
+                        ),
+                    ),
+                    condition=EqConditionSpec(
+                        left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
+                    ),
+                    matcher_name="PlainPropertyContributions",
+                )
+            ),
+        ),
+    ),
     "ModuleProduction": ComposableProductionSpec(
         name="ModuleProduction",
         inputs=(),
@@ -7162,9 +7975,12 @@ ASSEMBLY_PRODUCTIONS = {
     ),
 }
 ASSEMBLY_ASSEMBLIES = {
+    "LifecycleCoreModule": AssemblySpec(
+        name="LifecycleCoreModule", production_name="CoreModuleProduction"
+    ),
     "LifecycleModule": AssemblySpec(
         name="LifecycleModule", production_name="ModuleProduction"
-    )
+    ),
 }
 
 ASSEMBLY_CONCEPT = _YidlSimpleNamespace(
@@ -7188,6 +8004,10 @@ def build_container(builder):
 
 def build_assembly(entrypoint, container, *, unroll="auto"):
     return run_assembly(ASSEMBLY_CONCEPT, entrypoint, container, unroll=unroll)
+
+
+def build_LifecycleCoreModule(container, *, unroll="auto"):
+    return build_assembly("LifecycleCoreModule", container, unroll=unroll)
 
 
 def build_LifecycleModule(container, *, unroll="auto"):

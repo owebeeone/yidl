@@ -75,7 +75,6 @@ concept LifecycleCore {
     computed collection PlainFields: LifecycleFieldSpec from Fields where FieldKind == "field"
     computed collection InitVarFields: LifecycleFieldSpec from Fields where FieldKind == "initvar"
     computed collection ClassVarFields: LifecycleFieldSpec from Fields where FieldKind == "classvar"
-    computed collection ManagedFields: LifecycleFieldSpec from Fields where FieldKind == "managed"
 
     # -------------------------------------------------------------------------
     # Facade facts.
@@ -111,129 +110,6 @@ concept LifecycleCore {
 
     collection FacadeClasses: FacadeClass identity (FacadeOwner, FacadeId) many
     collection FacadeExposures: FacadeExposure identity (FacadeOwner, OwnerFacadeId, FieldName) many
-
-    # -------------------------------------------------------------------------
-    # Transaction facts.
-    # -------------------------------------------------------------------------
-
-    property TxGroupOrder: int = 0
-    property TxIndex: int = 0
-
-    record TransactionalField {
-        FieldId
-        FieldOwner
-        FieldName
-        FieldOrder
-        TxGroupKey
-    }
-
-    record TxGroup {
-        ClassId
-        TxGroupKey
-        TxIndex
-        TxGroupOrder
-    }
-
-    record IndexedTransactionalField {
-        FieldId
-        FieldOwner
-        FieldName
-        FieldOrder
-        TxGroupKey
-        TxIndex
-        CurrentSlotName
-        WorkingSlotName
-    }
-
-    collection TransactionalFields: TransactionalField identity FieldId many
-    collection TxGroups: TxGroup identity (ClassId, TxGroupKey) many
-    collection IndexedTransactionalFields: IndexedTransactionalField identity FieldId many
-
-    resource BuildTransactionFactsBody = code $[
-        from yidl.runtime.transaction_yidl import DEFAULT_TRANSACTION
-
-        classes = sorted(
-            ctx.records(ClassesCollection),
-            key=lambda item: item.class_order,
-        )
-        fields = sorted(
-            ctx.records(FieldsCollection),
-            key=lambda item: item.field_order,
-        )
-
-        for lifecycle_class in classes:
-            seen = {DEFAULT_TRANSACTION: 0}
-            ctx.write(
-                TxGroupsCollection,
-                TxGroup(
-                    class_id=lifecycle_class.class_id,
-                    tx_group_key=DEFAULT_TRANSACTION,
-                    tx_index=0,
-                    tx_group_order=0,
-                ),
-                policy=RejectDuplicate,
-            )
-
-            for field in fields:
-                if field.field_owner != lifecycle_class.class_id:
-                    continue
-                if field.field_kind != "managed":
-                    continue
-
-                tx_group = field.tx_group_key
-                if tx_group is None:
-                    tx_group = DEFAULT_TRANSACTION
-                if tx_group not in seen:
-                    seen[tx_group] = len(seen)
-                    ctx.write(
-                        TxGroupsCollection,
-                        TxGroup(
-                            class_id=lifecycle_class.class_id,
-                            tx_group_key=tx_group,
-                            tx_index=seen[tx_group],
-                            tx_group_order=field.field_order,
-                        ),
-                        policy=RejectDuplicate,
-                    )
-
-                tx_index = seen[tx_group]
-                ctx.write(
-                    TransactionalFieldsCollection,
-                    TransactionalField(
-                        field_id=field.field_id,
-                        field_owner=field.field_owner,
-                        field_name=field.field_name,
-                        field_order=field.field_order,
-                        tx_group_key=tx_group,
-                    ),
-                    policy=RejectDuplicate,
-                )
-                ctx.write(
-                    IndexedTransactionalFieldsCollection,
-                    IndexedTransactionalField(
-                        field_id=field.field_id,
-                        field_owner=field.field_owner,
-                        field_name=field.field_name,
-                        field_order=field.field_order,
-                        tx_group_key=tx_group,
-                        tx_index=tx_index,
-                        current_slot_name=field.current_slot_name,
-                        working_slot_name=field.working_slot_name,
-                    ),
-                    policy=RejectDuplicate,
-                )
-    ]$ {
-        keep ctx, ClassesCollection, FieldsCollection
-        keep TxGroupsCollection, TransactionalFieldsCollection
-        keep IndexedTransactionalFieldsCollection
-        keep TxGroup, TransactionalField, IndexedTransactionalField
-        keep RejectDuplicate
-    }
-
-    operation BuildTransactionFacts
-        inputs(Classes, Fields)
-        outputs(TransactionalFields, TxGroups, IndexedTransactionalFields)
-        using BuildTransactionFactsBody
 
     # -------------------------------------------------------------------------
     # Init and generated assignment facts.
@@ -286,279 +162,7 @@ concept LifecycleCore {
     collection ClassVarAssignments: ClassVarAssignment identity ClassVarAssignmentId many
 
     # -------------------------------------------------------------------------
-    # Default-factory dependency facts.
-    # -------------------------------------------------------------------------
-
-    property DependencyOwner: str
-    property ConsumerFieldId: str
-    property ConsumerFieldName: str = ""
-    property ProviderName: str
-    property ProviderFieldId: str = ""
-    property ProviderFieldKind: str = ""
-    property ProviderInit: bool = True  # Provider availability columns are informational now and reserved for future matchers.
-    property ProviderHasDefault: bool = False
-    property ProviderHasDefaultFactory: bool = False
-    property ParamName: str
-    property ParamOrder: int = 0
-    property ConsumerEvalOrder: int = 0
-
-    property EvalStepId: str
-    property EvalOwner: str
-    property EvalFieldId: str
-    property EvalFieldName: str
-    property EvalFieldKind: str = ""
-    property EvalInit: bool = True
-    property EvalStateSlotName: str = ""
-    property EvalDefaultFactoryParamName: str = ""
-    property EvalOrder: int = 0
-    property EvalStatementOrder: int = 0  # Factory eval statements add 100000 so normal field initialization stays first; revisit if generated field counts approach that offset.
-
-    property DiagnosticId: str
-    property DiagnosticOwner: str
-    property DiagnosticFieldId: str = ""
-    property DiagnosticMessage: str
-
-    record DefaultFactoryDependency {
-        DependencyOwner
-        ConsumerFieldId
-        ConsumerFieldName
-        ProviderName
-        ProviderFieldId
-        ProviderFieldKind
-        ProviderInit
-        ProviderHasDefault
-        ProviderHasDefaultFactory
-        ParamName
-        ParamOrder
-        ConsumerEvalOrder
-    }
-
-    record DefaultFactoryEvaluationStep {
-        EvalStepId
-        EvalOwner
-        EvalFieldId
-        EvalFieldName
-        EvalFieldKind
-        EvalInit
-        EvalStateSlotName
-        EvalDefaultFactoryParamName
-        EvalOrder
-        EvalStatementOrder
-    }
-
-    record DefaultFactoryDiagnostic {
-        DiagnosticId
-        DiagnosticOwner
-        DiagnosticFieldId
-        DiagnosticMessage
-    }
-
-    collection DefaultFactoryDependencies:
-        DefaultFactoryDependency identity (ConsumerFieldId, ParamName) many
-    collection DefaultFactoryEvaluationSteps:
-        DefaultFactoryEvaluationStep identity EvalStepId many
-    collection DefaultFactoryDiagnostics:
-        DefaultFactoryDiagnostic identity DiagnosticId many
-
-    resource BuildDefaultFactoryFactsBody = code $[
-        classes = sorted(
-            ctx.records(ClassesCollection),
-            key=lambda item: item.class_order,
-        )
-        fields = sorted(
-            ctx.records(FieldsCollection),
-            key=lambda item: item.field_order,
-        )
-
-        for lifecycle_class in classes:
-            class_fields = [
-                field for field in fields
-                if field.field_owner == lifecycle_class.class_id
-            ]
-            by_name = {field.field_name: field for field in class_fields}
-            by_id = {field.field_id: field for field in class_fields}
-            factory_fields = [
-                field for field in class_fields
-                if field.has_default_factory
-            ]
-            graph = {field.field_id: set() for field in factory_fields}
-            deps = []
-            diagnostic_count = 0
-
-            def add_diagnostic(field, suffix, message):
-                nonlocal diagnostic_count
-                diagnostic_count += 1
-                ctx.write(
-                    DefaultFactoryDiagnosticsCollection,
-                    DefaultFactoryDiagnostic(
-                        diagnostic_id=(
-                            f"{field.field_id}.{suffix}.{diagnostic_count}"
-                        ),
-                        diagnostic_owner=lifecycle_class.class_id,
-                        diagnostic_field_id=field.field_id,
-                        diagnostic_message=message,
-                    ),
-                    policy=ReplaceExisting,
-                )
-
-            def provider_is_available(provider):
-                if provider.init:
-                    return True
-                return provider.has_default or provider.has_default_factory
-
-            for consumer in factory_fields:
-                for param_order, param_name in enumerate(
-                    consumer.default_factory_param_names
-                ):
-                    provider = by_name.get(param_name)
-                    if provider is None:
-                        add_diagnostic(
-                            consumer,
-                            f"unknown.{param_name}",
-                            (
-                                f"{lifecycle_class.class_name}."
-                                f"{consumer.field_name}: default_factory "
-                                f"references unknown name {param_name!r}"
-                            ),
-                        )
-                        continue
-                    if not provider_is_available(provider):
-                        add_diagnostic(
-                            consumer,
-                            f"unavailable.{param_name}",
-                            (
-                                f"{lifecycle_class.class_name}."
-                                f"{consumer.field_name}: default_factory "
-                                f"cannot reference {param_name!r} "
-                                "(value is unavailable before factory evaluation)"
-                            ),
-                        )
-                        continue
-                    deps.append((consumer, provider, param_name, param_order))
-                    if provider.field_id in graph:
-                        graph[consumer.field_id].add(provider.field_id)
-
-            field_order = {
-                field.field_id: field.field_order for field in class_fields
-            }
-            visiting = set()
-            visited = set()
-            ordered_field_ids = []
-            cycle_found = False
-
-            def visit(field_id, path):
-                nonlocal cycle_found
-                if cycle_found or field_id in visited:
-                    return
-                if field_id in visiting:
-                    cycle = path[path.index(field_id):]
-                    names = " -> ".join(by_id[item].field_name for item in cycle)
-                    add_diagnostic(
-                        by_id[field_id],
-                        "cycle",
-                        (
-                            f"{lifecycle_class.class_name}: default_factory "
-                            f"dependency cycle: {names}"
-                        ),
-                    )
-                    cycle_found = True
-                    return
-                visiting.add(field_id)
-                for provider_id in sorted(
-                    graph.get(field_id, ()),
-                    key=lambda item: field_order[item],
-                ):
-                    visit(provider_id, [*path, provider_id])
-                visiting.remove(field_id)
-                visited.add(field_id)
-                ordered_field_ids.append(field_id)
-
-            for field in factory_fields:
-                visit(field.field_id, [field.field_id])
-                if cycle_found:
-                    break
-
-            if diagnostic_count:
-                continue
-
-            eval_order_by_id = {
-                field_id: eval_order
-                for eval_order, field_id in enumerate(ordered_field_ids)
-            }
-
-            for consumer, provider, param_name, param_order in deps:
-                ctx.write(
-                    DefaultFactoryDependenciesCollection,
-                    DefaultFactoryDependency(
-                        dependency_owner=lifecycle_class.class_id,
-                        consumer_field_id=consumer.field_id,
-                        consumer_field_name=consumer.field_name,
-                        provider_name=provider.field_name,
-                        provider_field_id=provider.field_id,
-                        provider_field_kind=provider.field_kind,
-                        provider_init=provider.init,
-                        provider_has_default=provider.has_default,
-                        provider_has_default_factory=provider.has_default_factory,
-                        param_name=param_name,
-                        param_order=param_order,
-                        consumer_eval_order=eval_order_by_id[consumer.field_id],
-                    ),
-                    policy=RejectDuplicate,
-                )
-
-            for eval_order, field_id in enumerate(ordered_field_ids):
-                field = by_id[field_id]
-                state_slot = ""
-                if field.field_kind == "field":
-                    state_slot = field.value_slot_name
-                elif field.field_kind == "managed":
-                    state_slot = field.current_slot_name
-                ctx.write(
-                    DefaultFactoryEvaluationStepsCollection,
-                    DefaultFactoryEvaluationStep(
-                        eval_step_id=field.field_id,
-                        eval_owner=lifecycle_class.class_id,
-                        eval_field_id=field.field_id,
-                        eval_field_name=field.field_name,
-                        eval_field_kind=field.field_kind,
-                        eval_init=field.init,
-                        eval_state_slot_name=state_slot,
-                        eval_default_factory_param_name=(
-                            field.default_factory_param_name
-                        ),
-                        eval_order=eval_order,
-                        eval_statement_order=100000 + eval_order,
-                    ),
-                    policy=RejectDuplicate,
-                )
-    ]$ {
-        keep ctx, ClassesCollection, FieldsCollection
-        keep DefaultFactoryDependenciesCollection
-        keep DefaultFactoryEvaluationStepsCollection
-        keep DefaultFactoryDiagnosticsCollection
-        keep DefaultFactoryDependency, DefaultFactoryEvaluationStep
-        keep DefaultFactoryDiagnostic, RejectDuplicate, ReplaceExisting
-    }
-
-    operation BuildDefaultFactoryFacts
-        inputs(Classes, Fields)
-        outputs(DefaultFactoryDependencies, DefaultFactoryEvaluationSteps, DefaultFactoryDiagnostics)
-        using BuildDefaultFactoryFactsBody
-
-    resource RaiseDefaultFactoryDiagnosticsBody = code $[
-        for diagnostic in ctx.records(DefaultFactoryDiagnosticsCollection):
-            raise AssemblyDiagnosticError(diagnostic.diagnostic_message)
-    ]$ {
-        keep ctx, DefaultFactoryDiagnosticsCollection, AssemblyDiagnosticError
-    }
-
-    operation RaiseDefaultFactoryDiagnostics
-        inputs(DefaultFactoryDiagnostics)
-        outputs()
-        using RaiseDefaultFactoryDiagnosticsBody
-
-    # -------------------------------------------------------------------------
-    # A3 generated module/class skeleton.
+    # Core generated module/class skeleton.
     # -------------------------------------------------------------------------
 
     resource ModuleRoot = code $[
@@ -606,16 +210,6 @@ concept LifecycleCore {
             pass
     ]$
 
-    resource InitParamDefaultFactory = template $[
-        def astichi_params(
-            param_name__astichi_arg__: astichi_bind_external(annotation)
-            = _HAS_DEFAULT_FACTORY
-        ):
-            pass
-    ]$ {
-        keep _HAS_DEFAULT_FACTORY
-    }
-
     resource PlainStateAssignment = template $[
         astichi_pass(state, outer_bind=True).astichi_ref(external=state_slot)._ = astichi_pass(
             init_value_name__astichi_arg__,
@@ -644,145 +238,6 @@ concept LifecycleCore {
         classvar_name__astichi_arg__ = astichi_pass(
             classvar_value_name__astichi_arg__,
             outer_bind=True,
-        )
-    ]$
-
-    resource ManagedCurrentStateAssignment = template $[
-        astichi_pass(state, outer_bind=True).astichi_ref(external=current_slot)._ = astichi_pass(
-            init_value_name__astichi_arg__,
-            outer_bind=True,
-        )
-    ]$
-
-    resource ManagedWorkingStateAssignment = template $[
-        astichi_pass(state, outer_bind=True).astichi_ref(external=working_slot)._ = VOID
-    ]$ {
-        keep VOID
-    }
-
-    resource ManagedDefaultProperty = template $[
-        @property
-        def property_getter_name__astichi_arg__(self):
-            state = self._y_state
-            if state.astichi_ref(external=working_slot) is not VOID:
-                return state.astichi_ref(external=working_slot)
-            return state.astichi_ref(external=current_slot)
-
-        @property_setter_target_name__astichi_arg__.setter
-        def property_setter_name__astichi_arg__(self, value):
-            state = self._y_state
-            state._y_ensure_working_transaction(astichi_bind_external(tx_index))
-            state.astichi_ref(external=working_slot)._ = value
-    ]$ {
-        keep VOID
-    }
-
-    resource ManagedCurrentProperty = template $[
-        @property
-        def property_getter_name__astichi_arg__(self):
-            return self._y_state.astichi_ref(external=current_slot)
-
-        @property_setter_target_name__astichi_arg__.setter
-        def property_setter_name__astichi_arg__(self, value):
-            del value
-            raise AttributeError(
-                "current facade is read-only for transactional field "
-                + astichi_bind_external(field_name)
-            )
-    ]$
-
-    resource ManagedWorkingProperty = template $[
-        @property
-        def property_getter_name__astichi_arg__(self):
-            state = self._y_state
-            if state.astichi_ref(external=working_slot) is not VOID:
-                return state.astichi_ref(external=working_slot)
-            return state.astichi_ref(external=current_slot)
-
-        @property_setter_target_name__astichi_arg__.setter
-        def property_setter_name__astichi_arg__(self, value):
-            state = self._y_state
-            state._y_ensure_working_transaction(astichi_bind_external(tx_index))
-            state.astichi_ref(external=working_slot)._ = value
-    ]$ {
-        keep VOID
-    }
-
-    resource ManagedCommitBranch = template $[
-        if astichi_pass(tx_index, outer_bind=True) == astichi_bind_external(tx_index_value):
-            if astichi_pass(self, outer_bind=True).astichi_ref(external=working_slot) is not VOID:
-                astichi_pass(self, outer_bind=True).astichi_ref(external=current_slot)._ = (
-                    astichi_pass(self, outer_bind=True).astichi_ref(external=working_slot)
-                )
-                astichi_pass(self, outer_bind=True).astichi_ref(external=working_slot)._ = VOID
-    ]$ {
-        keep VOID
-    }
-
-    resource ManagedRollbackBranch = template $[
-        if astichi_pass(tx_index, outer_bind=True) == astichi_bind_external(tx_index_value):
-            astichi_pass(self, outer_bind=True).astichi_ref(external=working_slot)._ = VOID
-    ]$ {
-        keep VOID
-    }
-
-    resource StoredDefaultFactoryEvalInit = template $[
-        if astichi_pass(field_name__astichi_arg__, outer_bind=True) is _HAS_DEFAULT_FACTORY:
-            astichi_pass(field_name__astichi_arg__, outer_bind=True)._ = (
-                default_factory_name__astichi_arg__(
-                    **astichi_hole(default_factory_args)
-                )
-            )
-        astichi_pass(state, outer_bind=True).astichi_ref(external=state_slot)._ = astichi_pass(
-            field_name__astichi_arg__,
-            outer_bind=True,
-        )
-    ]$ {
-        keep _HAS_DEFAULT_FACTORY
-    }
-
-    resource StoredDefaultFactoryEvalNoInit = template $[
-        field_name__astichi_arg__ = default_factory_name__astichi_arg__(
-            **astichi_hole(default_factory_args)
-        )
-        astichi_pass(state, outer_bind=True).astichi_ref(external=state_slot)._ = astichi_pass(
-            field_name__astichi_arg__,
-            outer_bind=True,
-        )
-    ]$
-
-    resource InitVarDefaultFactoryEvalInit = template $[
-        if astichi_pass(field_name__astichi_arg__, outer_bind=True) is _HAS_DEFAULT_FACTORY:
-            astichi_pass(field_name__astichi_arg__, outer_bind=True)._ = (
-                default_factory_name__astichi_arg__(
-                    **astichi_hole(default_factory_args)
-                )
-            )
-    ]$ {
-        keep _HAS_DEFAULT_FACTORY
-    }
-
-    resource InitVarDefaultFactoryEvalNoInit = template $[
-        field_name__astichi_arg__ = default_factory_name__astichi_arg__(
-            **astichi_hole(default_factory_args)
-        )
-    ]$
-
-    resource DefaultFactoryStoredArg = template $[
-        astichi_funcargs(
-            param_name__astichi_arg__=astichi_pass(
-                self,
-                outer_bind=True,
-            ).astichi_ref(external=provider_name)
-        )
-    ]$
-
-    resource DefaultFactoryLocalArg = template $[
-        astichi_funcargs(
-            param_name__astichi_arg__=astichi_pass(
-                provider_name__astichi_arg__,
-                outer_bind=True,
-            )
         )
     ]$
 
@@ -1065,28 +520,6 @@ concept LifecycleCore {
         ident value_name = DefaultValueParamName
     }
 
-    contribution FieldDefaultFactoryBuilderParam = BuilderParam {
-        as FieldDefaultFactoryBuilderParam
-        index FieldOrder
-        order FieldOrder
-
-        target builder_params {
-            build /Root
-        }
-
-        ident value_name = DefaultFactoryParamName
-    }
-
-    contribution ClassDefinition = ClassProduction {
-        as ClassDef
-        index ClassOrder
-        order ClassOrder
-
-        target function_body {
-            build /Root
-        }
-    }
-
     contribution FacadeBaseBodyPass = PassStatement {
         as FacadeBaseBodyPass
         index 0
@@ -1231,19 +664,6 @@ concept LifecycleCore {
         ident default_value_name = DefaultValueParamName
     }
 
-    contribution PlainInitParamDefaultFactory = InitParamDefaultFactory {
-        as PlainInitParam
-        index FieldOrder
-        order FieldOrder
-
-        target init_params {
-            build /ClassDef
-        }
-
-        ident param_name = FieldName
-        external annotation = Annotation
-    }
-
     contribution InitVarParamRequired = InitParamRequired {
         as InitVarParam
         index FieldOrder
@@ -1269,19 +689,6 @@ concept LifecycleCore {
         ident param_name = FieldName
         external annotation = Annotation
         ident default_value_name = DefaultValueParamName
-    }
-
-    contribution InitVarParamDefaultFactory = InitParamDefaultFactory {
-        as InitVarParam
-        index FieldOrder
-        order FieldOrder
-
-        target init_params {
-            build /ClassDef
-        }
-
-        ident param_name = FieldName
-        external annotation = Annotation
     }
 
     contribution InitVarLocalDefault = InitVarLocalDefaultAssignment {
@@ -1351,263 +758,14 @@ concept LifecycleCore {
         ident classvar_value_name = DefaultValueParamName
     }
 
-    contribution ManagedCurrentStateSlot = StateSlotEntry {
-        as ManagedCurrentStateSlot
-        index FieldOrder
-        order FieldOrder
+    contribution CoreClassDefinition = CoreClassProduction {
+        as ClassDef
+        index ClassOrder
+        order ClassOrder
 
-        target state_slots {
-            build /ClassDef
+        target function_body {
+            build /Root
         }
-
-        external slot_name = CurrentSlotName
-    }
-
-    contribution ManagedWorkingStateSlot = StateSlotEntry {
-        as ManagedWorkingStateSlot
-        index FieldOrder
-        order FieldOrder
-
-        target state_slots {
-            build /ClassDef
-        }
-
-        external slot_name = WorkingSlotName
-    }
-
-    contribution ManagedInitParamDefault = InitParamDefault {
-        as ManagedInitParam
-        index FieldOrder
-        order FieldOrder
-
-        target init_params {
-            build /ClassDef
-        }
-
-        ident param_name = FieldName
-        external annotation = Annotation
-        ident default_value_name = DefaultValueParamName
-    }
-
-    contribution ManagedInitParamRequired = InitParamRequired {
-        as ManagedInitParam
-        index FieldOrder
-        order FieldOrder
-
-        target init_params {
-            build /ClassDef
-        }
-
-        ident param_name = FieldName
-        external annotation = Annotation
-    }
-
-    contribution ManagedInitParamDefaultFactory = InitParamDefaultFactory {
-        as ManagedInitParam
-        index FieldOrder
-        order FieldOrder
-
-        target init_params {
-            build /ClassDef
-        }
-
-        ident param_name = FieldName
-        external annotation = Annotation
-    }
-
-    contribution ManagedCurrentInitAssignment = ManagedCurrentStateAssignment {
-        as ManagedCurrentInitAssignment
-        index FieldOrder
-        order FieldOrder
-
-        target state_init_body {
-            build /ClassDef
-        }
-
-        ident init_value_name = FieldName
-        external current_slot = CurrentSlotName
-    }
-
-    contribution ManagedCurrentDefaultAssignment = ManagedCurrentStateAssignment {
-        as ManagedCurrentDefaultAssignment
-        index FieldOrder
-        order FieldOrder
-
-        target state_init_body {
-            build /ClassDef
-        }
-
-        ident init_value_name = DefaultValueParamName
-        external current_slot = CurrentSlotName
-    }
-
-    contribution ManagedWorkingInitAssignment = ManagedWorkingStateAssignment {
-        as ManagedWorkingInitAssignment
-        index FieldOrder
-        order FieldOrder
-
-        target state_init_body {
-            build /ClassDef
-        }
-
-        external working_slot = WorkingSlotName
-    }
-
-    contribution ManagedDefaultFacadeProperty = ManagedDefaultProperty {
-        as ManagedDefaultFacadeProperty
-        index FieldOrder
-        order FieldOrder
-
-        target default_facade_properties {
-            build /ClassDef
-        }
-
-        ident property_getter_name = FieldName
-        ident property_setter_target_name = FieldName
-        ident property_setter_name = FieldName
-        external current_slot = CurrentSlotName
-        external working_slot = WorkingSlotName
-        external tx_index = TxIndex
-    }
-
-    contribution ManagedCurrentFacadeProperty = ManagedCurrentProperty {
-        as ManagedCurrentFacadeProperty
-        index FieldOrder
-        order FieldOrder
-
-        target current_facade_properties {
-            build /ClassDef
-        }
-
-        ident property_getter_name = FieldName
-        ident property_setter_target_name = FieldName
-        ident property_setter_name = FieldName
-        external current_slot = CurrentSlotName
-        external field_name = FieldName
-    }
-
-    contribution ManagedWorkingFacadeProperty = ManagedWorkingProperty {
-        as ManagedWorkingFacadeProperty
-        index FieldOrder
-        order FieldOrder
-
-        target working_facade_properties {
-            build /ClassDef
-        }
-
-        ident property_getter_name = FieldName
-        ident property_setter_target_name = FieldName
-        ident property_setter_name = FieldName
-        external current_slot = CurrentSlotName
-        external working_slot = WorkingSlotName
-        external tx_index = TxIndex
-    }
-
-    contribution ManagedCommit = ManagedCommitBranch {
-        as ManagedCommit
-        index FieldOrder
-        order FieldOrder
-
-        target commit_transaction_body {
-            build /ClassDef
-        }
-
-        external current_slot = CurrentSlotName
-        external working_slot = WorkingSlotName
-        external tx_index_value = TxIndex
-    }
-
-    contribution ManagedRollback = ManagedRollbackBranch {
-        as ManagedRollback
-        index FieldOrder
-        order FieldOrder
-
-        target rollback_transaction_body {
-            build /ClassDef
-        }
-
-        external working_slot = WorkingSlotName
-        external tx_index_value = TxIndex
-    }
-
-    contribution StoredDefaultFactoryEvalInitContribution = StoredDefaultFactoryEvalInit {
-        as DefaultFactoryEval
-        index EvalOrder
-        order EvalStatementOrder
-
-        target state_init_body {
-            build /ClassDef
-        }
-
-        ident field_name = EvalFieldName
-        ident default_factory_name = EvalDefaultFactoryParamName
-        external state_slot = EvalStateSlotName
-    }
-
-    contribution StoredDefaultFactoryEvalNoInitContribution = StoredDefaultFactoryEvalNoInit {
-        as DefaultFactoryEval
-        index EvalOrder
-        order EvalStatementOrder
-
-        target state_init_body {
-            build /ClassDef
-        }
-
-        ident field_name = EvalFieldName
-        ident default_factory_name = EvalDefaultFactoryParamName
-        external state_slot = EvalStateSlotName
-    }
-
-    contribution InitVarDefaultFactoryEvalInitContribution = InitVarDefaultFactoryEvalInit {
-        as DefaultFactoryEval
-        index EvalOrder
-        order EvalStatementOrder
-
-        target state_init_body {
-            build /ClassDef
-        }
-
-        ident field_name = EvalFieldName
-        ident default_factory_name = EvalDefaultFactoryParamName
-    }
-
-    contribution InitVarDefaultFactoryEvalNoInitContribution = InitVarDefaultFactoryEvalNoInit {
-        as DefaultFactoryEval
-        index EvalOrder
-        order EvalStatementOrder
-
-        target state_init_body {
-            build /ClassDef
-        }
-
-        ident field_name = EvalFieldName
-        ident default_factory_name = EvalDefaultFactoryParamName
-    }
-
-    contribution DefaultFactoryStoredArgContribution = DefaultFactoryStoredArg {
-        as DefaultFactoryArg
-        index (ConsumerEvalOrder, ParamOrder)
-        order ParamOrder
-
-        target default_factory_args {
-            build /ClassDef/DefaultFactoryEval[ConsumerEvalOrder]
-        }
-
-        ident param_name = ParamName
-        external provider_name = ProviderName
-    }
-
-    contribution DefaultFactoryLocalArgContribution = DefaultFactoryLocalArg {
-        as DefaultFactoryArg
-        index (ConsumerEvalOrder, ParamOrder)
-        order ParamOrder
-
-        target default_factory_args {
-            build /ClassDef/DefaultFactoryEval[ConsumerEvalOrder]
-        }
-
-        ident param_name = ParamName
-        ident provider_name = ProviderName
     }
 
     matcher BuilderParamContributions(lifecycle_class: Classes) -> contribution {
@@ -1620,15 +778,6 @@ concept LifecycleCore {
 
     matcher TxGroupsBuilderParamContributions(lifecycle_class: Classes) -> contribution {
         default -> TxGroupsBuilderParam
-    }
-
-    matcher FieldDefaultBuilderParamContributions(field: Fields) -> contribution {
-        rule has_default when HasDefault == True -> FieldDefaultBuilderParam
-        rule has_default_factory when HasDefaultFactory == True -> FieldDefaultFactoryBuilderParam
-    }
-
-    matcher ClassDefinitionContributions(lifecycle_class: Classes) -> contribution {
-        default -> ClassDefinition
     }
 
     matcher ReturnClassContributions(lifecycle_class: Classes) -> contribution {
@@ -1675,34 +824,6 @@ concept LifecycleCore {
         default -> PlainStateSlot
     }
 
-    matcher PlainInitParamContributions(field: PlainFields) -> contribution {
-        rule required when Init == True
-                      and HasDefault == False
-                      and HasDefaultFactory == False
-                      -> PlainInitParamRequired
-        rule default_value when Init == True
-                           and HasDefault == True
-                           and HasDefaultFactory == False
-                           -> PlainInitParamDefault
-        rule default_factory when Init == True
-                             and HasDefaultFactory == True
-                             -> PlainInitParamDefaultFactory
-    }
-
-    matcher InitVarParamContributions(field: InitVarFields) -> contribution {
-        rule required when Init == True
-                      and HasDefault == False
-                      and HasDefaultFactory == False
-                      -> InitVarParamRequired
-        rule default_value when Init == True
-                           and HasDefault == True
-                           and HasDefaultFactory == False
-                           -> InitVarParamDefault
-        rule default_factory when Init == True
-                             and HasDefaultFactory == True
-                             -> InitVarParamDefaultFactory
-    }
-
     matcher InitVarLocalDefaultContributions(field: InitVarFields) -> contribution {
         rule default_value when Init == False
                            and HasDefault == True
@@ -1728,90 +849,37 @@ concept LifecycleCore {
         rule has_default when HasDefault == True -> ClassVarDefault
     }
 
-    matcher ManagedCurrentStateSlotContributions(field: ManagedFields) -> contribution {
-        default -> ManagedCurrentStateSlot
+    matcher FieldDefaultBuilderParamContributions(field: Fields) -> contribution {
+        rule has_default when HasDefault == True -> FieldDefaultBuilderParam
     }
 
-    matcher ManagedWorkingStateSlotContributions(field: ManagedFields) -> contribution {
-        default -> ManagedWorkingStateSlot
+    matcher CoreClassDefinitionContributions(lifecycle_class: Classes) -> contribution {
+        default -> CoreClassDefinition
     }
 
-    matcher ManagedInitParamContributions(field: ManagedFields) -> contribution {
+    matcher PlainInitParamContributions(field: PlainFields) -> contribution {
         rule required when Init == True
                       and HasDefault == False
                       and HasDefaultFactory == False
-                      -> ManagedInitParamRequired
+                      -> PlainInitParamRequired
         rule default_value when Init == True
                            and HasDefault == True
                            and HasDefaultFactory == False
-                           -> ManagedInitParamDefault
-        rule default_factory when Init == True
-                             and HasDefaultFactory == True
-                             -> ManagedInitParamDefaultFactory
+                           -> PlainInitParamDefault
     }
 
-    matcher ManagedCurrentInitAssignmentContributions(field: ManagedFields) -> contribution {
-        rule init_field when Init == True
-                        and HasDefaultFactory == False
-                        -> ManagedCurrentInitAssignment
-        rule default_value when Init == False
+    matcher InitVarParamContributions(field: InitVarFields) -> contribution {
+        rule required when Init == True
+                      and HasDefault == False
+                      and HasDefaultFactory == False
+                      -> InitVarParamRequired
+        rule default_value when Init == True
                            and HasDefault == True
                            and HasDefaultFactory == False
-                           -> ManagedCurrentDefaultAssignment
+                           -> InitVarParamDefault
     }
 
-    matcher ManagedWorkingInitAssignmentContributions(field: ManagedFields) -> contribution {
-        default -> ManagedWorkingInitAssignment
-    }
-
-    matcher ManagedDefaultFacadePropertyContributions(field: IndexedTransactionalFields) -> contribution {
-        default -> ManagedDefaultFacadeProperty
-    }
-
-    matcher ManagedCurrentFacadePropertyContributions(field: IndexedTransactionalFields) -> contribution {
-        default -> ManagedCurrentFacadeProperty
-    }
-
-    matcher ManagedWorkingFacadePropertyContributions(field: IndexedTransactionalFields) -> contribution {
-        default -> ManagedWorkingFacadeProperty
-    }
-
-    matcher ManagedCommitContributions(field: IndexedTransactionalFields) -> contribution {
-        default -> ManagedCommit
-    }
-
-    matcher ManagedRollbackContributions(field: IndexedTransactionalFields) -> contribution {
-        default -> ManagedRollback
-    }
-
-    matcher DefaultFactoryEvalContributions(step: DefaultFactoryEvaluationSteps) -> contribution {
-        rule field_init when EvalFieldKind == "field"
-                        and EvalInit == True
-                        -> StoredDefaultFactoryEvalInitContribution
-        rule field_no_init when EvalFieldKind == "field"
-                           and EvalInit == False
-                           -> StoredDefaultFactoryEvalNoInitContribution
-        rule managed_init when EvalFieldKind == "managed"
-                          and EvalInit == True
-                          -> StoredDefaultFactoryEvalInitContribution
-        rule managed_no_init when EvalFieldKind == "managed"
-                             and EvalInit == False
-                             -> StoredDefaultFactoryEvalNoInitContribution
-        rule initvar_init when EvalFieldKind == "initvar"
-                          and EvalInit == True
-                          -> InitVarDefaultFactoryEvalInitContribution
-        rule initvar_no_init when EvalFieldKind == "initvar"
-                             and EvalInit == False
-                             -> InitVarDefaultFactoryEvalNoInitContribution
-    }
-
-    matcher DefaultFactoryArgContributions(dep: DefaultFactoryDependencies) -> contribution {
-        default -> DefaultFactoryStoredArgContribution
-        rule local_provider when ProviderFieldKind == "initvar"
-                            -> DefaultFactoryLocalArgContribution
-    }
-
-    production ModuleProduction -> composable {
+    production CoreModuleProduction -> composable {
         root Root = ModuleRoot
 
         apply lifecycle_definition_params
@@ -1832,14 +900,14 @@ concept LifecycleCore {
 
         apply classes
             from lifecycle_class: Classes
-            using ClassDefinitionContributions
+            using CoreClassDefinitionContributions
 
         apply return_class
             from lifecycle_class: Classes
             using ReturnClassContributions
     }
 
-    production ClassProduction(lifecycle_class: Classes) -> composable {
+    production CoreClassProduction(lifecycle_class: Classes) -> composable {
         root ClassDef = ClassBundle {
             ident state_class_decl_name = StateClassName
             ident state_class_ref = StateClassName
@@ -1867,16 +935,6 @@ concept LifecycleCore {
             from field: PlainFields
             where FieldOwner == ClassId
             using PlainStateSlotContributions
-
-        apply managed_current_state_slots
-            from field: ManagedFields
-            where FieldOwner == ClassId
-            using ManagedCurrentStateSlotContributions
-
-        apply managed_working_state_slots
-            from field: ManagedFields
-            where FieldOwner == ClassId
-            using ManagedWorkingStateSlotContributions
 
         apply transaction_manager_param
             using TransactionManagerInitParamContributions
@@ -1920,11 +978,6 @@ concept LifecycleCore {
             where FieldOwner == ClassId
             using InitVarParamContributions
 
-        apply managed_init_params
-            from field: ManagedFields
-            where FieldOwner == ClassId
-            using ManagedInitParamContributions
-
         apply initvar_local_defaults
             from field: InitVarFields
             where FieldOwner == ClassId
@@ -1935,56 +988,12 @@ concept LifecycleCore {
             where FieldOwner == ClassId
             using PlainInitAssignmentContributions
 
-        apply managed_current_init_assignments
-            from field: ManagedFields
-            where FieldOwner == ClassId
-            using ManagedCurrentInitAssignmentContributions
-
-        apply managed_working_init_assignments
-            from field: ManagedFields
-            where FieldOwner == ClassId
-            using ManagedWorkingInitAssignmentContributions
-
-        apply default_factory_evals
-            from step: DefaultFactoryEvaluationSteps
-            where EvalOwner == ClassId
-            using DefaultFactoryEvalContributions
-
-        apply default_factory_args
-            from dep: DefaultFactoryDependencies
-            where DependencyOwner == ClassId
-            using DefaultFactoryArgContributions
-
         apply plain_properties
             from field: PlainFields
             where FieldOwner == ClassId
             using PlainPropertyContributions
-
-        apply managed_default_properties
-            from field: IndexedTransactionalFields
-            where FieldOwner == ClassId
-            using ManagedDefaultFacadePropertyContributions
-
-        apply managed_current_properties
-            from field: IndexedTransactionalFields
-            where FieldOwner == ClassId
-            using ManagedCurrentFacadePropertyContributions
-
-        apply managed_working_properties
-            from field: IndexedTransactionalFields
-            where FieldOwner == ClassId
-            using ManagedWorkingFacadePropertyContributions
-
-        apply managed_commit
-            from field: IndexedTransactionalFields
-            where FieldOwner == ClassId
-            using ManagedCommitContributions
-
-        apply managed_rollback
-            from field: IndexedTransactionalFields
-            where FieldOwner == ClassId
-            using ManagedRollbackContributions
     }
 
-    assembly LifecycleModule = ModuleProduction
+    assembly LifecycleCoreModule = CoreModuleProduction
+
 }

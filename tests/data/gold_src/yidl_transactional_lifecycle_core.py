@@ -44,12 +44,13 @@ def validate_case(sources: Mapping[str, str]) -> None:
     assert "InitVarField" in decorator_namespace
     assert "ClassVarField" in decorator_namespace
     assert "ManagedField" not in decorator_namespace
-    assert "build_LifecycleModule" in decorator_namespace
+    assert "build_LifecycleCoreModule" in decorator_namespace
+    assert "build_LifecycleModule" not in decorator_namespace
 
     prettier_decorator_namespace: dict[str, object] = {}
     exec(decorator_prettier_source, prettier_decorator_namespace)
     assert (
-        prettier_decorator_namespace["build_LifecycleModule"](
+        prettier_decorator_namespace["build_LifecycleCoreModule"](
             _container(prettier_decorator_namespace),
         ).emit_commented()
         == output_source
@@ -74,7 +75,7 @@ def _compile_concept() -> object:
 def _output_source(decorator_source: str) -> str:
     namespace: dict[str, object] = {}
     exec(decorator_source, namespace)
-    return namespace["build_LifecycleModule"](
+    return namespace["build_LifecycleCoreModule"](
         _container(namespace),
     ).emit_commented()
 

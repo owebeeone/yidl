@@ -35,6 +35,47 @@ def test_core_layer_rejects_managed_field_with_missing_layer_diagnostic() -> Non
         _build_lifecycle_container(generated, harvested)
 
 
+def test_lifecycle_layers_have_distinct_surfaces() -> None:
+    core = _compiled_namespace(
+        paths=(_YIDL_DIR / "lifecycle_core.yidl",),
+        entry_path=_YIDL_DIR / "lifecycle_core.yidl",
+        concept_name="LifecycleCore",
+    )
+    assert hasattr(core, "build_LifecycleCoreModule")
+    assert not hasattr(core, "build_LifecycleModule")
+    assert not hasattr(core, "ManagedField")
+    assert not hasattr(core, "ManagedFieldsCollection")
+    assert not hasattr(core, "TxGroup")
+    assert not hasattr(core, "DefaultFactoryDependency")
+
+    managed = _compiled_namespace(
+        paths=(
+            _YIDL_DIR / "lifecycle_core.yidl",
+            _YIDL_DIR / "lifecycle_managed.yidl",
+        ),
+        entry_path=_YIDL_DIR / "lifecycle_managed.yidl",
+        concept_name="LifecycleManaged",
+    )
+    assert hasattr(managed, "ManagedField")
+    assert hasattr(managed, "ManagedFieldsCollection")
+    assert hasattr(managed, "TxGroup")
+    assert not hasattr(managed, "DefaultFactoryDependency")
+    assert not hasattr(managed, "build_LifecycleModule")
+
+    default_factories = _compiled_namespace(
+        paths=(
+            _YIDL_DIR / "lifecycle_core.yidl",
+            _YIDL_DIR / "lifecycle_managed.yidl",
+            _YIDL_DIR / "lifecycle_default_factories.yidl",
+        ),
+        entry_path=_YIDL_DIR / "lifecycle_default_factories.yidl",
+        concept_name="LifecycleDefaultFactories",
+    )
+    assert hasattr(default_factories, "ManagedField")
+    assert hasattr(default_factories, "DefaultFactoryDependency")
+    assert not hasattr(default_factories, "build_LifecycleModule")
+
+
 def test_combined_layer_exposes_managed_field_record() -> None:
     generated = _compiled_namespace(
         paths=tuple(sorted(_YIDL_DIR.glob("*.yidl"))),
@@ -43,6 +84,8 @@ def test_combined_layer_exposes_managed_field_record() -> None:
     )
 
     assert hasattr(generated, "ManagedField")
+    assert hasattr(generated, "DefaultFactoryDependency")
+    assert hasattr(generated, "build_LifecycleModule")
 
 
 def _compiled_namespace(

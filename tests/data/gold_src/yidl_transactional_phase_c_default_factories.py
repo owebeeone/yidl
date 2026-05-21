@@ -195,7 +195,8 @@ def _assert_decorator_frontend() -> None:
 def _assert_source_shape(sources: Mapping[str, str]) -> None:
     combined = "\n".join(sources.values())
     assert "locals()" not in combined
-    assert "default_factories" not in combined
+    assert "default_factories=" not in combined
+    assert "default_factories[" not in combined
 
     source = sources["generated_output.py"]
     assert "_Example_v2_default_factory(v1=self.v1)" in source

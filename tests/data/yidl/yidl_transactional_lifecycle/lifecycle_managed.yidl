@@ -5,8 +5,437 @@ import "lifecycle_core.yidl" as core
 export concept LifecycleManaged
 
 concept LifecycleManaged extends core.LifecycleCore {
+
     family core.LifecycleFieldSpec {
         variant ManagedField {
         }
     }
+
+    computed collection ManagedFields: LifecycleFieldSpec from Fields where FieldKind == "managed"
+
+    # -------------------------------------------------------------------------
+    # Transaction facts.
+    # -------------------------------------------------------------------------
+
+    property TxGroupOrder: int = 0
+    property TxIndex: int = 0
+
+    record TransactionalField {
+        FieldId
+        FieldOwner
+        FieldName
+        FieldOrder
+        TxGroupKey
+    }
+
+    record TxGroup {
+        ClassId
+        TxGroupKey
+        TxIndex
+        TxGroupOrder
+    }
+
+    record IndexedTransactionalField {
+        FieldId
+        FieldOwner
+        FieldName
+        FieldOrder
+        TxGroupKey
+        TxIndex
+        CurrentSlotName
+        WorkingSlotName
+    }
+
+    collection TransactionalFields: TransactionalField identity FieldId many
+    collection TxGroups: TxGroup identity (ClassId, TxGroupKey) many
+    collection IndexedTransactionalFields: IndexedTransactionalField identity FieldId many
+
+    resource BuildTransactionFactsBody = code $[
+        from yidl.runtime.transaction_yidl import DEFAULT_TRANSACTION
+
+        classes = sorted(
+            ctx.records(ClassesCollection),
+            key=lambda item: item.class_order,
+        )
+        fields = sorted(
+            ctx.records(FieldsCollection),
+            key=lambda item: item.field_order,
+        )
+
+        for lifecycle_class in classes:
+            seen = {DEFAULT_TRANSACTION: 0}
+            ctx.write(
+                TxGroupsCollection,
+                TxGroup(
+                    class_id=lifecycle_class.class_id,
+                    tx_group_key=DEFAULT_TRANSACTION,
+                    tx_index=0,
+                    tx_group_order=0,
+                ),
+                policy=RejectDuplicate,
+            )
+
+            for field in fields:
+                if field.field_owner != lifecycle_class.class_id:
+                    continue
+                if field.field_kind != "managed":
+                    continue
+
+                tx_group = field.tx_group_key
+                if tx_group is None:
+                    tx_group = DEFAULT_TRANSACTION
+                if tx_group not in seen:
+                    seen[tx_group] = len(seen)
+                    ctx.write(
+                        TxGroupsCollection,
+                        TxGroup(
+                            class_id=lifecycle_class.class_id,
+                            tx_group_key=tx_group,
+                            tx_index=seen[tx_group],
+                            tx_group_order=field.field_order,
+                        ),
+                        policy=RejectDuplicate,
+                    )
+
+                tx_index = seen[tx_group]
+                ctx.write(
+                    TransactionalFieldsCollection,
+                    TransactionalField(
+                        field_id=field.field_id,
+                        field_owner=field.field_owner,
+                        field_name=field.field_name,
+                        field_order=field.field_order,
+                        tx_group_key=tx_group,
+                    ),
+                    policy=RejectDuplicate,
+                )
+                ctx.write(
+                    IndexedTransactionalFieldsCollection,
+                    IndexedTransactionalField(
+                        field_id=field.field_id,
+                        field_owner=field.field_owner,
+                        field_name=field.field_name,
+                        field_order=field.field_order,
+                        tx_group_key=tx_group,
+                        tx_index=tx_index,
+                        current_slot_name=field.current_slot_name,
+                        working_slot_name=field.working_slot_name,
+                    ),
+                    policy=RejectDuplicate,
+                )
+    ]$ {
+        keep ctx, ClassesCollection, FieldsCollection
+        keep TxGroupsCollection, TransactionalFieldsCollection
+        keep IndexedTransactionalFieldsCollection
+        keep TxGroup, TransactionalField, IndexedTransactionalField
+        keep RejectDuplicate
+    }
+
+    operation BuildTransactionFacts
+        inputs(Classes, Fields)
+        outputs(TransactionalFields, TxGroups, IndexedTransactionalFields)
+        using BuildTransactionFactsBody
+
+    # -------------------------------------------------------------------------
+    # Managed lifecycle resources.
+    # -------------------------------------------------------------------------
+
+    resource ManagedCurrentStateAssignment = template $[
+        astichi_pass(state, outer_bind=True).astichi_ref(external=current_slot)._ = astichi_pass(
+            init_value_name__astichi_arg__,
+            outer_bind=True,
+        )
+    ]$
+
+    resource ManagedWorkingStateAssignment = template $[
+        astichi_pass(state, outer_bind=True).astichi_ref(external=working_slot)._ = VOID
+    ]$ {
+        keep VOID
+    }
+
+    resource ManagedDefaultProperty = template $[
+        @property
+        def property_getter_name__astichi_arg__(self):
+            state = self._y_state
+            if state.astichi_ref(external=working_slot) is not VOID:
+                return state.astichi_ref(external=working_slot)
+            return state.astichi_ref(external=current_slot)
+
+        @property_setter_target_name__astichi_arg__.setter
+        def property_setter_name__astichi_arg__(self, value):
+            state = self._y_state
+            state._y_ensure_working_transaction(astichi_bind_external(tx_index))
+            state.astichi_ref(external=working_slot)._ = value
+    ]$ {
+        keep VOID
+    }
+
+    resource ManagedCurrentProperty = template $[
+        @property
+        def property_getter_name__astichi_arg__(self):
+            return self._y_state.astichi_ref(external=current_slot)
+
+        @property_setter_target_name__astichi_arg__.setter
+        def property_setter_name__astichi_arg__(self, value):
+            del value
+            raise AttributeError(
+                "current facade is read-only for transactional field "
+                + astichi_bind_external(field_name)
+            )
+    ]$
+
+    resource ManagedWorkingProperty = template $[
+        @property
+        def property_getter_name__astichi_arg__(self):
+            state = self._y_state
+            if state.astichi_ref(external=working_slot) is not VOID:
+                return state.astichi_ref(external=working_slot)
+            return state.astichi_ref(external=current_slot)
+
+        @property_setter_target_name__astichi_arg__.setter
+        def property_setter_name__astichi_arg__(self, value):
+            state = self._y_state
+            state._y_ensure_working_transaction(astichi_bind_external(tx_index))
+            state.astichi_ref(external=working_slot)._ = value
+    ]$ {
+        keep VOID
+    }
+
+    resource ManagedCommitBranch = template $[
+        if astichi_pass(tx_index, outer_bind=True) == astichi_bind_external(tx_index_value):
+            if astichi_pass(self, outer_bind=True).astichi_ref(external=working_slot) is not VOID:
+                astichi_pass(self, outer_bind=True).astichi_ref(external=current_slot)._ = (
+                    astichi_pass(self, outer_bind=True).astichi_ref(external=working_slot)
+                )
+                astichi_pass(self, outer_bind=True).astichi_ref(external=working_slot)._ = VOID
+    ]$ {
+        keep VOID
+    }
+
+    resource ManagedRollbackBranch = template $[
+        if astichi_pass(tx_index, outer_bind=True) == astichi_bind_external(tx_index_value):
+            astichi_pass(self, outer_bind=True).astichi_ref(external=working_slot)._ = VOID
+    ]$ {
+        keep VOID
+    }
+
+    contribution ManagedCurrentStateSlot = StateSlotEntry {
+        as ManagedCurrentStateSlot
+        index FieldOrder
+        order FieldOrder
+
+        target state_slots {
+            build /ClassDef
+        }
+
+        external slot_name = CurrentSlotName
+    }
+
+    contribution ManagedWorkingStateSlot = StateSlotEntry {
+        as ManagedWorkingStateSlot
+        index FieldOrder
+        order FieldOrder
+
+        target state_slots {
+            build /ClassDef
+        }
+
+        external slot_name = WorkingSlotName
+    }
+
+    contribution ManagedInitParamDefault = InitParamDefault {
+        as ManagedInitParam
+        index FieldOrder
+        order FieldOrder
+
+        target init_params {
+            build /ClassDef
+        }
+
+        ident param_name = FieldName
+        external annotation = Annotation
+        ident default_value_name = DefaultValueParamName
+    }
+
+    contribution ManagedInitParamRequired = InitParamRequired {
+        as ManagedInitParam
+        index FieldOrder
+        order FieldOrder
+
+        target init_params {
+            build /ClassDef
+        }
+
+        ident param_name = FieldName
+        external annotation = Annotation
+    }
+
+    contribution ManagedCurrentInitAssignment = ManagedCurrentStateAssignment {
+        as ManagedCurrentInitAssignment
+        index FieldOrder
+        order FieldOrder
+
+        target state_init_body {
+            build /ClassDef
+        }
+
+        ident init_value_name = FieldName
+        external current_slot = CurrentSlotName
+    }
+
+    contribution ManagedCurrentDefaultAssignment = ManagedCurrentStateAssignment {
+        as ManagedCurrentDefaultAssignment
+        index FieldOrder
+        order FieldOrder
+
+        target state_init_body {
+            build /ClassDef
+        }
+
+        ident init_value_name = DefaultValueParamName
+        external current_slot = CurrentSlotName
+    }
+
+    contribution ManagedWorkingInitAssignment = ManagedWorkingStateAssignment {
+        as ManagedWorkingInitAssignment
+        index FieldOrder
+        order FieldOrder
+
+        target state_init_body {
+            build /ClassDef
+        }
+
+        external working_slot = WorkingSlotName
+    }
+
+    contribution ManagedDefaultFacadeProperty = ManagedDefaultProperty {
+        as ManagedDefaultFacadeProperty
+        index FieldOrder
+        order FieldOrder
+
+        target default_facade_properties {
+            build /ClassDef
+        }
+
+        ident property_getter_name = FieldName
+        ident property_setter_target_name = FieldName
+        ident property_setter_name = FieldName
+        external current_slot = CurrentSlotName
+        external working_slot = WorkingSlotName
+        external tx_index = TxIndex
+    }
+
+    contribution ManagedCurrentFacadeProperty = ManagedCurrentProperty {
+        as ManagedCurrentFacadeProperty
+        index FieldOrder
+        order FieldOrder
+
+        target current_facade_properties {
+            build /ClassDef
+        }
+
+        ident property_getter_name = FieldName
+        ident property_setter_target_name = FieldName
+        ident property_setter_name = FieldName
+        external current_slot = CurrentSlotName
+        external field_name = FieldName
+    }
+
+    contribution ManagedWorkingFacadeProperty = ManagedWorkingProperty {
+        as ManagedWorkingFacadeProperty
+        index FieldOrder
+        order FieldOrder
+
+        target working_facade_properties {
+            build /ClassDef
+        }
+
+        ident property_getter_name = FieldName
+        ident property_setter_target_name = FieldName
+        ident property_setter_name = FieldName
+        external current_slot = CurrentSlotName
+        external working_slot = WorkingSlotName
+        external tx_index = TxIndex
+    }
+
+    contribution ManagedCommit = ManagedCommitBranch {
+        as ManagedCommit
+        index FieldOrder
+        order FieldOrder
+
+        target commit_transaction_body {
+            build /ClassDef
+        }
+
+        external current_slot = CurrentSlotName
+        external working_slot = WorkingSlotName
+        external tx_index_value = TxIndex
+    }
+
+    contribution ManagedRollback = ManagedRollbackBranch {
+        as ManagedRollback
+        index FieldOrder
+        order FieldOrder
+
+        target rollback_transaction_body {
+            build /ClassDef
+        }
+
+        external working_slot = WorkingSlotName
+        external tx_index_value = TxIndex
+    }
+
+    matcher ManagedCurrentStateSlotContributions(field: ManagedFields) -> contribution {
+        default -> ManagedCurrentStateSlot
+    }
+
+    matcher ManagedWorkingStateSlotContributions(field: ManagedFields) -> contribution {
+        default -> ManagedWorkingStateSlot
+    }
+
+    matcher ManagedCurrentInitAssignmentContributions(field: ManagedFields) -> contribution {
+        rule init_field when Init == True
+                        and HasDefaultFactory == False
+                        -> ManagedCurrentInitAssignment
+        rule default_value when Init == False
+                           and HasDefault == True
+                           and HasDefaultFactory == False
+                           -> ManagedCurrentDefaultAssignment
+    }
+
+    matcher ManagedWorkingInitAssignmentContributions(field: ManagedFields) -> contribution {
+        default -> ManagedWorkingInitAssignment
+    }
+
+    matcher ManagedDefaultFacadePropertyContributions(field: IndexedTransactionalFields) -> contribution {
+        default -> ManagedDefaultFacadeProperty
+    }
+
+    matcher ManagedCurrentFacadePropertyContributions(field: IndexedTransactionalFields) -> contribution {
+        default -> ManagedCurrentFacadeProperty
+    }
+
+    matcher ManagedWorkingFacadePropertyContributions(field: IndexedTransactionalFields) -> contribution {
+        default -> ManagedWorkingFacadeProperty
+    }
+
+    matcher ManagedCommitContributions(field: IndexedTransactionalFields) -> contribution {
+        default -> ManagedCommit
+    }
+
+    matcher ManagedRollbackContributions(field: IndexedTransactionalFields) -> contribution {
+        default -> ManagedRollback
+    }
+
+    matcher ManagedInitParamContributions(field: ManagedFields) -> contribution {
+        rule required when Init == True
+                      and HasDefault == False
+                      and HasDefaultFactory == False
+                      -> ManagedInitParamRequired
+        rule default_value when Init == True
+                           and HasDefault == True
+                           and HasDefaultFactory == False
+                           -> ManagedInitParamDefault
+    }
+
 }

@@ -221,6 +221,9 @@ def build_lifecycle_class(
     return Counter
 ```
 
+The `build_lifecycle_class` boundary is intentionally unpacked. It should not
+accept generic `defaults` or `default_factories` dictionaries.
+
 The exact slot names should come from the generated naming layer. The important
 shape is:
 
@@ -726,15 +729,10 @@ Counter = build_lifecycle_class(
 )
 ```
 
-over a generic dictionary boundary:
-
-```python
-Counter = build_lifecycle_class(
-    decorated_cls,
-    defaults=defaults,
-    default_factories=default_factories,
-)
-```
+over a generic dictionary boundary. In particular, do not restore parameters
+such as `defaults=...` or `default_factories=...`; default-factory support
+should add explicit class/field-scoped keyword-only parameters such as
+`_Counter_count_default_factory`.
 
 This matters because YIDL will generate substantially more lifecycle code than
 the current dataclass fixtures. Every static lookup or metadata construction

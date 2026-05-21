@@ -5,4 +5,200 @@ import "lifecycle_default_factories.yidl" as default_factories
 export concept LifecycleBase
 
 concept LifecycleBase extends default_factories.LifecycleDefaultFactories {
+
+    # -------------------------------------------------------------------------
+    # Final lifecycle assembly.
+    # -------------------------------------------------------------------------
+
+    contribution ClassDefinition = ClassProduction {
+        as ClassDef
+        index ClassOrder
+        order ClassOrder
+
+        target function_body {
+            build /Root
+        }
+    }
+
+    matcher ClassDefinitionContributions(lifecycle_class: Classes) -> contribution {
+        default -> ClassDefinition
+    }
+
+    production ModuleProduction -> composable {
+        root Root = ModuleRoot
+
+        apply lifecycle_definition_params
+            from lifecycle_class: Classes
+            using BuilderParamContributions
+
+        apply annotations_params
+            from lifecycle_class: Classes
+            using AnnotationsBuilderParamContributions
+
+        apply tx_groups_params
+            from lifecycle_class: Classes
+            using TxGroupsBuilderParamContributions
+
+        apply field_default_params
+            from field: Fields
+            using FieldDefaultBuilderParamContributions
+
+        apply classes
+            from lifecycle_class: Classes
+            using ClassDefinitionContributions
+
+        apply return_class
+            from lifecycle_class: Classes
+            using ReturnClassContributions
+    }
+
+    production ClassProduction(lifecycle_class: Classes) -> composable {
+        root ClassDef = ClassBundle {
+            ident state_class_decl_name = StateClassName
+            ident state_class_ref = StateClassName
+            ident default_facade_class_decl_name = ClassName
+            ident default_facade_class_ref = ClassName
+            ident facade_base_decl_name = FacadeBaseClassName
+            ident facade_base_default_base_name = FacadeBaseClassName
+            ident facade_base_current_base_name = FacadeBaseClassName
+            ident facade_base_working_base_name = FacadeBaseClassName
+            ident current_facade_class_decl_name = CurrentFacadeClassName
+            ident current_facade_class_ref = CurrentFacadeClassName
+            ident working_facade_class_decl_name = WorkingFacadeClassName
+            ident working_facade_class_ref = WorkingFacadeClassName
+            ident tx_groups_for_index_name = TxGroupsParamName
+            ident tx_groups_for_map_name = TxGroupsParamName
+            ident tx_groups_for_class_index_name = TxGroupsParamName
+            ident tx_groups_for_class_map_name = TxGroupsParamName
+            ident tx_groups_for_manager_name = TxGroupsParamName
+            ident tx_groups_for_slots_name = TxGroupsParamName
+            ident lifecycle_definition_name = LifecycleDefinitionParamName
+            ident annotations_name = AnnotationsParamName
+        }
+
+        apply state_slots
+            from field: PlainFields
+            where FieldOwner == ClassId
+            using PlainStateSlotContributions
+
+        apply managed_current_state_slots
+            from field: ManagedFields
+            where FieldOwner == ClassId
+            using ManagedCurrentStateSlotContributions
+
+        apply managed_working_state_slots
+            from field: ManagedFields
+            where FieldOwner == ClassId
+            using ManagedWorkingStateSlotContributions
+
+        apply transaction_manager_param
+            using TransactionManagerInitParamContributions
+
+        apply facade_base_body_pass
+            using FacadeBaseBodyPassContributions
+
+        apply facade_properties_pass
+            using FacadePropertiesPassContributions
+
+        apply default_facade_properties_pass
+            using DefaultFacadePropertiesPassContributions
+
+        apply current_facade_properties_pass
+            using CurrentFacadePropertiesPassContributions
+
+        apply working_facade_properties_pass
+            using WorkingFacadePropertiesPassContributions
+
+        apply state_init_body_pass
+            using StateInitBodyPassContributions
+
+        apply commit_transaction_body_pass
+            using CommitTransactionBodyPassContributions
+
+        apply rollback_transaction_body_pass
+            using RollbackTransactionBodyPassContributions
+
+        apply classvars
+            from field: ClassVarFields
+            where FieldOwner == ClassId
+            using ClassVarDefaultContributions
+
+        apply plain_init_params
+            from field: PlainFields
+            where FieldOwner == ClassId
+            using PlainInitParamContributions
+
+        apply initvar_params
+            from field: InitVarFields
+            where FieldOwner == ClassId
+            using InitVarParamContributions
+
+        apply managed_init_params
+            from field: ManagedFields
+            where FieldOwner == ClassId
+            using ManagedInitParamContributions
+
+        apply initvar_local_defaults
+            from field: InitVarFields
+            where FieldOwner == ClassId
+            using InitVarLocalDefaultContributions
+
+        apply plain_init_assignments
+            from field: PlainFields
+            where FieldOwner == ClassId
+            using PlainInitAssignmentContributions
+
+        apply managed_current_init_assignments
+            from field: ManagedFields
+            where FieldOwner == ClassId
+            using ManagedCurrentInitAssignmentContributions
+
+        apply managed_working_init_assignments
+            from field: ManagedFields
+            where FieldOwner == ClassId
+            using ManagedWorkingInitAssignmentContributions
+
+        apply default_factory_evals
+            from step: DefaultFactoryEvaluationSteps
+            where EvalOwner == ClassId
+            using DefaultFactoryEvalContributions
+
+        apply default_factory_args
+            from dep: DefaultFactoryDependencies
+            where DependencyOwner == ClassId
+            using DefaultFactoryArgContributions
+
+        apply plain_properties
+            from field: PlainFields
+            where FieldOwner == ClassId
+            using PlainPropertyContributions
+
+        apply managed_default_properties
+            from field: IndexedTransactionalFields
+            where FieldOwner == ClassId
+            using ManagedDefaultFacadePropertyContributions
+
+        apply managed_current_properties
+            from field: IndexedTransactionalFields
+            where FieldOwner == ClassId
+            using ManagedCurrentFacadePropertyContributions
+
+        apply managed_working_properties
+            from field: IndexedTransactionalFields
+            where FieldOwner == ClassId
+            using ManagedWorkingFacadePropertyContributions
+
+        apply managed_commit
+            from field: IndexedTransactionalFields
+            where FieldOwner == ClassId
+            using ManagedCommitContributions
+
+        apply managed_rollback
+            from field: IndexedTransactionalFields
+            where FieldOwner == ClassId
+            using ManagedRollbackContributions
+    }
+
+    assembly LifecycleModule = ModuleProduction
+
 }

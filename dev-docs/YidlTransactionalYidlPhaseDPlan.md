@@ -79,6 +79,12 @@ B harvester:
   concept-import mechanism and exposes the final assembly used by the
   decorator
 
+`lifecycle_core.yidl` may expose a core-only assembly, named
+`LifecycleCoreModule`, for focused goldens. The decorator-facing
+`LifecycleModule` assembly belongs only to `lifecycle_base.yidl`, so feature
+layers can add matcher rules and the final composition point can decide which
+collections and productions participate.
+
 The existing `tests/data/yidl/yidl_update_a_dataclasses_split/` fixture is the
 model for cross-file concept import and merge behavior. Phase D should use the
 same import/merge machinery, not a new composition mechanism.
@@ -124,7 +130,8 @@ follow-up after Phase C lands.
 Use goldens for success paths:
 
 - core-only generated output works for plain fields, initvars, classvars, the
-  default facade, and common facade-base materialization
+  default facade, and common facade-base materialization through
+  `LifecycleCoreModule`
 - combined generated output matches the monolithic managed behavior from Phase
   B
 - combined generated output matches the parameterized default-factory behavior
