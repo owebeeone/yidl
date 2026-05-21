@@ -39,6 +39,12 @@ concept LifecycleCore {
     property CurrentSlotName: str = ""
     property WorkingSlotName: str = ""
 
+    property MethodId: str
+    property MethodOwner: str
+    property MethodName: str
+    property MethodKind: str
+    property DeclarationOrder: int = 0
+
     record LifecycleClass {
         ClassId
         ClassName
@@ -72,11 +78,23 @@ concept LifecycleCore {
 
     }
 
+    record TransactionMethod {
+        MethodId
+        MethodOwner
+        MethodName
+        MethodKind
+        TxGroupKey
+        DeclarationOrder
+    }
+
     collection Classes: LifecycleClass identity ClassId many
     collection Fields: LifecycleFieldSpec identity FieldId many
+    collection TransactionMethods: TransactionMethod identity MethodId many
     computed collection PlainFields: LifecycleFieldSpec from Fields where FieldKind == "field"
     computed collection InitVarFields: LifecycleFieldSpec from Fields where FieldKind == "initvar"
     computed collection ClassVarFields: LifecycleFieldSpec from Fields where FieldKind == "classvar"
+    computed collection CommitOrderKeyProviders: TransactionMethod from TransactionMethods where MethodKind == "commit_order_key"
+    computed collection CommitValidators: TransactionMethod from TransactionMethods where MethodKind == "validate_commit"
 
     # -------------------------------------------------------------------------
     # Facade facts.
@@ -243,6 +261,29 @@ concept LifecycleCore {
         )
     ]$
 
+    resource CommitOrderKeyBranch = template $[
+        if astichi_pass(tx_group, outer_bind=True) == astichi_bind_external(tx_group_key):
+            return getattr(
+                astichi_pass(self, outer_bind=True)._y_get_default_facade(),
+                astichi_bind_external(method_name),
+            )()
+    ]$
+
+    resource RequiresValidationBranch = template $[
+        if astichi_pass(tx_group, outer_bind=True) == astichi_bind_external(tx_group_key):
+            return True
+    ]$
+
+    resource ValidateCommitBranch = template $[
+        if astichi_pass(tx_group, outer_bind=True) == astichi_bind_external(tx_group_key):
+            result = getattr(
+                astichi_pass(self, outer_bind=True)._y_get_default_facade(),
+                astichi_bind_external(method_name),
+            )()
+            if result is False:
+                return False
+    ]$
+
     resource ClassBundle = template $[
         class state_class_decl_name__astichi_arg__:
             __slots__ = (
@@ -316,15 +357,15 @@ concept LifecycleCore {
                 return transaction
 
             def commit_order_key_for(self, tx_group=DEFAULT_TRANSACTION):
-                del tx_group
+                astichi_hole(commit_order_key_body)
                 return ()
 
             def requires_validation_for(self, tx_group=DEFAULT_TRANSACTION):
-                del tx_group
+                astichi_hole(requires_validation_body)
                 return False
 
             def validate_commit_for(self, tx_group=DEFAULT_TRANSACTION):
-                del tx_group
+                astichi_hole(validate_commit_body)
                 return True
 
             def _commit_transaction(self, tx_id, tx_group=DEFAULT_TRANSACTION):
@@ -629,6 +670,36 @@ concept LifecycleCore {
         }
     }
 
+    contribution CommitOrderKeyBodyPass = PassStatement {
+        as CommitOrderKeyBodyPass
+        index 0
+        order 0
+
+        target commit_order_key_body {
+            build /ClassDef
+        }
+    }
+
+    contribution RequiresValidationBodyPass = PassStatement {
+        as RequiresValidationBodyPass
+        index 0
+        order 0
+
+        target requires_validation_body {
+            build /ClassDef
+        }
+    }
+
+    contribution ValidateCommitBodyPass = PassStatement {
+        as ValidateCommitBodyPass
+        index 0
+        order 0
+
+        target validate_commit_body {
+            build /ClassDef
+        }
+    }
+
     contribution ReturnClassContribution = ReturnClass {
         as ReturnClass
         index ClassOrder
@@ -787,6 +858,44 @@ concept LifecycleCore {
         ident classvar_value_name = DefaultValueParamName
     }
 
+    contribution CommitOrderKeyBranchContribution = CommitOrderKeyBranch {
+        as CommitOrderKeyBranch
+        index DeclarationOrder
+        order DeclarationOrder
+
+        target commit_order_key_body {
+            build /ClassDef
+        }
+
+        external method_name = MethodName
+        external tx_group_key = TxGroupKey
+    }
+
+    contribution RequiresValidationBranchContribution = RequiresValidationBranch {
+        as RequiresValidationBranch
+        index DeclarationOrder
+        order DeclarationOrder
+
+        target requires_validation_body {
+            build /ClassDef
+        }
+
+        external tx_group_key = TxGroupKey
+    }
+
+    contribution ValidateCommitBranchContribution = ValidateCommitBranch {
+        as ValidateCommitBranch
+        index DeclarationOrder
+        order DeclarationOrder
+
+        target validate_commit_body {
+            build /ClassDef
+        }
+
+        external method_name = MethodName
+        external tx_group_key = TxGroupKey
+    }
+
     contribution CoreClassDefinition = CoreClassProduction {
         as ClassDef
         index ClassOrder
@@ -849,6 +958,18 @@ concept LifecycleCore {
         default -> RollbackTransactionBodyPass
     }
 
+    matcher CommitOrderKeyBodyPassContributions(lifecycle_class: Classes) -> contribution {
+        default -> CommitOrderKeyBodyPass
+    }
+
+    matcher RequiresValidationBodyPassContributions(lifecycle_class: Classes) -> contribution {
+        default -> RequiresValidationBodyPass
+    }
+
+    matcher ValidateCommitBodyPassContributions(lifecycle_class: Classes) -> contribution {
+        default -> ValidateCommitBodyPass
+    }
+
     matcher PlainStateSlotContributions(field: PlainFields) -> contribution {
         default -> PlainStateSlot
     }
@@ -876,6 +997,18 @@ concept LifecycleCore {
 
     matcher ClassVarDefaultContributions(field: ClassVarFields) -> contribution {
         rule has_default when HasDefault == True -> ClassVarDefault
+    }
+
+    matcher CommitOrderKeyContributions(method: CommitOrderKeyProviders) -> contribution {
+        default -> CommitOrderKeyBranchContribution
+    }
+
+    matcher RequiresValidationContributions(method: CommitValidators) -> contribution {
+        default -> RequiresValidationBranchContribution
+    }
+
+    matcher ValidateCommitContributions(method: CommitValidators) -> contribution {
+        default -> ValidateCommitBranchContribution
     }
 
     matcher FieldDefaultBuilderParamContributions(field: Fields) -> contribution {
@@ -993,10 +1126,34 @@ concept LifecycleCore {
         apply rollback_transaction_body_pass
             using RollbackTransactionBodyPassContributions
 
+        apply commit_order_key_body_pass
+            using CommitOrderKeyBodyPassContributions
+
+        apply requires_validation_body_pass
+            using RequiresValidationBodyPassContributions
+
+        apply validate_commit_body_pass
+            using ValidateCommitBodyPassContributions
+
         apply classvars
             from field: ClassVarFields
             where FieldOwner == ClassId
             using ClassVarDefaultContributions
+
+        apply commit_order_keys
+            from method: CommitOrderKeyProviders
+            where MethodOwner == ClassId
+            using CommitOrderKeyContributions
+
+        apply validation_flags
+            from method: CommitValidators
+            where MethodOwner == ClassId
+            using RequiresValidationContributions
+
+        apply validators
+            from method: CommitValidators
+            where MethodOwner == ClassId
+            using ValidateCommitContributions
 
         apply plain_init_params
             from field: PlainFields

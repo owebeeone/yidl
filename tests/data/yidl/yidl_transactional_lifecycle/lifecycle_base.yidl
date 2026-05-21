@@ -119,10 +119,34 @@ concept LifecycleBase extends default_factories.LifecycleDefaultFactories {
         apply rollback_transaction_body_pass
             using RollbackTransactionBodyPassContributions
 
+        apply commit_order_key_body_pass
+            using CommitOrderKeyBodyPassContributions
+
+        apply requires_validation_body_pass
+            using RequiresValidationBodyPassContributions
+
+        apply validate_commit_body_pass
+            using ValidateCommitBodyPassContributions
+
         apply classvars
             from field: ClassVarFields
             where FieldOwner == ClassId
             using ClassVarDefaultContributions
+
+        apply commit_order_keys
+            from method: CommitOrderKeyProviders
+            where MethodOwner == ClassId
+            using CommitOrderKeyContributions
+
+        apply validation_flags
+            from method: CommitValidators
+            where MethodOwner == ClassId
+            using RequiresValidationContributions
+
+        apply validators
+            from method: CommitValidators
+            where MethodOwner == ClassId
+            using ValidateCommitContributions
 
         apply plain_init_params
             from field: PlainFields

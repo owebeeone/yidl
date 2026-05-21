@@ -77,6 +77,23 @@ def _build_lifecycle_container(
             generated.FieldsCollection,
             record_type(**_filter_record_kwargs(record_type, fact)),
         )
+    transaction_method_collection = getattr(
+        generated,
+        "TransactionMethodsCollection",
+        None,
+    )
+    transaction_method_record = getattr(generated, "TransactionMethod", None)
+    if (
+        transaction_method_collection is not None
+        and transaction_method_record is not None
+    ):
+        for fact in harvested.transaction_method_facts:
+            builder.add(
+                transaction_method_collection,
+                transaction_method_record(
+                    **_filter_record_kwargs(transaction_method_record, fact),
+                ),
+            )
     return generated.build_container(builder)
 
 

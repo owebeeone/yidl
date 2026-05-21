@@ -10,12 +10,14 @@ import pytest
 
 from yidl.runtime.lifecycle import _generate_lifecycle_source
 from yidl.runtime.lifecycle import LifecycleDefinitionError
+from yidl.runtime.lifecycle import commit_order_key
 from yidl.runtime.lifecycle import classvar
 from yidl.runtime.lifecycle import field
 from yidl.runtime.lifecycle import harvest_lifecycle_definition
 from yidl.runtime.lifecycle import initvar
 from yidl.runtime.lifecycle import lifecycle
 from yidl.runtime.lifecycle import managed
+from yidl.runtime.lifecycle import validate_commit
 from yidl.runtime.transaction_yidl import DEFAULT_TRANSACTION
 
 _PERF_CONSTRUCTION_TIME_LIMIT = 5.0
@@ -297,10 +299,47 @@ def test_lifecycle_facade_rejects_lifecycle_field_deletion() -> None:
 
     item = lifecycle(Counter)()
 
-    with pytest.raises(AttributeError, match="lifecycle field 'plain' cannot be deleted"):
+    with pytest.raises(
+        AttributeError, match="lifecycle field 'plain' cannot be deleted"
+    ):
         del item.plain
-    with pytest.raises(AttributeError, match="lifecycle field 'count' cannot be deleted"):
+    with pytest.raises(
+        AttributeError, match="lifecycle field 'count' cannot be deleted"
+    ):
         del item.count
+
+
+def test_lifecycle_decorator_uses_commit_order_key_provider() -> None:
+    class Counter:
+        rank: int = field(default=5)
+        count: int = managed(default=1)
+
+        @commit_order_key(DEFAULT_TRANSACTION)
+        def _commit_key(self) -> tuple[int]:
+            return (self.rank,)
+
+    item = lifecycle(Counter)()
+
+    assert item._y_state.commit_order_key_for(DEFAULT_TRANSACTION) == (5,)
+
+
+def test_lifecycle_decorator_validation_failure_rolls_back_working_value() -> None:
+    class Counter:
+        count: int = managed(default=1)
+
+        @validate_commit(DEFAULT_TRANSACTION)
+        def _validate_count(self) -> bool:
+            return self.count >= 0
+
+    item = lifecycle(Counter)()
+
+    with pytest.raises(ExceptionGroup, match="yidl commit validation failed"):
+        with item.begin(DEFAULT_TRANSACTION):
+            item.count = -1
+
+    assert item.count == 1
+    assert item.current.count == 1
+    assert item.working.count == 1
 
 
 @pytest.mark.skipif(
