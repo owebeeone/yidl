@@ -17,6 +17,10 @@ from yidl.runtime.transaction_yidl import DEFAULT_TRANSACTION
 
 LIFECYCLE_METADATA_VERSION = 1
 ORDER_STEP = 10
+_FACADE_EXPOSURE_NAMES = frozenset({"default", "current", "working"})
+_GENERATED_HELPER_NAMES = frozenset(
+    {"begin", "validate", "commit_only", "commit", "rollback"}
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -37,6 +41,7 @@ def harvest_lifecycle_definition(cls: type[object]) -> HarvestedLifecycle:
     _reject_reserved_class_body_names(cls)
     annotations = dict(cls.__dict__.get("__annotations__", {}))
     class_fact = _class_fact(cls)
+    _reject_generated_name_collisions(cls, annotations, class_fact)
     class_id = str(class_fact["class_id"])
     class_name = str(class_fact["class_name"])
 
@@ -386,6 +391,42 @@ def _reject_reserved_class_body_names(cls: type[object]) -> None:
         ):
             raise LifecycleDefinitionError(
                 f"{cls.__name__}.{name}: reserved lifecycle name",
+            )
+
+
+def _reject_generated_name_collisions(
+    cls: type[object],
+    annotations: Mapping[str, object],
+    class_fact: Mapping[str, object],
+) -> None:
+    for name in annotations:
+        if name in _FACADE_EXPOSURE_NAMES:
+            raise LifecycleDefinitionError(
+                f"{cls.__name__}.{name}: field name collides with generated "
+                "facade exposure",
+            )
+        if name in _GENERATED_HELPER_NAMES:
+            raise LifecycleDefinitionError(
+                f"{cls.__name__}.{name}: name collides with generated "
+                "lifecycle helper",
+            )
+    for name in cls.__dict__:
+        if name in _GENERATED_HELPER_NAMES:
+            raise LifecycleDefinitionError(
+                f"{cls.__name__}.{name}: name collides with generated "
+                "lifecycle helper",
+            )
+    generated_class_names = {
+        str(class_fact["state_class_name"]),
+        str(class_fact["facade_base_class_name"]),
+        str(class_fact["current_facade_class_name"]),
+        str(class_fact["working_facade_class_name"]),
+    }
+    for name in cls.__dict__:
+        if name in generated_class_names:
+            raise LifecycleDefinitionError(
+                f"{cls.__name__}.{name}: name collides with generated "
+                "lifecycle class",
             )
 
 

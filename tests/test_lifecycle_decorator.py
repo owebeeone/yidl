@@ -232,6 +232,40 @@ def test_lifecycle_decorator_merges_generated_base_facts() -> None:
     assert child.v3 == 5
 
 
+def test_lifecycle_decorator_rejects_facade_exposure_field_collision() -> None:
+    class Counter:
+        default: int = field(default=1)
+
+    with pytest.raises(
+        LifecycleDefinitionError,
+        match="Counter.default: field name collides with generated facade exposure",
+    ):
+        lifecycle(Counter)
+
+
+def test_lifecycle_decorator_rejects_generated_helper_collision() -> None:
+    class Counter:
+        begin: int = managed(default=1)
+
+    with pytest.raises(
+        LifecycleDefinitionError,
+        match="Counter.begin: name collides with generated lifecycle helper",
+    ):
+        lifecycle(Counter)
+
+
+def test_lifecycle_decorator_rejects_generated_facade_class_collision() -> None:
+    class Counter:
+        Counter_State = object()
+        value: int = field(default=1)
+
+    with pytest.raises(
+        LifecycleDefinitionError,
+        match="Counter.Counter_State: name collides with generated lifecycle class",
+    ):
+        lifecycle(Counter)
+
+
 @pytest.mark.skipif(
     os.environ.get("YIDL_PERF_TESTS") != "1",
     reason="set YIDL_PERF_TESTS=1 to run constructor throughput comparison",
