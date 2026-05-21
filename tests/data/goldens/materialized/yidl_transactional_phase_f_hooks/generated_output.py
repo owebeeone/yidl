@@ -5,10 +5,10 @@ from yidl.runtime.transaction_yidl import DEFAULT_TRANSACTION
 from yidl.runtime.transaction_yidl import TransactionManager
 VOID = object()
 
-def build_lifecycle_class(decorated_cls, *, _Counter_lifecycle_definition, _Counter_annotations, _Counter_tx_groups, _Counter_rank_default, _Counter_count_default, _Counter_audit_count_default):
+def build_lifecycle_class(decorated_cls, *, _Counter_lifecycle_definition, _Counter_annotations, _Counter_tx_groups, _Counter_rank_default, _Counter_count_default, _Counter_items_default, _Counter_items_freeze, _Counter_items_thaw, _Counter_optional_items_default, _Counter_optional_items_freeze, _Counter_optional_items_thaw, _Counter_audit_count_default):
 
     class Counter_State:
-        __slots__ = ('_y_transaction_manager', '_y_default_ref', '_y_current_ref', '_y_working_ref', '_y_rank_value', '_y_count_current', '_y_count_working', '_y_count_staged', '_y_audit_count_current', '_y_audit_count_working', '_y_audit_count_staged', '_y_working_tx_ids')
+        __slots__ = ('_y_transaction_manager', '_y_default_ref', '_y_current_ref', '_y_working_ref', '_y_rank_value', '_y_count_current', '_y_count_working', '_y_count_staged', '_y_items_current', '_y_items_working', '_y_items_staged', '_y_optional_items_current', '_y_optional_items_working', '_y_optional_items_staged', '_y_audit_count_current', '_y_audit_count_working', '_y_audit_count_staged', '_y_working_tx_ids')
         __yidl_tx_index_to_group__ = _Counter_tx_groups
         __yidl_tx_group_to_index__ = {group: index for index, group in enumerate(_Counter_tx_groups)}
 
@@ -184,10 +184,22 @@ def build_lifecycle_class(decorated_cls, *, _Counter_lifecycle_definition, _Coun
                 self._y_count_current = self._y_count_staged
                 self._y_count_staged = VOID
                 self._y_count_working = VOID
+            if self._y_items_staged is not VOID:
+                self._y_items_current = self._y_items_staged
+                self._y_items_staged = VOID
+                self._y_items_working = VOID
+            if self._y_optional_items_staged is not VOID:
+                self._y_optional_items_current = self._y_optional_items_staged
+                self._y_optional_items_staged = VOID
+                self._y_optional_items_working = VOID
 
         def _prepare_commit_tx_0_fields(self):
             if self._y_count_working is not VOID:
                 self._y_count_staged = self._y_count_working
+            if self._y_items_working is not VOID:
+                self._y_items_staged = _Counter_items_freeze(self._y_items_working)
+            if self._y_optional_items_working is not VOID:
+                self._y_optional_items_staged = None if self._y_optional_items_working is None else _Counter_optional_items_freeze(self._y_optional_items_working)
 
         def _commit_order_key_tx_1(self):
             return ()
@@ -220,6 +232,10 @@ def build_lifecycle_class(decorated_cls, *, _Counter_lifecycle_definition, _Coun
         def _rollback_tx_0_fields(self):
             self._y_count_staged = VOID
             self._y_count_working = VOID
+            self._y_items_staged = VOID
+            self._y_items_working = VOID
+            self._y_optional_items_staged = VOID
+            self._y_optional_items_working = VOID
 
         def _after_rollback_tx_1(self):
             self._y_get_default_facade()._after_audit_rollback()
@@ -230,7 +246,7 @@ def build_lifecycle_class(decorated_cls, *, _Counter_lifecycle_definition, _Coun
 
     class Counter_FacadeBase(decorated_cls):
         __slots__ = ('_y_state',)
-        _y_lifecycle_field_names = frozenset(('rank', 'count', 'audit_count'))
+        _y_lifecycle_field_names = frozenset(('rank', 'count', 'items', 'optional_items', 'audit_count'))
 
         def __setattr__(self, name, value):
             if name in self._y_lifecycle_field_names:
@@ -308,6 +324,32 @@ def build_lifecycle_class(decorated_cls, *, _Counter_lifecycle_definition, _Coun
             state._y_count_working = value
 
         @property
+        def items(self):
+            state = self._y_state
+            if state._y_items_working is not VOID:
+                return state._y_items_working
+            return state._y_items_current
+
+        @items.setter
+        def items(self, value):
+            state = self._y_state
+            state._y_ensure_working_transaction(0)
+            state._y_items_working = value
+
+        @property
+        def optional_items(self):
+            state = self._y_state
+            if state._y_optional_items_working is not VOID:
+                return state._y_optional_items_working
+            return state._y_optional_items_current
+
+        @optional_items.setter
+        def optional_items(self, value):
+            state = self._y_state
+            state._y_ensure_working_transaction(0)
+            state._y_optional_items_working = value
+
+        @property
         def audit_count(self):
             state = self._y_state
             if state._y_audit_count_working is not VOID:
@@ -320,7 +362,7 @@ def build_lifecycle_class(decorated_cls, *, _Counter_lifecycle_definition, _Coun
             state._y_ensure_working_transaction(1)
             state._y_audit_count_working = value
 
-        def __init__(self, rank: 'int'=_Counter_rank_default, count: 'int'=_Counter_count_default, audit_count: 'int'=_Counter_audit_count_default, *, transaction_manager=None):
+        def __init__(self, rank: 'int'=_Counter_rank_default, count: 'int'=_Counter_count_default, items: 'tuple[int, ...]'=_Counter_items_default, optional_items: 'tuple[int, ...] | None'=_Counter_optional_items_default, audit_count: 'int'=_Counter_audit_count_default, *, transaction_manager=None):
             state = object.__new__(Counter_State)
             object.__setattr__(self, '_y_state', state)
             object.__setattr__(self, '_y_current_facade', None)
@@ -333,6 +375,12 @@ def build_lifecycle_class(decorated_cls, *, _Counter_lifecycle_definition, _Coun
             state._y_count_current = count
             state._y_count_working = VOID
             state._y_count_staged = VOID
+            state._y_items_current = items
+            state._y_items_working = VOID
+            state._y_items_staged = VOID
+            state._y_optional_items_current = optional_items
+            state._y_optional_items_working = VOID
+            state._y_optional_items_staged = VOID
             state._y_audit_count_current = audit_count
             state._y_audit_count_working = VOID
             state._y_audit_count_staged = VOID
@@ -349,6 +397,24 @@ def build_lifecycle_class(decorated_cls, *, _Counter_lifecycle_definition, _Coun
         def count(self, value):
             del value
             raise AttributeError('current facade is read-only for transactional field ' + 'count')
+
+        @property
+        def items(self):
+            return self._y_state._y_items_current
+
+        @items.setter
+        def items(self, value):
+            del value
+            raise AttributeError('current facade is read-only for transactional field ' + 'items')
+
+        @property
+        def optional_items(self):
+            return self._y_state._y_optional_items_current
+
+        @optional_items.setter
+        def optional_items(self, value):
+            del value
+            raise AttributeError('current facade is read-only for transactional field ' + 'optional_items')
 
         @property
         def audit_count(self):
@@ -374,6 +440,45 @@ def build_lifecycle_class(decorated_cls, *, _Counter_lifecycle_definition, _Coun
             state = self._y_state
             state._y_ensure_working_transaction(0)
             state._y_count_working = value
+
+        @property
+        def items(self):
+            state = self._y_state
+            if state._y_items_working is not VOID:
+                return state._y_items_working
+            tx_group = state.__yidl_tx_index_to_group__[0]
+            if state._y_transaction_manager.active_transaction_for(tx_group) is None:
+                return state._y_items_current
+            state._y_ensure_working_transaction(0)
+            next_value = _Counter_items_thaw(state._y_items_current)
+            state._y_items_working = next_value
+            return next_value
+
+        @items.setter
+        def items(self, value):
+            state = self._y_state
+            state._y_ensure_working_transaction(0)
+            state._y_items_working = value
+
+        @property
+        def optional_items(self):
+            state = self._y_state
+            if state._y_optional_items_working is not VOID:
+                return state._y_optional_items_working
+            tx_group = state.__yidl_tx_index_to_group__[0]
+            if state._y_transaction_manager.active_transaction_for(tx_group) is None:
+                return state._y_optional_items_current
+            state._y_ensure_working_transaction(0)
+            current_value = state._y_optional_items_current
+            next_value = None if current_value is None else _Counter_optional_items_thaw(current_value)
+            state._y_optional_items_working = next_value
+            return next_value
+
+        @optional_items.setter
+        def optional_items(self, value):
+            state = self._y_state
+            state._y_ensure_working_transaction(0)
+            state._y_optional_items_working = value
 
         @property
         def audit_count(self):

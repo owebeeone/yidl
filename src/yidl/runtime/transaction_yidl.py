@@ -84,11 +84,23 @@ class LifecycleTransaction:
 
     def rollback_dirty(self) -> None:
         for context in list(self.dirty_contexts.values()):
-            context._rollback_tx_by_key(self.tx_group, self.tx_id)
+            rollback = getattr(context, "_rollback_tx_by_key", None)
+            if rollback is not None:
+                rollback(self.tx_group, self.tx_id)
+                continue
+            legacy_rollback = getattr(context, "_rollback_transaction", None)
+            if legacy_rollback is not None:
+                legacy_rollback(self.tx_id, self.tx_group)
+                continue
+            raise AttributeError(
+                f"{type(context).__qualname__!r} has no yidl rollback callback",
+            )
 
     def after_rollbacks(self) -> None:
         for context in list(self.dirty_contexts.values()):
-            context._after_rollback_tx_by_key(self.tx_group, self.tx_id)
+            after_rollback = getattr(context, "_after_rollback_tx_by_key", None)
+            if after_rollback is not None:
+                after_rollback(self.tx_group, self.tx_id)
 
     def validate_commit(self) -> None:
         failures: list[BaseException] = []
@@ -105,15 +117,29 @@ class LifecycleTransaction:
 
     def prepare_commits(self) -> None:
         for context in self.commit_order():
-            context._prepare_commit_tx_by_key(self.tx_group, self.tx_id)
+            prepare = getattr(context, "_prepare_commit_tx_by_key", None)
+            if prepare is not None:
+                prepare(self.tx_group, self.tx_id)
 
     def apply_prepared_commits(self) -> None:
         for context in self.commit_order():
-            context._apply_prepared_commit_tx_by_key(self.tx_group, self.tx_id)
+            apply_prepared = getattr(context, "_apply_prepared_commit_tx_by_key", None)
+            if apply_prepared is not None:
+                apply_prepared(self.tx_group, self.tx_id)
+                continue
+            legacy_commit = getattr(context, "_commit_transaction", None)
+            if legacy_commit is not None:
+                legacy_commit(self.tx_id, self.tx_group)
+                continue
+            raise AttributeError(
+                f"{type(context).__qualname__!r} has no yidl commit callback",
+            )
 
     def after_commits(self) -> None:
         for context in self.commit_order():
-            context._after_commit_tx_by_key(self.tx_group, self.tx_id)
+            after_commit = getattr(context, "_after_commit_tx_by_key", None)
+            if after_commit is not None:
+                after_commit(self.tx_group, self.tx_id)
 
     def bind_scope(
         self,

@@ -18,10 +18,24 @@ def build_lifecycle_class(decorated_cls, *, _Counter_lifecycle_definition, _Coun
             if facade is None:
                 facade = object.__new__(Counter)
                 object.__setattr__(facade, '_y_state', self)
+                current_ref = self._y_current_ref
+                working_ref = self._y_working_ref
+                object.__setattr__(facade, '_y_current_facade', None if current_ref is None else current_ref())
+                object.__setattr__(facade, '_y_working_facade', None if working_ref is None else working_ref())
                 self._y_default_ref = weakref.ref(facade)
             return facade
 
         def _y_get_current_facade(self):
+            default_ref = self._y_default_ref
+            default = None if default_ref is None else default_ref()
+            if default is not None:
+                facade = default._y_current_facade
+                if facade is None:
+                    facade = object.__new__(Counter_Current)
+                    object.__setattr__(facade, '_y_state', self)
+                    object.__setattr__(default, '_y_current_facade', facade)
+                    self._y_current_ref = weakref.ref(facade)
+                return facade
             ref = self._y_current_ref
             facade = None if ref is None else ref()
             if facade is None:
@@ -31,6 +45,16 @@ def build_lifecycle_class(decorated_cls, *, _Counter_lifecycle_definition, _Coun
             return facade
 
         def _y_get_working_facade(self):
+            default_ref = self._y_default_ref
+            default = None if default_ref is None else default_ref()
+            if default is not None:
+                facade = default._y_working_facade
+                if facade is None:
+                    facade = object.__new__(Counter_Working)
+                    object.__setattr__(facade, '_y_state', self)
+                    object.__setattr__(default, '_y_working_facade', facade)
+                    self._y_working_ref = weakref.ref(facade)
+                return facade
             ref = self._y_working_ref
             facade = None if ref is None else ref()
             if facade is None:
@@ -59,35 +83,58 @@ def build_lifecycle_class(decorated_cls, *, _Counter_lifecycle_definition, _Coun
             return transaction
 
         def commit_order_key_for(self, tx_group=DEFAULT_TRANSACTION):
+            tx_index = self.__yidl_tx_group_to_index__[tx_group]
             pass
             return ()
 
         def requires_validation_for(self, tx_group=DEFAULT_TRANSACTION):
+            tx_index = self.__yidl_tx_group_to_index__[tx_group]
             pass
             return False
 
         def validate_commit_for(self, tx_group=DEFAULT_TRANSACTION):
+            tx_index = self.__yidl_tx_group_to_index__[tx_group]
             pass
             return True
 
-        def _commit_transaction(self, tx_id, tx_group=DEFAULT_TRANSACTION):
+        def _prepare_commit_tx_by_key(self, tx_group=DEFAULT_TRANSACTION, tx_token=None):
             tx_index = self.__yidl_tx_group_to_index__[tx_group]
-            if self._y_working_tx_ids[tx_index] != tx_id:
-                return self._y_get_default_facade()
+            if self._y_working_tx_ids[tx_index] != tx_token:
+                raise RuntimeError('stale yidl transaction token')
             pass
-            pass
-            self._y_working_tx_ids[tx_index] = None
             pass
             return self._y_get_default_facade()
 
-        def _rollback_transaction(self, tx_id, tx_group=DEFAULT_TRANSACTION):
+        def _apply_prepared_commit_tx_by_key(self, tx_group=DEFAULT_TRANSACTION, tx_token=None):
             tx_index = self.__yidl_tx_group_to_index__[tx_group]
-            if self._y_working_tx_ids[tx_index] != tx_id:
-                return self._y_get_default_facade()
+            if self._y_working_tx_ids[tx_index] != tx_token:
+                raise RuntimeError('stale yidl transaction token')
+            pass
             pass
             self._y_working_tx_ids[tx_index] = None
+            return self._y_get_default_facade()
+
+        def _after_commit_tx_by_key(self, tx_group=DEFAULT_TRANSACTION, tx_token=None):
+            del tx_token
+            tx_index = self.__yidl_tx_group_to_index__[tx_group]
             pass
             return self._y_get_default_facade()
+
+        def _rollback_tx_by_key(self, tx_group=DEFAULT_TRANSACTION, tx_token=None):
+            tx_index = self.__yidl_tx_group_to_index__[tx_group]
+            del tx_token
+            pass
+            pass
+            self._y_working_tx_ids[tx_index] = None
+            return self._y_get_default_facade()
+
+        def _after_rollback_tx_by_key(self, tx_group=DEFAULT_TRANSACTION, tx_token=None):
+            del tx_token
+            tx_index = self.__yidl_tx_group_to_index__[tx_group]
+            pass
+            return self._y_get_default_facade()
+        pass
+        pass
 
     class Counter_FacadeBase(decorated_cls):
         __slots__ = ('_y_state',)
@@ -150,7 +197,7 @@ def build_lifecycle_class(decorated_cls, *, _Counter_lifecycle_definition, _Coun
             self._y_state._y_plain_value = value
 
     class Counter(Counter_FacadeBase):
-        __slots__ = ()
+        __slots__ = ('_y_current_facade', '_y_working_facade')
         __annotations__ = _Counter_annotations
         __yidl_lifecycle_generated__ = True
         __yidl_lifecycle_user_class__ = decorated_cls
@@ -162,6 +209,8 @@ def build_lifecycle_class(decorated_cls, *, _Counter_lifecycle_definition, _Coun
         def __init__(self, plain: 'int'=_Counter_plain_default, seed: 'int'=_Counter_seed_default, *, transaction_manager=None):
             state = object.__new__(Counter_State)
             object.__setattr__(self, '_y_state', state)
+            object.__setattr__(self, '_y_current_facade', None)
+            object.__setattr__(self, '_y_working_facade', None)
             state._y_transaction_manager = transaction_manager or TransactionManager(tx_groups=tuple((group for group in _Counter_tx_groups if group != DEFAULT_TRANSACTION)))
             state._y_default_ref = weakref.ref(self)
             state._y_current_ref = None

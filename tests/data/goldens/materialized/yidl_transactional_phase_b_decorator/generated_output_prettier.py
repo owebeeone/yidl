@@ -29,8 +29,10 @@ def build_lifecycle_class(
             "_y_plain_value",
             "_y_count_current",
             "_y_count_working",
+            "_y_count_staged",
             "_y_audit_count_current",
             "_y_audit_count_working",
+            "_y_audit_count_staged",
             "_y_working_tx_ids",
         )
         __yidl_tx_index_to_group__ = _Counter_tx_groups
@@ -44,10 +46,32 @@ def build_lifecycle_class(
             if facade is None:
                 facade = object.__new__(Counter)
                 object.__setattr__(facade, "_y_state", self)
+                current_ref = self._y_current_ref
+                working_ref = self._y_working_ref
+                object.__setattr__(
+                    facade,
+                    "_y_current_facade",
+                    None if current_ref is None else current_ref(),
+                )
+                object.__setattr__(
+                    facade,
+                    "_y_working_facade",
+                    None if working_ref is None else working_ref(),
+                )
                 self._y_default_ref = weakref.ref(facade)
             return facade
 
         def _y_get_current_facade(self):
+            default_ref = self._y_default_ref
+            default = None if default_ref is None else default_ref()
+            if default is not None:
+                facade = default._y_current_facade
+                if facade is None:
+                    facade = object.__new__(Counter_Current)
+                    object.__setattr__(facade, "_y_state", self)
+                    object.__setattr__(default, "_y_current_facade", facade)
+                    self._y_current_ref = weakref.ref(facade)
+                return facade
             ref = self._y_current_ref
             facade = None if ref is None else ref()
             if facade is None:
@@ -57,6 +81,16 @@ def build_lifecycle_class(
             return facade
 
         def _y_get_working_facade(self):
+            default_ref = self._y_default_ref
+            default = None if default_ref is None else default_ref()
+            if default is not None:
+                facade = default._y_working_facade
+                if facade is None:
+                    facade = object.__new__(Counter_Working)
+                    object.__setattr__(facade, "_y_state", self)
+                    object.__setattr__(default, "_y_working_facade", facade)
+                    self._y_working_ref = weakref.ref(facade)
+                return facade
             ref = self._y_working_ref
             facade = None if ref is None else ref()
             if facade is None:
@@ -91,39 +125,151 @@ def build_lifecycle_class(
             return transaction
 
         def commit_order_key_for(self, tx_group=DEFAULT_TRANSACTION):
+            tx_index = self.__yidl_tx_group_to_index__[tx_group]
+            if tx_index == 0:
+                return self._commit_order_key_tx_0()
+            if tx_index == 1:
+                return self._commit_order_key_tx_1()
             return ()
 
         def requires_validation_for(self, tx_group=DEFAULT_TRANSACTION):
+            tx_index = self.__yidl_tx_group_to_index__[tx_group]
+            if tx_index == 0:
+                return self._requires_validation_tx_0()
+            if tx_index == 1:
+                return self._requires_validation_tx_1()
             return False
 
         def validate_commit_for(self, tx_group=DEFAULT_TRANSACTION):
+            tx_index = self.__yidl_tx_group_to_index__[tx_group]
+            if tx_index == 0:
+                return self._validate_commit_tx_0()
+            if tx_index == 1:
+                return self._validate_commit_tx_1()
             return True
 
-        def _commit_transaction(self, tx_id, tx_group=DEFAULT_TRANSACTION):
+        def _prepare_commit_tx_by_key(
+            self, tx_group=DEFAULT_TRANSACTION, tx_token=None
+        ):
             tx_index = self.__yidl_tx_group_to_index__[tx_group]
-            if self._y_working_tx_ids[tx_index] != tx_id:
-                return self._y_get_default_facade()
+            if self._y_working_tx_ids[tx_index] != tx_token:
+                raise RuntimeError("stale yidl transaction token")
             if tx_index == 0:
-                if self._y_count_working is not VOID:
-                    self._y_count_current = self._y_count_working
-                    self._y_count_working = VOID
+                self._before_commit_tx_0()
             if tx_index == 1:
-                if self._y_audit_count_working is not VOID:
-                    self._y_audit_count_current = self._y_audit_count_working
-                    self._y_audit_count_working = VOID
+                self._before_commit_tx_1()
+            if tx_index == 0:
+                self._prepare_commit_tx_0_fields()
+            if tx_index == 1:
+                self._prepare_commit_tx_1_fields()
+            return self._y_get_default_facade()
+
+        def _apply_prepared_commit_tx_by_key(
+            self, tx_group=DEFAULT_TRANSACTION, tx_token=None
+        ):
+            tx_index = self.__yidl_tx_group_to_index__[tx_group]
+            if self._y_working_tx_ids[tx_index] != tx_token:
+                raise RuntimeError("stale yidl transaction token")
+            if tx_index == 0:
+                self._apply_prepared_commit_tx_0_fields()
+            if tx_index == 1:
+                self._apply_prepared_commit_tx_1_fields()
             self._y_working_tx_ids[tx_index] = None
             return self._y_get_default_facade()
 
-        def _rollback_transaction(self, tx_id, tx_group=DEFAULT_TRANSACTION):
+        def _after_commit_tx_by_key(self, tx_group=DEFAULT_TRANSACTION, tx_token=None):
+            del tx_token
             tx_index = self.__yidl_tx_group_to_index__[tx_group]
-            if self._y_working_tx_ids[tx_index] != tx_id:
-                return self._y_get_default_facade()
             if tx_index == 0:
-                self._y_count_working = VOID
+                self._after_commit_tx_0()
             if tx_index == 1:
-                self._y_audit_count_working = VOID
+                self._after_commit_tx_1()
+            return self._y_get_default_facade()
+
+        def _rollback_tx_by_key(self, tx_group=DEFAULT_TRANSACTION, tx_token=None):
+            tx_index = self.__yidl_tx_group_to_index__[tx_group]
+            del tx_token
+            if tx_index == 0:
+                self._rollback_tx_0_fields()
+            if tx_index == 1:
+                self._rollback_tx_1_fields()
             self._y_working_tx_ids[tx_index] = None
             return self._y_get_default_facade()
+
+        def _after_rollback_tx_by_key(
+            self, tx_group=DEFAULT_TRANSACTION, tx_token=None
+        ):
+            del tx_token
+            tx_index = self.__yidl_tx_group_to_index__[tx_group]
+            if tx_index == 0:
+                self._after_rollback_tx_0()
+            if tx_index == 1:
+                self._after_rollback_tx_1()
+            return self._y_get_default_facade()
+
+        def _commit_order_key_tx_0(self):
+            return ()
+
+        def _requires_validation_tx_0(self):
+            return False
+
+        def _validate_commit_tx_0(self):
+            return True
+
+        def _before_commit_tx_0(self):
+            pass
+
+        def _after_commit_tx_0(self):
+            pass
+
+        def _apply_prepared_commit_tx_0_fields(self):
+            if self._y_count_staged is not VOID:
+                self._y_count_current = self._y_count_staged
+                self._y_count_staged = VOID
+                self._y_count_working = VOID
+
+        def _prepare_commit_tx_0_fields(self):
+            if self._y_count_working is not VOID:
+                self._y_count_staged = self._y_count_working
+
+        def _commit_order_key_tx_1(self):
+            return ()
+
+        def _requires_validation_tx_1(self):
+            return False
+
+        def _validate_commit_tx_1(self):
+            return True
+
+        def _before_commit_tx_1(self):
+            pass
+
+        def _after_commit_tx_1(self):
+            pass
+
+        def _apply_prepared_commit_tx_1_fields(self):
+            if self._y_audit_count_staged is not VOID:
+                self._y_audit_count_current = self._y_audit_count_staged
+                self._y_audit_count_staged = VOID
+                self._y_audit_count_working = VOID
+
+        def _prepare_commit_tx_1_fields(self):
+            if self._y_audit_count_working is not VOID:
+                self._y_audit_count_staged = self._y_audit_count_working
+
+        def _after_rollback_tx_0(self):
+            pass
+
+        def _rollback_tx_0_fields(self):
+            self._y_count_staged = VOID
+            self._y_count_working = VOID
+
+        def _after_rollback_tx_1(self):
+            pass
+
+        def _rollback_tx_1_fields(self):
+            self._y_audit_count_staged = VOID
+            self._y_audit_count_working = VOID
 
     class Counter_FacadeBase(decorated_cls):
         __slots__ = ("_y_state",)
@@ -189,7 +335,7 @@ def build_lifecycle_class(
             self._y_state._y_plain_value = value
 
     class Counter(Counter_FacadeBase):
-        __slots__ = ()
+        __slots__ = ("_y_current_facade", "_y_working_facade")
         __annotations__ = _Counter_annotations
         __yidl_lifecycle_generated__ = True
         __yidl_lifecycle_user_class__ = decorated_cls
@@ -236,6 +382,8 @@ def build_lifecycle_class(
         ):
             state = object.__new__(Counter_State)
             object.__setattr__(self, "_y_state", state)
+            object.__setattr__(self, "_y_current_facade", None)
+            object.__setattr__(self, "_y_working_facade", None)
             state._y_transaction_manager = transaction_manager or TransactionManager(
                 tx_groups=tuple(
                     (
@@ -251,8 +399,10 @@ def build_lifecycle_class(
             state._y_plain_value = plain
             state._y_count_current = count
             state._y_count_working = VOID
+            state._y_count_staged = VOID
             state._y_audit_count_current = audit_count
             state._y_audit_count_working = VOID
+            state._y_audit_count_staged = VOID
             state._y_working_tx_ids = [None for _group in _Counter_tx_groups]
 
     class Counter_Current(Counter_FacadeBase):

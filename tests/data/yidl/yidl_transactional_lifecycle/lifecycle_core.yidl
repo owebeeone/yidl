@@ -755,6 +755,26 @@ concept LifecycleCore {
         }
     }
 
+    contribution CommitTransactionHelpersPass = PassStatement {
+        as CommitTransactionHelpersPass
+        index 0
+        order 0
+
+        target commit_transaction_helpers {
+            build /ClassDef
+        }
+    }
+
+    contribution RollbackTransactionHelpersPass = PassStatement {
+        as RollbackTransactionHelpersPass
+        index 0
+        order 0
+
+        target rollback_transaction_helpers {
+            build /ClassDef
+        }
+    }
+
     contribution PrepareCommitTransactionDispatchBodyPass = PassStatement {
         as PrepareCommitTransactionDispatchBodyPass
         index 0
@@ -1142,6 +1162,14 @@ concept LifecycleCore {
         default -> CommitTransactionDispatchBodyPass
     }
 
+    matcher CommitTransactionHelpersPassContributions(lifecycle_class: Classes) -> contribution {
+        default -> CommitTransactionHelpersPass
+    }
+
+    matcher RollbackTransactionHelpersPassContributions(lifecycle_class: Classes) -> contribution {
+        default -> RollbackTransactionHelpersPass
+    }
+
     matcher PrepareCommitTransactionDispatchBodyPassContributions(lifecycle_class: Classes) -> contribution {
         default -> PrepareCommitTransactionDispatchBodyPass
     }
@@ -1345,6 +1373,12 @@ concept LifecycleCore {
 
         apply commit_transaction_dispatch_body_pass
             using CommitTransactionDispatchBodyPassContributions
+
+        apply commit_transaction_helpers_pass
+            using CommitTransactionHelpersPassContributions
+
+        apply rollback_transaction_helpers_pass
+            using RollbackTransactionHelpersPassContributions
 
         apply prepare_commit_transaction_dispatch_body_pass
             using PrepareCommitTransactionDispatchBodyPassContributions

@@ -53,9 +53,25 @@ def validate_case(sources: Mapping[str, str]) -> None:
 
 
 def _fixture_class(events: list[tuple[str, str, int]]) -> type[object]:
+    def thaw_items(value: tuple[int, ...]) -> list[int]:
+        return list(value)
+
+    def freeze_items(value: list[int]) -> tuple[int, ...]:
+        return tuple(value)
+
     class Counter:
         rank: int = field(default=5)
         count: int = managed(default=1)
+        items: tuple[int, ...] = managed(
+            default=(1, 2),
+            thaw=thaw_items,
+            freeze=freeze_items,
+        )
+        optional_items: tuple[int, ...] | None = managed(
+            default=None,
+            thaw=thaw_items,
+            freeze=freeze_items,
+        )
         audit_count: int = managed("audit", default=10)
 
         @commit_order_key(DEFAULT_TRANSACTION)
@@ -118,8 +134,11 @@ def _assert_counter_class(
 
     with item.begin(DEFAULT_TRANSACTION):
         item.count = 2
+        item.working.items[1] = 9
 
     assert item.count == 2
+    assert item.items == (1, 9)
+    assert item.optional_items is None
     assert events == [
         ("before", "default", 2),
         ("after", "default", 2),
@@ -203,6 +222,16 @@ def _assert_source_shape(sources: Mapping[str, str]) -> None:
         assert "def _apply_prepared_commit_tx_1_fields(self):" in generated
         assert "def _rollback_tx_0_fields(self):" in generated
         assert "def _rollback_tx_1_fields(self):" in generated
+        assert "_Counter_items_freeze" in generated
+        assert "_Counter_items_thaw" in generated
+        assert "_y_items_staged" in generated
+        assert "self._y_items_staged = _Counter_items_freeze(" in generated
+        assert "next_value = _Counter_items_thaw(" in generated
+        assert "_y_optional_items_staged" in generated
+        assert "if self._y_optional_items_working is None" in generated
+        assert "_Counter_optional_items_freeze" in generated
+        assert "_Counter_optional_items_thaw" in generated
+        assert "if current_value is None" in generated
         assert "def _commit_transaction(" not in generated
         assert "def _rollback_transaction(" not in generated
         assert "getattr(\n            self._y_get_default_facade()" not in generated

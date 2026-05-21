@@ -118,6 +118,26 @@ _CurrentSlotNameProperty = RuntimeProperty(
 _WorkingSlotNameProperty = RuntimeProperty(
     "WorkingSlotName", str, default="", storage_name="working_slot_name"
 )
+_StagedSlotNameProperty = RuntimeProperty(
+    "StagedSlotName", str, default="", storage_name="staged_slot_name"
+)
+_HasFreezeProperty = RuntimeProperty(
+    "HasFreeze", bool, default=False, storage_name="has_freeze"
+)
+_FreezeProperty = RuntimeProperty("Freeze", object, default=None, storage_name="freeze")
+_FreezeParamNameProperty = RuntimeProperty(
+    "FreezeParamName", str, default="", storage_name="freeze_param_name"
+)
+_HasThawProperty = RuntimeProperty(
+    "HasThaw", bool, default=False, storage_name="has_thaw"
+)
+_ThawProperty = RuntimeProperty("Thaw", object, default=None, storage_name="thaw")
+_ThawParamNameProperty = RuntimeProperty(
+    "ThawParamName", str, default="", storage_name="thaw_param_name"
+)
+_HasOptionalNoneProperty = RuntimeProperty(
+    "HasOptionalNone", bool, default=False, storage_name="has_optional_none"
+)
 _MethodIdProperty = RuntimeProperty(
     "MethodId", str, default=REQUIRED, storage_name="method_id"
 )
@@ -133,6 +153,7 @@ _MethodKindProperty = RuntimeProperty(
 _DeclarationOrderProperty = RuntimeProperty(
     "DeclarationOrder", int, default=0, storage_name="declaration_order"
 )
+_TxIndexProperty = RuntimeProperty("TxIndex", int, default=0, storage_name="tx_index")
 _FacadeIdProperty = RuntimeProperty(
     "FacadeId", str, default=REQUIRED, storage_name="facade_id"
 )
@@ -245,6 +266,7 @@ _TransactionMethodSpec = RuntimeRecord(
         _MethodNameProperty,
         _MethodKindProperty,
         _TxGroupKeyProperty,
+        _TxIndexProperty,
         _DeclarationOrderProperty,
     ),
 )
@@ -320,6 +342,14 @@ _PlainFieldSpec = RuntimeRecord(
         _ValueSlotNameProperty,
         _CurrentSlotNameProperty,
         _WorkingSlotNameProperty,
+        _StagedSlotNameProperty,
+        _HasFreezeProperty,
+        _FreezeProperty,
+        _FreezeParamNameProperty,
+        _HasThawProperty,
+        _ThawProperty,
+        _ThawParamNameProperty,
+        _HasOptionalNoneProperty,
     ),
 )
 _InitVarFieldSpec = RuntimeRecord(
@@ -343,6 +373,14 @@ _InitVarFieldSpec = RuntimeRecord(
         _ValueSlotNameProperty,
         _CurrentSlotNameProperty,
         _WorkingSlotNameProperty,
+        _StagedSlotNameProperty,
+        _HasFreezeProperty,
+        _FreezeProperty,
+        _FreezeParamNameProperty,
+        _HasThawProperty,
+        _ThawProperty,
+        _ThawParamNameProperty,
+        _HasOptionalNoneProperty,
     ),
 )
 _ClassVarFieldSpec = RuntimeRecord(
@@ -366,6 +404,14 @@ _ClassVarFieldSpec = RuntimeRecord(
         _ValueSlotNameProperty,
         _CurrentSlotNameProperty,
         _WorkingSlotNameProperty,
+        _StagedSlotNameProperty,
+        _HasFreezeProperty,
+        _FreezeProperty,
+        _FreezeParamNameProperty,
+        _HasThawProperty,
+        _ThawProperty,
+        _ThawParamNameProperty,
+        _HasOptionalNoneProperty,
     ),
 )
 _LifecycleFieldSpecUnion = RuntimeUnion(
@@ -527,6 +573,7 @@ class TransactionMethod:
         "method_name",
         "method_kind",
         "tx_group_key",
+        "tx_index",
         "declaration_order",
     )
     __dds_record_spec__ = _TransactionMethodSpec
@@ -535,6 +582,7 @@ class TransactionMethod:
     method_name: str
     method_kind: str
     tx_group_key: object
+    tx_index: int
     declaration_order: int
 
     def __init__(
@@ -545,6 +593,7 @@ class TransactionMethod:
         method_name: str,
         method_kind: str,
         tx_group_key: object = None,
+        tx_index: int = 0,
         declaration_order: int = 0
     ):
         if not isinstance(method_id, str):
@@ -562,6 +611,9 @@ class TransactionMethod:
             raise TypeError("MethodKind must be str, got " + type(method_kind).__name__)
         object.__setattr__(self, "method_kind", method_kind)
         object.__setattr__(self, "tx_group_key", tx_group_key)
+        if not isinstance(tx_index, int):
+            raise TypeError("TxIndex must be int, got " + type(tx_index).__name__)
+        object.__setattr__(self, "tx_index", tx_index)
         if not isinstance(declaration_order, int):
             raise TypeError(
                 "DeclarationOrder must be int, got " + type(declaration_order).__name__
@@ -575,6 +627,7 @@ class TransactionMethod:
             "method_name",
             "method_kind",
             "tx_group_key",
+            "tx_index",
             "declaration_order",
         ):
             raise AttributeError("TransactionMethod records are immutable")
@@ -587,6 +640,7 @@ class TransactionMethod:
         pieces.append("method_name=" + repr(self.method_name))
         pieces.append("method_kind=" + repr(self.method_kind))
         pieces.append("tx_group_key=" + repr(self.tx_group_key))
+        pieces.append("tx_index=" + repr(self.tx_index))
         pieces.append("declaration_order=" + repr(self.declaration_order))
         return "TransactionMethod" + "(" + ", ".join(pieces) + ")"
 
@@ -1013,6 +1067,14 @@ class PlainField:
         "value_slot_name",
         "current_slot_name",
         "working_slot_name",
+        "staged_slot_name",
+        "has_freeze",
+        "freeze",
+        "freeze_param_name",
+        "has_thaw",
+        "thaw",
+        "thaw_param_name",
+        "has_optional_none",
     )
     __dds_record_spec__ = _PlainFieldSpec
     field_id: str
@@ -1033,6 +1095,14 @@ class PlainField:
     value_slot_name: str
     current_slot_name: str
     working_slot_name: str
+    staged_slot_name: str
+    has_freeze: bool
+    freeze: object
+    freeze_param_name: str
+    has_thaw: bool
+    thaw: object
+    thaw_param_name: str
+    has_optional_none: bool
 
     def __init__(
         self,
@@ -1054,7 +1124,15 @@ class PlainField:
         tx_group_key: object = None,
         value_slot_name: str = "",
         current_slot_name: str = "",
-        working_slot_name: str = ""
+        working_slot_name: str = "",
+        staged_slot_name: str = "",
+        has_freeze: bool = False,
+        freeze: object = None,
+        freeze_param_name: str = "",
+        has_thaw: bool = False,
+        thaw: object = None,
+        thaw_param_name: str = "",
+        has_optional_none: bool = False
     ):
         if not isinstance(field_id, str):
             raise TypeError("FieldId must be str, got " + type(field_id).__name__)
@@ -1121,6 +1199,34 @@ class PlainField:
                 "WorkingSlotName must be str, got " + type(working_slot_name).__name__
             )
         object.__setattr__(self, "working_slot_name", working_slot_name)
+        if not isinstance(staged_slot_name, str):
+            raise TypeError(
+                "StagedSlotName must be str, got " + type(staged_slot_name).__name__
+            )
+        object.__setattr__(self, "staged_slot_name", staged_slot_name)
+        if not isinstance(has_freeze, bool):
+            raise TypeError("HasFreeze must be bool, got " + type(has_freeze).__name__)
+        object.__setattr__(self, "has_freeze", has_freeze)
+        object.__setattr__(self, "freeze", freeze)
+        if not isinstance(freeze_param_name, str):
+            raise TypeError(
+                "FreezeParamName must be str, got " + type(freeze_param_name).__name__
+            )
+        object.__setattr__(self, "freeze_param_name", freeze_param_name)
+        if not isinstance(has_thaw, bool):
+            raise TypeError("HasThaw must be bool, got " + type(has_thaw).__name__)
+        object.__setattr__(self, "has_thaw", has_thaw)
+        object.__setattr__(self, "thaw", thaw)
+        if not isinstance(thaw_param_name, str):
+            raise TypeError(
+                "ThawParamName must be str, got " + type(thaw_param_name).__name__
+            )
+        object.__setattr__(self, "thaw_param_name", thaw_param_name)
+        if not isinstance(has_optional_none, bool):
+            raise TypeError(
+                "HasOptionalNone must be bool, got " + type(has_optional_none).__name__
+            )
+        object.__setattr__(self, "has_optional_none", has_optional_none)
 
     def __setattr__(self, name, value):
         if name in (
@@ -1142,6 +1248,14 @@ class PlainField:
             "value_slot_name",
             "current_slot_name",
             "working_slot_name",
+            "staged_slot_name",
+            "has_freeze",
+            "freeze",
+            "freeze_param_name",
+            "has_thaw",
+            "thaw",
+            "thaw_param_name",
+            "has_optional_none",
         ):
             raise AttributeError("PlainField records are immutable")
         object.__setattr__(self, name, value)
@@ -1170,6 +1284,14 @@ class PlainField:
         pieces.append("value_slot_name=" + repr(self.value_slot_name))
         pieces.append("current_slot_name=" + repr(self.current_slot_name))
         pieces.append("working_slot_name=" + repr(self.working_slot_name))
+        pieces.append("staged_slot_name=" + repr(self.staged_slot_name))
+        pieces.append("has_freeze=" + repr(self.has_freeze))
+        pieces.append("freeze=" + repr(self.freeze))
+        pieces.append("freeze_param_name=" + repr(self.freeze_param_name))
+        pieces.append("has_thaw=" + repr(self.has_thaw))
+        pieces.append("thaw=" + repr(self.thaw))
+        pieces.append("thaw_param_name=" + repr(self.thaw_param_name))
+        pieces.append("has_optional_none=" + repr(self.has_optional_none))
         return "PlainField" + "(" + ", ".join(pieces) + ")"
 
 
@@ -1196,6 +1318,14 @@ class InitVarField:
         "value_slot_name",
         "current_slot_name",
         "working_slot_name",
+        "staged_slot_name",
+        "has_freeze",
+        "freeze",
+        "freeze_param_name",
+        "has_thaw",
+        "thaw",
+        "thaw_param_name",
+        "has_optional_none",
     )
     __dds_record_spec__ = _InitVarFieldSpec
     field_id: str
@@ -1216,6 +1346,14 @@ class InitVarField:
     value_slot_name: str
     current_slot_name: str
     working_slot_name: str
+    staged_slot_name: str
+    has_freeze: bool
+    freeze: object
+    freeze_param_name: str
+    has_thaw: bool
+    thaw: object
+    thaw_param_name: str
+    has_optional_none: bool
 
     def __init__(
         self,
@@ -1237,7 +1375,15 @@ class InitVarField:
         tx_group_key: object = None,
         value_slot_name: str = "",
         current_slot_name: str = "",
-        working_slot_name: str = ""
+        working_slot_name: str = "",
+        staged_slot_name: str = "",
+        has_freeze: bool = False,
+        freeze: object = None,
+        freeze_param_name: str = "",
+        has_thaw: bool = False,
+        thaw: object = None,
+        thaw_param_name: str = "",
+        has_optional_none: bool = False
     ):
         if not isinstance(field_id, str):
             raise TypeError("FieldId must be str, got " + type(field_id).__name__)
@@ -1304,6 +1450,34 @@ class InitVarField:
                 "WorkingSlotName must be str, got " + type(working_slot_name).__name__
             )
         object.__setattr__(self, "working_slot_name", working_slot_name)
+        if not isinstance(staged_slot_name, str):
+            raise TypeError(
+                "StagedSlotName must be str, got " + type(staged_slot_name).__name__
+            )
+        object.__setattr__(self, "staged_slot_name", staged_slot_name)
+        if not isinstance(has_freeze, bool):
+            raise TypeError("HasFreeze must be bool, got " + type(has_freeze).__name__)
+        object.__setattr__(self, "has_freeze", has_freeze)
+        object.__setattr__(self, "freeze", freeze)
+        if not isinstance(freeze_param_name, str):
+            raise TypeError(
+                "FreezeParamName must be str, got " + type(freeze_param_name).__name__
+            )
+        object.__setattr__(self, "freeze_param_name", freeze_param_name)
+        if not isinstance(has_thaw, bool):
+            raise TypeError("HasThaw must be bool, got " + type(has_thaw).__name__)
+        object.__setattr__(self, "has_thaw", has_thaw)
+        object.__setattr__(self, "thaw", thaw)
+        if not isinstance(thaw_param_name, str):
+            raise TypeError(
+                "ThawParamName must be str, got " + type(thaw_param_name).__name__
+            )
+        object.__setattr__(self, "thaw_param_name", thaw_param_name)
+        if not isinstance(has_optional_none, bool):
+            raise TypeError(
+                "HasOptionalNone must be bool, got " + type(has_optional_none).__name__
+            )
+        object.__setattr__(self, "has_optional_none", has_optional_none)
 
     def __setattr__(self, name, value):
         if name in (
@@ -1325,6 +1499,14 @@ class InitVarField:
             "value_slot_name",
             "current_slot_name",
             "working_slot_name",
+            "staged_slot_name",
+            "has_freeze",
+            "freeze",
+            "freeze_param_name",
+            "has_thaw",
+            "thaw",
+            "thaw_param_name",
+            "has_optional_none",
         ):
             raise AttributeError("InitVarField records are immutable")
         object.__setattr__(self, name, value)
@@ -1353,6 +1535,14 @@ class InitVarField:
         pieces.append("value_slot_name=" + repr(self.value_slot_name))
         pieces.append("current_slot_name=" + repr(self.current_slot_name))
         pieces.append("working_slot_name=" + repr(self.working_slot_name))
+        pieces.append("staged_slot_name=" + repr(self.staged_slot_name))
+        pieces.append("has_freeze=" + repr(self.has_freeze))
+        pieces.append("freeze=" + repr(self.freeze))
+        pieces.append("freeze_param_name=" + repr(self.freeze_param_name))
+        pieces.append("has_thaw=" + repr(self.has_thaw))
+        pieces.append("thaw=" + repr(self.thaw))
+        pieces.append("thaw_param_name=" + repr(self.thaw_param_name))
+        pieces.append("has_optional_none=" + repr(self.has_optional_none))
         return "InitVarField" + "(" + ", ".join(pieces) + ")"
 
 
@@ -1379,6 +1569,14 @@ class ClassVarField:
         "value_slot_name",
         "current_slot_name",
         "working_slot_name",
+        "staged_slot_name",
+        "has_freeze",
+        "freeze",
+        "freeze_param_name",
+        "has_thaw",
+        "thaw",
+        "thaw_param_name",
+        "has_optional_none",
     )
     __dds_record_spec__ = _ClassVarFieldSpec
     field_id: str
@@ -1399,6 +1597,14 @@ class ClassVarField:
     value_slot_name: str
     current_slot_name: str
     working_slot_name: str
+    staged_slot_name: str
+    has_freeze: bool
+    freeze: object
+    freeze_param_name: str
+    has_thaw: bool
+    thaw: object
+    thaw_param_name: str
+    has_optional_none: bool
 
     def __init__(
         self,
@@ -1420,7 +1626,15 @@ class ClassVarField:
         tx_group_key: object = None,
         value_slot_name: str = "",
         current_slot_name: str = "",
-        working_slot_name: str = ""
+        working_slot_name: str = "",
+        staged_slot_name: str = "",
+        has_freeze: bool = False,
+        freeze: object = None,
+        freeze_param_name: str = "",
+        has_thaw: bool = False,
+        thaw: object = None,
+        thaw_param_name: str = "",
+        has_optional_none: bool = False
     ):
         if not isinstance(field_id, str):
             raise TypeError("FieldId must be str, got " + type(field_id).__name__)
@@ -1487,6 +1701,34 @@ class ClassVarField:
                 "WorkingSlotName must be str, got " + type(working_slot_name).__name__
             )
         object.__setattr__(self, "working_slot_name", working_slot_name)
+        if not isinstance(staged_slot_name, str):
+            raise TypeError(
+                "StagedSlotName must be str, got " + type(staged_slot_name).__name__
+            )
+        object.__setattr__(self, "staged_slot_name", staged_slot_name)
+        if not isinstance(has_freeze, bool):
+            raise TypeError("HasFreeze must be bool, got " + type(has_freeze).__name__)
+        object.__setattr__(self, "has_freeze", has_freeze)
+        object.__setattr__(self, "freeze", freeze)
+        if not isinstance(freeze_param_name, str):
+            raise TypeError(
+                "FreezeParamName must be str, got " + type(freeze_param_name).__name__
+            )
+        object.__setattr__(self, "freeze_param_name", freeze_param_name)
+        if not isinstance(has_thaw, bool):
+            raise TypeError("HasThaw must be bool, got " + type(has_thaw).__name__)
+        object.__setattr__(self, "has_thaw", has_thaw)
+        object.__setattr__(self, "thaw", thaw)
+        if not isinstance(thaw_param_name, str):
+            raise TypeError(
+                "ThawParamName must be str, got " + type(thaw_param_name).__name__
+            )
+        object.__setattr__(self, "thaw_param_name", thaw_param_name)
+        if not isinstance(has_optional_none, bool):
+            raise TypeError(
+                "HasOptionalNone must be bool, got " + type(has_optional_none).__name__
+            )
+        object.__setattr__(self, "has_optional_none", has_optional_none)
 
     def __setattr__(self, name, value):
         if name in (
@@ -1508,6 +1750,14 @@ class ClassVarField:
             "value_slot_name",
             "current_slot_name",
             "working_slot_name",
+            "staged_slot_name",
+            "has_freeze",
+            "freeze",
+            "freeze_param_name",
+            "has_thaw",
+            "thaw",
+            "thaw_param_name",
+            "has_optional_none",
         ):
             raise AttributeError("ClassVarField records are immutable")
         object.__setattr__(self, name, value)
@@ -1536,6 +1786,14 @@ class ClassVarField:
         pieces.append("value_slot_name=" + repr(self.value_slot_name))
         pieces.append("current_slot_name=" + repr(self.current_slot_name))
         pieces.append("working_slot_name=" + repr(self.working_slot_name))
+        pieces.append("staged_slot_name=" + repr(self.staged_slot_name))
+        pieces.append("has_freeze=" + repr(self.has_freeze))
+        pieces.append("freeze=" + repr(self.freeze))
+        pieces.append("freeze_param_name=" + repr(self.freeze_param_name))
+        pieces.append("has_thaw=" + repr(self.has_thaw))
+        pieces.append("thaw=" + repr(self.thaw))
+        pieces.append("thaw_param_name=" + repr(self.thaw_param_name))
+        pieces.append("has_optional_none=" + repr(self.has_optional_none))
         return "ClassVarField" + "(" + ", ".join(pieces) + ")"
 
 
@@ -1781,6 +2039,22 @@ ASSEMBLY_PROPERTIES = {
     "WorkingSlotName": _YidlSimpleNamespace(
         name="WorkingSlotName", storage_name="working_slot_name"
     ),
+    "StagedSlotName": _YidlSimpleNamespace(
+        name="StagedSlotName", storage_name="staged_slot_name"
+    ),
+    "HasFreeze": _YidlSimpleNamespace(name="HasFreeze", storage_name="has_freeze"),
+    "Freeze": _YidlSimpleNamespace(name="Freeze", storage_name="freeze"),
+    "FreezeParamName": _YidlSimpleNamespace(
+        name="FreezeParamName", storage_name="freeze_param_name"
+    ),
+    "HasThaw": _YidlSimpleNamespace(name="HasThaw", storage_name="has_thaw"),
+    "Thaw": _YidlSimpleNamespace(name="Thaw", storage_name="thaw"),
+    "ThawParamName": _YidlSimpleNamespace(
+        name="ThawParamName", storage_name="thaw_param_name"
+    ),
+    "HasOptionalNone": _YidlSimpleNamespace(
+        name="HasOptionalNone", storage_name="has_optional_none"
+    ),
     "MethodId": _YidlSimpleNamespace(name="MethodId", storage_name="method_id"),
     "MethodOwner": _YidlSimpleNamespace(
         name="MethodOwner", storage_name="method_owner"
@@ -1790,6 +2064,7 @@ ASSEMBLY_PROPERTIES = {
     "DeclarationOrder": _YidlSimpleNamespace(
         name="DeclarationOrder", storage_name="declaration_order"
     ),
+    "TxIndex": _YidlSimpleNamespace(name="TxIndex", storage_name="tx_index"),
     "FacadeId": _YidlSimpleNamespace(name="FacadeId", storage_name="facade_id"),
     "FacadeOwner": _YidlSimpleNamespace(
         name="FacadeOwner", storage_name="facade_owner"
@@ -1876,7 +2151,7 @@ def build_lifecycle_class(decorated_cls, builder_params__astichi_param_hole__):
     astichi_hole(function_body)
     astichi_hole(return_statement)""",
         file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-        line_number=192,
+        line_number=205,
     ),
     "BuilderParam": astichi_template(
         from_astichi_code(
@@ -1884,7 +2159,7 @@ def build_lifecycle_class(decorated_cls, builder_params__astichi_param_hole__):
 def astichi_params(*, value_name__astichi_arg__):
     pass""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=210,
+            line_number=223,
         )
     ),
     "TransactionManagerParam": astichi_template(
@@ -1893,14 +2168,14 @@ def astichi_params(*, value_name__astichi_arg__):
 def astichi_params(*, transaction_manager=None):
     pass""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=215,
+            line_number=228,
         )
     ),
     "StateSlotEntry": astichi_template(
         from_astichi_code(
             "astichi_bind_external(slot_name)",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=220,
+            line_number=233,
         )
     ),
     "InitParamRequired": astichi_template(
@@ -1909,7 +2184,7 @@ def astichi_params(*, transaction_manager=None):
 def astichi_params(param_name__astichi_arg__: astichi_bind_external(annotation)):
     pass""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=224,
+            line_number=237,
         )
     ),
     "InitParamDefault": astichi_template(
@@ -1921,7 +2196,7 @@ def astichi_params(
 ):
     pass""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=229,
+            line_number=242,
         )
     ),
     "PlainStateAssignment": astichi_template(
@@ -1932,7 +2207,7 @@ astichi_pass(state, outer_bind=True).astichi_ref(external=state_slot)._ = astich
     outer_bind=True,
 )""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=237,
+            line_number=250,
         )
     ),
     "InitVarLocalDefaultAssignment": astichi_template(
@@ -1943,7 +2218,7 @@ init_value_name__astichi_arg__ = astichi_pass(
     outer_bind=True,
 )""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=244,
+            line_number=257,
         )
     ),
     "PlainProperty": astichi_template(
@@ -1957,7 +2232,7 @@ def property_getter_name__astichi_arg__(self):
 def property_setter_name__astichi_arg__(self, value):
     self._y_state.astichi_ref(external=state_slot)._ = value""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=251,
+            line_number=264,
         )
     ),
     "ClassVarDefaultAssignment": astichi_template(
@@ -1968,34 +2243,34 @@ classvar_name__astichi_arg__ = astichi_pass(
     outer_bind=True,
 )""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=261,
+            line_number=274,
         )
     ),
     "CommitOrderKeyBranch": astichi_template(
         from_astichi_code(
             """\
-if astichi_pass(tx_group, outer_bind=True) == astichi_bind_external(tx_group_key):
+if astichi_pass(tx_index, outer_bind=True) == astichi_bind_external(tx_index_value):
     return astichi_pass(
         self,
         outer_bind=True,
     )._y_get_default_facade().astichi_ref(external=method_name)()""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=268,
+            line_number=281,
         )
     ),
     "RequiresValidationBranch": astichi_template(
         from_astichi_code(
             """\
-if astichi_pass(tx_group, outer_bind=True) == astichi_bind_external(tx_group_key):
+if astichi_pass(tx_index, outer_bind=True) == astichi_bind_external(tx_index_value):
     return True""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=276,
+            line_number=289,
         )
     ),
     "ValidateCommitBranch": astichi_template(
         from_astichi_code(
             """\
-if astichi_pass(tx_group, outer_bind=True) == astichi_bind_external(tx_group_key):
+if astichi_pass(tx_index, outer_bind=True) == astichi_bind_external(tx_index_value):
     result = astichi_pass(
         self,
         outer_bind=True,
@@ -2003,19 +2278,19 @@ if astichi_pass(tx_group, outer_bind=True) == astichi_bind_external(tx_group_key
     if result is False:
         return False""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=281,
+            line_number=294,
         )
     ),
     "TransactionHookCall": astichi_template(
         from_astichi_code(
             """\
-if astichi_pass(tx_group, outer_bind=True) == astichi_bind_external(tx_group_key):
+if astichi_pass(tx_index, outer_bind=True) == astichi_bind_external(tx_index_value):
     astichi_pass(
         self,
         outer_bind=True,
     )._y_get_default_facade().astichi_ref(external=method_name)()""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=291,
+            line_number=304,
         )
     ),
     "ClassBundle": astichi_template(
@@ -2046,10 +2321,32 @@ class state_class_decl_name__astichi_arg__:
         if facade is None:
             facade = object.__new__(default_facade_class_ref__astichi_arg__)
             object.__setattr__(facade, "_y_state", self)
+            current_ref = self._y_current_ref
+            working_ref = self._y_working_ref
+            object.__setattr__(
+                facade,
+                "_y_current_facade",
+                None if current_ref is None else current_ref(),
+            )
+            object.__setattr__(
+                facade,
+                "_y_working_facade",
+                None if working_ref is None else working_ref(),
+            )
             self._y_default_ref = weakref.ref(facade)
         return facade
 
     def _y_get_current_facade(self):
+        default_ref = self._y_default_ref
+        default = None if default_ref is None else default_ref()
+        if default is not None:
+            facade = default._y_current_facade
+            if facade is None:
+                facade = object.__new__(current_facade_class_ref__astichi_arg__)
+                object.__setattr__(facade, "_y_state", self)
+                object.__setattr__(default, "_y_current_facade", facade)
+                self._y_current_ref = weakref.ref(facade)
+            return facade
         ref = self._y_current_ref
         facade = None if ref is None else ref()
         if facade is None:
@@ -2059,6 +2356,16 @@ class state_class_decl_name__astichi_arg__:
         return facade
 
     def _y_get_working_facade(self):
+        default_ref = self._y_default_ref
+        default = None if default_ref is None else default_ref()
+        if default is not None:
+            facade = default._y_working_facade
+            if facade is None:
+                facade = object.__new__(working_facade_class_ref__astichi_arg__)
+                object.__setattr__(facade, "_y_state", self)
+                object.__setattr__(default, "_y_working_facade", facade)
+                self._y_working_ref = weakref.ref(facade)
+            return facade
         ref = self._y_working_ref
         facade = None if ref is None else ref()
         if facade is None:
@@ -2093,35 +2400,59 @@ class state_class_decl_name__astichi_arg__:
         return transaction
 
     def commit_order_key_for(self, tx_group=DEFAULT_TRANSACTION):
+        tx_index = self.__yidl_tx_group_to_index__[tx_group]
         astichi_hole(commit_order_key_body)
         return ()
 
     def requires_validation_for(self, tx_group=DEFAULT_TRANSACTION):
+        tx_index = self.__yidl_tx_group_to_index__[tx_group]
         astichi_hole(requires_validation_body)
         return False
 
     def validate_commit_for(self, tx_group=DEFAULT_TRANSACTION):
+        tx_index = self.__yidl_tx_group_to_index__[tx_group]
         astichi_hole(validate_commit_body)
         return True
 
-    def _commit_transaction(self, tx_id, tx_group=DEFAULT_TRANSACTION):
+    def _prepare_commit_tx_by_key(self, tx_group=DEFAULT_TRANSACTION, tx_token=None):
         tx_index = self.__yidl_tx_group_to_index__[tx_group]
-        if self._y_working_tx_ids[tx_index] != tx_id:
-            return self._y_get_default_facade()
+        if self._y_working_tx_ids[tx_index] != tx_token:
+            raise RuntimeError("stale yidl transaction token")
         astichi_hole(before_commit_body)
+        astichi_hole(prepare_commit_transaction_dispatch_body)
+        return self._y_get_default_facade()
+
+    def _apply_prepared_commit_tx_by_key(self, tx_group=DEFAULT_TRANSACTION, tx_token=None):
+        tx_index = self.__yidl_tx_group_to_index__[tx_group]
+        if self._y_working_tx_ids[tx_index] != tx_token:
+            raise RuntimeError("stale yidl transaction token")
+        astichi_hole(commit_transaction_dispatch_body)
         astichi_hole(commit_transaction_body)
         self._y_working_tx_ids[tx_index] = None
+        return self._y_get_default_facade()
+
+    def _after_commit_tx_by_key(self, tx_group=DEFAULT_TRANSACTION, tx_token=None):
+        del tx_token
+        tx_index = self.__yidl_tx_group_to_index__[tx_group]
         astichi_hole(after_commit_body)
         return self._y_get_default_facade()
 
-    def _rollback_transaction(self, tx_id, tx_group=DEFAULT_TRANSACTION):
+    def _rollback_tx_by_key(self, tx_group=DEFAULT_TRANSACTION, tx_token=None):
         tx_index = self.__yidl_tx_group_to_index__[tx_group]
-        if self._y_working_tx_ids[tx_index] != tx_id:
-            return self._y_get_default_facade()
+        del tx_token
+        astichi_hole(rollback_transaction_dispatch_body)
         astichi_hole(rollback_transaction_body)
         self._y_working_tx_ids[tx_index] = None
+        return self._y_get_default_facade()
+
+    def _after_rollback_tx_by_key(self, tx_group=DEFAULT_TRANSACTION, tx_token=None):
+        del tx_token
+        tx_index = self.__yidl_tx_group_to_index__[tx_group]
         astichi_hole(after_rollback_body)
         return self._y_get_default_facade()
+
+    astichi_hole(commit_transaction_helpers)
+    astichi_hole(rollback_transaction_helpers)
 
 
 class facade_base_decl_name__astichi_arg__(
@@ -2190,7 +2521,7 @@ class facade_base_decl_name__astichi_arg__(
 class default_facade_class_decl_name__astichi_arg__(
     facade_base_default_base_name__astichi_arg__
 ):
-    __slots__ = ()
+    __slots__ = ("_y_current_facade", "_y_working_facade")
     __annotations__ = astichi_pass(
         annotations_name__astichi_arg__,
         outer_bind=True,
@@ -2222,6 +2553,8 @@ class default_facade_class_decl_name__astichi_arg__(
     def __init__(self, init_params__astichi_param_hole__):
         state = object.__new__(state_class_ref__astichi_arg__)
         object.__setattr__(self, "_y_state", state)
+        object.__setattr__(self, "_y_current_facade", None)
+        object.__setattr__(self, "_y_working_facade", None)
         state._y_transaction_manager = transaction_manager or TransactionManager(
             tx_groups=tuple(
                 group for group in astichi_pass(
@@ -2257,7 +2590,7 @@ class working_facade_class_decl_name__astichi_arg__(
     __slots__ = ()
     astichi_hole(working_facade_properties)""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=299,
+            line_number=312,
             keep_names=(
                 "DEFAULT_TRANSACTION",
                 "TransactionManager",
@@ -2284,14 +2617,14 @@ return_class_module_ref__astichi_arg__.__module__ = astichi_pass(
 ).__module__
 return return_class_result_ref__astichi_arg__""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=540,
+            line_number=611,
         )
     ),
     "PassStatement": astichi_template(
         from_astichi_code(
             "pass",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=556,
+            line_number=627,
         )
     ),
 }
@@ -2556,6 +2889,94 @@ ASSEMBLY_CONTRIBUTIONS = {
         ),
         bindings=(),
     ),
+    "CommitTransactionDispatchBodyPass": ContributionSpec(
+        name="CommitTransactionDispatchBodyPass",
+        source_name="PassStatement",
+        source_kind="resource",
+        build_name="CommitTransactionDispatchBodyPass",
+        index=LiteralValueRef(0),
+        order=LiteralValueRef(0),
+        target=TargetSpec(
+            name="commit_transaction_dispatch_body",
+            paths=(
+                TargetPathSpec(
+                    kind="build",
+                    path=PathSpec(
+                        segments=(
+                            PathSegmentSpec(kind="name", name="ClassDef", indexes=()),
+                        )
+                    ),
+                ),
+            ),
+        ),
+        bindings=(),
+    ),
+    "CommitTransactionHelpersPass": ContributionSpec(
+        name="CommitTransactionHelpersPass",
+        source_name="PassStatement",
+        source_kind="resource",
+        build_name="CommitTransactionHelpersPass",
+        index=LiteralValueRef(0),
+        order=LiteralValueRef(0),
+        target=TargetSpec(
+            name="commit_transaction_helpers",
+            paths=(
+                TargetPathSpec(
+                    kind="build",
+                    path=PathSpec(
+                        segments=(
+                            PathSegmentSpec(kind="name", name="ClassDef", indexes=()),
+                        )
+                    ),
+                ),
+            ),
+        ),
+        bindings=(),
+    ),
+    "RollbackTransactionHelpersPass": ContributionSpec(
+        name="RollbackTransactionHelpersPass",
+        source_name="PassStatement",
+        source_kind="resource",
+        build_name="RollbackTransactionHelpersPass",
+        index=LiteralValueRef(0),
+        order=LiteralValueRef(0),
+        target=TargetSpec(
+            name="rollback_transaction_helpers",
+            paths=(
+                TargetPathSpec(
+                    kind="build",
+                    path=PathSpec(
+                        segments=(
+                            PathSegmentSpec(kind="name", name="ClassDef", indexes=()),
+                        )
+                    ),
+                ),
+            ),
+        ),
+        bindings=(),
+    ),
+    "PrepareCommitTransactionDispatchBodyPass": ContributionSpec(
+        name="PrepareCommitTransactionDispatchBodyPass",
+        source_name="PassStatement",
+        source_kind="resource",
+        build_name="PrepareCommitTransactionDispatchBodyPass",
+        index=LiteralValueRef(0),
+        order=LiteralValueRef(0),
+        target=TargetSpec(
+            name="prepare_commit_transaction_dispatch_body",
+            paths=(
+                TargetPathSpec(
+                    kind="build",
+                    path=PathSpec(
+                        segments=(
+                            PathSegmentSpec(kind="name", name="ClassDef", indexes=()),
+                        )
+                    ),
+                ),
+            ),
+        ),
+        bindings=(),
+    ),
     "RollbackTransactionBodyPass": ContributionSpec(
         name="RollbackTransactionBodyPass",
         source_name="PassStatement",
@@ -2565,6 +2986,28 @@ ASSEMBLY_CONTRIBUTIONS = {
         order=LiteralValueRef(0),
         target=TargetSpec(
             name="rollback_transaction_body",
+            paths=(
+                TargetPathSpec(
+                    kind="build",
+                    path=PathSpec(
+                        segments=(
+                            PathSegmentSpec(kind="name", name="ClassDef", indexes=()),
+                        )
+                    ),
+                ),
+            ),
+        ),
+        bindings=(),
+    ),
+    "RollbackTransactionDispatchBodyPass": ContributionSpec(
+        name="RollbackTransactionDispatchBodyPass",
+        source_name="PassStatement",
+        source_kind="resource",
+        build_name="RollbackTransactionDispatchBodyPass",
+        index=LiteralValueRef(0),
+        order=LiteralValueRef(0),
+        target=TargetSpec(
+            name="rollback_transaction_dispatch_body",
             paths=(
                 TargetPathSpec(
                     kind="build",
@@ -3101,7 +3544,7 @@ ASSEMBLY_CONTRIBUTIONS = {
                 kind="external", name="method_name", value=ValueRef("MethodName")
             ),
             BindingSpec(
-                kind="external", name="tx_group_key", value=ValueRef("TxGroupKey")
+                kind="external", name="tx_index_value", value=ValueRef("TxIndex")
             ),
         ),
     ),
@@ -3127,7 +3570,7 @@ ASSEMBLY_CONTRIBUTIONS = {
         ),
         bindings=(
             BindingSpec(
-                kind="external", name="tx_group_key", value=ValueRef("TxGroupKey")
+                kind="external", name="tx_index_value", value=ValueRef("TxIndex")
             ),
         ),
     ),
@@ -3156,7 +3599,7 @@ ASSEMBLY_CONTRIBUTIONS = {
                 kind="external", name="method_name", value=ValueRef("MethodName")
             ),
             BindingSpec(
-                kind="external", name="tx_group_key", value=ValueRef("TxGroupKey")
+                kind="external", name="tx_index_value", value=ValueRef("TxIndex")
             ),
         ),
     ),
@@ -3185,7 +3628,7 @@ ASSEMBLY_CONTRIBUTIONS = {
                 kind="external", name="method_name", value=ValueRef("MethodName")
             ),
             BindingSpec(
-                kind="external", name="tx_group_key", value=ValueRef("TxGroupKey")
+                kind="external", name="tx_index_value", value=ValueRef("TxIndex")
             ),
         ),
     ),
@@ -3214,7 +3657,7 @@ ASSEMBLY_CONTRIBUTIONS = {
                 kind="external", name="method_name", value=ValueRef("MethodName")
             ),
             BindingSpec(
-                kind="external", name="tx_group_key", value=ValueRef("TxGroupKey")
+                kind="external", name="tx_index_value", value=ValueRef("TxIndex")
             ),
         ),
     ),
@@ -3243,7 +3686,7 @@ ASSEMBLY_CONTRIBUTIONS = {
                 kind="external", name="method_name", value=ValueRef("MethodName")
             ),
             BindingSpec(
-                kind="external", name="tx_group_key", value=ValueRef("TxGroupKey")
+                kind="external", name="tx_index_value", value=ValueRef("TxIndex")
             ),
         ),
     ),
@@ -3391,6 +3834,46 @@ ASSEMBLY_MATCHERS = {
         default_contribution_name="CommitTransactionBodyPass",
         rules=(),
     ),
+    "CommitTransactionDispatchBodyPassContributions": ContributionMatcherSpec(
+        name="CommitTransactionDispatchBodyPassContributions",
+        inputs=(
+            AssemblyInputSpec(
+                name="lifecycle_class", collection_name="Classes", collection=None
+            ),
+        ),
+        default_contribution_name="CommitTransactionDispatchBodyPass",
+        rules=(),
+    ),
+    "CommitTransactionHelpersPassContributions": ContributionMatcherSpec(
+        name="CommitTransactionHelpersPassContributions",
+        inputs=(
+            AssemblyInputSpec(
+                name="lifecycle_class", collection_name="Classes", collection=None
+            ),
+        ),
+        default_contribution_name="CommitTransactionHelpersPass",
+        rules=(),
+    ),
+    "RollbackTransactionHelpersPassContributions": ContributionMatcherSpec(
+        name="RollbackTransactionHelpersPassContributions",
+        inputs=(
+            AssemblyInputSpec(
+                name="lifecycle_class", collection_name="Classes", collection=None
+            ),
+        ),
+        default_contribution_name="RollbackTransactionHelpersPass",
+        rules=(),
+    ),
+    "PrepareCommitTransactionDispatchBodyPassContributions": ContributionMatcherSpec(
+        name="PrepareCommitTransactionDispatchBodyPassContributions",
+        inputs=(
+            AssemblyInputSpec(
+                name="lifecycle_class", collection_name="Classes", collection=None
+            ),
+        ),
+        default_contribution_name="PrepareCommitTransactionDispatchBodyPass",
+        rules=(),
+    ),
     "RollbackTransactionBodyPassContributions": ContributionMatcherSpec(
         name="RollbackTransactionBodyPassContributions",
         inputs=(
@@ -3399,6 +3882,16 @@ ASSEMBLY_MATCHERS = {
             ),
         ),
         default_contribution_name="RollbackTransactionBodyPass",
+        rules=(),
+    ),
+    "RollbackTransactionDispatchBodyPassContributions": ContributionMatcherSpec(
+        name="RollbackTransactionDispatchBodyPassContributions",
+        inputs=(
+            AssemblyInputSpec(
+                name="lifecycle_class", collection_name="Classes", collection=None
+            ),
+        ),
+        default_contribution_name="RollbackTransactionDispatchBodyPass",
         rules=(),
     ),
     "CommitOrderKeyBodyPassContributions": ContributionMatcherSpec(
@@ -3934,6 +4427,50 @@ ASSEMBLY_EDGES = {
         condition=None,
         matcher_name="CommitTransactionBodyPassContributions",
     ),
+    "CoreClassProduction.commit_transaction_dispatch_body_pass": AssemblyEdgeSpec(
+        name="CoreClassProduction.commit_transaction_dispatch_body_pass",
+        context_inputs=(
+            AssemblyInputSpec(
+                name="lifecycle_class", collection_name="Classes", collection=None
+            ),
+        ),
+        from_inputs=(),
+        condition=None,
+        matcher_name="CommitTransactionDispatchBodyPassContributions",
+    ),
+    "CoreClassProduction.commit_transaction_helpers_pass": AssemblyEdgeSpec(
+        name="CoreClassProduction.commit_transaction_helpers_pass",
+        context_inputs=(
+            AssemblyInputSpec(
+                name="lifecycle_class", collection_name="Classes", collection=None
+            ),
+        ),
+        from_inputs=(),
+        condition=None,
+        matcher_name="CommitTransactionHelpersPassContributions",
+    ),
+    "CoreClassProduction.rollback_transaction_helpers_pass": AssemblyEdgeSpec(
+        name="CoreClassProduction.rollback_transaction_helpers_pass",
+        context_inputs=(
+            AssemblyInputSpec(
+                name="lifecycle_class", collection_name="Classes", collection=None
+            ),
+        ),
+        from_inputs=(),
+        condition=None,
+        matcher_name="RollbackTransactionHelpersPassContributions",
+    ),
+    "CoreClassProduction.prepare_commit_transaction_dispatch_body_pass": AssemblyEdgeSpec(
+        name="CoreClassProduction.prepare_commit_transaction_dispatch_body_pass",
+        context_inputs=(
+            AssemblyInputSpec(
+                name="lifecycle_class", collection_name="Classes", collection=None
+            ),
+        ),
+        from_inputs=(),
+        condition=None,
+        matcher_name="PrepareCommitTransactionDispatchBodyPassContributions",
+    ),
     "CoreClassProduction.rollback_transaction_body_pass": AssemblyEdgeSpec(
         name="CoreClassProduction.rollback_transaction_body_pass",
         context_inputs=(
@@ -3944,6 +4481,17 @@ ASSEMBLY_EDGES = {
         from_inputs=(),
         condition=None,
         matcher_name="RollbackTransactionBodyPassContributions",
+    ),
+    "CoreClassProduction.rollback_transaction_dispatch_body_pass": AssemblyEdgeSpec(
+        name="CoreClassProduction.rollback_transaction_dispatch_body_pass",
+        context_inputs=(
+            AssemblyInputSpec(
+                name="lifecycle_class", collection_name="Classes", collection=None
+            ),
+        ),
+        from_inputs=(),
+        condition=None,
+        matcher_name="RollbackTransactionDispatchBodyPassContributions",
     ),
     "CoreClassProduction.commit_order_key_body_pass": AssemblyEdgeSpec(
         name="CoreClassProduction.commit_order_key_body_pass",
@@ -4576,6 +5124,66 @@ ASSEMBLY_PRODUCTIONS = {
             ),
             InlineApplySpec(
                 edge=AssemblyEdgeSpec(
+                    name="CoreClassProduction.commit_transaction_dispatch_body_pass",
+                    context_inputs=(
+                        AssemblyInputSpec(
+                            name="lifecycle_class",
+                            collection_name="Classes",
+                            collection=None,
+                        ),
+                    ),
+                    from_inputs=(),
+                    condition=None,
+                    matcher_name="CommitTransactionDispatchBodyPassContributions",
+                )
+            ),
+            InlineApplySpec(
+                edge=AssemblyEdgeSpec(
+                    name="CoreClassProduction.commit_transaction_helpers_pass",
+                    context_inputs=(
+                        AssemblyInputSpec(
+                            name="lifecycle_class",
+                            collection_name="Classes",
+                            collection=None,
+                        ),
+                    ),
+                    from_inputs=(),
+                    condition=None,
+                    matcher_name="CommitTransactionHelpersPassContributions",
+                )
+            ),
+            InlineApplySpec(
+                edge=AssemblyEdgeSpec(
+                    name="CoreClassProduction.rollback_transaction_helpers_pass",
+                    context_inputs=(
+                        AssemblyInputSpec(
+                            name="lifecycle_class",
+                            collection_name="Classes",
+                            collection=None,
+                        ),
+                    ),
+                    from_inputs=(),
+                    condition=None,
+                    matcher_name="RollbackTransactionHelpersPassContributions",
+                )
+            ),
+            InlineApplySpec(
+                edge=AssemblyEdgeSpec(
+                    name="CoreClassProduction.prepare_commit_transaction_dispatch_body_pass",
+                    context_inputs=(
+                        AssemblyInputSpec(
+                            name="lifecycle_class",
+                            collection_name="Classes",
+                            collection=None,
+                        ),
+                    ),
+                    from_inputs=(),
+                    condition=None,
+                    matcher_name="PrepareCommitTransactionDispatchBodyPassContributions",
+                )
+            ),
+            InlineApplySpec(
+                edge=AssemblyEdgeSpec(
                     name="CoreClassProduction.rollback_transaction_body_pass",
                     context_inputs=(
                         AssemblyInputSpec(
@@ -4587,6 +5195,21 @@ ASSEMBLY_PRODUCTIONS = {
                     from_inputs=(),
                     condition=None,
                     matcher_name="RollbackTransactionBodyPassContributions",
+                )
+            ),
+            InlineApplySpec(
+                edge=AssemblyEdgeSpec(
+                    name="CoreClassProduction.rollback_transaction_dispatch_body_pass",
+                    context_inputs=(
+                        AssemblyInputSpec(
+                            name="lifecycle_class",
+                            collection_name="Classes",
+                            collection=None,
+                        ),
+                    ),
+                    from_inputs=(),
+                    condition=None,
+                    matcher_name="RollbackTransactionDispatchBodyPassContributions",
                 )
             ),
             InlineApplySpec(

@@ -132,6 +132,12 @@ concept LifecycleBase extends default_factories.LifecycleDefaultFactories {
         apply commit_transaction_dispatch_body_pass
             using CommitTransactionDispatchBodyPassContributions
 
+        apply commit_transaction_helpers_pass
+            using CommitTransactionHelpersPassContributions
+
+        apply rollback_transaction_helpers_pass
+            using RollbackTransactionHelpersPassContributions
+
         apply prepare_commit_transaction_dispatch_body_pass
             using PrepareCommitTransactionDispatchBodyPassContributions
 

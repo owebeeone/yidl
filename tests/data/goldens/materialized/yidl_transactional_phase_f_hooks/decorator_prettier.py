@@ -5438,6 +5438,50 @@ ASSEMBLY_CONTRIBUTIONS = {
         ),
         bindings=(),
     ),
+    "CommitTransactionHelpersPass": ContributionSpec(
+        name="CommitTransactionHelpersPass",
+        source_name="PassStatement",
+        source_kind="resource",
+        build_name="CommitTransactionHelpersPass",
+        index=LiteralValueRef(0),
+        order=LiteralValueRef(0),
+        target=TargetSpec(
+            name="commit_transaction_helpers",
+            paths=(
+                TargetPathSpec(
+                    kind="build",
+                    path=PathSpec(
+                        segments=(
+                            PathSegmentSpec(kind="name", name="ClassDef", indexes=()),
+                        )
+                    ),
+                ),
+            ),
+        ),
+        bindings=(),
+    ),
+    "RollbackTransactionHelpersPass": ContributionSpec(
+        name="RollbackTransactionHelpersPass",
+        source_name="PassStatement",
+        source_kind="resource",
+        build_name="RollbackTransactionHelpersPass",
+        index=LiteralValueRef(0),
+        order=LiteralValueRef(0),
+        target=TargetSpec(
+            name="rollback_transaction_helpers",
+            paths=(
+                TargetPathSpec(
+                    kind="build",
+                    path=PathSpec(
+                        segments=(
+                            PathSegmentSpec(kind="name", name="ClassDef", indexes=()),
+                        )
+                    ),
+                ),
+            ),
+        ),
+        bindings=(),
+    ),
     "PrepareCommitTransactionDispatchBodyPass": ContributionSpec(
         name="PrepareCommitTransactionDispatchBodyPass",
         source_name="PassStatement",
@@ -8302,6 +8346,26 @@ ASSEMBLY_MATCHERS = {
         default_contribution_name="CommitTransactionDispatchBodyPass",
         rules=(),
     ),
+    "CommitTransactionHelpersPassContributions": ContributionMatcherSpec(
+        name="CommitTransactionHelpersPassContributions",
+        inputs=(
+            AssemblyInputSpec(
+                name="lifecycle_class", collection_name="Classes", collection=None
+            ),
+        ),
+        default_contribution_name="CommitTransactionHelpersPass",
+        rules=(),
+    ),
+    "RollbackTransactionHelpersPassContributions": ContributionMatcherSpec(
+        name="RollbackTransactionHelpersPassContributions",
+        inputs=(
+            AssemblyInputSpec(
+                name="lifecycle_class", collection_name="Classes", collection=None
+            ),
+        ),
+        default_contribution_name="RollbackTransactionHelpersPass",
+        rules=(),
+    ),
     "PrepareCommitTransactionDispatchBodyPassContributions": ContributionMatcherSpec(
         name="PrepareCommitTransactionDispatchBodyPassContributions",
         inputs=(
@@ -9704,6 +9768,28 @@ ASSEMBLY_EDGES = {
         condition=None,
         matcher_name="CommitTransactionDispatchBodyPassContributions",
     ),
+    "CoreClassProduction.commit_transaction_helpers_pass": AssemblyEdgeSpec(
+        name="CoreClassProduction.commit_transaction_helpers_pass",
+        context_inputs=(
+            AssemblyInputSpec(
+                name="lifecycle_class", collection_name="Classes", collection=None
+            ),
+        ),
+        from_inputs=(),
+        condition=None,
+        matcher_name="CommitTransactionHelpersPassContributions",
+    ),
+    "CoreClassProduction.rollback_transaction_helpers_pass": AssemblyEdgeSpec(
+        name="CoreClassProduction.rollback_transaction_helpers_pass",
+        context_inputs=(
+            AssemblyInputSpec(
+                name="lifecycle_class", collection_name="Classes", collection=None
+            ),
+        ),
+        from_inputs=(),
+        condition=None,
+        matcher_name="RollbackTransactionHelpersPassContributions",
+    ),
     "CoreClassProduction.prepare_commit_transaction_dispatch_body_pass": AssemblyEdgeSpec(
         name="CoreClassProduction.prepare_commit_transaction_dispatch_body_pass",
         context_inputs=(
@@ -10261,6 +10347,28 @@ ASSEMBLY_EDGES = {
         from_inputs=(),
         condition=None,
         matcher_name="CommitTransactionDispatchBodyPassContributions",
+    ),
+    "ClassProduction.commit_transaction_helpers_pass": AssemblyEdgeSpec(
+        name="ClassProduction.commit_transaction_helpers_pass",
+        context_inputs=(
+            AssemblyInputSpec(
+                name="lifecycle_class", collection_name="Classes", collection=None
+            ),
+        ),
+        from_inputs=(),
+        condition=None,
+        matcher_name="CommitTransactionHelpersPassContributions",
+    ),
+    "ClassProduction.rollback_transaction_helpers_pass": AssemblyEdgeSpec(
+        name="ClassProduction.rollback_transaction_helpers_pass",
+        context_inputs=(
+            AssemblyInputSpec(
+                name="lifecycle_class", collection_name="Classes", collection=None
+            ),
+        ),
+        from_inputs=(),
+        condition=None,
+        matcher_name="RollbackTransactionHelpersPassContributions",
     ),
     "ClassProduction.prepare_commit_transaction_dispatch_body_pass": AssemblyEdgeSpec(
         name="ClassProduction.prepare_commit_transaction_dispatch_body_pass",
@@ -11566,6 +11674,36 @@ ASSEMBLY_PRODUCTIONS = {
             ),
             InlineApplySpec(
                 edge=AssemblyEdgeSpec(
+                    name="CoreClassProduction.commit_transaction_helpers_pass",
+                    context_inputs=(
+                        AssemblyInputSpec(
+                            name="lifecycle_class",
+                            collection_name="Classes",
+                            collection=None,
+                        ),
+                    ),
+                    from_inputs=(),
+                    condition=None,
+                    matcher_name="CommitTransactionHelpersPassContributions",
+                )
+            ),
+            InlineApplySpec(
+                edge=AssemblyEdgeSpec(
+                    name="CoreClassProduction.rollback_transaction_helpers_pass",
+                    context_inputs=(
+                        AssemblyInputSpec(
+                            name="lifecycle_class",
+                            collection_name="Classes",
+                            collection=None,
+                        ),
+                    ),
+                    from_inputs=(),
+                    condition=None,
+                    matcher_name="RollbackTransactionHelpersPassContributions",
+                )
+            ),
+            InlineApplySpec(
+                edge=AssemblyEdgeSpec(
                     name="CoreClassProduction.prepare_commit_transaction_dispatch_body_pass",
                     context_inputs=(
                         AssemblyInputSpec(
@@ -12438,6 +12576,36 @@ ASSEMBLY_PRODUCTIONS = {
                     from_inputs=(),
                     condition=None,
                     matcher_name="CommitTransactionDispatchBodyPassContributions",
+                )
+            ),
+            InlineApplySpec(
+                edge=AssemblyEdgeSpec(
+                    name="ClassProduction.commit_transaction_helpers_pass",
+                    context_inputs=(
+                        AssemblyInputSpec(
+                            name="lifecycle_class",
+                            collection_name="Classes",
+                            collection=None,
+                        ),
+                    ),
+                    from_inputs=(),
+                    condition=None,
+                    matcher_name="CommitTransactionHelpersPassContributions",
+                )
+            ),
+            InlineApplySpec(
+                edge=AssemblyEdgeSpec(
+                    name="ClassProduction.rollback_transaction_helpers_pass",
+                    context_inputs=(
+                        AssemblyInputSpec(
+                            name="lifecycle_class",
+                            collection_name="Classes",
+                            collection=None,
+                        ),
+                    ),
+                    from_inputs=(),
+                    condition=None,
+                    matcher_name="RollbackTransactionHelpersPassContributions",
                 )
             ),
             InlineApplySpec(
