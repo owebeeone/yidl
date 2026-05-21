@@ -159,6 +159,96 @@ concept LifecycleBase extends default_factories.LifecycleDefaultFactories {
         apply after_rollback_body_pass
             using AfterRollbackBodyPassContributions
 
+        apply commit_order_key_helpers
+            from tx_group: TxGroups
+            where TxOwner == ClassId
+            using CommitOrderKeyHelperContributions
+
+        apply requires_validation_helpers
+            from tx_group: TxGroups
+            where TxOwner == ClassId
+            using RequiresValidationHelperContributions
+
+        apply validate_commit_helpers
+            from tx_group: TxGroups
+            where TxOwner == ClassId
+            using ValidateCommitHelperContributions
+
+        apply before_commit_helpers
+            from tx_group: TxGroups
+            where TxOwner == ClassId
+            using BeforeCommitHelperContributions
+
+        apply after_commit_helpers
+            from tx_group: TxGroups
+            where TxOwner == ClassId
+            using AfterCommitHelperContributions
+
+        apply after_rollback_helpers
+            from tx_group: TxGroups
+            where TxOwner == ClassId
+            using AfterRollbackHelperContributions
+
+        apply commit_order_key_helper_body_pass
+            from tx_group: TxGroups
+            where TxOwner == ClassId
+            using CommitOrderKeyHelperBodyPassContributions
+
+        apply requires_validation_helper_body_pass
+            from tx_group: TxGroups
+            where TxOwner == ClassId
+            using RequiresValidationHelperBodyPassContributions
+
+        apply validate_commit_helper_body_pass
+            from tx_group: TxGroups
+            where TxOwner == ClassId
+            using ValidateCommitHelperBodyPassContributions
+
+        apply before_commit_helper_body_pass
+            from tx_group: TxGroups
+            where TxOwner == ClassId
+            using BeforeCommitHelperBodyPassContributions
+
+        apply after_commit_helper_body_pass
+            from tx_group: TxGroups
+            where TxOwner == ClassId
+            using AfterCommitHelperBodyPassContributions
+
+        apply after_rollback_helper_body_pass
+            from tx_group: TxGroups
+            where TxOwner == ClassId
+            using AfterRollbackHelperBodyPassContributions
+
+        apply commit_order_key_dispatch
+            from tx_group: TxGroups
+            where TxOwner == ClassId
+            using CommitOrderKeyDispatchContributions
+
+        apply requires_validation_dispatch
+            from tx_group: TxGroups
+            where TxOwner == ClassId
+            using RequiresValidationDispatchContributions
+
+        apply validate_commit_dispatch
+            from tx_group: TxGroups
+            where TxOwner == ClassId
+            using ValidateCommitDispatchContributions
+
+        apply before_commit_dispatch
+            from tx_group: TxGroups
+            where TxOwner == ClassId
+            using BeforeCommitDispatchContributions
+
+        apply after_commit_dispatch
+            from tx_group: TxGroups
+            where TxOwner == ClassId
+            using AfterCommitDispatchContributions
+
+        apply after_rollback_dispatch
+            from tx_group: TxGroups
+            where TxOwner == ClassId
+            using AfterRollbackDispatchContributions
+
         apply classvars
             from field: ClassVarFields
             where FieldOwner == ClassId

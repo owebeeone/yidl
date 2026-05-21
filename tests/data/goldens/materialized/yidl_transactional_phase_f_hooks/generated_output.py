@@ -85,21 +85,25 @@ def build_lifecycle_class(decorated_cls, *, _Counter_lifecycle_definition, _Coun
         def commit_order_key_for(self, tx_group=DEFAULT_TRANSACTION):
             tx_index = self.__yidl_tx_group_to_index__[tx_group]
             if tx_index == 0:
-                return self._y_get_default_facade()._commit_key()
+                return self._commit_order_key_tx_0()
+            if tx_index == 1:
+                return self._commit_order_key_tx_1()
             return ()
 
         def requires_validation_for(self, tx_group=DEFAULT_TRANSACTION):
             tx_index = self.__yidl_tx_group_to_index__[tx_group]
             if tx_index == 0:
-                return True
+                return self._requires_validation_tx_0()
+            if tx_index == 1:
+                return self._requires_validation_tx_1()
             return False
 
         def validate_commit_for(self, tx_group=DEFAULT_TRANSACTION):
             tx_index = self.__yidl_tx_group_to_index__[tx_group]
             if tx_index == 0:
-                result = self._y_get_default_facade()._validate_count()
-                if result is False:
-                    return False
+                return self._validate_commit_tx_0()
+            if tx_index == 1:
+                return self._validate_commit_tx_1()
             return True
 
         def _prepare_commit_tx_by_key(self, tx_group=DEFAULT_TRANSACTION, tx_token=None):
@@ -107,7 +111,9 @@ def build_lifecycle_class(decorated_cls, *, _Counter_lifecycle_definition, _Coun
             if self._y_working_tx_ids[tx_index] != tx_token:
                 raise RuntimeError('stale yidl transaction token')
             if tx_index == 0:
-                self._y_get_default_facade()._before_default()
+                self._before_commit_tx_0()
+            if tx_index == 1:
+                self._before_commit_tx_1()
             if tx_index == 0:
                 self._prepare_commit_tx_0_fields()
             if tx_index == 1:
@@ -129,7 +135,9 @@ def build_lifecycle_class(decorated_cls, *, _Counter_lifecycle_definition, _Coun
             del tx_token
             tx_index = self.__yidl_tx_group_to_index__[tx_group]
             if tx_index == 0:
-                self._y_get_default_facade()._after_default()
+                self._after_commit_tx_0()
+            if tx_index == 1:
+                self._after_commit_tx_1()
             return self._y_get_default_facade()
 
         def _rollback_tx_by_key(self, tx_group=DEFAULT_TRANSACTION, tx_token=None):
@@ -145,9 +153,31 @@ def build_lifecycle_class(decorated_cls, *, _Counter_lifecycle_definition, _Coun
         def _after_rollback_tx_by_key(self, tx_group=DEFAULT_TRANSACTION, tx_token=None):
             del tx_token
             tx_index = self.__yidl_tx_group_to_index__[tx_group]
+            if tx_index == 0:
+                self._after_rollback_tx_0()
             if tx_index == 1:
-                self._y_get_default_facade()._after_audit_rollback()
+                self._after_rollback_tx_1()
             return self._y_get_default_facade()
+
+        def _commit_order_key_tx_0(self):
+            return self._y_get_default_facade()._commit_key()
+            return ()
+
+        def _requires_validation_tx_0(self):
+            return True
+            return False
+
+        def _validate_commit_tx_0(self):
+            result = self._y_get_default_facade()._validate_count()
+            if result is False:
+                return False
+            return True
+
+        def _before_commit_tx_0(self):
+            self._y_get_default_facade()._before_default()
+
+        def _after_commit_tx_0(self):
+            self._y_get_default_facade()._after_default()
 
         def _apply_prepared_commit_tx_0_fields(self):
             if self._y_count_staged is not VOID:
@@ -159,6 +189,21 @@ def build_lifecycle_class(decorated_cls, *, _Counter_lifecycle_definition, _Coun
             if self._y_count_working is not VOID:
                 self._y_count_staged = self._y_count_working
 
+        def _commit_order_key_tx_1(self):
+            return ()
+
+        def _requires_validation_tx_1(self):
+            return False
+
+        def _validate_commit_tx_1(self):
+            return True
+
+        def _before_commit_tx_1(self):
+            pass
+
+        def _after_commit_tx_1(self):
+            pass
+
         def _apply_prepared_commit_tx_1_fields(self):
             if self._y_audit_count_staged is not VOID:
                 self._y_audit_count_current = self._y_audit_count_staged
@@ -169,9 +214,15 @@ def build_lifecycle_class(decorated_cls, *, _Counter_lifecycle_definition, _Coun
             if self._y_audit_count_working is not VOID:
                 self._y_audit_count_staged = self._y_audit_count_working
 
+        def _after_rollback_tx_0(self):
+            pass
+
         def _rollback_tx_0_fields(self):
             self._y_count_staged = VOID
             self._y_count_working = VOID
+
+        def _after_rollback_tx_1(self):
+            self._y_get_default_facade()._after_audit_rollback()
 
         def _rollback_tx_1_fields(self):
             self._y_audit_count_staged = VOID

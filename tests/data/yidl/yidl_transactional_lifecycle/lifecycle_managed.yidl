@@ -19,6 +19,12 @@ concept LifecycleManaged extends core.LifecycleCore {
 
     property TxGroupOrder: int = 0
     property TxOwner: str = ""
+    property CommitOrderKeyFunctionName: str = ""
+    property RequiresValidationFunctionName: str = ""
+    property ValidateCommitFunctionName: str = ""
+    property BeforeCommitFunctionName: str = ""
+    property AfterCommitFunctionName: str = ""
+    property AfterRollbackFunctionName: str = ""
     property PrepareCommitFieldsFunctionName: str = ""
     property ApplyPreparedCommitFieldsFunctionName: str = ""
     property RollbackFieldsFunctionName: str = ""
@@ -35,6 +41,12 @@ concept LifecycleManaged extends core.LifecycleCore {
         TxGroupKey
         TxIndex
         TxGroupOrder
+        CommitOrderKeyFunctionName
+        RequiresValidationFunctionName
+        ValidateCommitFunctionName
+        BeforeCommitFunctionName
+        AfterCommitFunctionName
+        AfterRollbackFunctionName
         PrepareCommitFieldsFunctionName
         ApplyPreparedCommitFieldsFunctionName
         RollbackFieldsFunctionName
@@ -82,6 +94,12 @@ concept LifecycleManaged extends core.LifecycleCore {
                     tx_group_key=DEFAULT_TRANSACTION,
                     tx_index=0,
                     tx_group_order=0,
+                    commit_order_key_function_name="_commit_order_key_tx_0",
+                    requires_validation_function_name="_requires_validation_tx_0",
+                    validate_commit_function_name="_validate_commit_tx_0",
+                    before_commit_function_name="_before_commit_tx_0",
+                    after_commit_function_name="_after_commit_tx_0",
+                    after_rollback_function_name="_after_rollback_tx_0",
                     prepare_commit_fields_function_name="_prepare_commit_tx_0_fields",
                     apply_prepared_commit_fields_function_name="_apply_prepared_commit_tx_0_fields",
                     rollback_fields_function_name="_rollback_tx_0_fields",
@@ -107,6 +125,24 @@ concept LifecycleManaged extends core.LifecycleCore {
                             tx_group_key=tx_group,
                             tx_index=seen[tx_group],
                             tx_group_order=field.field_order,
+                            commit_order_key_function_name=(
+                                f"_commit_order_key_tx_{seen[tx_group]}"
+                            ),
+                            requires_validation_function_name=(
+                                f"_requires_validation_tx_{seen[tx_group]}"
+                            ),
+                            validate_commit_function_name=(
+                                f"_validate_commit_tx_{seen[tx_group]}"
+                            ),
+                            before_commit_function_name=(
+                                f"_before_commit_tx_{seen[tx_group]}"
+                            ),
+                            after_commit_function_name=(
+                                f"_after_commit_tx_{seen[tx_group]}"
+                            ),
+                            after_rollback_function_name=(
+                                f"_after_rollback_tx_{seen[tx_group]}"
+                            ),
                             prepare_commit_fields_function_name=(
                                 f"_prepare_commit_tx_{seen[tx_group]}_fields"
                             ),
@@ -343,6 +379,114 @@ concept LifecycleManaged extends core.LifecycleCore {
     ]$ {
         keep VOID
     }
+
+    resource CommitOrderKeyFunction = template $[
+        def commit_order_key_function_name__astichi_arg__(self):
+            astichi_hole(commit_order_key_tx_body)
+            return ()
+    ]$
+
+    resource RequiresValidationFunction = template $[
+        def requires_validation_function_name__astichi_arg__(self):
+            astichi_hole(requires_validation_tx_body)
+            return False
+    ]$
+
+    resource ValidateCommitFunction = template $[
+        def validate_commit_function_name__astichi_arg__(self):
+            astichi_hole(validate_commit_tx_body)
+            return True
+    ]$
+
+    resource BeforeCommitFunction = template $[
+        def before_commit_function_name__astichi_arg__(self):
+            astichi_hole(before_commit_tx_body)
+    ]$
+
+    resource AfterCommitFunction = template $[
+        def after_commit_function_name__astichi_arg__(self):
+            astichi_hole(after_commit_tx_body)
+    ]$
+
+    resource AfterRollbackFunction = template $[
+        def after_rollback_function_name__astichi_arg__(self):
+            astichi_hole(after_rollback_tx_body)
+    ]$
+
+    resource CommitOrderKeyHelperCall = template $[
+        return astichi_pass(
+            self,
+            outer_bind=True,
+        )._y_get_default_facade().astichi_ref(external=method_name)()
+    ]$
+
+    resource RequiresValidationHelperCall = template $[
+        return True
+    ]$
+
+    resource ValidateCommitHelperCall = template $[
+        result = astichi_pass(
+            self,
+            outer_bind=True,
+        )._y_get_default_facade().astichi_ref(external=method_name)()
+        if result is False:
+            return False
+    ]$
+
+    resource TransactionHookHelperCall = template $[
+        astichi_pass(
+            self,
+            outer_bind=True,
+        )._y_get_default_facade().astichi_ref(external=method_name)()
+    ]$
+
+    resource CommitOrderKeyDispatchCall = template $[
+        if astichi_pass(tx_index, outer_bind=True) == astichi_bind_external(tx_index_value):
+            return astichi_pass(
+                self,
+                outer_bind=True,
+            ).astichi_ref(external=commit_order_key_function_name)()
+    ]$
+
+    resource RequiresValidationDispatchCall = template $[
+        if astichi_pass(tx_index, outer_bind=True) == astichi_bind_external(tx_index_value):
+            return astichi_pass(
+                self,
+                outer_bind=True,
+            ).astichi_ref(external=requires_validation_function_name)()
+    ]$
+
+    resource ValidateCommitDispatchCall = template $[
+        if astichi_pass(tx_index, outer_bind=True) == astichi_bind_external(tx_index_value):
+            return astichi_pass(
+                self,
+                outer_bind=True,
+            ).astichi_ref(external=validate_commit_function_name)()
+    ]$
+
+    resource BeforeCommitDispatchCall = template $[
+        if astichi_pass(tx_index, outer_bind=True) == astichi_bind_external(tx_index_value):
+            astichi_pass(
+                self,
+                outer_bind=True,
+            ).astichi_ref(external=before_commit_function_name)()
+    ]$
+
+    resource AfterCommitDispatchCall = template $[
+        if astichi_pass(tx_index, outer_bind=True) == astichi_bind_external(tx_index_value):
+            astichi_pass(
+                self,
+                outer_bind=True,
+            ).astichi_ref(external=after_commit_function_name)()
+    ]$
+
+    resource AfterRollbackDispatchCall = template $[
+        if astichi_pass(tx_index, outer_bind=True) == astichi_bind_external(tx_index_value):
+            astichi_pass(
+                self,
+                outer_bind=True,
+            ).astichi_ref(external=after_rollback_function_name)()
+    ]$
 
     resource PrepareCommitFieldsFunction = template $[
         def prepare_commit_fields_function_name__astichi_arg__(self):
@@ -674,6 +818,286 @@ concept LifecycleManaged extends core.LifecycleCore {
         external staged_slot = StagedSlotName
     }
 
+    contribution CommitOrderKeyHelper = CommitOrderKeyFunction {
+        as CommitOrderKeyFunction
+        index TxIndex
+        order TxIndex
+
+        target commit_transaction_helpers {
+            build /ClassDef
+        }
+
+        ident commit_order_key_function_name = CommitOrderKeyFunctionName
+    }
+
+    contribution RequiresValidationHelper = RequiresValidationFunction {
+        as RequiresValidationFunction
+        index TxIndex
+        order TxIndex
+
+        target commit_transaction_helpers {
+            build /ClassDef
+        }
+
+        ident requires_validation_function_name = RequiresValidationFunctionName
+    }
+
+    contribution ValidateCommitHelper = ValidateCommitFunction {
+        as ValidateCommitFunction
+        index TxIndex
+        order TxIndex
+
+        target commit_transaction_helpers {
+            build /ClassDef
+        }
+
+        ident validate_commit_function_name = ValidateCommitFunctionName
+    }
+
+    contribution BeforeCommitHelper = BeforeCommitFunction {
+        as BeforeCommitFunction
+        index TxIndex
+        order TxIndex
+
+        target commit_transaction_helpers {
+            build /ClassDef
+        }
+
+        ident before_commit_function_name = BeforeCommitFunctionName
+    }
+
+    contribution AfterCommitHelper = AfterCommitFunction {
+        as AfterCommitFunction
+        index TxIndex
+        order TxIndex
+
+        target commit_transaction_helpers {
+            build /ClassDef
+        }
+
+        ident after_commit_function_name = AfterCommitFunctionName
+    }
+
+    contribution AfterRollbackHelper = AfterRollbackFunction {
+        as AfterRollbackFunction
+        index TxIndex
+        order TxIndex
+
+        target rollback_transaction_helpers {
+            build /ClassDef
+        }
+
+        ident after_rollback_function_name = AfterRollbackFunctionName
+    }
+
+    contribution CommitOrderKeyHelperBodyPass = PassStatement {
+        as CommitOrderKeyHelperBodyPass
+        index TxIndex
+        order 0
+
+        target commit_order_key_tx_body {
+            build /ClassDef/CommitOrderKeyFunction[TxIndex]
+        }
+    }
+
+    contribution RequiresValidationHelperBodyPass = PassStatement {
+        as RequiresValidationHelperBodyPass
+        index TxIndex
+        order 0
+
+        target requires_validation_tx_body {
+            build /ClassDef/RequiresValidationFunction[TxIndex]
+        }
+    }
+
+    contribution ValidateCommitHelperBodyPass = PassStatement {
+        as ValidateCommitHelperBodyPass
+        index TxIndex
+        order 0
+
+        target validate_commit_tx_body {
+            build /ClassDef/ValidateCommitFunction[TxIndex]
+        }
+    }
+
+    contribution BeforeCommitHelperBodyPass = PassStatement {
+        as BeforeCommitHelperBodyPass
+        index TxIndex
+        order 0
+
+        target before_commit_tx_body {
+            build /ClassDef/BeforeCommitFunction[TxIndex]
+        }
+    }
+
+    contribution AfterCommitHelperBodyPass = PassStatement {
+        as AfterCommitHelperBodyPass
+        index TxIndex
+        order 0
+
+        target after_commit_tx_body {
+            build /ClassDef/AfterCommitFunction[TxIndex]
+        }
+    }
+
+    contribution AfterRollbackHelperBodyPass = PassStatement {
+        as AfterRollbackHelperBodyPass
+        index TxIndex
+        order 0
+
+        target after_rollback_tx_body {
+            build /ClassDef/AfterRollbackFunction[TxIndex]
+        }
+    }
+
+    contribution CommitOrderKeyDispatch = CommitOrderKeyDispatchCall {
+        as CommitOrderKeyDispatch
+        index TxIndex
+        order TxIndex
+
+        target commit_order_key_body {
+            build /ClassDef
+        }
+
+        external commit_order_key_function_name = CommitOrderKeyFunctionName
+        external tx_index_value = TxIndex
+    }
+
+    contribution RequiresValidationDispatch = RequiresValidationDispatchCall {
+        as RequiresValidationDispatch
+        index TxIndex
+        order TxIndex
+
+        target requires_validation_body {
+            build /ClassDef
+        }
+
+        external requires_validation_function_name = RequiresValidationFunctionName
+        external tx_index_value = TxIndex
+    }
+
+    contribution ValidateCommitDispatch = ValidateCommitDispatchCall {
+        as ValidateCommitDispatch
+        index TxIndex
+        order TxIndex
+
+        target validate_commit_body {
+            build /ClassDef
+        }
+
+        external validate_commit_function_name = ValidateCommitFunctionName
+        external tx_index_value = TxIndex
+    }
+
+    contribution BeforeCommitDispatch = BeforeCommitDispatchCall {
+        as BeforeCommitDispatch
+        index TxIndex
+        order TxIndex
+
+        target before_commit_body {
+            build /ClassDef
+        }
+
+        external before_commit_function_name = BeforeCommitFunctionName
+        external tx_index_value = TxIndex
+    }
+
+    contribution AfterCommitDispatch = AfterCommitDispatchCall {
+        as AfterCommitDispatch
+        index TxIndex
+        order TxIndex
+
+        target after_commit_body {
+            build /ClassDef
+        }
+
+        external after_commit_function_name = AfterCommitFunctionName
+        external tx_index_value = TxIndex
+    }
+
+    contribution AfterRollbackDispatch = AfterRollbackDispatchCall {
+        as AfterRollbackDispatch
+        index TxIndex
+        order TxIndex
+
+        target after_rollback_body {
+            build /ClassDef
+        }
+
+        external after_rollback_function_name = AfterRollbackFunctionName
+        external tx_index_value = TxIndex
+    }
+
+    contribution CommitOrderKeyHelperMethodCall = CommitOrderKeyHelperCall {
+        as CommitOrderKeyHelperMethodCall
+        index DeclarationOrder
+        order DeclarationOrder
+
+        target commit_order_key_tx_body {
+            build /ClassDef/CommitOrderKeyFunction[TxIndex]
+        }
+
+        external method_name = MethodName
+    }
+
+    contribution RequiresValidationHelperMethodCall = RequiresValidationHelperCall {
+        as RequiresValidationHelperMethodCall
+        index DeclarationOrder
+        order DeclarationOrder
+
+        target requires_validation_tx_body {
+            build /ClassDef/RequiresValidationFunction[TxIndex]
+        }
+    }
+
+    contribution ValidateCommitHelperMethodCall = ValidateCommitHelperCall {
+        as ValidateCommitHelperMethodCall
+        index DeclarationOrder
+        order DeclarationOrder
+
+        target validate_commit_tx_body {
+            build /ClassDef/ValidateCommitFunction[TxIndex]
+        }
+
+        external method_name = MethodName
+    }
+
+    contribution BeforeCommitHelperMethodCall = TransactionHookHelperCall {
+        as BeforeCommitHelperMethodCall
+        index DeclarationOrder
+        order DeclarationOrder
+
+        target before_commit_tx_body {
+            build /ClassDef/BeforeCommitFunction[TxIndex]
+        }
+
+        external method_name = MethodName
+    }
+
+    contribution AfterCommitHelperMethodCall = TransactionHookHelperCall {
+        as AfterCommitHelperMethodCall
+        index DeclarationOrder
+        order DeclarationOrder
+
+        target after_commit_tx_body {
+            build /ClassDef/AfterCommitFunction[TxIndex]
+        }
+
+        external method_name = MethodName
+    }
+
+    contribution AfterRollbackHelperMethodCall = TransactionHookHelperCall {
+        as AfterRollbackHelperMethodCall
+        index DeclarationOrder
+        order DeclarationOrder
+
+        target after_rollback_tx_body {
+            build /ClassDef/AfterRollbackFunction[TxIndex]
+        }
+
+        external method_name = MethodName
+    }
+
     contribution PrepareCommitFieldsBodyPass = PassStatement {
         as PrepareCommitFieldsBodyPass
         index TxIndex
@@ -847,6 +1271,102 @@ concept LifecycleManaged extends core.LifecycleCore {
 
     matcher ManagedRollbackContributions(field: IndexedTransactionalFields) -> contribution {
         default -> ManagedRollback
+    }
+
+    matcher CommitOrderKeyHelperContributions(tx_group: TxGroups) -> contribution {
+        default -> CommitOrderKeyHelper
+    }
+
+    matcher RequiresValidationHelperContributions(tx_group: TxGroups) -> contribution {
+        default -> RequiresValidationHelper
+    }
+
+    matcher ValidateCommitHelperContributions(tx_group: TxGroups) -> contribution {
+        default -> ValidateCommitHelper
+    }
+
+    matcher BeforeCommitHelperContributions(tx_group: TxGroups) -> contribution {
+        default -> BeforeCommitHelper
+    }
+
+    matcher AfterCommitHelperContributions(tx_group: TxGroups) -> contribution {
+        default -> AfterCommitHelper
+    }
+
+    matcher AfterRollbackHelperContributions(tx_group: TxGroups) -> contribution {
+        default -> AfterRollbackHelper
+    }
+
+    matcher CommitOrderKeyHelperBodyPassContributions(tx_group: TxGroups) -> contribution {
+        default -> CommitOrderKeyHelperBodyPass
+    }
+
+    matcher RequiresValidationHelperBodyPassContributions(tx_group: TxGroups) -> contribution {
+        default -> RequiresValidationHelperBodyPass
+    }
+
+    matcher ValidateCommitHelperBodyPassContributions(tx_group: TxGroups) -> contribution {
+        default -> ValidateCommitHelperBodyPass
+    }
+
+    matcher BeforeCommitHelperBodyPassContributions(tx_group: TxGroups) -> contribution {
+        default -> BeforeCommitHelperBodyPass
+    }
+
+    matcher AfterCommitHelperBodyPassContributions(tx_group: TxGroups) -> contribution {
+        default -> AfterCommitHelperBodyPass
+    }
+
+    matcher AfterRollbackHelperBodyPassContributions(tx_group: TxGroups) -> contribution {
+        default -> AfterRollbackHelperBodyPass
+    }
+
+    matcher CommitOrderKeyDispatchContributions(tx_group: TxGroups) -> contribution {
+        default -> CommitOrderKeyDispatch
+    }
+
+    matcher RequiresValidationDispatchContributions(tx_group: TxGroups) -> contribution {
+        default -> RequiresValidationDispatch
+    }
+
+    matcher ValidateCommitDispatchContributions(tx_group: TxGroups) -> contribution {
+        default -> ValidateCommitDispatch
+    }
+
+    matcher BeforeCommitDispatchContributions(tx_group: TxGroups) -> contribution {
+        default -> BeforeCommitDispatch
+    }
+
+    matcher AfterCommitDispatchContributions(tx_group: TxGroups) -> contribution {
+        default -> AfterCommitDispatch
+    }
+
+    matcher AfterRollbackDispatchContributions(tx_group: TxGroups) -> contribution {
+        default -> AfterRollbackDispatch
+    }
+
+    matcher CommitOrderKeyContributions(method: CommitOrderKeyProviders) -> contribution {
+        rule helper when MethodKind == "commit_order_key" -> CommitOrderKeyHelperMethodCall
+    }
+
+    matcher RequiresValidationContributions(method: CommitValidators) -> contribution {
+        rule helper when MethodKind == "validate_commit" -> RequiresValidationHelperMethodCall
+    }
+
+    matcher ValidateCommitContributions(method: CommitValidators) -> contribution {
+        rule helper when MethodKind == "validate_commit" -> ValidateCommitHelperMethodCall
+    }
+
+    matcher BeforeCommitHookContributions(method: BeforeCommitHooks) -> contribution {
+        rule helper when MethodKind == "before_commit" -> BeforeCommitHelperMethodCall
+    }
+
+    matcher AfterCommitHookContributions(method: AfterCommitHooks) -> contribution {
+        rule helper when MethodKind == "after_commit" -> AfterCommitHelperMethodCall
+    }
+
+    matcher AfterRollbackHookContributions(method: AfterRollbackHooks) -> contribution {
+        rule helper when MethodKind == "after_rollback" -> AfterRollbackHelperMethodCall
     }
 
     matcher PrepareCommitFieldsBodyPassContributions(tx_group: TxGroups) -> contribution {
