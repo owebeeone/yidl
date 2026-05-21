@@ -193,6 +193,10 @@ def _assert_source_shape(sources: Mapping[str, str]) -> None:
         assert "def _after_commit_tx_by_key(" in generated
         assert "def _rollback_tx_by_key(" in generated
         assert "def _after_rollback_tx_by_key(" in generated
+        assert "def _apply_prepared_commit_tx_0_fields(self):" in generated
+        assert "def _apply_prepared_commit_tx_1_fields(self):" in generated
+        assert "def _rollback_tx_0_fields(self):" in generated
+        assert "def _rollback_tx_1_fields(self):" in generated
         assert "def _commit_transaction(" not in generated
         assert "def _rollback_transaction(" not in generated
         assert "getattr(\n            self._y_get_default_facade()" not in generated

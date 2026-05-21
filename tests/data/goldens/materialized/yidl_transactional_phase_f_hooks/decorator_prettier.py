@@ -243,6 +243,19 @@ _ClassVarAssignmentOrderProperty = RuntimeProperty(
 _TxGroupOrderProperty = RuntimeProperty(
     "TxGroupOrder", int, default=0, storage_name="tx_group_order"
 )
+_TxOwnerProperty = RuntimeProperty("TxOwner", str, default="", storage_name="tx_owner")
+_ApplyPreparedCommitFieldsFunctionNameProperty = RuntimeProperty(
+    "ApplyPreparedCommitFieldsFunctionName",
+    str,
+    default="",
+    storage_name="apply_prepared_commit_fields_function_name",
+)
+_RollbackFieldsFunctionNameProperty = RuntimeProperty(
+    "RollbackFieldsFunctionName",
+    str,
+    default="",
+    storage_name="rollback_fields_function_name",
+)
 _DependencyOwnerProperty = RuntimeProperty(
     "DependencyOwner", str, default=REQUIRED, storage_name="dependency_owner"
 )
@@ -509,7 +522,14 @@ _TransactionalFieldSpec = RuntimeRecord(
 )
 _TxGroupSpec = RuntimeRecord(
     "TxGroup",
-    (_ClassIdProperty, _TxGroupKeyProperty, _TxIndexProperty, _TxGroupOrderProperty),
+    (
+        _TxOwnerProperty,
+        _TxGroupKeyProperty,
+        _TxIndexProperty,
+        _TxGroupOrderProperty,
+        _ApplyPreparedCommitFieldsFunctionNameProperty,
+        _RollbackFieldsFunctionNameProperty,
+    ),
 )
 _IndexedTransactionalFieldSpec = RuntimeRecord(
     "IndexedTransactionalField",
@@ -2009,24 +2029,35 @@ _TransactionalFieldSpec.bind_record_class(TransactionalField)
 
 
 class TxGroup:
-    __slots__ = ("class_id", "tx_group_key", "tx_index", "tx_group_order")
+    __slots__ = (
+        "tx_owner",
+        "tx_group_key",
+        "tx_index",
+        "tx_group_order",
+        "apply_prepared_commit_fields_function_name",
+        "rollback_fields_function_name",
+    )
     __dds_record_spec__ = _TxGroupSpec
-    class_id: str
+    tx_owner: str
     tx_group_key: object
     tx_index: int
     tx_group_order: int
+    apply_prepared_commit_fields_function_name: str
+    rollback_fields_function_name: str
 
     def __init__(
         self,
         *,
-        class_id: str,
+        tx_owner: str = "",
         tx_group_key: object = None,
         tx_index: int = 0,
         tx_group_order: int = 0,
+        apply_prepared_commit_fields_function_name: str = "",
+        rollback_fields_function_name: str = "",
     ):
-        if not isinstance(class_id, str):
-            raise TypeError("ClassId must be str, got " + type(class_id).__name__)
-        object.__setattr__(self, "class_id", class_id)
+        if not isinstance(tx_owner, str):
+            raise TypeError("TxOwner must be str, got " + type(tx_owner).__name__)
+        object.__setattr__(self, "tx_owner", tx_owner)
         object.__setattr__(self, "tx_group_key", tx_group_key)
         if not isinstance(tx_index, int):
             raise TypeError("TxIndex must be int, got " + type(tx_index).__name__)
@@ -2036,18 +2067,50 @@ class TxGroup:
                 "TxGroupOrder must be int, got " + type(tx_group_order).__name__
             )
         object.__setattr__(self, "tx_group_order", tx_group_order)
+        if not isinstance(apply_prepared_commit_fields_function_name, str):
+            raise TypeError(
+                "ApplyPreparedCommitFieldsFunctionName must be str, got "
+                + type(apply_prepared_commit_fields_function_name).__name__
+            )
+        object.__setattr__(
+            self,
+            "apply_prepared_commit_fields_function_name",
+            apply_prepared_commit_fields_function_name,
+        )
+        if not isinstance(rollback_fields_function_name, str):
+            raise TypeError(
+                "RollbackFieldsFunctionName must be str, got "
+                + type(rollback_fields_function_name).__name__
+            )
+        object.__setattr__(
+            self, "rollback_fields_function_name", rollback_fields_function_name
+        )
 
     def __setattr__(self, name, value):
-        if name in ("class_id", "tx_group_key", "tx_index", "tx_group_order"):
+        if name in (
+            "tx_owner",
+            "tx_group_key",
+            "tx_index",
+            "tx_group_order",
+            "apply_prepared_commit_fields_function_name",
+            "rollback_fields_function_name",
+        ):
             raise AttributeError("TxGroup records are immutable")
         object.__setattr__(self, name, value)
 
     def __repr__(self):
         pieces = []
-        pieces.append("class_id=" + repr(self.class_id))
+        pieces.append("tx_owner=" + repr(self.tx_owner))
         pieces.append("tx_group_key=" + repr(self.tx_group_key))
         pieces.append("tx_index=" + repr(self.tx_index))
         pieces.append("tx_group_order=" + repr(self.tx_group_order))
+        pieces.append(
+            "apply_prepared_commit_fields_function_name="
+            + repr(self.apply_prepared_commit_fields_function_name)
+        )
+        pieces.append(
+            "rollback_fields_function_name=" + repr(self.rollback_fields_function_name)
+        )
         return "TxGroup" + "(" + ", ".join(pieces) + ")"
 
 
@@ -2776,7 +2839,7 @@ TxGroupsCollection = RuntimeCollection(
     "TxGroups",
     _TxGroupSpec,
     allows_multiple=True,
-    identity=(_ClassIdProperty, _TxGroupKeyProperty),
+    identity=(_TxOwnerProperty, _TxGroupKeyProperty),
 )
 IndexedTransactionalFieldsCollection = RuntimeCollection(
     "IndexedTransactionalFields",
@@ -2883,10 +2946,12 @@ def run_build_transaction_facts(builder):
         ctx.write(
             TxGroupsCollection,
             TxGroup(
-                class_id=lifecycle_class.class_id,
+                tx_owner=lifecycle_class.class_id,
                 tx_group_key=DEFAULT_TRANSACTION,
                 tx_index=0,
                 tx_group_order=0,
+                apply_prepared_commit_fields_function_name="_apply_prepared_commit_tx_0_fields",
+                rollback_fields_function_name="_rollback_tx_0_fields",
             ),
             policy=RejectDuplicate,
         )
@@ -2903,10 +2968,12 @@ def run_build_transaction_facts(builder):
                 ctx.write(
                     TxGroupsCollection,
                     TxGroup(
-                        class_id=lifecycle_class.class_id,
+                        tx_owner=lifecycle_class.class_id,
                         tx_group_key=tx_group,
                         tx_index=seen[tx_group],
                         tx_group_order=field.field_order,
+                        apply_prepared_commit_fields_function_name=f"_apply_prepared_commit_tx_{seen[tx_group]}_fields",
+                        rollback_fields_function_name=f"_rollback_tx_{seen[tx_group]}_fields",
                     ),
                     policy=RejectDuplicate,
                 )
@@ -3328,6 +3395,14 @@ ASSEMBLY_PROPERTIES = {
     "TxGroupOrder": _YidlSimpleNamespace(
         name="TxGroupOrder", storage_name="tx_group_order"
     ),
+    "TxOwner": _YidlSimpleNamespace(name="TxOwner", storage_name="tx_owner"),
+    "ApplyPreparedCommitFieldsFunctionName": _YidlSimpleNamespace(
+        name="ApplyPreparedCommitFieldsFunctionName",
+        storage_name="apply_prepared_commit_fields_function_name",
+    ),
+    "RollbackFieldsFunctionName": _YidlSimpleNamespace(
+        name="RollbackFieldsFunctionName", storage_name="rollback_fields_function_name"
+    ),
     "DependencyOwner": _YidlSimpleNamespace(
         name="DependencyOwner", storage_name="dependency_owner"
     ),
@@ -3657,6 +3732,7 @@ class state_class_decl_name__astichi_arg__:
         tx_index = self.__yidl_tx_group_to_index__[tx_group]
         if self._y_working_tx_ids[tx_index] != tx_token:
             raise RuntimeError("stale yidl transaction token")
+        astichi_hole(commit_transaction_dispatch_body)
         astichi_hole(commit_transaction_body)
         self._y_working_tx_ids[tx_index] = None
         return self._y_get_default_facade()
@@ -3670,6 +3746,7 @@ class state_class_decl_name__astichi_arg__:
     def _rollback_tx_by_key(self, tx_group=DEFAULT_TRANSACTION, tx_token=None):
         tx_index = self.__yidl_tx_group_to_index__[tx_group]
         del tx_token
+        astichi_hole(rollback_transaction_dispatch_body)
         astichi_hole(rollback_transaction_body)
         self._y_working_tx_ids[tx_index] = None
         return self._y_get_default_facade()
@@ -3679,6 +3756,9 @@ class state_class_decl_name__astichi_arg__:
         tx_index = self.__yidl_tx_group_to_index__[tx_group]
         astichi_hole(after_rollback_body)
         return self._y_get_default_facade()
+
+    astichi_hole(commit_transaction_helpers)
+    astichi_hole(rollback_transaction_helpers)
 
 
 class facade_base_decl_name__astichi_arg__(
@@ -3841,14 +3921,14 @@ return_class_module_ref__astichi_arg__.__module__ = astichi_pass(
 ).__module__
 return return_class_result_ref__astichi_arg__""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=569,
+            line_number=574,
         )
     ),
     "PassStatement": astichi_template(
         from_astichi_code(
             "pass",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=585,
+            line_number=590,
         )
     ),
     "BuildTransactionFactsBody": from_astichi_code(
@@ -3869,10 +3949,12 @@ for lifecycle_class in classes:
     ctx.write(
         TxGroupsCollection,
         TxGroup(
-            class_id=lifecycle_class.class_id,
+            tx_owner=lifecycle_class.class_id,
             tx_group_key=DEFAULT_TRANSACTION,
             tx_index=0,
             tx_group_order=0,
+            apply_prepared_commit_fields_function_name="_apply_prepared_commit_tx_0_fields",
+            rollback_fields_function_name="_rollback_tx_0_fields",
         ),
         policy=RejectDuplicate,
     )
@@ -3891,10 +3973,16 @@ for lifecycle_class in classes:
             ctx.write(
                 TxGroupsCollection,
                 TxGroup(
-                    class_id=lifecycle_class.class_id,
+                    tx_owner=lifecycle_class.class_id,
                     tx_group_key=tx_group,
                     tx_index=seen[tx_group],
                     tx_group_order=field.field_order,
+                    apply_prepared_commit_fields_function_name=(
+                        f"_apply_prepared_commit_tx_{seen[tx_group]}_fields"
+                    ),
+                    rollback_fields_function_name=(
+                        f"_rollback_tx_{seen[tx_group]}_fields"
+                    ),
                 ),
                 policy=RejectDuplicate,
             )
@@ -3926,7 +4014,7 @@ for lifecycle_class in classes:
             policy=RejectDuplicate,
         )""",
         file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_managed.yidl",
-        line_number=52,
+        line_number=57,
         keep_names=(
             "ctx",
             "ClassesCollection",
@@ -3948,14 +4036,14 @@ astichi_pass(state, outer_bind=True).astichi_ref(external=current_slot)._ = asti
     outer_bind=True,
 )""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_managed.yidl",
-            line_number=142,
+            line_number=155,
         )
     ),
     "ManagedWorkingStateAssignment": astichi_template(
         from_astichi_code(
             "astichi_pass(state, outer_bind=True).astichi_ref(external=working_slot)._ = VOID",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_managed.yidl",
-            line_number=149,
+            line_number=162,
             keep_names=("VOID",),
         )
     ),
@@ -3975,7 +4063,7 @@ def property_setter_name__astichi_arg__(self, value):
     state._y_ensure_working_transaction(astichi_bind_external(tx_index))
     state.astichi_ref(external=working_slot)._ = value""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_managed.yidl",
-            line_number=155,
+            line_number=168,
             keep_names=("VOID",),
         )
     ),
@@ -3994,7 +4082,7 @@ def property_setter_name__astichi_arg__(self, value):
         + astichi_bind_external(field_name)
     )""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_managed.yidl",
-            line_number=172,
+            line_number=185,
         )
     ),
     "ManagedWorkingProperty": astichi_template(
@@ -4013,32 +4101,71 @@ def property_setter_name__astichi_arg__(self, value):
     state._y_ensure_working_transaction(astichi_bind_external(tx_index))
     state.astichi_ref(external=working_slot)._ = value""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_managed.yidl",
-            line_number=186,
+            line_number=199,
             keep_names=("VOID",),
         )
     ),
     "ManagedCommitBranch": astichi_template(
         from_astichi_code(
             """\
-if astichi_pass(tx_index, outer_bind=True) == astichi_bind_external(tx_index_value):
-    if astichi_pass(self, outer_bind=True).astichi_ref(external=working_slot) is not VOID:
-        astichi_pass(self, outer_bind=True).astichi_ref(external=current_slot)._ = (
-            astichi_pass(self, outer_bind=True).astichi_ref(external=working_slot)
-        )
-        astichi_pass(self, outer_bind=True).astichi_ref(external=working_slot)._ = VOID""",
+if astichi_pass(self, outer_bind=True).astichi_ref(external=working_slot) is not VOID:
+    astichi_pass(self, outer_bind=True).astichi_ref(external=current_slot)._ = (
+        astichi_pass(self, outer_bind=True).astichi_ref(external=working_slot)
+    )
+    astichi_pass(self, outer_bind=True).astichi_ref(external=working_slot)._ = VOID""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_managed.yidl",
-            line_number=203,
+            line_number=216,
             keep_names=("VOID",),
         )
     ),
     "ManagedRollbackBranch": astichi_template(
         from_astichi_code(
+            "astichi_pass(self, outer_bind=True).astichi_ref(external=working_slot)._ = VOID",
+            file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_managed.yidl",
+            line_number=226,
+            keep_names=("VOID",),
+        )
+    ),
+    "ApplyPreparedCommitFieldsFunction": astichi_template(
+        from_astichi_code(
+            """\
+def apply_prepared_commit_fields_function_name__astichi_arg__(self):
+    astichi_hole(apply_prepared_commit_fields_body)""",
+            file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_managed.yidl",
+            line_number=232,
+        )
+    ),
+    "RollbackFieldsFunction": astichi_template(
+        from_astichi_code(
+            """\
+def rollback_fields_function_name__astichi_arg__(self):
+    astichi_hole(rollback_fields_body)""",
+            file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_managed.yidl",
+            line_number=237,
+        )
+    ),
+    "ApplyPreparedCommitDispatchBranch": astichi_template(
+        from_astichi_code(
             """\
 if astichi_pass(tx_index, outer_bind=True) == astichi_bind_external(tx_index_value):
-    astichi_pass(self, outer_bind=True).astichi_ref(external=working_slot)._ = VOID""",
+    astichi_pass(
+        self,
+        outer_bind=True,
+    ).astichi_ref(external=apply_prepared_commit_fields_function_name)()""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_managed.yidl",
-            line_number=214,
-            keep_names=("VOID",),
+            line_number=242,
+        )
+    ),
+    "RollbackDispatchBranch": astichi_template(
+        from_astichi_code(
+            """\
+if astichi_pass(tx_index, outer_bind=True) == astichi_bind_external(tx_index_value):
+    astichi_pass(
+        self,
+        outer_bind=True,
+    ).astichi_ref(external=rollback_fields_function_name)()""",
+            file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_managed.yidl",
+            line_number=250,
         )
     ),
     "BuildDefaultFactoryFactsBody": from_astichi_code(
@@ -4598,6 +4725,28 @@ ASSEMBLY_CONTRIBUTIONS = {
         ),
         bindings=(),
     ),
+    "CommitTransactionDispatchBodyPass": ContributionSpec(
+        name="CommitTransactionDispatchBodyPass",
+        source_name="PassStatement",
+        source_kind="resource",
+        build_name="CommitTransactionDispatchBodyPass",
+        index=LiteralValueRef(0),
+        order=LiteralValueRef(0),
+        target=TargetSpec(
+            name="commit_transaction_dispatch_body",
+            paths=(
+                TargetPathSpec(
+                    kind="build",
+                    path=PathSpec(
+                        segments=(
+                            PathSegmentSpec(kind="name", name="ClassDef", indexes=()),
+                        )
+                    ),
+                ),
+            ),
+        ),
+        bindings=(),
+    ),
     "RollbackTransactionBodyPass": ContributionSpec(
         name="RollbackTransactionBodyPass",
         source_name="PassStatement",
@@ -4607,6 +4756,28 @@ ASSEMBLY_CONTRIBUTIONS = {
         order=LiteralValueRef(0),
         target=TargetSpec(
             name="rollback_transaction_body",
+            paths=(
+                TargetPathSpec(
+                    kind="build",
+                    path=PathSpec(
+                        segments=(
+                            PathSegmentSpec(kind="name", name="ClassDef", indexes=()),
+                        )
+                    ),
+                ),
+            ),
+        ),
+        bindings=(),
+    ),
+    "RollbackTransactionDispatchBodyPass": ContributionSpec(
+        name="RollbackTransactionDispatchBodyPass",
+        source_name="PassStatement",
+        source_kind="resource",
+        build_name="RollbackTransactionDispatchBodyPass",
+        index=LiteralValueRef(0),
+        order=LiteralValueRef(0),
+        target=TargetSpec(
+            name="rollback_transaction_dispatch_body",
             paths=(
                 TargetPathSpec(
                     kind="build",
@@ -5638,13 +5809,18 @@ ASSEMBLY_CONTRIBUTIONS = {
         index=ValueRef("FieldOrder"),
         order=ValueRef("FieldOrder"),
         target=TargetSpec(
-            name="commit_transaction_body",
+            name="apply_prepared_commit_fields_body",
             paths=(
                 TargetPathSpec(
                     kind="build",
                     path=PathSpec(
                         segments=(
                             PathSegmentSpec(kind="name", name="ClassDef", indexes=()),
+                            PathSegmentSpec(
+                                kind="name",
+                                name="ApplyPreparedCommitFields",
+                                indexes=(ValueRef("TxIndex"),),
+                            ),
                         )
                     ),
                 ),
@@ -5657,9 +5833,6 @@ ASSEMBLY_CONTRIBUTIONS = {
             BindingSpec(
                 kind="external", name="working_slot", value=ValueRef("WorkingSlotName")
             ),
-            BindingSpec(
-                kind="external", name="tx_index_value", value=ValueRef("TxIndex")
-            ),
         ),
     ),
     "ManagedRollback": ContributionSpec(
@@ -5670,7 +5843,92 @@ ASSEMBLY_CONTRIBUTIONS = {
         index=ValueRef("FieldOrder"),
         order=ValueRef("FieldOrder"),
         target=TargetSpec(
-            name="rollback_transaction_body",
+            name="rollback_fields_body",
+            paths=(
+                TargetPathSpec(
+                    kind="build",
+                    path=PathSpec(
+                        segments=(
+                            PathSegmentSpec(kind="name", name="ClassDef", indexes=()),
+                            PathSegmentSpec(
+                                kind="name",
+                                name="RollbackFields",
+                                indexes=(ValueRef("TxIndex"),),
+                            ),
+                        )
+                    ),
+                ),
+            ),
+        ),
+        bindings=(
+            BindingSpec(
+                kind="external", name="working_slot", value=ValueRef("WorkingSlotName")
+            ),
+        ),
+    ),
+    "ApplyPreparedCommitFieldsBodyPass": ContributionSpec(
+        name="ApplyPreparedCommitFieldsBodyPass",
+        source_name="PassStatement",
+        source_kind="resource",
+        build_name="ApplyPreparedCommitFieldsBodyPass",
+        index=ValueRef("TxIndex"),
+        order=LiteralValueRef(0),
+        target=TargetSpec(
+            name="apply_prepared_commit_fields_body",
+            paths=(
+                TargetPathSpec(
+                    kind="build",
+                    path=PathSpec(
+                        segments=(
+                            PathSegmentSpec(kind="name", name="ClassDef", indexes=()),
+                            PathSegmentSpec(
+                                kind="name",
+                                name="ApplyPreparedCommitFields",
+                                indexes=(ValueRef("TxIndex"),),
+                            ),
+                        )
+                    ),
+                ),
+            ),
+        ),
+        bindings=(),
+    ),
+    "RollbackFieldsBodyPass": ContributionSpec(
+        name="RollbackFieldsBodyPass",
+        source_name="PassStatement",
+        source_kind="resource",
+        build_name="RollbackFieldsBodyPass",
+        index=ValueRef("TxIndex"),
+        order=LiteralValueRef(0),
+        target=TargetSpec(
+            name="rollback_fields_body",
+            paths=(
+                TargetPathSpec(
+                    kind="build",
+                    path=PathSpec(
+                        segments=(
+                            PathSegmentSpec(kind="name", name="ClassDef", indexes=()),
+                            PathSegmentSpec(
+                                kind="name",
+                                name="RollbackFields",
+                                indexes=(ValueRef("TxIndex"),),
+                            ),
+                        )
+                    ),
+                ),
+            ),
+        ),
+        bindings=(),
+    ),
+    "ApplyPreparedCommitFields": ContributionSpec(
+        name="ApplyPreparedCommitFields",
+        source_name="ApplyPreparedCommitFieldsFunction",
+        source_kind="resource",
+        build_name="ApplyPreparedCommitFields",
+        index=ValueRef("TxIndex"),
+        order=ValueRef("TxIndex"),
+        target=TargetSpec(
+            name="commit_transaction_helpers",
             paths=(
                 TargetPathSpec(
                     kind="build",
@@ -5684,7 +5942,96 @@ ASSEMBLY_CONTRIBUTIONS = {
         ),
         bindings=(
             BindingSpec(
-                kind="external", name="working_slot", value=ValueRef("WorkingSlotName")
+                kind="ident",
+                name="apply_prepared_commit_fields_function_name",
+                value=ValueRef("ApplyPreparedCommitFieldsFunctionName"),
+            ),
+        ),
+    ),
+    "RollbackFields": ContributionSpec(
+        name="RollbackFields",
+        source_name="RollbackFieldsFunction",
+        source_kind="resource",
+        build_name="RollbackFields",
+        index=ValueRef("TxIndex"),
+        order=ValueRef("TxIndex"),
+        target=TargetSpec(
+            name="rollback_transaction_helpers",
+            paths=(
+                TargetPathSpec(
+                    kind="build",
+                    path=PathSpec(
+                        segments=(
+                            PathSegmentSpec(kind="name", name="ClassDef", indexes=()),
+                        )
+                    ),
+                ),
+            ),
+        ),
+        bindings=(
+            BindingSpec(
+                kind="ident",
+                name="rollback_fields_function_name",
+                value=ValueRef("RollbackFieldsFunctionName"),
+            ),
+        ),
+    ),
+    "ApplyPreparedCommitDispatch": ContributionSpec(
+        name="ApplyPreparedCommitDispatch",
+        source_name="ApplyPreparedCommitDispatchBranch",
+        source_kind="resource",
+        build_name="ApplyPreparedCommitDispatch",
+        index=ValueRef("TxIndex"),
+        order=ValueRef("TxIndex"),
+        target=TargetSpec(
+            name="commit_transaction_dispatch_body",
+            paths=(
+                TargetPathSpec(
+                    kind="build",
+                    path=PathSpec(
+                        segments=(
+                            PathSegmentSpec(kind="name", name="ClassDef", indexes=()),
+                        )
+                    ),
+                ),
+            ),
+        ),
+        bindings=(
+            BindingSpec(
+                kind="external",
+                name="apply_prepared_commit_fields_function_name",
+                value=ValueRef("ApplyPreparedCommitFieldsFunctionName"),
+            ),
+            BindingSpec(
+                kind="external", name="tx_index_value", value=ValueRef("TxIndex")
+            ),
+        ),
+    ),
+    "RollbackDispatch": ContributionSpec(
+        name="RollbackDispatch",
+        source_name="RollbackDispatchBranch",
+        source_kind="resource",
+        build_name="RollbackDispatch",
+        index=ValueRef("TxIndex"),
+        order=ValueRef("TxIndex"),
+        target=TargetSpec(
+            name="rollback_transaction_dispatch_body",
+            paths=(
+                TargetPathSpec(
+                    kind="build",
+                    path=PathSpec(
+                        segments=(
+                            PathSegmentSpec(kind="name", name="ClassDef", indexes=()),
+                        )
+                    ),
+                ),
+            ),
+        ),
+        bindings=(
+            BindingSpec(
+                kind="external",
+                name="rollback_fields_function_name",
+                value=ValueRef("RollbackFieldsFunctionName"),
             ),
             BindingSpec(
                 kind="external", name="tx_index_value", value=ValueRef("TxIndex")
@@ -6138,6 +6485,16 @@ ASSEMBLY_MATCHERS = {
         default_contribution_name="CommitTransactionBodyPass",
         rules=(),
     ),
+    "CommitTransactionDispatchBodyPassContributions": ContributionMatcherSpec(
+        name="CommitTransactionDispatchBodyPassContributions",
+        inputs=(
+            AssemblyInputSpec(
+                name="lifecycle_class", collection_name="Classes", collection=None
+            ),
+        ),
+        default_contribution_name="CommitTransactionDispatchBodyPass",
+        rules=(),
+    ),
     "RollbackTransactionBodyPassContributions": ContributionMatcherSpec(
         name="RollbackTransactionBodyPassContributions",
         inputs=(
@@ -6146,6 +6503,16 @@ ASSEMBLY_MATCHERS = {
             ),
         ),
         default_contribution_name="RollbackTransactionBodyPass",
+        rules=(),
+    ),
+    "RollbackTransactionDispatchBodyPassContributions": ContributionMatcherSpec(
+        name="RollbackTransactionDispatchBodyPassContributions",
+        inputs=(
+            AssemblyInputSpec(
+                name="lifecycle_class", collection_name="Classes", collection=None
+            ),
+        ),
+        default_contribution_name="RollbackTransactionDispatchBodyPass",
         rules=(),
     ),
     "CommitOrderKeyBodyPassContributions": ContributionMatcherSpec(
@@ -6686,6 +7053,66 @@ ASSEMBLY_MATCHERS = {
         default_contribution_name="ManagedRollback",
         rules=(),
     ),
+    "ApplyPreparedCommitFieldsBodyPassContributions": ContributionMatcherSpec(
+        name="ApplyPreparedCommitFieldsBodyPassContributions",
+        inputs=(
+            AssemblyInputSpec(
+                name="tx_group", collection_name="TxGroups", collection=None
+            ),
+        ),
+        default_contribution_name="ApplyPreparedCommitFieldsBodyPass",
+        rules=(),
+    ),
+    "RollbackFieldsBodyPassContributions": ContributionMatcherSpec(
+        name="RollbackFieldsBodyPassContributions",
+        inputs=(
+            AssemblyInputSpec(
+                name="tx_group", collection_name="TxGroups", collection=None
+            ),
+        ),
+        default_contribution_name="RollbackFieldsBodyPass",
+        rules=(),
+    ),
+    "ApplyPreparedCommitFieldsContributions": ContributionMatcherSpec(
+        name="ApplyPreparedCommitFieldsContributions",
+        inputs=(
+            AssemblyInputSpec(
+                name="tx_group", collection_name="TxGroups", collection=None
+            ),
+        ),
+        default_contribution_name="ApplyPreparedCommitFields",
+        rules=(),
+    ),
+    "RollbackFieldsContributions": ContributionMatcherSpec(
+        name="RollbackFieldsContributions",
+        inputs=(
+            AssemblyInputSpec(
+                name="tx_group", collection_name="TxGroups", collection=None
+            ),
+        ),
+        default_contribution_name="RollbackFields",
+        rules=(),
+    ),
+    "ApplyPreparedCommitDispatchContributions": ContributionMatcherSpec(
+        name="ApplyPreparedCommitDispatchContributions",
+        inputs=(
+            AssemblyInputSpec(
+                name="tx_group", collection_name="TxGroups", collection=None
+            ),
+        ),
+        default_contribution_name="ApplyPreparedCommitDispatch",
+        rules=(),
+    ),
+    "RollbackDispatchContributions": ContributionMatcherSpec(
+        name="RollbackDispatchContributions",
+        inputs=(
+            AssemblyInputSpec(
+                name="tx_group", collection_name="TxGroups", collection=None
+            ),
+        ),
+        default_contribution_name="RollbackDispatch",
+        rules=(),
+    ),
     "ManagedInitParamContributions": ContributionMatcherSpec(
         name="ManagedInitParamContributions",
         inputs=(
@@ -7062,6 +7489,17 @@ ASSEMBLY_EDGES = {
         condition=None,
         matcher_name="CommitTransactionBodyPassContributions",
     ),
+    "CoreClassProduction.commit_transaction_dispatch_body_pass": AssemblyEdgeSpec(
+        name="CoreClassProduction.commit_transaction_dispatch_body_pass",
+        context_inputs=(
+            AssemblyInputSpec(
+                name="lifecycle_class", collection_name="Classes", collection=None
+            ),
+        ),
+        from_inputs=(),
+        condition=None,
+        matcher_name="CommitTransactionDispatchBodyPassContributions",
+    ),
     "CoreClassProduction.rollback_transaction_body_pass": AssemblyEdgeSpec(
         name="CoreClassProduction.rollback_transaction_body_pass",
         context_inputs=(
@@ -7072,6 +7510,17 @@ ASSEMBLY_EDGES = {
         from_inputs=(),
         condition=None,
         matcher_name="RollbackTransactionBodyPassContributions",
+    ),
+    "CoreClassProduction.rollback_transaction_dispatch_body_pass": AssemblyEdgeSpec(
+        name="CoreClassProduction.rollback_transaction_dispatch_body_pass",
+        context_inputs=(
+            AssemblyInputSpec(
+                name="lifecycle_class", collection_name="Classes", collection=None
+            ),
+        ),
+        from_inputs=(),
+        condition=None,
+        matcher_name="RollbackTransactionDispatchBodyPassContributions",
     ),
     "CoreClassProduction.commit_order_key_body_pass": AssemblyEdgeSpec(
         name="CoreClassProduction.commit_order_key_body_pass",
@@ -7548,6 +7997,17 @@ ASSEMBLY_EDGES = {
         condition=None,
         matcher_name="CommitTransactionBodyPassContributions",
     ),
+    "ClassProduction.commit_transaction_dispatch_body_pass": AssemblyEdgeSpec(
+        name="ClassProduction.commit_transaction_dispatch_body_pass",
+        context_inputs=(
+            AssemblyInputSpec(
+                name="lifecycle_class", collection_name="Classes", collection=None
+            ),
+        ),
+        from_inputs=(),
+        condition=None,
+        matcher_name="CommitTransactionDispatchBodyPassContributions",
+    ),
     "ClassProduction.rollback_transaction_body_pass": AssemblyEdgeSpec(
         name="ClassProduction.rollback_transaction_body_pass",
         context_inputs=(
@@ -7558,6 +8018,17 @@ ASSEMBLY_EDGES = {
         from_inputs=(),
         condition=None,
         matcher_name="RollbackTransactionBodyPassContributions",
+    ),
+    "ClassProduction.rollback_transaction_dispatch_body_pass": AssemblyEdgeSpec(
+        name="ClassProduction.rollback_transaction_dispatch_body_pass",
+        context_inputs=(
+            AssemblyInputSpec(
+                name="lifecycle_class", collection_name="Classes", collection=None
+            ),
+        ),
+        from_inputs=(),
+        condition=None,
+        matcher_name="RollbackTransactionDispatchBodyPassContributions",
     ),
     "ClassProduction.commit_order_key_body_pass": AssemblyEdgeSpec(
         name="ClassProduction.commit_order_key_body_pass",
@@ -7977,6 +8448,96 @@ ASSEMBLY_EDGES = {
         ),
         matcher_name="ManagedWorkingFacadePropertyContributions",
     ),
+    "ClassProduction.apply_prepared_commit_helpers": AssemblyEdgeSpec(
+        name="ClassProduction.apply_prepared_commit_helpers",
+        context_inputs=(
+            AssemblyInputSpec(
+                name="lifecycle_class", collection_name="Classes", collection=None
+            ),
+        ),
+        from_inputs=(
+            AssemblyInputSpec(
+                name="tx_group", collection_name="TxGroups", collection=None
+            ),
+        ),
+        condition=EqConditionSpec(left=ValueRef("TxOwner"), right=ValueRef("ClassId")),
+        matcher_name="ApplyPreparedCommitFieldsContributions",
+    ),
+    "ClassProduction.rollback_helpers": AssemblyEdgeSpec(
+        name="ClassProduction.rollback_helpers",
+        context_inputs=(
+            AssemblyInputSpec(
+                name="lifecycle_class", collection_name="Classes", collection=None
+            ),
+        ),
+        from_inputs=(
+            AssemblyInputSpec(
+                name="tx_group", collection_name="TxGroups", collection=None
+            ),
+        ),
+        condition=EqConditionSpec(left=ValueRef("TxOwner"), right=ValueRef("ClassId")),
+        matcher_name="RollbackFieldsContributions",
+    ),
+    "ClassProduction.apply_prepared_commit_helper_body_pass": AssemblyEdgeSpec(
+        name="ClassProduction.apply_prepared_commit_helper_body_pass",
+        context_inputs=(
+            AssemblyInputSpec(
+                name="lifecycle_class", collection_name="Classes", collection=None
+            ),
+        ),
+        from_inputs=(
+            AssemblyInputSpec(
+                name="tx_group", collection_name="TxGroups", collection=None
+            ),
+        ),
+        condition=EqConditionSpec(left=ValueRef("TxOwner"), right=ValueRef("ClassId")),
+        matcher_name="ApplyPreparedCommitFieldsBodyPassContributions",
+    ),
+    "ClassProduction.rollback_helper_body_pass": AssemblyEdgeSpec(
+        name="ClassProduction.rollback_helper_body_pass",
+        context_inputs=(
+            AssemblyInputSpec(
+                name="lifecycle_class", collection_name="Classes", collection=None
+            ),
+        ),
+        from_inputs=(
+            AssemblyInputSpec(
+                name="tx_group", collection_name="TxGroups", collection=None
+            ),
+        ),
+        condition=EqConditionSpec(left=ValueRef("TxOwner"), right=ValueRef("ClassId")),
+        matcher_name="RollbackFieldsBodyPassContributions",
+    ),
+    "ClassProduction.apply_prepared_commit_dispatch": AssemblyEdgeSpec(
+        name="ClassProduction.apply_prepared_commit_dispatch",
+        context_inputs=(
+            AssemblyInputSpec(
+                name="lifecycle_class", collection_name="Classes", collection=None
+            ),
+        ),
+        from_inputs=(
+            AssemblyInputSpec(
+                name="tx_group", collection_name="TxGroups", collection=None
+            ),
+        ),
+        condition=EqConditionSpec(left=ValueRef("TxOwner"), right=ValueRef("ClassId")),
+        matcher_name="ApplyPreparedCommitDispatchContributions",
+    ),
+    "ClassProduction.rollback_dispatch": AssemblyEdgeSpec(
+        name="ClassProduction.rollback_dispatch",
+        context_inputs=(
+            AssemblyInputSpec(
+                name="lifecycle_class", collection_name="Classes", collection=None
+            ),
+        ),
+        from_inputs=(
+            AssemblyInputSpec(
+                name="tx_group", collection_name="TxGroups", collection=None
+            ),
+        ),
+        condition=EqConditionSpec(left=ValueRef("TxOwner"), right=ValueRef("ClassId")),
+        matcher_name="RollbackDispatchContributions",
+    ),
     "ClassProduction.managed_commit": AssemblyEdgeSpec(
         name="ClassProduction.managed_commit",
         context_inputs=(
@@ -8374,6 +8935,21 @@ ASSEMBLY_PRODUCTIONS = {
             ),
             InlineApplySpec(
                 edge=AssemblyEdgeSpec(
+                    name="CoreClassProduction.commit_transaction_dispatch_body_pass",
+                    context_inputs=(
+                        AssemblyInputSpec(
+                            name="lifecycle_class",
+                            collection_name="Classes",
+                            collection=None,
+                        ),
+                    ),
+                    from_inputs=(),
+                    condition=None,
+                    matcher_name="CommitTransactionDispatchBodyPassContributions",
+                )
+            ),
+            InlineApplySpec(
+                edge=AssemblyEdgeSpec(
                     name="CoreClassProduction.rollback_transaction_body_pass",
                     context_inputs=(
                         AssemblyInputSpec(
@@ -8385,6 +8961,21 @@ ASSEMBLY_PRODUCTIONS = {
                     from_inputs=(),
                     condition=None,
                     matcher_name="RollbackTransactionBodyPassContributions",
+                )
+            ),
+            InlineApplySpec(
+                edge=AssemblyEdgeSpec(
+                    name="CoreClassProduction.rollback_transaction_dispatch_body_pass",
+                    context_inputs=(
+                        AssemblyInputSpec(
+                            name="lifecycle_class",
+                            collection_name="Classes",
+                            collection=None,
+                        ),
+                    ),
+                    from_inputs=(),
+                    condition=None,
+                    matcher_name="RollbackTransactionDispatchBodyPassContributions",
                 )
             ),
             InlineApplySpec(
@@ -9152,6 +9743,21 @@ ASSEMBLY_PRODUCTIONS = {
             ),
             InlineApplySpec(
                 edge=AssemblyEdgeSpec(
+                    name="ClassProduction.commit_transaction_dispatch_body_pass",
+                    context_inputs=(
+                        AssemblyInputSpec(
+                            name="lifecycle_class",
+                            collection_name="Classes",
+                            collection=None,
+                        ),
+                    ),
+                    from_inputs=(),
+                    condition=None,
+                    matcher_name="CommitTransactionDispatchBodyPassContributions",
+                )
+            ),
+            InlineApplySpec(
+                edge=AssemblyEdgeSpec(
                     name="ClassProduction.rollback_transaction_body_pass",
                     context_inputs=(
                         AssemblyInputSpec(
@@ -9163,6 +9769,21 @@ ASSEMBLY_PRODUCTIONS = {
                     from_inputs=(),
                     condition=None,
                     matcher_name="RollbackTransactionBodyPassContributions",
+                )
+            ),
+            InlineApplySpec(
+                edge=AssemblyEdgeSpec(
+                    name="ClassProduction.rollback_transaction_dispatch_body_pass",
+                    context_inputs=(
+                        AssemblyInputSpec(
+                            name="lifecycle_class",
+                            collection_name="Classes",
+                            collection=None,
+                        ),
+                    ),
+                    from_inputs=(),
+                    condition=None,
+                    matcher_name="RollbackTransactionDispatchBodyPassContributions",
                 )
             ),
             InlineApplySpec(
@@ -9707,6 +10328,132 @@ ASSEMBLY_PRODUCTIONS = {
                         left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
                     ),
                     matcher_name="ManagedWorkingFacadePropertyContributions",
+                )
+            ),
+            InlineApplySpec(
+                edge=AssemblyEdgeSpec(
+                    name="ClassProduction.apply_prepared_commit_helpers",
+                    context_inputs=(
+                        AssemblyInputSpec(
+                            name="lifecycle_class",
+                            collection_name="Classes",
+                            collection=None,
+                        ),
+                    ),
+                    from_inputs=(
+                        AssemblyInputSpec(
+                            name="tx_group", collection_name="TxGroups", collection=None
+                        ),
+                    ),
+                    condition=EqConditionSpec(
+                        left=ValueRef("TxOwner"), right=ValueRef("ClassId")
+                    ),
+                    matcher_name="ApplyPreparedCommitFieldsContributions",
+                )
+            ),
+            InlineApplySpec(
+                edge=AssemblyEdgeSpec(
+                    name="ClassProduction.rollback_helpers",
+                    context_inputs=(
+                        AssemblyInputSpec(
+                            name="lifecycle_class",
+                            collection_name="Classes",
+                            collection=None,
+                        ),
+                    ),
+                    from_inputs=(
+                        AssemblyInputSpec(
+                            name="tx_group", collection_name="TxGroups", collection=None
+                        ),
+                    ),
+                    condition=EqConditionSpec(
+                        left=ValueRef("TxOwner"), right=ValueRef("ClassId")
+                    ),
+                    matcher_name="RollbackFieldsContributions",
+                )
+            ),
+            InlineApplySpec(
+                edge=AssemblyEdgeSpec(
+                    name="ClassProduction.apply_prepared_commit_helper_body_pass",
+                    context_inputs=(
+                        AssemblyInputSpec(
+                            name="lifecycle_class",
+                            collection_name="Classes",
+                            collection=None,
+                        ),
+                    ),
+                    from_inputs=(
+                        AssemblyInputSpec(
+                            name="tx_group", collection_name="TxGroups", collection=None
+                        ),
+                    ),
+                    condition=EqConditionSpec(
+                        left=ValueRef("TxOwner"), right=ValueRef("ClassId")
+                    ),
+                    matcher_name="ApplyPreparedCommitFieldsBodyPassContributions",
+                )
+            ),
+            InlineApplySpec(
+                edge=AssemblyEdgeSpec(
+                    name="ClassProduction.rollback_helper_body_pass",
+                    context_inputs=(
+                        AssemblyInputSpec(
+                            name="lifecycle_class",
+                            collection_name="Classes",
+                            collection=None,
+                        ),
+                    ),
+                    from_inputs=(
+                        AssemblyInputSpec(
+                            name="tx_group", collection_name="TxGroups", collection=None
+                        ),
+                    ),
+                    condition=EqConditionSpec(
+                        left=ValueRef("TxOwner"), right=ValueRef("ClassId")
+                    ),
+                    matcher_name="RollbackFieldsBodyPassContributions",
+                )
+            ),
+            InlineApplySpec(
+                edge=AssemblyEdgeSpec(
+                    name="ClassProduction.apply_prepared_commit_dispatch",
+                    context_inputs=(
+                        AssemblyInputSpec(
+                            name="lifecycle_class",
+                            collection_name="Classes",
+                            collection=None,
+                        ),
+                    ),
+                    from_inputs=(
+                        AssemblyInputSpec(
+                            name="tx_group", collection_name="TxGroups", collection=None
+                        ),
+                    ),
+                    condition=EqConditionSpec(
+                        left=ValueRef("TxOwner"), right=ValueRef("ClassId")
+                    ),
+                    matcher_name="ApplyPreparedCommitDispatchContributions",
+                )
+            ),
+            InlineApplySpec(
+                edge=AssemblyEdgeSpec(
+                    name="ClassProduction.rollback_dispatch",
+                    context_inputs=(
+                        AssemblyInputSpec(
+                            name="lifecycle_class",
+                            collection_name="Classes",
+                            collection=None,
+                        ),
+                    ),
+                    from_inputs=(
+                        AssemblyInputSpec(
+                            name="tx_group", collection_name="TxGroups", collection=None
+                        ),
+                    ),
+                    condition=EqConditionSpec(
+                        left=ValueRef("TxOwner"), right=ValueRef("ClassId")
+                    ),
+                    matcher_name="RollbackDispatchContributions",
                 )
             ),
             InlineApplySpec(

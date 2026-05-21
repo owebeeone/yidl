@@ -404,6 +404,7 @@ concept LifecycleCore {
                 tx_index = self.__yidl_tx_group_to_index__[tx_group]
                 if self._y_working_tx_ids[tx_index] != tx_token:
                     raise RuntimeError("stale yidl transaction token")
+                astichi_hole(commit_transaction_dispatch_body)
                 astichi_hole(commit_transaction_body)
                 self._y_working_tx_ids[tx_index] = None
                 return self._y_get_default_facade()
@@ -417,6 +418,7 @@ concept LifecycleCore {
             def _rollback_tx_by_key(self, tx_group=DEFAULT_TRANSACTION, tx_token=None):
                 tx_index = self.__yidl_tx_group_to_index__[tx_group]
                 del tx_token
+                astichi_hole(rollback_transaction_dispatch_body)
                 astichi_hole(rollback_transaction_body)
                 self._y_working_tx_ids[tx_index] = None
                 return self._y_get_default_facade()
@@ -426,6 +428,9 @@ concept LifecycleCore {
                 tx_index = self.__yidl_tx_group_to_index__[tx_group]
                 astichi_hole(after_rollback_body)
                 return self._y_get_default_facade()
+
+            astichi_hole(commit_transaction_helpers)
+            astichi_hole(rollback_transaction_helpers)
 
 
         class facade_base_decl_name__astichi_arg__(
@@ -703,12 +708,32 @@ concept LifecycleCore {
         }
     }
 
+    contribution CommitTransactionDispatchBodyPass = PassStatement {
+        as CommitTransactionDispatchBodyPass
+        index 0
+        order 0
+
+        target commit_transaction_dispatch_body {
+            build /ClassDef
+        }
+    }
+
     contribution RollbackTransactionBodyPass = PassStatement {
         as RollbackTransactionBodyPass
         index 0
         order 0
 
         target rollback_transaction_body {
+            build /ClassDef
+        }
+    }
+
+    contribution RollbackTransactionDispatchBodyPass = PassStatement {
+        as RollbackTransactionDispatchBodyPass
+        index 0
+        order 0
+
+        target rollback_transaction_dispatch_body {
             build /ClassDef
         }
     }
@@ -1066,8 +1091,16 @@ concept LifecycleCore {
         default -> CommitTransactionBodyPass
     }
 
+    matcher CommitTransactionDispatchBodyPassContributions(lifecycle_class: Classes) -> contribution {
+        default -> CommitTransactionDispatchBodyPass
+    }
+
     matcher RollbackTransactionBodyPassContributions(lifecycle_class: Classes) -> contribution {
         default -> RollbackTransactionBodyPass
+    }
+
+    matcher RollbackTransactionDispatchBodyPassContributions(lifecycle_class: Classes) -> contribution {
+        default -> RollbackTransactionDispatchBodyPass
     }
 
     matcher CommitOrderKeyBodyPassContributions(lifecycle_class: Classes) -> contribution {
@@ -1259,8 +1292,14 @@ concept LifecycleCore {
         apply commit_transaction_body_pass
             using CommitTransactionBodyPassContributions
 
+        apply commit_transaction_dispatch_body_pass
+            using CommitTransactionDispatchBodyPassContributions
+
         apply rollback_transaction_body_pass
             using RollbackTransactionBodyPassContributions
+
+        apply rollback_transaction_dispatch_body_pass
+            using RollbackTransactionDispatchBodyPassContributions
 
         apply commit_order_key_body_pass
             using CommitOrderKeyBodyPassContributions

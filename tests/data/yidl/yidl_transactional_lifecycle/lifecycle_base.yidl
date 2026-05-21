@@ -116,8 +116,14 @@ concept LifecycleBase extends default_factories.LifecycleDefaultFactories {
         apply commit_transaction_body_pass
             using CommitTransactionBodyPassContributions
 
+        apply commit_transaction_dispatch_body_pass
+            using CommitTransactionDispatchBodyPassContributions
+
         apply rollback_transaction_body_pass
             using RollbackTransactionBodyPassContributions
+
+        apply rollback_transaction_dispatch_body_pass
+            using RollbackTransactionDispatchBodyPassContributions
 
         apply commit_order_key_body_pass
             using CommitOrderKeyBodyPassContributions
@@ -236,6 +242,36 @@ concept LifecycleBase extends default_factories.LifecycleDefaultFactories {
             from field: IndexedTransactionalFields
             where FieldOwner == ClassId
             using ManagedWorkingFacadePropertyContributions
+
+        apply apply_prepared_commit_helpers
+            from tx_group: TxGroups
+            where TxOwner == ClassId
+            using ApplyPreparedCommitFieldsContributions
+
+        apply rollback_helpers
+            from tx_group: TxGroups
+            where TxOwner == ClassId
+            using RollbackFieldsContributions
+
+        apply apply_prepared_commit_helper_body_pass
+            from tx_group: TxGroups
+            where TxOwner == ClassId
+            using ApplyPreparedCommitFieldsBodyPassContributions
+
+        apply rollback_helper_body_pass
+            from tx_group: TxGroups
+            where TxOwner == ClassId
+            using RollbackFieldsBodyPassContributions
+
+        apply apply_prepared_commit_dispatch
+            from tx_group: TxGroups
+            where TxOwner == ClassId
+            using ApplyPreparedCommitDispatchContributions
+
+        apply rollback_dispatch
+            from tx_group: TxGroups
+            where TxOwner == ClassId
+            using RollbackDispatchContributions
 
         apply managed_commit
             from field: IndexedTransactionalFields

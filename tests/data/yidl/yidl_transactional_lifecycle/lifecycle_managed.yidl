@@ -18,6 +18,9 @@ concept LifecycleManaged extends core.LifecycleCore {
     # -------------------------------------------------------------------------
 
     property TxGroupOrder: int = 0
+    property TxOwner: str = ""
+    property ApplyPreparedCommitFieldsFunctionName: str = ""
+    property RollbackFieldsFunctionName: str = ""
     record TransactionalField {
         FieldId
         FieldOwner
@@ -27,10 +30,12 @@ concept LifecycleManaged extends core.LifecycleCore {
     }
 
     record TxGroup {
-        ClassId
+        TxOwner
         TxGroupKey
         TxIndex
         TxGroupOrder
+        ApplyPreparedCommitFieldsFunctionName
+        RollbackFieldsFunctionName
     }
 
     record IndexedTransactionalField {
@@ -45,7 +50,7 @@ concept LifecycleManaged extends core.LifecycleCore {
     }
 
     collection TransactionalFields: TransactionalField identity FieldId many
-    collection TxGroups: TxGroup identity (ClassId, TxGroupKey) many
+    collection TxGroups: TxGroup identity (TxOwner, TxGroupKey) many
     collection IndexedTransactionalFields: IndexedTransactionalField identity FieldId many
 
     resource BuildTransactionFactsBody = code $[
@@ -65,10 +70,12 @@ concept LifecycleManaged extends core.LifecycleCore {
             ctx.write(
                 TxGroupsCollection,
                 TxGroup(
-                    class_id=lifecycle_class.class_id,
+                    tx_owner=lifecycle_class.class_id,
                     tx_group_key=DEFAULT_TRANSACTION,
                     tx_index=0,
                     tx_group_order=0,
+                    apply_prepared_commit_fields_function_name="_apply_prepared_commit_tx_0_fields",
+                    rollback_fields_function_name="_rollback_tx_0_fields",
                 ),
                 policy=RejectDuplicate,
             )
@@ -87,10 +94,16 @@ concept LifecycleManaged extends core.LifecycleCore {
                     ctx.write(
                         TxGroupsCollection,
                         TxGroup(
-                            class_id=lifecycle_class.class_id,
+                            tx_owner=lifecycle_class.class_id,
                             tx_group_key=tx_group,
                             tx_index=seen[tx_group],
                             tx_group_order=field.field_order,
+                            apply_prepared_commit_fields_function_name=(
+                                f"_apply_prepared_commit_tx_{seen[tx_group]}_fields"
+                            ),
+                            rollback_fields_function_name=(
+                                f"_rollback_tx_{seen[tx_group]}_fields"
+                            ),
                         ),
                         policy=RejectDuplicate,
                     )
@@ -200,22 +213,46 @@ concept LifecycleManaged extends core.LifecycleCore {
     }
 
     resource ManagedCommitBranch = template $[
-        if astichi_pass(tx_index, outer_bind=True) == astichi_bind_external(tx_index_value):
-            if astichi_pass(self, outer_bind=True).astichi_ref(external=working_slot) is not VOID:
-                astichi_pass(self, outer_bind=True).astichi_ref(external=current_slot)._ = (
-                    astichi_pass(self, outer_bind=True).astichi_ref(external=working_slot)
-                )
-                astichi_pass(self, outer_bind=True).astichi_ref(external=working_slot)._ = VOID
+        if astichi_pass(self, outer_bind=True).astichi_ref(external=working_slot) is not VOID:
+            astichi_pass(self, outer_bind=True).astichi_ref(external=current_slot)._ = (
+                astichi_pass(self, outer_bind=True).astichi_ref(external=working_slot)
+            )
+            astichi_pass(self, outer_bind=True).astichi_ref(external=working_slot)._ = VOID
     ]$ {
         keep VOID
     }
 
     resource ManagedRollbackBranch = template $[
-        if astichi_pass(tx_index, outer_bind=True) == astichi_bind_external(tx_index_value):
-            astichi_pass(self, outer_bind=True).astichi_ref(external=working_slot)._ = VOID
+        astichi_pass(self, outer_bind=True).astichi_ref(external=working_slot)._ = VOID
     ]$ {
         keep VOID
     }
+
+    resource ApplyPreparedCommitFieldsFunction = template $[
+        def apply_prepared_commit_fields_function_name__astichi_arg__(self):
+            astichi_hole(apply_prepared_commit_fields_body)
+    ]$
+
+    resource RollbackFieldsFunction = template $[
+        def rollback_fields_function_name__astichi_arg__(self):
+            astichi_hole(rollback_fields_body)
+    ]$
+
+    resource ApplyPreparedCommitDispatchBranch = template $[
+        if astichi_pass(tx_index, outer_bind=True) == astichi_bind_external(tx_index_value):
+            astichi_pass(
+                self,
+                outer_bind=True,
+            ).astichi_ref(external=apply_prepared_commit_fields_function_name)()
+    ]$
+
+    resource RollbackDispatchBranch = template $[
+        if astichi_pass(tx_index, outer_bind=True) == astichi_bind_external(tx_index_value):
+            astichi_pass(
+                self,
+                outer_bind=True,
+            ).astichi_ref(external=rollback_fields_function_name)()
+    ]$
 
     contribution ManagedCurrentStateSlot = StateSlotEntry {
         as ManagedCurrentStateSlot
@@ -361,13 +398,12 @@ concept LifecycleManaged extends core.LifecycleCore {
         index FieldOrder
         order FieldOrder
 
-        target commit_transaction_body {
-            build /ClassDef
+        target apply_prepared_commit_fields_body {
+            build /ClassDef/ApplyPreparedCommitFields[TxIndex]
         }
 
         external current_slot = CurrentSlotName
         external working_slot = WorkingSlotName
-        external tx_index_value = TxIndex
     }
 
     contribution ManagedRollback = ManagedRollbackBranch {
@@ -375,11 +411,80 @@ concept LifecycleManaged extends core.LifecycleCore {
         index FieldOrder
         order FieldOrder
 
-        target rollback_transaction_body {
-            build /ClassDef
+        target rollback_fields_body {
+            build /ClassDef/RollbackFields[TxIndex]
         }
 
         external working_slot = WorkingSlotName
+    }
+
+    contribution ApplyPreparedCommitFieldsBodyPass = PassStatement {
+        as ApplyPreparedCommitFieldsBodyPass
+        index TxIndex
+        order 0
+
+        target apply_prepared_commit_fields_body {
+            build /ClassDef/ApplyPreparedCommitFields[TxIndex]
+        }
+    }
+
+    contribution RollbackFieldsBodyPass = PassStatement {
+        as RollbackFieldsBodyPass
+        index TxIndex
+        order 0
+
+        target rollback_fields_body {
+            build /ClassDef/RollbackFields[TxIndex]
+        }
+    }
+
+    contribution ApplyPreparedCommitFields = ApplyPreparedCommitFieldsFunction {
+        as ApplyPreparedCommitFields
+        index TxIndex
+        order TxIndex
+
+        target commit_transaction_helpers {
+            build /ClassDef
+        }
+
+        ident apply_prepared_commit_fields_function_name = ApplyPreparedCommitFieldsFunctionName
+    }
+
+    contribution RollbackFields = RollbackFieldsFunction {
+        as RollbackFields
+        index TxIndex
+        order TxIndex
+
+        target rollback_transaction_helpers {
+            build /ClassDef
+        }
+
+        ident rollback_fields_function_name = RollbackFieldsFunctionName
+    }
+
+    contribution ApplyPreparedCommitDispatch = ApplyPreparedCommitDispatchBranch {
+        as ApplyPreparedCommitDispatch
+        index TxIndex
+        order TxIndex
+
+        target commit_transaction_dispatch_body {
+            build /ClassDef
+        }
+
+        external apply_prepared_commit_fields_function_name = ApplyPreparedCommitFieldsFunctionName
+        external tx_index_value = TxIndex
+    }
+
+    contribution RollbackDispatch = RollbackDispatchBranch {
+        as RollbackDispatch
+        index TxIndex
+        order TxIndex
+
+        target rollback_transaction_dispatch_body {
+            build /ClassDef
+        }
+
+        external rollback_fields_function_name = RollbackFieldsFunctionName
         external tx_index_value = TxIndex
     }
 
@@ -423,6 +528,30 @@ concept LifecycleManaged extends core.LifecycleCore {
 
     matcher ManagedRollbackContributions(field: IndexedTransactionalFields) -> contribution {
         default -> ManagedRollback
+    }
+
+    matcher ApplyPreparedCommitFieldsBodyPassContributions(tx_group: TxGroups) -> contribution {
+        default -> ApplyPreparedCommitFieldsBodyPass
+    }
+
+    matcher RollbackFieldsBodyPassContributions(tx_group: TxGroups) -> contribution {
+        default -> RollbackFieldsBodyPass
+    }
+
+    matcher ApplyPreparedCommitFieldsContributions(tx_group: TxGroups) -> contribution {
+        default -> ApplyPreparedCommitFields
+    }
+
+    matcher RollbackFieldsContributions(tx_group: TxGroups) -> contribution {
+        default -> RollbackFields
+    }
+
+    matcher ApplyPreparedCommitDispatchContributions(tx_group: TxGroups) -> contribution {
+        default -> ApplyPreparedCommitDispatch
+    }
+
+    matcher RollbackDispatchContributions(tx_group: TxGroups) -> contribution {
+        default -> RollbackDispatch
     }
 
     matcher ManagedInitParamContributions(field: ManagedFields) -> contribution {

@@ -91,13 +91,9 @@ def build_lifecycle_class(decorated_cls, *, _Counter_lifecycle_definition, _Coun
             if self._y_working_tx_ids[tx_index] != tx_token:
                 raise RuntimeError('stale yidl transaction token')
             if tx_index == 0:
-                if self._y_count_working is not VOID:
-                    self._y_count_current = self._y_count_working
-                    self._y_count_working = VOID
+                self._apply_prepared_commit_tx_0_fields()
             if tx_index == 1:
-                if self._y_audit_count_working is not VOID:
-                    self._y_audit_count_current = self._y_audit_count_working
-                    self._y_audit_count_working = VOID
+                self._apply_prepared_commit_tx_1_fields()
             self._y_working_tx_ids[tx_index] = None
             return self._y_get_default_facade()
 
@@ -112,9 +108,9 @@ def build_lifecycle_class(decorated_cls, *, _Counter_lifecycle_definition, _Coun
             tx_index = self.__yidl_tx_group_to_index__[tx_group]
             del tx_token
             if tx_index == 0:
-                self._y_count_working = VOID
+                self._rollback_tx_0_fields()
             if tx_index == 1:
-                self._y_audit_count_working = VOID
+                self._rollback_tx_1_fields()
             self._y_working_tx_ids[tx_index] = None
             return self._y_get_default_facade()
 
@@ -124,6 +120,22 @@ def build_lifecycle_class(decorated_cls, *, _Counter_lifecycle_definition, _Coun
             if tx_index == 1:
                 self._y_get_default_facade()._after_audit_rollback()
             return self._y_get_default_facade()
+
+        def _apply_prepared_commit_tx_0_fields(self):
+            if self._y_count_working is not VOID:
+                self._y_count_current = self._y_count_working
+                self._y_count_working = VOID
+
+        def _apply_prepared_commit_tx_1_fields(self):
+            if self._y_audit_count_working is not VOID:
+                self._y_audit_count_current = self._y_audit_count_working
+                self._y_audit_count_working = VOID
+
+        def _rollback_tx_0_fields(self):
+            self._y_count_working = VOID
+
+        def _rollback_tx_1_fields(self):
+            self._y_audit_count_working = VOID
 
     class Counter_FacadeBase(decorated_cls):
         __slots__ = ('_y_state',)
