@@ -9,6 +9,8 @@ from yidl.runtime.lifecycle_markers import field
 from yidl.runtime.lifecycle_markers import initvar
 from yidl.runtime.lifecycle_markers import managed
 from yidl.runtime.lifecycle_markers import normalize_marker
+from yidl.runtime.lifecycle_harvester import HarvestedLifecycle
+from yidl.runtime.lifecycle_harvester import harvest_lifecycle_definition
 
 
 def lifecycle(cls: type[object]) -> type[object]:
@@ -24,9 +26,10 @@ __all__ = [
     "MISSING",
     "classvar",
     "field",
+    "HarvestedLifecycle",
+    "harvest_lifecycle_definition",
     "initvar",
     "lifecycle",
     "managed",
     "normalize_marker",
 ]
-
