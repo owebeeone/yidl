@@ -29,6 +29,13 @@ _TxGroupKeyProperty = RuntimeProperty('TxGroupKey', object, default=None, storag
 _ValueSlotNameProperty = RuntimeProperty('ValueSlotName', str, default='', storage_name='value_slot_name')
 _CurrentSlotNameProperty = RuntimeProperty('CurrentSlotName', str, default='', storage_name='current_slot_name')
 _WorkingSlotNameProperty = RuntimeProperty('WorkingSlotName', str, default='', storage_name='working_slot_name')
+_HasFreezeProperty = RuntimeProperty('HasFreeze', bool, default=False, storage_name='has_freeze')
+_FreezeProperty = RuntimeProperty('Freeze', object, default=None, storage_name='freeze')
+_FreezeParamNameProperty = RuntimeProperty('FreezeParamName', str, default='', storage_name='freeze_param_name')
+_HasThawProperty = RuntimeProperty('HasThaw', bool, default=False, storage_name='has_thaw')
+_ThawProperty = RuntimeProperty('Thaw', object, default=None, storage_name='thaw')
+_ThawParamNameProperty = RuntimeProperty('ThawParamName', str, default='', storage_name='thaw_param_name')
+_HasOptionalNoneProperty = RuntimeProperty('HasOptionalNone', bool, default=False, storage_name='has_optional_none')
 _MethodIdProperty = RuntimeProperty('MethodId', str, default=REQUIRED, storage_name='method_id')
 _MethodOwnerProperty = RuntimeProperty('MethodOwner', str, default=REQUIRED, storage_name='method_owner')
 _MethodNameProperty = RuntimeProperty('MethodName', str, default=REQUIRED, storage_name='method_name')
@@ -93,13 +100,13 @@ _FacadeExposureSpec = RuntimeRecord('FacadeExposure', (_FacadeOwnerProperty, _Ow
 _InitParameterSpec = RuntimeRecord('InitParameter', (_InitParameterIdProperty, _InitParameterOwnerProperty, _InitParameterNameProperty, _InitParameterOrderProperty, _InitParameterKindProperty))
 _InitAssignmentSpec = RuntimeRecord('InitAssignment', (_InitAssignmentIdProperty, _InitAssignmentOwnerProperty, _InitAssignmentFieldIdProperty, _InitAssignmentFieldNameProperty, _InitAssignmentOrderProperty, _InitAssignmentKindProperty))
 _ClassVarAssignmentSpec = RuntimeRecord('ClassVarAssignment', (_ClassVarAssignmentIdProperty, _ClassVarAssignmentOwnerProperty, _ClassVarAssignmentNameProperty, _ClassVarAssignmentOrderProperty))
-_PlainFieldSpec = RuntimeRecord('PlainField', (_FieldIdProperty, _FieldOwnerProperty, _FieldNameProperty, _FieldOrderProperty, _FieldKindProperty, _AnnotationProperty, _InitProperty, _HasDefaultProperty, _DefaultValueProperty, _DefaultValueParamNameProperty, _HasDefaultFactoryProperty, _DefaultFactoryProperty, _DefaultFactoryParamNameProperty, _DefaultFactoryParamNamesProperty, _TxGroupKeyProperty, _ValueSlotNameProperty, _CurrentSlotNameProperty, _WorkingSlotNameProperty))
-_InitVarFieldSpec = RuntimeRecord('InitVarField', (_FieldIdProperty, _FieldOwnerProperty, _FieldNameProperty, _FieldOrderProperty, _FieldKindProperty, _AnnotationProperty, _InitProperty, _HasDefaultProperty, _DefaultValueProperty, _DefaultValueParamNameProperty, _HasDefaultFactoryProperty, _DefaultFactoryProperty, _DefaultFactoryParamNameProperty, _DefaultFactoryParamNamesProperty, _TxGroupKeyProperty, _ValueSlotNameProperty, _CurrentSlotNameProperty, _WorkingSlotNameProperty))
-_ClassVarFieldSpec = RuntimeRecord('ClassVarField', (_FieldIdProperty, _FieldOwnerProperty, _FieldNameProperty, _FieldOrderProperty, _FieldKindProperty, _AnnotationProperty, _InitProperty, _HasDefaultProperty, _DefaultValueProperty, _DefaultValueParamNameProperty, _HasDefaultFactoryProperty, _DefaultFactoryProperty, _DefaultFactoryParamNameProperty, _DefaultFactoryParamNamesProperty, _TxGroupKeyProperty, _ValueSlotNameProperty, _CurrentSlotNameProperty, _WorkingSlotNameProperty))
+_PlainFieldSpec = RuntimeRecord('PlainField', (_FieldIdProperty, _FieldOwnerProperty, _FieldNameProperty, _FieldOrderProperty, _FieldKindProperty, _AnnotationProperty, _InitProperty, _HasDefaultProperty, _DefaultValueProperty, _DefaultValueParamNameProperty, _HasDefaultFactoryProperty, _DefaultFactoryProperty, _DefaultFactoryParamNameProperty, _DefaultFactoryParamNamesProperty, _TxGroupKeyProperty, _ValueSlotNameProperty, _CurrentSlotNameProperty, _WorkingSlotNameProperty, _HasFreezeProperty, _FreezeProperty, _FreezeParamNameProperty, _HasThawProperty, _ThawProperty, _ThawParamNameProperty, _HasOptionalNoneProperty))
+_InitVarFieldSpec = RuntimeRecord('InitVarField', (_FieldIdProperty, _FieldOwnerProperty, _FieldNameProperty, _FieldOrderProperty, _FieldKindProperty, _AnnotationProperty, _InitProperty, _HasDefaultProperty, _DefaultValueProperty, _DefaultValueParamNameProperty, _HasDefaultFactoryProperty, _DefaultFactoryProperty, _DefaultFactoryParamNameProperty, _DefaultFactoryParamNamesProperty, _TxGroupKeyProperty, _ValueSlotNameProperty, _CurrentSlotNameProperty, _WorkingSlotNameProperty, _HasFreezeProperty, _FreezeProperty, _FreezeParamNameProperty, _HasThawProperty, _ThawProperty, _ThawParamNameProperty, _HasOptionalNoneProperty))
+_ClassVarFieldSpec = RuntimeRecord('ClassVarField', (_FieldIdProperty, _FieldOwnerProperty, _FieldNameProperty, _FieldOrderProperty, _FieldKindProperty, _AnnotationProperty, _InitProperty, _HasDefaultProperty, _DefaultValueProperty, _DefaultValueParamNameProperty, _HasDefaultFactoryProperty, _DefaultFactoryProperty, _DefaultFactoryParamNameProperty, _DefaultFactoryParamNamesProperty, _TxGroupKeyProperty, _ValueSlotNameProperty, _CurrentSlotNameProperty, _WorkingSlotNameProperty, _HasFreezeProperty, _FreezeProperty, _FreezeParamNameProperty, _HasThawProperty, _ThawProperty, _ThawParamNameProperty, _HasOptionalNoneProperty))
 _TransactionalFieldSpec = RuntimeRecord('TransactionalField', (_FieldIdProperty, _FieldOwnerProperty, _FieldNameProperty, _FieldOrderProperty, _TxGroupKeyProperty))
 _TxGroupSpec = RuntimeRecord('TxGroup', (_ClassIdProperty, _TxGroupKeyProperty, _TxIndexProperty, _TxGroupOrderProperty))
 _IndexedTransactionalFieldSpec = RuntimeRecord('IndexedTransactionalField', (_FieldIdProperty, _FieldOwnerProperty, _FieldNameProperty, _FieldOrderProperty, _TxGroupKeyProperty, _TxIndexProperty, _CurrentSlotNameProperty, _WorkingSlotNameProperty))
-_ManagedFieldSpec = RuntimeRecord('ManagedField', (_FieldIdProperty, _FieldOwnerProperty, _FieldNameProperty, _FieldOrderProperty, _FieldKindProperty, _AnnotationProperty, _InitProperty, _HasDefaultProperty, _DefaultValueProperty, _DefaultValueParamNameProperty, _HasDefaultFactoryProperty, _DefaultFactoryProperty, _DefaultFactoryParamNameProperty, _DefaultFactoryParamNamesProperty, _TxGroupKeyProperty, _ValueSlotNameProperty, _CurrentSlotNameProperty, _WorkingSlotNameProperty))
+_ManagedFieldSpec = RuntimeRecord('ManagedField', (_FieldIdProperty, _FieldOwnerProperty, _FieldNameProperty, _FieldOrderProperty, _FieldKindProperty, _AnnotationProperty, _InitProperty, _HasDefaultProperty, _DefaultValueProperty, _DefaultValueParamNameProperty, _HasDefaultFactoryProperty, _DefaultFactoryProperty, _DefaultFactoryParamNameProperty, _DefaultFactoryParamNamesProperty, _TxGroupKeyProperty, _ValueSlotNameProperty, _CurrentSlotNameProperty, _WorkingSlotNameProperty, _HasFreezeProperty, _FreezeProperty, _FreezeParamNameProperty, _HasThawProperty, _ThawProperty, _ThawParamNameProperty, _HasOptionalNoneProperty))
 _DefaultFactoryDependencySpec = RuntimeRecord('DefaultFactoryDependency', (_DependencyOwnerProperty, _ConsumerFieldIdProperty, _ConsumerFieldNameProperty, _ProviderNameProperty, _ProviderFieldIdProperty, _ProviderFieldKindProperty, _ProviderInitProperty, _ProviderHasDefaultProperty, _ProviderHasDefaultFactoryProperty, _ParamNameProperty, _ParamOrderProperty, _ConsumerEvalOrderProperty))
 _DefaultFactoryEvaluationStepSpec = RuntimeRecord('DefaultFactoryEvaluationStep', (_EvalStepIdProperty, _EvalOwnerProperty, _EvalFieldIdProperty, _EvalFieldNameProperty, _EvalFieldKindProperty, _EvalInitProperty, _EvalStateSlotNameProperty, _EvalDefaultFactoryParamNameProperty, _EvalOrderProperty, _EvalStatementOrderProperty))
 _DefaultFactoryDiagnosticSpec = RuntimeRecord('DefaultFactoryDiagnostic', (_DiagnosticIdProperty, _DiagnosticOwnerProperty, _DiagnosticFieldIdProperty, _DiagnosticMessageProperty))
@@ -439,7 +446,7 @@ class ClassVarAssignment:
 _ClassVarAssignmentSpec.bind_record_class(ClassVarAssignment)
 
 class PlainField:
-    __slots__ = ('field_id', 'field_owner', 'field_name', 'field_order', 'field_kind', 'annotation', 'init', 'has_default', 'default_value', 'default_value_param_name', 'has_default_factory', 'default_factory', 'default_factory_param_name', 'default_factory_param_names', 'tx_group_key', 'value_slot_name', 'current_slot_name', 'working_slot_name')
+    __slots__ = ('field_id', 'field_owner', 'field_name', 'field_order', 'field_kind', 'annotation', 'init', 'has_default', 'default_value', 'default_value_param_name', 'has_default_factory', 'default_factory', 'default_factory_param_name', 'default_factory_param_names', 'tx_group_key', 'value_slot_name', 'current_slot_name', 'working_slot_name', 'has_freeze', 'freeze', 'freeze_param_name', 'has_thaw', 'thaw', 'thaw_param_name', 'has_optional_none')
     __dds_record_spec__ = _PlainFieldSpec
     field_id: str
     field_owner: str
@@ -459,8 +466,15 @@ class PlainField:
     value_slot_name: str
     current_slot_name: str
     working_slot_name: str
+    has_freeze: bool
+    freeze: object
+    freeze_param_name: str
+    has_thaw: bool
+    thaw: object
+    thaw_param_name: str
+    has_optional_none: bool
 
-    def __init__(self, *, field_id: str, field_owner: str, field_name: str, field_order: int, field_kind: str='field', annotation: object=object, init: bool=True, has_default: bool=False, default_value: object=None, default_value_param_name: str='', has_default_factory: bool=False, default_factory: object=None, default_factory_param_name: str='', default_factory_param_names: object=(), tx_group_key: object=None, value_slot_name: str='', current_slot_name: str='', working_slot_name: str=''):
+    def __init__(self, *, field_id: str, field_owner: str, field_name: str, field_order: int, field_kind: str='field', annotation: object=object, init: bool=True, has_default: bool=False, default_value: object=None, default_value_param_name: str='', has_default_factory: bool=False, default_factory: object=None, default_factory_param_name: str='', default_factory_param_names: object=(), tx_group_key: object=None, value_slot_name: str='', current_slot_name: str='', working_slot_name: str='', has_freeze: bool=False, freeze: object=None, freeze_param_name: str='', has_thaw: bool=False, thaw: object=None, thaw_param_name: str='', has_optional_none: bool=False):
         if not isinstance(field_id, str):
             raise TypeError('FieldId must be str, got ' + type(field_id).__name__)
         object.__setattr__(self, 'field_id', field_id)
@@ -505,9 +519,26 @@ class PlainField:
         if not isinstance(working_slot_name, str):
             raise TypeError('WorkingSlotName must be str, got ' + type(working_slot_name).__name__)
         object.__setattr__(self, 'working_slot_name', working_slot_name)
+        if not isinstance(has_freeze, bool):
+            raise TypeError('HasFreeze must be bool, got ' + type(has_freeze).__name__)
+        object.__setattr__(self, 'has_freeze', has_freeze)
+        object.__setattr__(self, 'freeze', freeze)
+        if not isinstance(freeze_param_name, str):
+            raise TypeError('FreezeParamName must be str, got ' + type(freeze_param_name).__name__)
+        object.__setattr__(self, 'freeze_param_name', freeze_param_name)
+        if not isinstance(has_thaw, bool):
+            raise TypeError('HasThaw must be bool, got ' + type(has_thaw).__name__)
+        object.__setattr__(self, 'has_thaw', has_thaw)
+        object.__setattr__(self, 'thaw', thaw)
+        if not isinstance(thaw_param_name, str):
+            raise TypeError('ThawParamName must be str, got ' + type(thaw_param_name).__name__)
+        object.__setattr__(self, 'thaw_param_name', thaw_param_name)
+        if not isinstance(has_optional_none, bool):
+            raise TypeError('HasOptionalNone must be bool, got ' + type(has_optional_none).__name__)
+        object.__setattr__(self, 'has_optional_none', has_optional_none)
 
     def __setattr__(self, name, value):
-        if name in ('field_id', 'field_owner', 'field_name', 'field_order', 'field_kind', 'annotation', 'init', 'has_default', 'default_value', 'default_value_param_name', 'has_default_factory', 'default_factory', 'default_factory_param_name', 'default_factory_param_names', 'tx_group_key', 'value_slot_name', 'current_slot_name', 'working_slot_name'):
+        if name in ('field_id', 'field_owner', 'field_name', 'field_order', 'field_kind', 'annotation', 'init', 'has_default', 'default_value', 'default_value_param_name', 'has_default_factory', 'default_factory', 'default_factory_param_name', 'default_factory_param_names', 'tx_group_key', 'value_slot_name', 'current_slot_name', 'working_slot_name', 'has_freeze', 'freeze', 'freeze_param_name', 'has_thaw', 'thaw', 'thaw_param_name', 'has_optional_none'):
             raise AttributeError('PlainField records are immutable')
         object.__setattr__(self, name, value)
 
@@ -531,11 +562,18 @@ class PlainField:
         pieces.append('value_slot_name=' + repr(self.value_slot_name))
         pieces.append('current_slot_name=' + repr(self.current_slot_name))
         pieces.append('working_slot_name=' + repr(self.working_slot_name))
+        pieces.append('has_freeze=' + repr(self.has_freeze))
+        pieces.append('freeze=' + repr(self.freeze))
+        pieces.append('freeze_param_name=' + repr(self.freeze_param_name))
+        pieces.append('has_thaw=' + repr(self.has_thaw))
+        pieces.append('thaw=' + repr(self.thaw))
+        pieces.append('thaw_param_name=' + repr(self.thaw_param_name))
+        pieces.append('has_optional_none=' + repr(self.has_optional_none))
         return 'PlainField' + '(' + ', '.join(pieces) + ')'
 _PlainFieldSpec.bind_record_class(PlainField)
 
 class InitVarField:
-    __slots__ = ('field_id', 'field_owner', 'field_name', 'field_order', 'field_kind', 'annotation', 'init', 'has_default', 'default_value', 'default_value_param_name', 'has_default_factory', 'default_factory', 'default_factory_param_name', 'default_factory_param_names', 'tx_group_key', 'value_slot_name', 'current_slot_name', 'working_slot_name')
+    __slots__ = ('field_id', 'field_owner', 'field_name', 'field_order', 'field_kind', 'annotation', 'init', 'has_default', 'default_value', 'default_value_param_name', 'has_default_factory', 'default_factory', 'default_factory_param_name', 'default_factory_param_names', 'tx_group_key', 'value_slot_name', 'current_slot_name', 'working_slot_name', 'has_freeze', 'freeze', 'freeze_param_name', 'has_thaw', 'thaw', 'thaw_param_name', 'has_optional_none')
     __dds_record_spec__ = _InitVarFieldSpec
     field_id: str
     field_owner: str
@@ -555,8 +593,15 @@ class InitVarField:
     value_slot_name: str
     current_slot_name: str
     working_slot_name: str
+    has_freeze: bool
+    freeze: object
+    freeze_param_name: str
+    has_thaw: bool
+    thaw: object
+    thaw_param_name: str
+    has_optional_none: bool
 
-    def __init__(self, *, field_id: str, field_owner: str, field_name: str, field_order: int, field_kind: str='field', annotation: object=object, init: bool=True, has_default: bool=False, default_value: object=None, default_value_param_name: str='', has_default_factory: bool=False, default_factory: object=None, default_factory_param_name: str='', default_factory_param_names: object=(), tx_group_key: object=None, value_slot_name: str='', current_slot_name: str='', working_slot_name: str=''):
+    def __init__(self, *, field_id: str, field_owner: str, field_name: str, field_order: int, field_kind: str='field', annotation: object=object, init: bool=True, has_default: bool=False, default_value: object=None, default_value_param_name: str='', has_default_factory: bool=False, default_factory: object=None, default_factory_param_name: str='', default_factory_param_names: object=(), tx_group_key: object=None, value_slot_name: str='', current_slot_name: str='', working_slot_name: str='', has_freeze: bool=False, freeze: object=None, freeze_param_name: str='', has_thaw: bool=False, thaw: object=None, thaw_param_name: str='', has_optional_none: bool=False):
         if not isinstance(field_id, str):
             raise TypeError('FieldId must be str, got ' + type(field_id).__name__)
         object.__setattr__(self, 'field_id', field_id)
@@ -601,9 +646,26 @@ class InitVarField:
         if not isinstance(working_slot_name, str):
             raise TypeError('WorkingSlotName must be str, got ' + type(working_slot_name).__name__)
         object.__setattr__(self, 'working_slot_name', working_slot_name)
+        if not isinstance(has_freeze, bool):
+            raise TypeError('HasFreeze must be bool, got ' + type(has_freeze).__name__)
+        object.__setattr__(self, 'has_freeze', has_freeze)
+        object.__setattr__(self, 'freeze', freeze)
+        if not isinstance(freeze_param_name, str):
+            raise TypeError('FreezeParamName must be str, got ' + type(freeze_param_name).__name__)
+        object.__setattr__(self, 'freeze_param_name', freeze_param_name)
+        if not isinstance(has_thaw, bool):
+            raise TypeError('HasThaw must be bool, got ' + type(has_thaw).__name__)
+        object.__setattr__(self, 'has_thaw', has_thaw)
+        object.__setattr__(self, 'thaw', thaw)
+        if not isinstance(thaw_param_name, str):
+            raise TypeError('ThawParamName must be str, got ' + type(thaw_param_name).__name__)
+        object.__setattr__(self, 'thaw_param_name', thaw_param_name)
+        if not isinstance(has_optional_none, bool):
+            raise TypeError('HasOptionalNone must be bool, got ' + type(has_optional_none).__name__)
+        object.__setattr__(self, 'has_optional_none', has_optional_none)
 
     def __setattr__(self, name, value):
-        if name in ('field_id', 'field_owner', 'field_name', 'field_order', 'field_kind', 'annotation', 'init', 'has_default', 'default_value', 'default_value_param_name', 'has_default_factory', 'default_factory', 'default_factory_param_name', 'default_factory_param_names', 'tx_group_key', 'value_slot_name', 'current_slot_name', 'working_slot_name'):
+        if name in ('field_id', 'field_owner', 'field_name', 'field_order', 'field_kind', 'annotation', 'init', 'has_default', 'default_value', 'default_value_param_name', 'has_default_factory', 'default_factory', 'default_factory_param_name', 'default_factory_param_names', 'tx_group_key', 'value_slot_name', 'current_slot_name', 'working_slot_name', 'has_freeze', 'freeze', 'freeze_param_name', 'has_thaw', 'thaw', 'thaw_param_name', 'has_optional_none'):
             raise AttributeError('InitVarField records are immutable')
         object.__setattr__(self, name, value)
 
@@ -627,11 +689,18 @@ class InitVarField:
         pieces.append('value_slot_name=' + repr(self.value_slot_name))
         pieces.append('current_slot_name=' + repr(self.current_slot_name))
         pieces.append('working_slot_name=' + repr(self.working_slot_name))
+        pieces.append('has_freeze=' + repr(self.has_freeze))
+        pieces.append('freeze=' + repr(self.freeze))
+        pieces.append('freeze_param_name=' + repr(self.freeze_param_name))
+        pieces.append('has_thaw=' + repr(self.has_thaw))
+        pieces.append('thaw=' + repr(self.thaw))
+        pieces.append('thaw_param_name=' + repr(self.thaw_param_name))
+        pieces.append('has_optional_none=' + repr(self.has_optional_none))
         return 'InitVarField' + '(' + ', '.join(pieces) + ')'
 _InitVarFieldSpec.bind_record_class(InitVarField)
 
 class ClassVarField:
-    __slots__ = ('field_id', 'field_owner', 'field_name', 'field_order', 'field_kind', 'annotation', 'init', 'has_default', 'default_value', 'default_value_param_name', 'has_default_factory', 'default_factory', 'default_factory_param_name', 'default_factory_param_names', 'tx_group_key', 'value_slot_name', 'current_slot_name', 'working_slot_name')
+    __slots__ = ('field_id', 'field_owner', 'field_name', 'field_order', 'field_kind', 'annotation', 'init', 'has_default', 'default_value', 'default_value_param_name', 'has_default_factory', 'default_factory', 'default_factory_param_name', 'default_factory_param_names', 'tx_group_key', 'value_slot_name', 'current_slot_name', 'working_slot_name', 'has_freeze', 'freeze', 'freeze_param_name', 'has_thaw', 'thaw', 'thaw_param_name', 'has_optional_none')
     __dds_record_spec__ = _ClassVarFieldSpec
     field_id: str
     field_owner: str
@@ -651,8 +720,15 @@ class ClassVarField:
     value_slot_name: str
     current_slot_name: str
     working_slot_name: str
+    has_freeze: bool
+    freeze: object
+    freeze_param_name: str
+    has_thaw: bool
+    thaw: object
+    thaw_param_name: str
+    has_optional_none: bool
 
-    def __init__(self, *, field_id: str, field_owner: str, field_name: str, field_order: int, field_kind: str='field', annotation: object=object, init: bool=True, has_default: bool=False, default_value: object=None, default_value_param_name: str='', has_default_factory: bool=False, default_factory: object=None, default_factory_param_name: str='', default_factory_param_names: object=(), tx_group_key: object=None, value_slot_name: str='', current_slot_name: str='', working_slot_name: str=''):
+    def __init__(self, *, field_id: str, field_owner: str, field_name: str, field_order: int, field_kind: str='field', annotation: object=object, init: bool=True, has_default: bool=False, default_value: object=None, default_value_param_name: str='', has_default_factory: bool=False, default_factory: object=None, default_factory_param_name: str='', default_factory_param_names: object=(), tx_group_key: object=None, value_slot_name: str='', current_slot_name: str='', working_slot_name: str='', has_freeze: bool=False, freeze: object=None, freeze_param_name: str='', has_thaw: bool=False, thaw: object=None, thaw_param_name: str='', has_optional_none: bool=False):
         if not isinstance(field_id, str):
             raise TypeError('FieldId must be str, got ' + type(field_id).__name__)
         object.__setattr__(self, 'field_id', field_id)
@@ -697,9 +773,26 @@ class ClassVarField:
         if not isinstance(working_slot_name, str):
             raise TypeError('WorkingSlotName must be str, got ' + type(working_slot_name).__name__)
         object.__setattr__(self, 'working_slot_name', working_slot_name)
+        if not isinstance(has_freeze, bool):
+            raise TypeError('HasFreeze must be bool, got ' + type(has_freeze).__name__)
+        object.__setattr__(self, 'has_freeze', has_freeze)
+        object.__setattr__(self, 'freeze', freeze)
+        if not isinstance(freeze_param_name, str):
+            raise TypeError('FreezeParamName must be str, got ' + type(freeze_param_name).__name__)
+        object.__setattr__(self, 'freeze_param_name', freeze_param_name)
+        if not isinstance(has_thaw, bool):
+            raise TypeError('HasThaw must be bool, got ' + type(has_thaw).__name__)
+        object.__setattr__(self, 'has_thaw', has_thaw)
+        object.__setattr__(self, 'thaw', thaw)
+        if not isinstance(thaw_param_name, str):
+            raise TypeError('ThawParamName must be str, got ' + type(thaw_param_name).__name__)
+        object.__setattr__(self, 'thaw_param_name', thaw_param_name)
+        if not isinstance(has_optional_none, bool):
+            raise TypeError('HasOptionalNone must be bool, got ' + type(has_optional_none).__name__)
+        object.__setattr__(self, 'has_optional_none', has_optional_none)
 
     def __setattr__(self, name, value):
-        if name in ('field_id', 'field_owner', 'field_name', 'field_order', 'field_kind', 'annotation', 'init', 'has_default', 'default_value', 'default_value_param_name', 'has_default_factory', 'default_factory', 'default_factory_param_name', 'default_factory_param_names', 'tx_group_key', 'value_slot_name', 'current_slot_name', 'working_slot_name'):
+        if name in ('field_id', 'field_owner', 'field_name', 'field_order', 'field_kind', 'annotation', 'init', 'has_default', 'default_value', 'default_value_param_name', 'has_default_factory', 'default_factory', 'default_factory_param_name', 'default_factory_param_names', 'tx_group_key', 'value_slot_name', 'current_slot_name', 'working_slot_name', 'has_freeze', 'freeze', 'freeze_param_name', 'has_thaw', 'thaw', 'thaw_param_name', 'has_optional_none'):
             raise AttributeError('ClassVarField records are immutable')
         object.__setattr__(self, name, value)
 
@@ -723,6 +816,13 @@ class ClassVarField:
         pieces.append('value_slot_name=' + repr(self.value_slot_name))
         pieces.append('current_slot_name=' + repr(self.current_slot_name))
         pieces.append('working_slot_name=' + repr(self.working_slot_name))
+        pieces.append('has_freeze=' + repr(self.has_freeze))
+        pieces.append('freeze=' + repr(self.freeze))
+        pieces.append('freeze_param_name=' + repr(self.freeze_param_name))
+        pieces.append('has_thaw=' + repr(self.has_thaw))
+        pieces.append('thaw=' + repr(self.thaw))
+        pieces.append('thaw_param_name=' + repr(self.thaw_param_name))
+        pieces.append('has_optional_none=' + repr(self.has_optional_none))
         return 'ClassVarField' + '(' + ', '.join(pieces) + ')'
 _ClassVarFieldSpec.bind_record_class(ClassVarField)
 
@@ -854,7 +954,7 @@ class IndexedTransactionalField:
 _IndexedTransactionalFieldSpec.bind_record_class(IndexedTransactionalField)
 
 class ManagedField:
-    __slots__ = ('field_id', 'field_owner', 'field_name', 'field_order', 'field_kind', 'annotation', 'init', 'has_default', 'default_value', 'default_value_param_name', 'has_default_factory', 'default_factory', 'default_factory_param_name', 'default_factory_param_names', 'tx_group_key', 'value_slot_name', 'current_slot_name', 'working_slot_name')
+    __slots__ = ('field_id', 'field_owner', 'field_name', 'field_order', 'field_kind', 'annotation', 'init', 'has_default', 'default_value', 'default_value_param_name', 'has_default_factory', 'default_factory', 'default_factory_param_name', 'default_factory_param_names', 'tx_group_key', 'value_slot_name', 'current_slot_name', 'working_slot_name', 'has_freeze', 'freeze', 'freeze_param_name', 'has_thaw', 'thaw', 'thaw_param_name', 'has_optional_none')
     __dds_record_spec__ = _ManagedFieldSpec
     field_id: str
     field_owner: str
@@ -874,8 +974,15 @@ class ManagedField:
     value_slot_name: str
     current_slot_name: str
     working_slot_name: str
+    has_freeze: bool
+    freeze: object
+    freeze_param_name: str
+    has_thaw: bool
+    thaw: object
+    thaw_param_name: str
+    has_optional_none: bool
 
-    def __init__(self, *, field_id: str, field_owner: str, field_name: str, field_order: int, field_kind: str='field', annotation: object=object, init: bool=True, has_default: bool=False, default_value: object=None, default_value_param_name: str='', has_default_factory: bool=False, default_factory: object=None, default_factory_param_name: str='', default_factory_param_names: object=(), tx_group_key: object=None, value_slot_name: str='', current_slot_name: str='', working_slot_name: str=''):
+    def __init__(self, *, field_id: str, field_owner: str, field_name: str, field_order: int, field_kind: str='field', annotation: object=object, init: bool=True, has_default: bool=False, default_value: object=None, default_value_param_name: str='', has_default_factory: bool=False, default_factory: object=None, default_factory_param_name: str='', default_factory_param_names: object=(), tx_group_key: object=None, value_slot_name: str='', current_slot_name: str='', working_slot_name: str='', has_freeze: bool=False, freeze: object=None, freeze_param_name: str='', has_thaw: bool=False, thaw: object=None, thaw_param_name: str='', has_optional_none: bool=False):
         if not isinstance(field_id, str):
             raise TypeError('FieldId must be str, got ' + type(field_id).__name__)
         object.__setattr__(self, 'field_id', field_id)
@@ -920,9 +1027,26 @@ class ManagedField:
         if not isinstance(working_slot_name, str):
             raise TypeError('WorkingSlotName must be str, got ' + type(working_slot_name).__name__)
         object.__setattr__(self, 'working_slot_name', working_slot_name)
+        if not isinstance(has_freeze, bool):
+            raise TypeError('HasFreeze must be bool, got ' + type(has_freeze).__name__)
+        object.__setattr__(self, 'has_freeze', has_freeze)
+        object.__setattr__(self, 'freeze', freeze)
+        if not isinstance(freeze_param_name, str):
+            raise TypeError('FreezeParamName must be str, got ' + type(freeze_param_name).__name__)
+        object.__setattr__(self, 'freeze_param_name', freeze_param_name)
+        if not isinstance(has_thaw, bool):
+            raise TypeError('HasThaw must be bool, got ' + type(has_thaw).__name__)
+        object.__setattr__(self, 'has_thaw', has_thaw)
+        object.__setattr__(self, 'thaw', thaw)
+        if not isinstance(thaw_param_name, str):
+            raise TypeError('ThawParamName must be str, got ' + type(thaw_param_name).__name__)
+        object.__setattr__(self, 'thaw_param_name', thaw_param_name)
+        if not isinstance(has_optional_none, bool):
+            raise TypeError('HasOptionalNone must be bool, got ' + type(has_optional_none).__name__)
+        object.__setattr__(self, 'has_optional_none', has_optional_none)
 
     def __setattr__(self, name, value):
-        if name in ('field_id', 'field_owner', 'field_name', 'field_order', 'field_kind', 'annotation', 'init', 'has_default', 'default_value', 'default_value_param_name', 'has_default_factory', 'default_factory', 'default_factory_param_name', 'default_factory_param_names', 'tx_group_key', 'value_slot_name', 'current_slot_name', 'working_slot_name'):
+        if name in ('field_id', 'field_owner', 'field_name', 'field_order', 'field_kind', 'annotation', 'init', 'has_default', 'default_value', 'default_value_param_name', 'has_default_factory', 'default_factory', 'default_factory_param_name', 'default_factory_param_names', 'tx_group_key', 'value_slot_name', 'current_slot_name', 'working_slot_name', 'has_freeze', 'freeze', 'freeze_param_name', 'has_thaw', 'thaw', 'thaw_param_name', 'has_optional_none'):
             raise AttributeError('ManagedField records are immutable')
         object.__setattr__(self, name, value)
 
@@ -946,6 +1070,13 @@ class ManagedField:
         pieces.append('value_slot_name=' + repr(self.value_slot_name))
         pieces.append('current_slot_name=' + repr(self.current_slot_name))
         pieces.append('working_slot_name=' + repr(self.working_slot_name))
+        pieces.append('has_freeze=' + repr(self.has_freeze))
+        pieces.append('freeze=' + repr(self.freeze))
+        pieces.append('freeze_param_name=' + repr(self.freeze_param_name))
+        pieces.append('has_thaw=' + repr(self.has_thaw))
+        pieces.append('thaw=' + repr(self.thaw))
+        pieces.append('thaw_param_name=' + repr(self.thaw_param_name))
+        pieces.append('has_optional_none=' + repr(self.has_optional_none))
         return 'ManagedField' + '(' + ', '.join(pieces) + ')'
 _ManagedFieldSpec.bind_record_class(ManagedField)
 
@@ -1309,7 +1440,7 @@ from yidl.generation.assembly_plan import AndConditionSpec, AssemblyEdgeSpec, As
 from yidl.generation.assembly_runtime import run_assembly
 from yidl.generation.matcher_values import astichi_template, from_astichi_code, from_import
 
-ASSEMBLY_PROPERTIES = {'ClassId': _YidlSimpleNamespace(name='ClassId', storage_name='class_id'), 'ClassName': _YidlSimpleNamespace(name='ClassName', storage_name='class_name'), 'ClassOrder': _YidlSimpleNamespace(name='ClassOrder', storage_name='class_order'), 'ModuleName': _YidlSimpleNamespace(name='ModuleName', storage_name='module_name'), 'StateClassName': _YidlSimpleNamespace(name='StateClassName', storage_name='state_class_name'), 'FacadeBaseClassName': _YidlSimpleNamespace(name='FacadeBaseClassName', storage_name='facade_base_class_name'), 'CurrentFacadeClassName': _YidlSimpleNamespace(name='CurrentFacadeClassName', storage_name='current_facade_class_name'), 'WorkingFacadeClassName': _YidlSimpleNamespace(name='WorkingFacadeClassName', storage_name='working_facade_class_name'), 'LifecycleDefinitionParamName': _YidlSimpleNamespace(name='LifecycleDefinitionParamName', storage_name='lifecycle_definition_param_name'), 'AnnotationsParamName': _YidlSimpleNamespace(name='AnnotationsParamName', storage_name='annotations_param_name'), 'TxGroupsParamName': _YidlSimpleNamespace(name='TxGroupsParamName', storage_name='tx_groups_param_name'), 'LifecycleFieldNames': _YidlSimpleNamespace(name='LifecycleFieldNames', storage_name='lifecycle_field_names'), 'FieldId': _YidlSimpleNamespace(name='FieldId', storage_name='field_id'), 'FieldOwner': _YidlSimpleNamespace(name='FieldOwner', storage_name='field_owner'), 'FieldName': _YidlSimpleNamespace(name='FieldName', storage_name='field_name'), 'FieldOrder': _YidlSimpleNamespace(name='FieldOrder', storage_name='field_order'), 'FieldKind': _YidlSimpleNamespace(name='FieldKind', storage_name='field_kind'), 'Annotation': _YidlSimpleNamespace(name='Annotation', storage_name='annotation'), 'Init': _YidlSimpleNamespace(name='Init', storage_name='init'), 'HasDefault': _YidlSimpleNamespace(name='HasDefault', storage_name='has_default'), 'DefaultValue': _YidlSimpleNamespace(name='DefaultValue', storage_name='default_value'), 'DefaultValueParamName': _YidlSimpleNamespace(name='DefaultValueParamName', storage_name='default_value_param_name'), 'HasDefaultFactory': _YidlSimpleNamespace(name='HasDefaultFactory', storage_name='has_default_factory'), 'DefaultFactory': _YidlSimpleNamespace(name='DefaultFactory', storage_name='default_factory'), 'DefaultFactoryParamName': _YidlSimpleNamespace(name='DefaultFactoryParamName', storage_name='default_factory_param_name'), 'DefaultFactoryParamNames': _YidlSimpleNamespace(name='DefaultFactoryParamNames', storage_name='default_factory_param_names'), 'TxGroupKey': _YidlSimpleNamespace(name='TxGroupKey', storage_name='tx_group_key'), 'ValueSlotName': _YidlSimpleNamespace(name='ValueSlotName', storage_name='value_slot_name'), 'CurrentSlotName': _YidlSimpleNamespace(name='CurrentSlotName', storage_name='current_slot_name'), 'WorkingSlotName': _YidlSimpleNamespace(name='WorkingSlotName', storage_name='working_slot_name'), 'MethodId': _YidlSimpleNamespace(name='MethodId', storage_name='method_id'), 'MethodOwner': _YidlSimpleNamespace(name='MethodOwner', storage_name='method_owner'), 'MethodName': _YidlSimpleNamespace(name='MethodName', storage_name='method_name'), 'MethodKind': _YidlSimpleNamespace(name='MethodKind', storage_name='method_kind'), 'DeclarationOrder': _YidlSimpleNamespace(name='DeclarationOrder', storage_name='declaration_order'), 'TxIndex': _YidlSimpleNamespace(name='TxIndex', storage_name='tx_index'), 'FacadeId': _YidlSimpleNamespace(name='FacadeId', storage_name='facade_id'), 'FacadeOwner': _YidlSimpleNamespace(name='FacadeOwner', storage_name='facade_owner'), 'FacadeKind': _YidlSimpleNamespace(name='FacadeKind', storage_name='facade_kind'), 'FacadeMode': _YidlSimpleNamespace(name='FacadeMode', storage_name='facade_mode'), 'FacadeClassName': _YidlSimpleNamespace(name='FacadeClassName', storage_name='facade_class_name'), 'FacadeOrder': _YidlSimpleNamespace(name='FacadeOrder', storage_name='facade_order'), 'OwnerFacadeId': _YidlSimpleNamespace(name='OwnerFacadeId', storage_name='owner_facade_id'), 'TargetFacadeId': _YidlSimpleNamespace(name='TargetFacadeId', storage_name='target_facade_id'), 'ExposureOrder': _YidlSimpleNamespace(name='ExposureOrder', storage_name='exposure_order'), 'InitParameterId': _YidlSimpleNamespace(name='InitParameterId', storage_name='init_parameter_id'), 'InitParameterOwner': _YidlSimpleNamespace(name='InitParameterOwner', storage_name='init_parameter_owner'), 'InitParameterName': _YidlSimpleNamespace(name='InitParameterName', storage_name='init_parameter_name'), 'InitParameterOrder': _YidlSimpleNamespace(name='InitParameterOrder', storage_name='init_parameter_order'), 'InitParameterKind': _YidlSimpleNamespace(name='InitParameterKind', storage_name='init_parameter_kind'), 'InitAssignmentId': _YidlSimpleNamespace(name='InitAssignmentId', storage_name='init_assignment_id'), 'InitAssignmentOwner': _YidlSimpleNamespace(name='InitAssignmentOwner', storage_name='init_assignment_owner'), 'InitAssignmentFieldId': _YidlSimpleNamespace(name='InitAssignmentFieldId', storage_name='init_assignment_field_id'), 'InitAssignmentFieldName': _YidlSimpleNamespace(name='InitAssignmentFieldName', storage_name='init_assignment_field_name'), 'InitAssignmentOrder': _YidlSimpleNamespace(name='InitAssignmentOrder', storage_name='init_assignment_order'), 'InitAssignmentKind': _YidlSimpleNamespace(name='InitAssignmentKind', storage_name='init_assignment_kind'), 'ClassVarAssignmentId': _YidlSimpleNamespace(name='ClassVarAssignmentId', storage_name='class_var_assignment_id'), 'ClassVarAssignmentOwner': _YidlSimpleNamespace(name='ClassVarAssignmentOwner', storage_name='class_var_assignment_owner'), 'ClassVarAssignmentName': _YidlSimpleNamespace(name='ClassVarAssignmentName', storage_name='class_var_assignment_name'), 'ClassVarAssignmentOrder': _YidlSimpleNamespace(name='ClassVarAssignmentOrder', storage_name='class_var_assignment_order'), 'TxGroupOrder': _YidlSimpleNamespace(name='TxGroupOrder', storage_name='tx_group_order'), 'DependencyOwner': _YidlSimpleNamespace(name='DependencyOwner', storage_name='dependency_owner'), 'ConsumerFieldId': _YidlSimpleNamespace(name='ConsumerFieldId', storage_name='consumer_field_id'), 'ConsumerFieldName': _YidlSimpleNamespace(name='ConsumerFieldName', storage_name='consumer_field_name'), 'ProviderName': _YidlSimpleNamespace(name='ProviderName', storage_name='provider_name'), 'ProviderFieldId': _YidlSimpleNamespace(name='ProviderFieldId', storage_name='provider_field_id'), 'ProviderFieldKind': _YidlSimpleNamespace(name='ProviderFieldKind', storage_name='provider_field_kind'), 'ProviderInit': _YidlSimpleNamespace(name='ProviderInit', storage_name='provider_init'), 'ProviderHasDefault': _YidlSimpleNamespace(name='ProviderHasDefault', storage_name='provider_has_default'), 'ProviderHasDefaultFactory': _YidlSimpleNamespace(name='ProviderHasDefaultFactory', storage_name='provider_has_default_factory'), 'ParamName': _YidlSimpleNamespace(name='ParamName', storage_name='param_name'), 'ParamOrder': _YidlSimpleNamespace(name='ParamOrder', storage_name='param_order'), 'ConsumerEvalOrder': _YidlSimpleNamespace(name='ConsumerEvalOrder', storage_name='consumer_eval_order'), 'EvalStepId': _YidlSimpleNamespace(name='EvalStepId', storage_name='eval_step_id'), 'EvalOwner': _YidlSimpleNamespace(name='EvalOwner', storage_name='eval_owner'), 'EvalFieldId': _YidlSimpleNamespace(name='EvalFieldId', storage_name='eval_field_id'), 'EvalFieldName': _YidlSimpleNamespace(name='EvalFieldName', storage_name='eval_field_name'), 'EvalFieldKind': _YidlSimpleNamespace(name='EvalFieldKind', storage_name='eval_field_kind'), 'EvalInit': _YidlSimpleNamespace(name='EvalInit', storage_name='eval_init'), 'EvalStateSlotName': _YidlSimpleNamespace(name='EvalStateSlotName', storage_name='eval_state_slot_name'), 'EvalDefaultFactoryParamName': _YidlSimpleNamespace(name='EvalDefaultFactoryParamName', storage_name='eval_default_factory_param_name'), 'EvalOrder': _YidlSimpleNamespace(name='EvalOrder', storage_name='eval_order'), 'EvalStatementOrder': _YidlSimpleNamespace(name='EvalStatementOrder', storage_name='eval_statement_order'), 'DiagnosticId': _YidlSimpleNamespace(name='DiagnosticId', storage_name='diagnostic_id'), 'DiagnosticOwner': _YidlSimpleNamespace(name='DiagnosticOwner', storage_name='diagnostic_owner'), 'DiagnosticFieldId': _YidlSimpleNamespace(name='DiagnosticFieldId', storage_name='diagnostic_field_id'), 'DiagnosticMessage': _YidlSimpleNamespace(name='DiagnosticMessage', storage_name='diagnostic_message')}
+ASSEMBLY_PROPERTIES = {'ClassId': _YidlSimpleNamespace(name='ClassId', storage_name='class_id'), 'ClassName': _YidlSimpleNamespace(name='ClassName', storage_name='class_name'), 'ClassOrder': _YidlSimpleNamespace(name='ClassOrder', storage_name='class_order'), 'ModuleName': _YidlSimpleNamespace(name='ModuleName', storage_name='module_name'), 'StateClassName': _YidlSimpleNamespace(name='StateClassName', storage_name='state_class_name'), 'FacadeBaseClassName': _YidlSimpleNamespace(name='FacadeBaseClassName', storage_name='facade_base_class_name'), 'CurrentFacadeClassName': _YidlSimpleNamespace(name='CurrentFacadeClassName', storage_name='current_facade_class_name'), 'WorkingFacadeClassName': _YidlSimpleNamespace(name='WorkingFacadeClassName', storage_name='working_facade_class_name'), 'LifecycleDefinitionParamName': _YidlSimpleNamespace(name='LifecycleDefinitionParamName', storage_name='lifecycle_definition_param_name'), 'AnnotationsParamName': _YidlSimpleNamespace(name='AnnotationsParamName', storage_name='annotations_param_name'), 'TxGroupsParamName': _YidlSimpleNamespace(name='TxGroupsParamName', storage_name='tx_groups_param_name'), 'LifecycleFieldNames': _YidlSimpleNamespace(name='LifecycleFieldNames', storage_name='lifecycle_field_names'), 'FieldId': _YidlSimpleNamespace(name='FieldId', storage_name='field_id'), 'FieldOwner': _YidlSimpleNamespace(name='FieldOwner', storage_name='field_owner'), 'FieldName': _YidlSimpleNamespace(name='FieldName', storage_name='field_name'), 'FieldOrder': _YidlSimpleNamespace(name='FieldOrder', storage_name='field_order'), 'FieldKind': _YidlSimpleNamespace(name='FieldKind', storage_name='field_kind'), 'Annotation': _YidlSimpleNamespace(name='Annotation', storage_name='annotation'), 'Init': _YidlSimpleNamespace(name='Init', storage_name='init'), 'HasDefault': _YidlSimpleNamespace(name='HasDefault', storage_name='has_default'), 'DefaultValue': _YidlSimpleNamespace(name='DefaultValue', storage_name='default_value'), 'DefaultValueParamName': _YidlSimpleNamespace(name='DefaultValueParamName', storage_name='default_value_param_name'), 'HasDefaultFactory': _YidlSimpleNamespace(name='HasDefaultFactory', storage_name='has_default_factory'), 'DefaultFactory': _YidlSimpleNamespace(name='DefaultFactory', storage_name='default_factory'), 'DefaultFactoryParamName': _YidlSimpleNamespace(name='DefaultFactoryParamName', storage_name='default_factory_param_name'), 'DefaultFactoryParamNames': _YidlSimpleNamespace(name='DefaultFactoryParamNames', storage_name='default_factory_param_names'), 'TxGroupKey': _YidlSimpleNamespace(name='TxGroupKey', storage_name='tx_group_key'), 'ValueSlotName': _YidlSimpleNamespace(name='ValueSlotName', storage_name='value_slot_name'), 'CurrentSlotName': _YidlSimpleNamespace(name='CurrentSlotName', storage_name='current_slot_name'), 'WorkingSlotName': _YidlSimpleNamespace(name='WorkingSlotName', storage_name='working_slot_name'), 'HasFreeze': _YidlSimpleNamespace(name='HasFreeze', storage_name='has_freeze'), 'Freeze': _YidlSimpleNamespace(name='Freeze', storage_name='freeze'), 'FreezeParamName': _YidlSimpleNamespace(name='FreezeParamName', storage_name='freeze_param_name'), 'HasThaw': _YidlSimpleNamespace(name='HasThaw', storage_name='has_thaw'), 'Thaw': _YidlSimpleNamespace(name='Thaw', storage_name='thaw'), 'ThawParamName': _YidlSimpleNamespace(name='ThawParamName', storage_name='thaw_param_name'), 'HasOptionalNone': _YidlSimpleNamespace(name='HasOptionalNone', storage_name='has_optional_none'), 'MethodId': _YidlSimpleNamespace(name='MethodId', storage_name='method_id'), 'MethodOwner': _YidlSimpleNamespace(name='MethodOwner', storage_name='method_owner'), 'MethodName': _YidlSimpleNamespace(name='MethodName', storage_name='method_name'), 'MethodKind': _YidlSimpleNamespace(name='MethodKind', storage_name='method_kind'), 'DeclarationOrder': _YidlSimpleNamespace(name='DeclarationOrder', storage_name='declaration_order'), 'TxIndex': _YidlSimpleNamespace(name='TxIndex', storage_name='tx_index'), 'FacadeId': _YidlSimpleNamespace(name='FacadeId', storage_name='facade_id'), 'FacadeOwner': _YidlSimpleNamespace(name='FacadeOwner', storage_name='facade_owner'), 'FacadeKind': _YidlSimpleNamespace(name='FacadeKind', storage_name='facade_kind'), 'FacadeMode': _YidlSimpleNamespace(name='FacadeMode', storage_name='facade_mode'), 'FacadeClassName': _YidlSimpleNamespace(name='FacadeClassName', storage_name='facade_class_name'), 'FacadeOrder': _YidlSimpleNamespace(name='FacadeOrder', storage_name='facade_order'), 'OwnerFacadeId': _YidlSimpleNamespace(name='OwnerFacadeId', storage_name='owner_facade_id'), 'TargetFacadeId': _YidlSimpleNamespace(name='TargetFacadeId', storage_name='target_facade_id'), 'ExposureOrder': _YidlSimpleNamespace(name='ExposureOrder', storage_name='exposure_order'), 'InitParameterId': _YidlSimpleNamespace(name='InitParameterId', storage_name='init_parameter_id'), 'InitParameterOwner': _YidlSimpleNamespace(name='InitParameterOwner', storage_name='init_parameter_owner'), 'InitParameterName': _YidlSimpleNamespace(name='InitParameterName', storage_name='init_parameter_name'), 'InitParameterOrder': _YidlSimpleNamespace(name='InitParameterOrder', storage_name='init_parameter_order'), 'InitParameterKind': _YidlSimpleNamespace(name='InitParameterKind', storage_name='init_parameter_kind'), 'InitAssignmentId': _YidlSimpleNamespace(name='InitAssignmentId', storage_name='init_assignment_id'), 'InitAssignmentOwner': _YidlSimpleNamespace(name='InitAssignmentOwner', storage_name='init_assignment_owner'), 'InitAssignmentFieldId': _YidlSimpleNamespace(name='InitAssignmentFieldId', storage_name='init_assignment_field_id'), 'InitAssignmentFieldName': _YidlSimpleNamespace(name='InitAssignmentFieldName', storage_name='init_assignment_field_name'), 'InitAssignmentOrder': _YidlSimpleNamespace(name='InitAssignmentOrder', storage_name='init_assignment_order'), 'InitAssignmentKind': _YidlSimpleNamespace(name='InitAssignmentKind', storage_name='init_assignment_kind'), 'ClassVarAssignmentId': _YidlSimpleNamespace(name='ClassVarAssignmentId', storage_name='class_var_assignment_id'), 'ClassVarAssignmentOwner': _YidlSimpleNamespace(name='ClassVarAssignmentOwner', storage_name='class_var_assignment_owner'), 'ClassVarAssignmentName': _YidlSimpleNamespace(name='ClassVarAssignmentName', storage_name='class_var_assignment_name'), 'ClassVarAssignmentOrder': _YidlSimpleNamespace(name='ClassVarAssignmentOrder', storage_name='class_var_assignment_order'), 'TxGroupOrder': _YidlSimpleNamespace(name='TxGroupOrder', storage_name='tx_group_order'), 'DependencyOwner': _YidlSimpleNamespace(name='DependencyOwner', storage_name='dependency_owner'), 'ConsumerFieldId': _YidlSimpleNamespace(name='ConsumerFieldId', storage_name='consumer_field_id'), 'ConsumerFieldName': _YidlSimpleNamespace(name='ConsumerFieldName', storage_name='consumer_field_name'), 'ProviderName': _YidlSimpleNamespace(name='ProviderName', storage_name='provider_name'), 'ProviderFieldId': _YidlSimpleNamespace(name='ProviderFieldId', storage_name='provider_field_id'), 'ProviderFieldKind': _YidlSimpleNamespace(name='ProviderFieldKind', storage_name='provider_field_kind'), 'ProviderInit': _YidlSimpleNamespace(name='ProviderInit', storage_name='provider_init'), 'ProviderHasDefault': _YidlSimpleNamespace(name='ProviderHasDefault', storage_name='provider_has_default'), 'ProviderHasDefaultFactory': _YidlSimpleNamespace(name='ProviderHasDefaultFactory', storage_name='provider_has_default_factory'), 'ParamName': _YidlSimpleNamespace(name='ParamName', storage_name='param_name'), 'ParamOrder': _YidlSimpleNamespace(name='ParamOrder', storage_name='param_order'), 'ConsumerEvalOrder': _YidlSimpleNamespace(name='ConsumerEvalOrder', storage_name='consumer_eval_order'), 'EvalStepId': _YidlSimpleNamespace(name='EvalStepId', storage_name='eval_step_id'), 'EvalOwner': _YidlSimpleNamespace(name='EvalOwner', storage_name='eval_owner'), 'EvalFieldId': _YidlSimpleNamespace(name='EvalFieldId', storage_name='eval_field_id'), 'EvalFieldName': _YidlSimpleNamespace(name='EvalFieldName', storage_name='eval_field_name'), 'EvalFieldKind': _YidlSimpleNamespace(name='EvalFieldKind', storage_name='eval_field_kind'), 'EvalInit': _YidlSimpleNamespace(name='EvalInit', storage_name='eval_init'), 'EvalStateSlotName': _YidlSimpleNamespace(name='EvalStateSlotName', storage_name='eval_state_slot_name'), 'EvalDefaultFactoryParamName': _YidlSimpleNamespace(name='EvalDefaultFactoryParamName', storage_name='eval_default_factory_param_name'), 'EvalOrder': _YidlSimpleNamespace(name='EvalOrder', storage_name='eval_order'), 'EvalStatementOrder': _YidlSimpleNamespace(name='EvalStatementOrder', storage_name='eval_statement_order'), 'DiagnosticId': _YidlSimpleNamespace(name='DiagnosticId', storage_name='diagnostic_id'), 'DiagnosticOwner': _YidlSimpleNamespace(name='DiagnosticOwner', storage_name='diagnostic_owner'), 'DiagnosticFieldId': _YidlSimpleNamespace(name='DiagnosticFieldId', storage_name='diagnostic_field_id'), 'DiagnosticMessage': _YidlSimpleNamespace(name='DiagnosticMessage', storage_name='diagnostic_message')}
 ASSEMBLY_RESOURCES = {'ModuleRoot': from_astichi_code("""\
 from __future__ import annotations
 
@@ -1325,56 +1456,56 @@ VOID = object()
 
 def build_lifecycle_class(decorated_cls, builder_params__astichi_param_hole__):
     astichi_hole(function_body)
-    astichi_hole(return_statement)""", file_name='tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl', line_number=194), 'BuilderParam': astichi_template(from_astichi_code("""\
+    astichi_hole(return_statement)""", file_name='tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl', line_number=203), 'BuilderParam': astichi_template(from_astichi_code("""\
 def astichi_params(*, value_name__astichi_arg__):
-    pass""", file_name='tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl', line_number=212)), 'TransactionManagerParam': astichi_template(from_astichi_code("""\
+    pass""", file_name='tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl', line_number=221)), 'TransactionManagerParam': astichi_template(from_astichi_code("""\
 def astichi_params(*, transaction_manager=None):
-    pass""", file_name='tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl', line_number=217)), 'StateSlotEntry': astichi_template(from_astichi_code('astichi_bind_external(slot_name)', file_name='tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl', line_number=222)), 'InitParamRequired': astichi_template(from_astichi_code("""\
+    pass""", file_name='tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl', line_number=226)), 'StateSlotEntry': astichi_template(from_astichi_code('astichi_bind_external(slot_name)', file_name='tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl', line_number=231)), 'InitParamRequired': astichi_template(from_astichi_code("""\
 def astichi_params(param_name__astichi_arg__: astichi_bind_external(annotation)):
-    pass""", file_name='tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl', line_number=226)), 'InitParamDefault': astichi_template(from_astichi_code("""\
+    pass""", file_name='tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl', line_number=235)), 'InitParamDefault': astichi_template(from_astichi_code("""\
 def astichi_params(
     param_name__astichi_arg__: astichi_bind_external(annotation)
     = default_value_name__astichi_arg__
 ):
-    pass""", file_name='tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl', line_number=231)), 'PlainStateAssignment': astichi_template(from_astichi_code("""\
+    pass""", file_name='tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl', line_number=240)), 'PlainStateAssignment': astichi_template(from_astichi_code("""\
 astichi_pass(state, outer_bind=True).astichi_ref(external=state_slot)._ = astichi_pass(
     init_value_name__astichi_arg__,
     outer_bind=True,
-)""", file_name='tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl', line_number=239)), 'InitVarLocalDefaultAssignment': astichi_template(from_astichi_code("""\
+)""", file_name='tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl', line_number=248)), 'InitVarLocalDefaultAssignment': astichi_template(from_astichi_code("""\
 init_value_name__astichi_arg__ = astichi_pass(
     default_value_name__astichi_arg__,
     outer_bind=True,
-)""", file_name='tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl', line_number=246)), 'PlainProperty': astichi_template(from_astichi_code("""\
+)""", file_name='tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl', line_number=255)), 'PlainProperty': astichi_template(from_astichi_code("""\
 @property
 def property_getter_name__astichi_arg__(self):
     return self._y_state.astichi_ref(external=state_slot)
 
 @property_setter_target_name__astichi_arg__.setter
 def property_setter_name__astichi_arg__(self, value):
-    self._y_state.astichi_ref(external=state_slot)._ = value""", file_name='tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl', line_number=253)), 'ClassVarDefaultAssignment': astichi_template(from_astichi_code("""\
+    self._y_state.astichi_ref(external=state_slot)._ = value""", file_name='tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl', line_number=262)), 'ClassVarDefaultAssignment': astichi_template(from_astichi_code("""\
 classvar_name__astichi_arg__ = astichi_pass(
     classvar_value_name__astichi_arg__,
     outer_bind=True,
-)""", file_name='tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl', line_number=263)), 'CommitOrderKeyBranch': astichi_template(from_astichi_code("""\
+)""", file_name='tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl', line_number=272)), 'CommitOrderKeyBranch': astichi_template(from_astichi_code("""\
 if astichi_pass(tx_index, outer_bind=True) == astichi_bind_external(tx_index_value):
     return astichi_pass(
         self,
         outer_bind=True,
-    )._y_get_default_facade().astichi_ref(external=method_name)()""", file_name='tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl', line_number=270)), 'RequiresValidationBranch': astichi_template(from_astichi_code("""\
+    )._y_get_default_facade().astichi_ref(external=method_name)()""", file_name='tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl', line_number=279)), 'RequiresValidationBranch': astichi_template(from_astichi_code("""\
 if astichi_pass(tx_index, outer_bind=True) == astichi_bind_external(tx_index_value):
-    return True""", file_name='tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl', line_number=278)), 'ValidateCommitBranch': astichi_template(from_astichi_code("""\
+    return True""", file_name='tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl', line_number=287)), 'ValidateCommitBranch': astichi_template(from_astichi_code("""\
 if astichi_pass(tx_index, outer_bind=True) == astichi_bind_external(tx_index_value):
     result = astichi_pass(
         self,
         outer_bind=True,
     )._y_get_default_facade().astichi_ref(external=method_name)()
     if result is False:
-        return False""", file_name='tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl', line_number=283)), 'TransactionHookCall': astichi_template(from_astichi_code("""\
+        return False""", file_name='tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl', line_number=292)), 'TransactionHookCall': astichi_template(from_astichi_code("""\
 if astichi_pass(tx_index, outer_bind=True) == astichi_bind_external(tx_index_value):
     astichi_pass(
         self,
         outer_bind=True,
-    )._y_get_default_facade().astichi_ref(external=method_name)()""", file_name='tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl', line_number=293)), 'ClassBundle': astichi_template(from_astichi_code("""\
+    )._y_get_default_facade().astichi_ref(external=method_name)()""", file_name='tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl', line_number=302)), 'ClassBundle': astichi_template(from_astichi_code("""\
 class state_class_decl_name__astichi_arg__:
     __slots__ = (
         "_y_transaction_manager",
@@ -1612,7 +1743,7 @@ class working_facade_class_decl_name__astichi_arg__(
     facade_base_working_base_name__astichi_arg__
 ):
     __slots__ = ()
-    astichi_hole(working_facade_properties)""", file_name='tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl', line_number=301, keep_names=('DEFAULT_TRANSACTION', 'TransactionManager', 'VOID', 'weakref', '_HAS_DEFAULT_FACTORY'))), 'ReturnClass': astichi_template(from_astichi_code("""\
+    astichi_hole(working_facade_properties)""", file_name='tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl', line_number=310, keep_names=('DEFAULT_TRANSACTION', 'TransactionManager', 'VOID', 'weakref', '_HAS_DEFAULT_FACTORY'))), 'ReturnClass': astichi_template(from_astichi_code("""\
 return_class_name_ref__astichi_arg__.__name__ = astichi_pass(
     decorated_cls,
     outer_bind=True,
@@ -1625,7 +1756,7 @@ return_class_module_ref__astichi_arg__.__module__ = astichi_pass(
     decorated_cls,
     outer_bind=True,
 ).__module__
-return return_class_result_ref__astichi_arg__""", file_name='tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl', line_number=545)), 'PassStatement': astichi_template(from_astichi_code('pass', file_name='tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl', line_number=561)), 'BuildTransactionFactsBody': from_astichi_code("""\
+return return_class_result_ref__astichi_arg__""", file_name='tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl', line_number=554)), 'PassStatement': astichi_template(from_astichi_code('pass', file_name='tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl', line_number=570)), 'BuildTransactionFactsBody': from_astichi_code("""\
 from yidl.runtime.transaction_yidl import DEFAULT_TRANSACTION
 
 classes = sorted(

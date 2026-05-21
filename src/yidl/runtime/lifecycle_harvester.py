@@ -4,6 +4,10 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 import inspect
 from types import MappingProxyType
+from types import NoneType
+from types import UnionType
+from typing import get_args
+from typing import get_origin
 import warnings
 
 from yidl.runtime.lifecycle_markers import FieldDecl
@@ -125,6 +129,10 @@ def harvest_lifecycle_definition(cls: type[object]) -> HarvestedLifecycle:
             build_kwargs[str(fact["default_factory_param_name"])] = fact[
                 "default_factory"
             ]
+        if fact["has_freeze"]:
+            build_kwargs[str(fact["freeze_param_name"])] = fact["freeze"]
+        if fact["has_thaw"]:
+            build_kwargs[str(fact["thaw_param_name"])] = fact["thaw"]
 
     tx_group_values = tx_groups.values()
     transaction_method_facts.extend(
@@ -219,6 +227,13 @@ def _field_fact(
         "value_slot_name": "",
         "current_slot_name": "",
         "working_slot_name": "",
+        "has_freeze": False,
+        "freeze": MISSING,
+        "freeze_param_name": "",
+        "has_thaw": False,
+        "thaw": MISSING,
+        "thaw_param_name": "",
+        "has_optional_none": _has_optional_none(decl.annotation),
     }
     if kind == "field":
         fact["value_slot_name"] = f"_y_{name}_value"
@@ -226,6 +241,16 @@ def _field_fact(
         fact["tx_group_key"] = decl.tx_group
         fact["current_slot_name"] = f"_y_{name}_current"
         fact["working_slot_name"] = f"_y_{name}_working"
+        fact["has_freeze"] = decl.has_freeze
+        fact["freeze"] = decl.freeze
+        fact["freeze_param_name"] = (
+            f"_{class_name}_{name}_freeze" if decl.has_freeze else ""
+        )
+        fact["has_thaw"] = decl.has_thaw
+        fact["thaw"] = decl.thaw
+        fact["thaw_param_name"] = (
+            f"_{class_name}_{name}_thaw" if decl.has_thaw else ""
+        )
     return fact
 
 
@@ -240,6 +265,13 @@ def _remap_inherited_field_fact(
     has_default_factory = bool(inherited["has_default_factory"])
     fact = dict(inherited)
     fact.setdefault("default_factory_param_names", ())
+    fact.setdefault("has_freeze", False)
+    fact.setdefault("freeze", MISSING)
+    fact.setdefault("has_thaw", False)
+    fact.setdefault("thaw", MISSING)
+    fact.setdefault("has_optional_none", _has_optional_none(fact.get("annotation")))
+    has_freeze = bool(fact["has_freeze"])
+    has_thaw = bool(fact["has_thaw"])
     fact.update(
         {
             "field_id": f"{class_id}.{name}",
@@ -253,6 +285,8 @@ def _remap_inherited_field_fact(
             "value_slot_name": "",
             "current_slot_name": "",
             "working_slot_name": "",
+            "freeze_param_name": f"_{class_name}_{name}_freeze" if has_freeze else "",
+            "thaw_param_name": f"_{class_name}_{name}_thaw" if has_thaw else "",
         },
     )
     if kind == "field":
@@ -388,6 +422,17 @@ def _raise_unbindable_default_factory_param(
         f"{class_name}.{decl.name}: default_factory parameters must be "
         "bindable by name",
     )
+
+
+def _has_optional_none(annotation: object) -> bool:
+    if isinstance(annotation, str):
+        return "None" in annotation
+    origin = get_origin(annotation)
+    if origin is None:
+        return False
+    if origin is UnionType:
+        return NoneType in get_args(annotation)
+    return NoneType in get_args(annotation)
 
 
 def _inherited_lifecycle_definitions(

@@ -120,6 +120,23 @@ _CurrentSlotNameProperty = RuntimeProperty(
 _WorkingSlotNameProperty = RuntimeProperty(
     "WorkingSlotName", str, default="", storage_name="working_slot_name"
 )
+_HasFreezeProperty = RuntimeProperty(
+    "HasFreeze", bool, default=False, storage_name="has_freeze"
+)
+_FreezeProperty = RuntimeProperty("Freeze", object, default=None, storage_name="freeze")
+_FreezeParamNameProperty = RuntimeProperty(
+    "FreezeParamName", str, default="", storage_name="freeze_param_name"
+)
+_HasThawProperty = RuntimeProperty(
+    "HasThaw", bool, default=False, storage_name="has_thaw"
+)
+_ThawProperty = RuntimeProperty("Thaw", object, default=None, storage_name="thaw")
+_ThawParamNameProperty = RuntimeProperty(
+    "ThawParamName", str, default="", storage_name="thaw_param_name"
+)
+_HasOptionalNoneProperty = RuntimeProperty(
+    "HasOptionalNone", bool, default=False, storage_name="has_optional_none"
+)
 _MethodIdProperty = RuntimeProperty(
     "MethodId", str, default=REQUIRED, storage_name="method_id"
 )
@@ -411,6 +428,13 @@ _PlainFieldSpec = RuntimeRecord(
         _ValueSlotNameProperty,
         _CurrentSlotNameProperty,
         _WorkingSlotNameProperty,
+        _HasFreezeProperty,
+        _FreezeProperty,
+        _FreezeParamNameProperty,
+        _HasThawProperty,
+        _ThawProperty,
+        _ThawParamNameProperty,
+        _HasOptionalNoneProperty,
     ),
 )
 _InitVarFieldSpec = RuntimeRecord(
@@ -434,6 +458,13 @@ _InitVarFieldSpec = RuntimeRecord(
         _ValueSlotNameProperty,
         _CurrentSlotNameProperty,
         _WorkingSlotNameProperty,
+        _HasFreezeProperty,
+        _FreezeProperty,
+        _FreezeParamNameProperty,
+        _HasThawProperty,
+        _ThawProperty,
+        _ThawParamNameProperty,
+        _HasOptionalNoneProperty,
     ),
 )
 _ClassVarFieldSpec = RuntimeRecord(
@@ -457,6 +488,13 @@ _ClassVarFieldSpec = RuntimeRecord(
         _ValueSlotNameProperty,
         _CurrentSlotNameProperty,
         _WorkingSlotNameProperty,
+        _HasFreezeProperty,
+        _FreezeProperty,
+        _FreezeParamNameProperty,
+        _HasThawProperty,
+        _ThawProperty,
+        _ThawParamNameProperty,
+        _HasOptionalNoneProperty,
     ),
 )
 _TransactionalFieldSpec = RuntimeRecord(
@@ -507,6 +545,13 @@ _ManagedFieldSpec = RuntimeRecord(
         _ValueSlotNameProperty,
         _CurrentSlotNameProperty,
         _WorkingSlotNameProperty,
+        _HasFreezeProperty,
+        _FreezeProperty,
+        _FreezeParamNameProperty,
+        _HasThawProperty,
+        _ThawProperty,
+        _ThawParamNameProperty,
+        _HasOptionalNoneProperty,
     ),
 )
 _DefaultFactoryDependencySpec = RuntimeRecord(
@@ -1204,6 +1249,13 @@ class PlainField:
         "value_slot_name",
         "current_slot_name",
         "working_slot_name",
+        "has_freeze",
+        "freeze",
+        "freeze_param_name",
+        "has_thaw",
+        "thaw",
+        "thaw_param_name",
+        "has_optional_none",
     )
     __dds_record_spec__ = _PlainFieldSpec
     field_id: str
@@ -1224,6 +1276,13 @@ class PlainField:
     value_slot_name: str
     current_slot_name: str
     working_slot_name: str
+    has_freeze: bool
+    freeze: object
+    freeze_param_name: str
+    has_thaw: bool
+    thaw: object
+    thaw_param_name: str
+    has_optional_none: bool
 
     def __init__(
         self,
@@ -1246,6 +1305,13 @@ class PlainField:
         value_slot_name: str = "",
         current_slot_name: str = "",
         working_slot_name: str = "",
+        has_freeze: bool = False,
+        freeze: object = None,
+        freeze_param_name: str = "",
+        has_thaw: bool = False,
+        thaw: object = None,
+        thaw_param_name: str = "",
+        has_optional_none: bool = False,
     ):
         if not isinstance(field_id, str):
             raise TypeError("FieldId must be str, got " + type(field_id).__name__)
@@ -1312,6 +1378,29 @@ class PlainField:
                 "WorkingSlotName must be str, got " + type(working_slot_name).__name__
             )
         object.__setattr__(self, "working_slot_name", working_slot_name)
+        if not isinstance(has_freeze, bool):
+            raise TypeError("HasFreeze must be bool, got " + type(has_freeze).__name__)
+        object.__setattr__(self, "has_freeze", has_freeze)
+        object.__setattr__(self, "freeze", freeze)
+        if not isinstance(freeze_param_name, str):
+            raise TypeError(
+                "FreezeParamName must be str, got " + type(freeze_param_name).__name__
+            )
+        object.__setattr__(self, "freeze_param_name", freeze_param_name)
+        if not isinstance(has_thaw, bool):
+            raise TypeError("HasThaw must be bool, got " + type(has_thaw).__name__)
+        object.__setattr__(self, "has_thaw", has_thaw)
+        object.__setattr__(self, "thaw", thaw)
+        if not isinstance(thaw_param_name, str):
+            raise TypeError(
+                "ThawParamName must be str, got " + type(thaw_param_name).__name__
+            )
+        object.__setattr__(self, "thaw_param_name", thaw_param_name)
+        if not isinstance(has_optional_none, bool):
+            raise TypeError(
+                "HasOptionalNone must be bool, got " + type(has_optional_none).__name__
+            )
+        object.__setattr__(self, "has_optional_none", has_optional_none)
 
     def __setattr__(self, name, value):
         if name in (
@@ -1333,6 +1422,13 @@ class PlainField:
             "value_slot_name",
             "current_slot_name",
             "working_slot_name",
+            "has_freeze",
+            "freeze",
+            "freeze_param_name",
+            "has_thaw",
+            "thaw",
+            "thaw_param_name",
+            "has_optional_none",
         ):
             raise AttributeError("PlainField records are immutable")
         object.__setattr__(self, name, value)
@@ -1361,6 +1457,13 @@ class PlainField:
         pieces.append("value_slot_name=" + repr(self.value_slot_name))
         pieces.append("current_slot_name=" + repr(self.current_slot_name))
         pieces.append("working_slot_name=" + repr(self.working_slot_name))
+        pieces.append("has_freeze=" + repr(self.has_freeze))
+        pieces.append("freeze=" + repr(self.freeze))
+        pieces.append("freeze_param_name=" + repr(self.freeze_param_name))
+        pieces.append("has_thaw=" + repr(self.has_thaw))
+        pieces.append("thaw=" + repr(self.thaw))
+        pieces.append("thaw_param_name=" + repr(self.thaw_param_name))
+        pieces.append("has_optional_none=" + repr(self.has_optional_none))
         return "PlainField" + "(" + ", ".join(pieces) + ")"
 
 
@@ -1387,6 +1490,13 @@ class InitVarField:
         "value_slot_name",
         "current_slot_name",
         "working_slot_name",
+        "has_freeze",
+        "freeze",
+        "freeze_param_name",
+        "has_thaw",
+        "thaw",
+        "thaw_param_name",
+        "has_optional_none",
     )
     __dds_record_spec__ = _InitVarFieldSpec
     field_id: str
@@ -1407,6 +1517,13 @@ class InitVarField:
     value_slot_name: str
     current_slot_name: str
     working_slot_name: str
+    has_freeze: bool
+    freeze: object
+    freeze_param_name: str
+    has_thaw: bool
+    thaw: object
+    thaw_param_name: str
+    has_optional_none: bool
 
     def __init__(
         self,
@@ -1429,6 +1546,13 @@ class InitVarField:
         value_slot_name: str = "",
         current_slot_name: str = "",
         working_slot_name: str = "",
+        has_freeze: bool = False,
+        freeze: object = None,
+        freeze_param_name: str = "",
+        has_thaw: bool = False,
+        thaw: object = None,
+        thaw_param_name: str = "",
+        has_optional_none: bool = False,
     ):
         if not isinstance(field_id, str):
             raise TypeError("FieldId must be str, got " + type(field_id).__name__)
@@ -1495,6 +1619,29 @@ class InitVarField:
                 "WorkingSlotName must be str, got " + type(working_slot_name).__name__
             )
         object.__setattr__(self, "working_slot_name", working_slot_name)
+        if not isinstance(has_freeze, bool):
+            raise TypeError("HasFreeze must be bool, got " + type(has_freeze).__name__)
+        object.__setattr__(self, "has_freeze", has_freeze)
+        object.__setattr__(self, "freeze", freeze)
+        if not isinstance(freeze_param_name, str):
+            raise TypeError(
+                "FreezeParamName must be str, got " + type(freeze_param_name).__name__
+            )
+        object.__setattr__(self, "freeze_param_name", freeze_param_name)
+        if not isinstance(has_thaw, bool):
+            raise TypeError("HasThaw must be bool, got " + type(has_thaw).__name__)
+        object.__setattr__(self, "has_thaw", has_thaw)
+        object.__setattr__(self, "thaw", thaw)
+        if not isinstance(thaw_param_name, str):
+            raise TypeError(
+                "ThawParamName must be str, got " + type(thaw_param_name).__name__
+            )
+        object.__setattr__(self, "thaw_param_name", thaw_param_name)
+        if not isinstance(has_optional_none, bool):
+            raise TypeError(
+                "HasOptionalNone must be bool, got " + type(has_optional_none).__name__
+            )
+        object.__setattr__(self, "has_optional_none", has_optional_none)
 
     def __setattr__(self, name, value):
         if name in (
@@ -1516,6 +1663,13 @@ class InitVarField:
             "value_slot_name",
             "current_slot_name",
             "working_slot_name",
+            "has_freeze",
+            "freeze",
+            "freeze_param_name",
+            "has_thaw",
+            "thaw",
+            "thaw_param_name",
+            "has_optional_none",
         ):
             raise AttributeError("InitVarField records are immutable")
         object.__setattr__(self, name, value)
@@ -1544,6 +1698,13 @@ class InitVarField:
         pieces.append("value_slot_name=" + repr(self.value_slot_name))
         pieces.append("current_slot_name=" + repr(self.current_slot_name))
         pieces.append("working_slot_name=" + repr(self.working_slot_name))
+        pieces.append("has_freeze=" + repr(self.has_freeze))
+        pieces.append("freeze=" + repr(self.freeze))
+        pieces.append("freeze_param_name=" + repr(self.freeze_param_name))
+        pieces.append("has_thaw=" + repr(self.has_thaw))
+        pieces.append("thaw=" + repr(self.thaw))
+        pieces.append("thaw_param_name=" + repr(self.thaw_param_name))
+        pieces.append("has_optional_none=" + repr(self.has_optional_none))
         return "InitVarField" + "(" + ", ".join(pieces) + ")"
 
 
@@ -1570,6 +1731,13 @@ class ClassVarField:
         "value_slot_name",
         "current_slot_name",
         "working_slot_name",
+        "has_freeze",
+        "freeze",
+        "freeze_param_name",
+        "has_thaw",
+        "thaw",
+        "thaw_param_name",
+        "has_optional_none",
     )
     __dds_record_spec__ = _ClassVarFieldSpec
     field_id: str
@@ -1590,6 +1758,13 @@ class ClassVarField:
     value_slot_name: str
     current_slot_name: str
     working_slot_name: str
+    has_freeze: bool
+    freeze: object
+    freeze_param_name: str
+    has_thaw: bool
+    thaw: object
+    thaw_param_name: str
+    has_optional_none: bool
 
     def __init__(
         self,
@@ -1612,6 +1787,13 @@ class ClassVarField:
         value_slot_name: str = "",
         current_slot_name: str = "",
         working_slot_name: str = "",
+        has_freeze: bool = False,
+        freeze: object = None,
+        freeze_param_name: str = "",
+        has_thaw: bool = False,
+        thaw: object = None,
+        thaw_param_name: str = "",
+        has_optional_none: bool = False,
     ):
         if not isinstance(field_id, str):
             raise TypeError("FieldId must be str, got " + type(field_id).__name__)
@@ -1678,6 +1860,29 @@ class ClassVarField:
                 "WorkingSlotName must be str, got " + type(working_slot_name).__name__
             )
         object.__setattr__(self, "working_slot_name", working_slot_name)
+        if not isinstance(has_freeze, bool):
+            raise TypeError("HasFreeze must be bool, got " + type(has_freeze).__name__)
+        object.__setattr__(self, "has_freeze", has_freeze)
+        object.__setattr__(self, "freeze", freeze)
+        if not isinstance(freeze_param_name, str):
+            raise TypeError(
+                "FreezeParamName must be str, got " + type(freeze_param_name).__name__
+            )
+        object.__setattr__(self, "freeze_param_name", freeze_param_name)
+        if not isinstance(has_thaw, bool):
+            raise TypeError("HasThaw must be bool, got " + type(has_thaw).__name__)
+        object.__setattr__(self, "has_thaw", has_thaw)
+        object.__setattr__(self, "thaw", thaw)
+        if not isinstance(thaw_param_name, str):
+            raise TypeError(
+                "ThawParamName must be str, got " + type(thaw_param_name).__name__
+            )
+        object.__setattr__(self, "thaw_param_name", thaw_param_name)
+        if not isinstance(has_optional_none, bool):
+            raise TypeError(
+                "HasOptionalNone must be bool, got " + type(has_optional_none).__name__
+            )
+        object.__setattr__(self, "has_optional_none", has_optional_none)
 
     def __setattr__(self, name, value):
         if name in (
@@ -1699,6 +1904,13 @@ class ClassVarField:
             "value_slot_name",
             "current_slot_name",
             "working_slot_name",
+            "has_freeze",
+            "freeze",
+            "freeze_param_name",
+            "has_thaw",
+            "thaw",
+            "thaw_param_name",
+            "has_optional_none",
         ):
             raise AttributeError("ClassVarField records are immutable")
         object.__setattr__(self, name, value)
@@ -1727,6 +1939,13 @@ class ClassVarField:
         pieces.append("value_slot_name=" + repr(self.value_slot_name))
         pieces.append("current_slot_name=" + repr(self.current_slot_name))
         pieces.append("working_slot_name=" + repr(self.working_slot_name))
+        pieces.append("has_freeze=" + repr(self.has_freeze))
+        pieces.append("freeze=" + repr(self.freeze))
+        pieces.append("freeze_param_name=" + repr(self.freeze_param_name))
+        pieces.append("has_thaw=" + repr(self.has_thaw))
+        pieces.append("thaw=" + repr(self.thaw))
+        pieces.append("thaw_param_name=" + repr(self.thaw_param_name))
+        pieces.append("has_optional_none=" + repr(self.has_optional_none))
         return "ClassVarField" + "(" + ", ".join(pieces) + ")"
 
 
@@ -1945,6 +2164,13 @@ class ManagedField:
         "value_slot_name",
         "current_slot_name",
         "working_slot_name",
+        "has_freeze",
+        "freeze",
+        "freeze_param_name",
+        "has_thaw",
+        "thaw",
+        "thaw_param_name",
+        "has_optional_none",
     )
     __dds_record_spec__ = _ManagedFieldSpec
     field_id: str
@@ -1965,6 +2191,13 @@ class ManagedField:
     value_slot_name: str
     current_slot_name: str
     working_slot_name: str
+    has_freeze: bool
+    freeze: object
+    freeze_param_name: str
+    has_thaw: bool
+    thaw: object
+    thaw_param_name: str
+    has_optional_none: bool
 
     def __init__(
         self,
@@ -1987,6 +2220,13 @@ class ManagedField:
         value_slot_name: str = "",
         current_slot_name: str = "",
         working_slot_name: str = "",
+        has_freeze: bool = False,
+        freeze: object = None,
+        freeze_param_name: str = "",
+        has_thaw: bool = False,
+        thaw: object = None,
+        thaw_param_name: str = "",
+        has_optional_none: bool = False,
     ):
         if not isinstance(field_id, str):
             raise TypeError("FieldId must be str, got " + type(field_id).__name__)
@@ -2053,6 +2293,29 @@ class ManagedField:
                 "WorkingSlotName must be str, got " + type(working_slot_name).__name__
             )
         object.__setattr__(self, "working_slot_name", working_slot_name)
+        if not isinstance(has_freeze, bool):
+            raise TypeError("HasFreeze must be bool, got " + type(has_freeze).__name__)
+        object.__setattr__(self, "has_freeze", has_freeze)
+        object.__setattr__(self, "freeze", freeze)
+        if not isinstance(freeze_param_name, str):
+            raise TypeError(
+                "FreezeParamName must be str, got " + type(freeze_param_name).__name__
+            )
+        object.__setattr__(self, "freeze_param_name", freeze_param_name)
+        if not isinstance(has_thaw, bool):
+            raise TypeError("HasThaw must be bool, got " + type(has_thaw).__name__)
+        object.__setattr__(self, "has_thaw", has_thaw)
+        object.__setattr__(self, "thaw", thaw)
+        if not isinstance(thaw_param_name, str):
+            raise TypeError(
+                "ThawParamName must be str, got " + type(thaw_param_name).__name__
+            )
+        object.__setattr__(self, "thaw_param_name", thaw_param_name)
+        if not isinstance(has_optional_none, bool):
+            raise TypeError(
+                "HasOptionalNone must be bool, got " + type(has_optional_none).__name__
+            )
+        object.__setattr__(self, "has_optional_none", has_optional_none)
 
     def __setattr__(self, name, value):
         if name in (
@@ -2074,6 +2337,13 @@ class ManagedField:
             "value_slot_name",
             "current_slot_name",
             "working_slot_name",
+            "has_freeze",
+            "freeze",
+            "freeze_param_name",
+            "has_thaw",
+            "thaw",
+            "thaw_param_name",
+            "has_optional_none",
         ):
             raise AttributeError("ManagedField records are immutable")
         object.__setattr__(self, name, value)
@@ -2102,6 +2372,13 @@ class ManagedField:
         pieces.append("value_slot_name=" + repr(self.value_slot_name))
         pieces.append("current_slot_name=" + repr(self.current_slot_name))
         pieces.append("working_slot_name=" + repr(self.working_slot_name))
+        pieces.append("has_freeze=" + repr(self.has_freeze))
+        pieces.append("freeze=" + repr(self.freeze))
+        pieces.append("freeze_param_name=" + repr(self.freeze_param_name))
+        pieces.append("has_thaw=" + repr(self.has_thaw))
+        pieces.append("thaw=" + repr(self.thaw))
+        pieces.append("thaw_param_name=" + repr(self.thaw_param_name))
+        pieces.append("has_optional_none=" + repr(self.has_optional_none))
         return "ManagedField" + "(" + ", ".join(pieces) + ")"
 
 
@@ -2959,6 +3236,19 @@ ASSEMBLY_PROPERTIES = {
     "WorkingSlotName": _YidlSimpleNamespace(
         name="WorkingSlotName", storage_name="working_slot_name"
     ),
+    "HasFreeze": _YidlSimpleNamespace(name="HasFreeze", storage_name="has_freeze"),
+    "Freeze": _YidlSimpleNamespace(name="Freeze", storage_name="freeze"),
+    "FreezeParamName": _YidlSimpleNamespace(
+        name="FreezeParamName", storage_name="freeze_param_name"
+    ),
+    "HasThaw": _YidlSimpleNamespace(name="HasThaw", storage_name="has_thaw"),
+    "Thaw": _YidlSimpleNamespace(name="Thaw", storage_name="thaw"),
+    "ThawParamName": _YidlSimpleNamespace(
+        name="ThawParamName", storage_name="thaw_param_name"
+    ),
+    "HasOptionalNone": _YidlSimpleNamespace(
+        name="HasOptionalNone", storage_name="has_optional_none"
+    ),
     "MethodId": _YidlSimpleNamespace(name="MethodId", storage_name="method_id"),
     "MethodOwner": _YidlSimpleNamespace(
         name="MethodOwner", storage_name="method_owner"
@@ -3125,7 +3415,7 @@ def build_lifecycle_class(decorated_cls, builder_params__astichi_param_hole__):
     astichi_hole(function_body)
     astichi_hole(return_statement)""",
         file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-        line_number=194,
+        line_number=203,
     ),
     "BuilderParam": astichi_template(
         from_astichi_code(
@@ -3133,7 +3423,7 @@ def build_lifecycle_class(decorated_cls, builder_params__astichi_param_hole__):
 def astichi_params(*, value_name__astichi_arg__):
     pass""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=212,
+            line_number=221,
         )
     ),
     "TransactionManagerParam": astichi_template(
@@ -3142,14 +3432,14 @@ def astichi_params(*, value_name__astichi_arg__):
 def astichi_params(*, transaction_manager=None):
     pass""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=217,
+            line_number=226,
         )
     ),
     "StateSlotEntry": astichi_template(
         from_astichi_code(
             "astichi_bind_external(slot_name)",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=222,
+            line_number=231,
         )
     ),
     "InitParamRequired": astichi_template(
@@ -3158,7 +3448,7 @@ def astichi_params(*, transaction_manager=None):
 def astichi_params(param_name__astichi_arg__: astichi_bind_external(annotation)):
     pass""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=226,
+            line_number=235,
         )
     ),
     "InitParamDefault": astichi_template(
@@ -3170,7 +3460,7 @@ def astichi_params(
 ):
     pass""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=231,
+            line_number=240,
         )
     ),
     "PlainStateAssignment": astichi_template(
@@ -3181,7 +3471,7 @@ astichi_pass(state, outer_bind=True).astichi_ref(external=state_slot)._ = astich
     outer_bind=True,
 )""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=239,
+            line_number=248,
         )
     ),
     "InitVarLocalDefaultAssignment": astichi_template(
@@ -3192,7 +3482,7 @@ init_value_name__astichi_arg__ = astichi_pass(
     outer_bind=True,
 )""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=246,
+            line_number=255,
         )
     ),
     "PlainProperty": astichi_template(
@@ -3206,7 +3496,7 @@ def property_getter_name__astichi_arg__(self):
 def property_setter_name__astichi_arg__(self, value):
     self._y_state.astichi_ref(external=state_slot)._ = value""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=253,
+            line_number=262,
         )
     ),
     "ClassVarDefaultAssignment": astichi_template(
@@ -3217,7 +3507,7 @@ classvar_name__astichi_arg__ = astichi_pass(
     outer_bind=True,
 )""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=263,
+            line_number=272,
         )
     ),
     "CommitOrderKeyBranch": astichi_template(
@@ -3229,7 +3519,7 @@ if astichi_pass(tx_index, outer_bind=True) == astichi_bind_external(tx_index_val
         outer_bind=True,
     )._y_get_default_facade().astichi_ref(external=method_name)()""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=270,
+            line_number=279,
         )
     ),
     "RequiresValidationBranch": astichi_template(
@@ -3238,7 +3528,7 @@ if astichi_pass(tx_index, outer_bind=True) == astichi_bind_external(tx_index_val
 if astichi_pass(tx_index, outer_bind=True) == astichi_bind_external(tx_index_value):
     return True""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=278,
+            line_number=287,
         )
     ),
     "ValidateCommitBranch": astichi_template(
@@ -3252,7 +3542,7 @@ if astichi_pass(tx_index, outer_bind=True) == astichi_bind_external(tx_index_val
     if result is False:
         return False""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=283,
+            line_number=292,
         )
     ),
     "TransactionHookCall": astichi_template(
@@ -3264,7 +3554,7 @@ if astichi_pass(tx_index, outer_bind=True) == astichi_bind_external(tx_index_val
         outer_bind=True,
     )._y_get_default_facade().astichi_ref(external=method_name)()""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=293,
+            line_number=302,
         )
     ),
     "ClassBundle": astichi_template(
@@ -3509,7 +3799,7 @@ class working_facade_class_decl_name__astichi_arg__(
     __slots__ = ()
     astichi_hole(working_facade_properties)""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=301,
+            line_number=310,
             keep_names=(
                 "DEFAULT_TRANSACTION",
                 "TransactionManager",
@@ -3536,14 +3826,14 @@ return_class_module_ref__astichi_arg__.__module__ = astichi_pass(
 ).__module__
 return return_class_result_ref__astichi_arg__""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=545,
+            line_number=554,
         )
     ),
     "PassStatement": astichi_template(
         from_astichi_code(
             "pass",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=561,
+            line_number=570,
         )
     ),
     "BuildTransactionFactsBody": from_astichi_code(

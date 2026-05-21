@@ -92,6 +92,25 @@ def test_managed_marker_accepts_keyword_transaction_group() -> None:
     assert decl.tx_group == "audit"
 
 
+def test_managed_marker_preserves_freeze_and_thaw_callables() -> None:
+    def freeze(value: object) -> object:
+        return value
+
+    def thaw(value: object) -> object:
+        return value
+
+    decl = normalize_marker(
+        "items",
+        tuple[int, ...],
+        managed(default=(), freeze=freeze, thaw=thaw),
+    )
+
+    assert decl.freeze is freeze
+    assert decl.thaw is thaw
+    assert decl.has_freeze is True
+    assert decl.has_thaw is True
+
+
 def test_marker_rejects_default_and_default_factory() -> None:
     with pytest.raises(LifecycleDefinitionError, match="both default and default_factory"):
         field(default=1, default_factory=int)
@@ -100,6 +119,14 @@ def test_marker_rejects_default_and_default_factory() -> None:
 def test_marker_rejects_non_callable_default_factory() -> None:
     with pytest.raises(LifecycleDefinitionError, match="default_factory must be callable"):
         managed(default_factory=1)
+
+
+def test_managed_marker_rejects_non_callable_conversions() -> None:
+    with pytest.raises(LifecycleDefinitionError, match="freeze must be callable"):
+        managed(freeze=1)  # type: ignore[arg-type]
+
+    with pytest.raises(LifecycleDefinitionError, match="thaw must be callable"):
+        managed(thaw=1)  # type: ignore[arg-type]
 
 
 def test_marker_rejects_non_bool_init() -> None:

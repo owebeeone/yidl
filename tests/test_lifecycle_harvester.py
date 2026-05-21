@@ -21,13 +21,19 @@ from yidl.runtime.transaction_yidl import DEFAULT_TRANSACTION
 
 
 def test_harvests_phase_a_compatible_facts() -> None:
+    def freeze_count(value: object) -> object:
+        return value
+
+    def thaw_count(value: object) -> object:
+        return value
+
     class Counter:
         plain: int = field(default=3)
         optional: str | None = field(default=None)
         tags: list[str] = field(default_factory=list)
         seed: int = initvar(default=2)
         KIND: str = classvar(default="counter")
-        count: int = managed(default=1)
+        count: int = managed(default=1, freeze=freeze_count, thaw=thaw_count)
         audit_count: int = managed("audit", default=10)
 
     harvested = harvest_lifecycle_definition(Counter)
@@ -73,6 +79,15 @@ def test_harvests_phase_a_compatible_facts() -> None:
     assert harvested.field_facts[0]["value_slot_name"] == "_y_plain_value"
     assert harvested.field_facts[5]["current_slot_name"] == "_y_count_current"
     assert harvested.field_facts[5]["working_slot_name"] == "_y_count_working"
+    assert harvested.field_facts[5]["has_freeze"] is True
+    assert harvested.field_facts[5]["freeze"] is freeze_count
+    assert harvested.field_facts[5]["freeze_param_name"] == "_Counter_count_freeze"
+    assert harvested.field_facts[5]["has_thaw"] is True
+    assert harvested.field_facts[5]["thaw"] is thaw_count
+    assert harvested.field_facts[5]["thaw_param_name"] == "_Counter_count_thaw"
+    assert harvested.field_facts[5]["has_optional_none"] is False
+    assert harvested.field_facts[6]["has_freeze"] is False
+    assert harvested.field_facts[6]["has_thaw"] is False
     assert harvested.tx_groups == (DEFAULT_TRANSACTION, "audit")
     assert harvested.lifecycle_definition["version"] == 1
     assert harvested.lifecycle_definition["fields"] == harvested.field_facts
@@ -86,6 +101,18 @@ def test_harvests_phase_a_compatible_facts() -> None:
     )
     assert harvested.build_kwargs["_Counter_optional_default"] is None
     assert harvested.build_kwargs["_Counter_tags_default_factory"] is list
+    assert harvested.build_kwargs["_Counter_count_freeze"] is freeze_count
+    assert harvested.build_kwargs["_Counter_count_thaw"] is thaw_count
+
+
+def test_harvester_marks_optional_none_managed_field() -> None:
+    class Counter:
+        optional: tuple[int, ...] | None = managed(default=None)
+
+    harvested = harvest_lifecycle_definition(Counter)
+
+    assert harvested.field_facts[0]["field_name"] == "optional"
+    assert harvested.field_facts[0]["has_optional_none"] is True
 
 
 def test_harvester_treats_plain_assignment_as_default_field() -> None:

@@ -28,6 +28,8 @@ class LifecycleMarker:
     default_factory: object = MISSING
     init: bool = True
     tx_group: object = MISSING
+    freeze: object = MISSING
+    thaw: object = MISSING
 
 
 @dataclass(frozen=True, slots=True)
@@ -43,6 +45,10 @@ class FieldDecl:
     has_default_factory: bool
     default_factory: object
     tx_group: object
+    has_freeze: bool = False
+    freeze: object = MISSING
+    has_thaw: bool = False
+    thaw: object = MISSING
 
 
 @dataclass(frozen=True, slots=True)
@@ -105,6 +111,8 @@ def managed(
     default: object = MISSING,
     default_factory: object = MISSING,
     init: bool = True,
+    freeze: object = MISSING,
+    thaw: object = MISSING,
 ) -> LifecycleMarker:
     """Declare a transaction-managed lifecycle field."""
 
@@ -114,6 +122,8 @@ def managed(
         default_factory=default_factory,
         init=init,
         tx_group=tx_group,
+        freeze=freeze,
+        thaw=thaw,
     )
 
 
@@ -202,6 +212,10 @@ def normalize_marker(
             if marker.kind == "managed" and marker.tx_group is MISSING
             else marker.tx_group
         ),
+        has_freeze=marker.freeze is not MISSING,
+        freeze=marker.freeze,
+        has_thaw=marker.thaw is not MISSING,
+        thaw=marker.thaw,
     )
 
 
@@ -212,6 +226,8 @@ def _marker(
     default_factory: object,
     init: bool,
     tx_group: object,
+    freeze: object = MISSING,
+    thaw: object = MISSING,
 ) -> LifecycleMarker:
     if default is not MISSING and default_factory is not MISSING:
         raise LifecycleDefinitionError("cannot specify both default and default_factory")
@@ -219,12 +235,20 @@ def _marker(
         raise LifecycleDefinitionError("init must be a bool")
     if default_factory is not MISSING and not callable(default_factory):
         raise LifecycleDefinitionError("default_factory must be callable")
+    if freeze is not MISSING and not callable(freeze):
+        raise LifecycleDefinitionError("freeze must be callable")
+    if thaw is not MISSING and not callable(thaw):
+        raise LifecycleDefinitionError("thaw must be callable")
+    if kind != "managed" and (freeze is not MISSING or thaw is not MISSING):
+        raise LifecycleDefinitionError("freeze and thaw are only valid for managed fields")
     return LifecycleMarker(
         kind=kind,
         default=default,
         default_factory=default_factory,
         init=init,
         tx_group=tx_group,
+        freeze=freeze,
+        thaw=thaw,
     )
 
 

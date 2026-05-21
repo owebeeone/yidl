@@ -38,6 +38,13 @@ concept LifecycleCore {
     property ValueSlotName: str = ""
     property CurrentSlotName: str = ""
     property WorkingSlotName: str = ""
+    property HasFreeze: bool = False
+    property Freeze: object = None
+    property FreezeParamName: str = ""
+    property HasThaw: bool = False
+    property Thaw: object = None
+    property ThawParamName: str = ""
+    property HasOptionalNone: bool = False
 
     property MethodId: str
     property MethodOwner: str
@@ -67,6 +74,8 @@ concept LifecycleCore {
         common HasDefaultFactory, DefaultFactory, DefaultFactoryParamName
         common DefaultFactoryParamNames
         common TxGroupKey, ValueSlotName, CurrentSlotName, WorkingSlotName
+        common HasFreeze, Freeze, FreezeParamName, HasThaw, Thaw, ThawParamName
+        common HasOptionalNone
 
         variant PlainField {
         }
