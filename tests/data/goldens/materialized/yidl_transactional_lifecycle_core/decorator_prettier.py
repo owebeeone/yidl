@@ -106,6 +106,30 @@ _DefaultFactoryParamNamesProperty = RuntimeProperty(
     default=(),
     storage_name="default_factory_param_names",
 )
+_HasWorkingDefaultFactoryProperty = RuntimeProperty(
+    "HasWorkingDefaultFactory",
+    bool,
+    default=False,
+    storage_name="has_working_default_factory",
+)
+_WorkingDefaultFactoryProperty = RuntimeProperty(
+    "WorkingDefaultFactory",
+    object,
+    default=None,
+    storage_name="working_default_factory",
+)
+_WorkingDefaultFactoryParamNameProperty = RuntimeProperty(
+    "WorkingDefaultFactoryParamName",
+    str,
+    default="",
+    storage_name="working_default_factory_param_name",
+)
+_WorkingDefaultFactoryParamNamesProperty = RuntimeProperty(
+    "WorkingDefaultFactoryParamNames",
+    object,
+    default=(),
+    storage_name="working_default_factory_param_names",
+)
 _TxGroupKeyProperty = RuntimeProperty(
     "TxGroupKey", object, default=None, storage_name="tx_group_key"
 )
@@ -338,6 +362,10 @@ _PlainFieldSpec = RuntimeRecord(
         _DefaultFactoryProperty,
         _DefaultFactoryParamNameProperty,
         _DefaultFactoryParamNamesProperty,
+        _HasWorkingDefaultFactoryProperty,
+        _WorkingDefaultFactoryProperty,
+        _WorkingDefaultFactoryParamNameProperty,
+        _WorkingDefaultFactoryParamNamesProperty,
         _TxGroupKeyProperty,
         _ValueSlotNameProperty,
         _CurrentSlotNameProperty,
@@ -369,6 +397,10 @@ _InitVarFieldSpec = RuntimeRecord(
         _DefaultFactoryProperty,
         _DefaultFactoryParamNameProperty,
         _DefaultFactoryParamNamesProperty,
+        _HasWorkingDefaultFactoryProperty,
+        _WorkingDefaultFactoryProperty,
+        _WorkingDefaultFactoryParamNameProperty,
+        _WorkingDefaultFactoryParamNamesProperty,
         _TxGroupKeyProperty,
         _ValueSlotNameProperty,
         _CurrentSlotNameProperty,
@@ -400,6 +432,10 @@ _ClassVarFieldSpec = RuntimeRecord(
         _DefaultFactoryProperty,
         _DefaultFactoryParamNameProperty,
         _DefaultFactoryParamNamesProperty,
+        _HasWorkingDefaultFactoryProperty,
+        _WorkingDefaultFactoryProperty,
+        _WorkingDefaultFactoryParamNameProperty,
+        _WorkingDefaultFactoryParamNamesProperty,
         _TxGroupKeyProperty,
         _ValueSlotNameProperty,
         _CurrentSlotNameProperty,
@@ -1063,6 +1099,10 @@ class PlainField:
         "default_factory",
         "default_factory_param_name",
         "default_factory_param_names",
+        "has_working_default_factory",
+        "working_default_factory",
+        "working_default_factory_param_name",
+        "working_default_factory_param_names",
         "tx_group_key",
         "value_slot_name",
         "current_slot_name",
@@ -1091,6 +1131,10 @@ class PlainField:
     default_factory: object
     default_factory_param_name: str
     default_factory_param_names: object
+    has_working_default_factory: bool
+    working_default_factory: object
+    working_default_factory_param_name: str
+    working_default_factory_param_names: object
     tx_group_key: object
     value_slot_name: str
     current_slot_name: str
@@ -1121,6 +1165,10 @@ class PlainField:
         default_factory: object = None,
         default_factory_param_name: str = "",
         default_factory_param_names: object = (),
+        has_working_default_factory: bool = False,
+        working_default_factory: object = None,
+        working_default_factory_param_name: str = "",
+        working_default_factory_param_names: object = (),
         tx_group_key: object = None,
         value_slot_name: str = "",
         current_slot_name: str = "",
@@ -1183,6 +1231,30 @@ class PlainField:
         object.__setattr__(
             self, "default_factory_param_names", default_factory_param_names
         )
+        if not isinstance(has_working_default_factory, bool):
+            raise TypeError(
+                "HasWorkingDefaultFactory must be bool, got "
+                + type(has_working_default_factory).__name__
+            )
+        object.__setattr__(
+            self, "has_working_default_factory", has_working_default_factory
+        )
+        object.__setattr__(self, "working_default_factory", working_default_factory)
+        if not isinstance(working_default_factory_param_name, str):
+            raise TypeError(
+                "WorkingDefaultFactoryParamName must be str, got "
+                + type(working_default_factory_param_name).__name__
+            )
+        object.__setattr__(
+            self,
+            "working_default_factory_param_name",
+            working_default_factory_param_name,
+        )
+        object.__setattr__(
+            self,
+            "working_default_factory_param_names",
+            working_default_factory_param_names,
+        )
         object.__setattr__(self, "tx_group_key", tx_group_key)
         if not isinstance(value_slot_name, str):
             raise TypeError(
@@ -1244,6 +1316,10 @@ class PlainField:
             "default_factory",
             "default_factory_param_name",
             "default_factory_param_names",
+            "has_working_default_factory",
+            "working_default_factory",
+            "working_default_factory_param_name",
+            "working_default_factory_param_names",
             "tx_group_key",
             "value_slot_name",
             "current_slot_name",
@@ -1280,6 +1356,18 @@ class PlainField:
         pieces.append(
             "default_factory_param_names=" + repr(self.default_factory_param_names)
         )
+        pieces.append(
+            "has_working_default_factory=" + repr(self.has_working_default_factory)
+        )
+        pieces.append("working_default_factory=" + repr(self.working_default_factory))
+        pieces.append(
+            "working_default_factory_param_name="
+            + repr(self.working_default_factory_param_name)
+        )
+        pieces.append(
+            "working_default_factory_param_names="
+            + repr(self.working_default_factory_param_names)
+        )
         pieces.append("tx_group_key=" + repr(self.tx_group_key))
         pieces.append("value_slot_name=" + repr(self.value_slot_name))
         pieces.append("current_slot_name=" + repr(self.current_slot_name))
@@ -1314,6 +1402,10 @@ class InitVarField:
         "default_factory",
         "default_factory_param_name",
         "default_factory_param_names",
+        "has_working_default_factory",
+        "working_default_factory",
+        "working_default_factory_param_name",
+        "working_default_factory_param_names",
         "tx_group_key",
         "value_slot_name",
         "current_slot_name",
@@ -1342,6 +1434,10 @@ class InitVarField:
     default_factory: object
     default_factory_param_name: str
     default_factory_param_names: object
+    has_working_default_factory: bool
+    working_default_factory: object
+    working_default_factory_param_name: str
+    working_default_factory_param_names: object
     tx_group_key: object
     value_slot_name: str
     current_slot_name: str
@@ -1372,6 +1468,10 @@ class InitVarField:
         default_factory: object = None,
         default_factory_param_name: str = "",
         default_factory_param_names: object = (),
+        has_working_default_factory: bool = False,
+        working_default_factory: object = None,
+        working_default_factory_param_name: str = "",
+        working_default_factory_param_names: object = (),
         tx_group_key: object = None,
         value_slot_name: str = "",
         current_slot_name: str = "",
@@ -1434,6 +1534,30 @@ class InitVarField:
         object.__setattr__(
             self, "default_factory_param_names", default_factory_param_names
         )
+        if not isinstance(has_working_default_factory, bool):
+            raise TypeError(
+                "HasWorkingDefaultFactory must be bool, got "
+                + type(has_working_default_factory).__name__
+            )
+        object.__setattr__(
+            self, "has_working_default_factory", has_working_default_factory
+        )
+        object.__setattr__(self, "working_default_factory", working_default_factory)
+        if not isinstance(working_default_factory_param_name, str):
+            raise TypeError(
+                "WorkingDefaultFactoryParamName must be str, got "
+                + type(working_default_factory_param_name).__name__
+            )
+        object.__setattr__(
+            self,
+            "working_default_factory_param_name",
+            working_default_factory_param_name,
+        )
+        object.__setattr__(
+            self,
+            "working_default_factory_param_names",
+            working_default_factory_param_names,
+        )
         object.__setattr__(self, "tx_group_key", tx_group_key)
         if not isinstance(value_slot_name, str):
             raise TypeError(
@@ -1495,6 +1619,10 @@ class InitVarField:
             "default_factory",
             "default_factory_param_name",
             "default_factory_param_names",
+            "has_working_default_factory",
+            "working_default_factory",
+            "working_default_factory_param_name",
+            "working_default_factory_param_names",
             "tx_group_key",
             "value_slot_name",
             "current_slot_name",
@@ -1531,6 +1659,18 @@ class InitVarField:
         pieces.append(
             "default_factory_param_names=" + repr(self.default_factory_param_names)
         )
+        pieces.append(
+            "has_working_default_factory=" + repr(self.has_working_default_factory)
+        )
+        pieces.append("working_default_factory=" + repr(self.working_default_factory))
+        pieces.append(
+            "working_default_factory_param_name="
+            + repr(self.working_default_factory_param_name)
+        )
+        pieces.append(
+            "working_default_factory_param_names="
+            + repr(self.working_default_factory_param_names)
+        )
         pieces.append("tx_group_key=" + repr(self.tx_group_key))
         pieces.append("value_slot_name=" + repr(self.value_slot_name))
         pieces.append("current_slot_name=" + repr(self.current_slot_name))
@@ -1565,6 +1705,10 @@ class ClassVarField:
         "default_factory",
         "default_factory_param_name",
         "default_factory_param_names",
+        "has_working_default_factory",
+        "working_default_factory",
+        "working_default_factory_param_name",
+        "working_default_factory_param_names",
         "tx_group_key",
         "value_slot_name",
         "current_slot_name",
@@ -1593,6 +1737,10 @@ class ClassVarField:
     default_factory: object
     default_factory_param_name: str
     default_factory_param_names: object
+    has_working_default_factory: bool
+    working_default_factory: object
+    working_default_factory_param_name: str
+    working_default_factory_param_names: object
     tx_group_key: object
     value_slot_name: str
     current_slot_name: str
@@ -1623,6 +1771,10 @@ class ClassVarField:
         default_factory: object = None,
         default_factory_param_name: str = "",
         default_factory_param_names: object = (),
+        has_working_default_factory: bool = False,
+        working_default_factory: object = None,
+        working_default_factory_param_name: str = "",
+        working_default_factory_param_names: object = (),
         tx_group_key: object = None,
         value_slot_name: str = "",
         current_slot_name: str = "",
@@ -1685,6 +1837,30 @@ class ClassVarField:
         object.__setattr__(
             self, "default_factory_param_names", default_factory_param_names
         )
+        if not isinstance(has_working_default_factory, bool):
+            raise TypeError(
+                "HasWorkingDefaultFactory must be bool, got "
+                + type(has_working_default_factory).__name__
+            )
+        object.__setattr__(
+            self, "has_working_default_factory", has_working_default_factory
+        )
+        object.__setattr__(self, "working_default_factory", working_default_factory)
+        if not isinstance(working_default_factory_param_name, str):
+            raise TypeError(
+                "WorkingDefaultFactoryParamName must be str, got "
+                + type(working_default_factory_param_name).__name__
+            )
+        object.__setattr__(
+            self,
+            "working_default_factory_param_name",
+            working_default_factory_param_name,
+        )
+        object.__setattr__(
+            self,
+            "working_default_factory_param_names",
+            working_default_factory_param_names,
+        )
         object.__setattr__(self, "tx_group_key", tx_group_key)
         if not isinstance(value_slot_name, str):
             raise TypeError(
@@ -1746,6 +1922,10 @@ class ClassVarField:
             "default_factory",
             "default_factory_param_name",
             "default_factory_param_names",
+            "has_working_default_factory",
+            "working_default_factory",
+            "working_default_factory_param_name",
+            "working_default_factory_param_names",
             "tx_group_key",
             "value_slot_name",
             "current_slot_name",
@@ -1781,6 +1961,18 @@ class ClassVarField:
         )
         pieces.append(
             "default_factory_param_names=" + repr(self.default_factory_param_names)
+        )
+        pieces.append(
+            "has_working_default_factory=" + repr(self.has_working_default_factory)
+        )
+        pieces.append("working_default_factory=" + repr(self.working_default_factory))
+        pieces.append(
+            "working_default_factory_param_name="
+            + repr(self.working_default_factory_param_name)
+        )
+        pieces.append(
+            "working_default_factory_param_names="
+            + repr(self.working_default_factory_param_names)
         )
         pieces.append("tx_group_key=" + repr(self.tx_group_key))
         pieces.append("value_slot_name=" + repr(self.value_slot_name))
@@ -2029,6 +2221,20 @@ ASSEMBLY_PROPERTIES = {
     "DefaultFactoryParamNames": _YidlSimpleNamespace(
         name="DefaultFactoryParamNames", storage_name="default_factory_param_names"
     ),
+    "HasWorkingDefaultFactory": _YidlSimpleNamespace(
+        name="HasWorkingDefaultFactory", storage_name="has_working_default_factory"
+    ),
+    "WorkingDefaultFactory": _YidlSimpleNamespace(
+        name="WorkingDefaultFactory", storage_name="working_default_factory"
+    ),
+    "WorkingDefaultFactoryParamName": _YidlSimpleNamespace(
+        name="WorkingDefaultFactoryParamName",
+        storage_name="working_default_factory_param_name",
+    ),
+    "WorkingDefaultFactoryParamNames": _YidlSimpleNamespace(
+        name="WorkingDefaultFactoryParamNames",
+        storage_name="working_default_factory_param_names",
+    ),
     "TxGroupKey": _YidlSimpleNamespace(name="TxGroupKey", storage_name="tx_group_key"),
     "ValueSlotName": _YidlSimpleNamespace(
         name="ValueSlotName", storage_name="value_slot_name"
@@ -2151,7 +2357,7 @@ def build_lifecycle_class(decorated_cls, builder_params__astichi_param_hole__):
     astichi_hole(function_body)
     astichi_hole(return_statement)""",
         file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-        line_number=205,
+        line_number=211,
     ),
     "BuilderParam": astichi_template(
         from_astichi_code(
@@ -2159,7 +2365,7 @@ def build_lifecycle_class(decorated_cls, builder_params__astichi_param_hole__):
 def astichi_params(*, value_name__astichi_arg__):
     pass""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=223,
+            line_number=229,
         )
     ),
     "TransactionManagerParam": astichi_template(
@@ -2168,14 +2374,14 @@ def astichi_params(*, value_name__astichi_arg__):
 def astichi_params(*, transaction_manager=None):
     pass""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=228,
+            line_number=234,
         )
     ),
     "StateSlotEntry": astichi_template(
         from_astichi_code(
             "astichi_bind_external(slot_name)",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=233,
+            line_number=239,
         )
     ),
     "InitParamRequired": astichi_template(
@@ -2184,7 +2390,7 @@ def astichi_params(*, transaction_manager=None):
 def astichi_params(param_name__astichi_arg__: astichi_bind_external(annotation)):
     pass""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=237,
+            line_number=243,
         )
     ),
     "InitParamDefault": astichi_template(
@@ -2196,7 +2402,7 @@ def astichi_params(
 ):
     pass""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=242,
+            line_number=248,
         )
     ),
     "PlainStateAssignment": astichi_template(
@@ -2207,7 +2413,7 @@ astichi_pass(state, outer_bind=True).astichi_ref(external=state_slot)._ = astich
     outer_bind=True,
 )""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=250,
+            line_number=256,
         )
     ),
     "InitVarLocalDefaultAssignment": astichi_template(
@@ -2218,7 +2424,7 @@ init_value_name__astichi_arg__ = astichi_pass(
     outer_bind=True,
 )""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=257,
+            line_number=263,
         )
     ),
     "PlainProperty": astichi_template(
@@ -2232,7 +2438,7 @@ def property_getter_name__astichi_arg__(self):
 def property_setter_name__astichi_arg__(self, value):
     self._y_state.astichi_ref(external=state_slot)._ = value""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=264,
+            line_number=270,
         )
     ),
     "ClassVarDefaultAssignment": astichi_template(
@@ -2243,7 +2449,7 @@ classvar_name__astichi_arg__ = astichi_pass(
     outer_bind=True,
 )""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=274,
+            line_number=280,
         )
     ),
     "CommitOrderKeyBranch": astichi_template(
@@ -2256,7 +2462,7 @@ match astichi_pass(tx_index, outer_bind=True):
             outer_bind=True,
         )._y_get_default_facade().astichi_ref(external=method_name)()""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=281,
+            line_number=287,
         )
     ),
     "RequiresValidationBranch": astichi_template(
@@ -2266,7 +2472,7 @@ match astichi_pass(tx_index, outer_bind=True):
     case _ if astichi_pass(tx_index, outer_bind=True) == astichi_bind_external(tx_index_value):
         return True""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=290,
+            line_number=296,
         )
     ),
     "ValidateCommitBranch": astichi_template(
@@ -2281,7 +2487,7 @@ match astichi_pass(tx_index, outer_bind=True):
         if result is False:
             return False""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=296,
+            line_number=302,
         )
     ),
     "TransactionHookCall": astichi_template(
@@ -2294,7 +2500,7 @@ match astichi_pass(tx_index, outer_bind=True):
             outer_bind=True,
         )._y_get_default_facade().astichi_ref(external=method_name)()""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=307,
+            line_number=313,
         )
     ),
     "ClassBundle": astichi_template(
@@ -2586,7 +2792,7 @@ class working_facade_class_decl_name__astichi_arg__(
     __slots__ = ()
     astichi_hole(working_facade_properties)""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=316,
+            line_number=322,
             keep_names=(
                 "DEFAULT_TRANSACTION",
                 "TransactionManager",
@@ -2613,14 +2819,14 @@ return_class_module_ref__astichi_arg__.__module__ = astichi_pass(
 ).__module__
 return return_class_result_ref__astichi_arg__""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=607,
+            line_number=613,
         )
     ),
     "PassStatement": astichi_template(
         from_astichi_code(
             "pass",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=623,
+            line_number=629,
         )
     ),
 }

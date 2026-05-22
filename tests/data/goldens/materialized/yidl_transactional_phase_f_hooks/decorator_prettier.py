@@ -108,6 +108,30 @@ _DefaultFactoryParamNamesProperty = RuntimeProperty(
     default=(),
     storage_name="default_factory_param_names",
 )
+_HasWorkingDefaultFactoryProperty = RuntimeProperty(
+    "HasWorkingDefaultFactory",
+    bool,
+    default=False,
+    storage_name="has_working_default_factory",
+)
+_WorkingDefaultFactoryProperty = RuntimeProperty(
+    "WorkingDefaultFactory",
+    object,
+    default=None,
+    storage_name="working_default_factory",
+)
+_WorkingDefaultFactoryParamNameProperty = RuntimeProperty(
+    "WorkingDefaultFactoryParamName",
+    str,
+    default="",
+    storage_name="working_default_factory_param_name",
+)
+_WorkingDefaultFactoryParamNamesProperty = RuntimeProperty(
+    "WorkingDefaultFactoryParamNames",
+    object,
+    default=(),
+    storage_name="working_default_factory_param_names",
+)
 _TxGroupKeyProperty = RuntimeProperty(
     "TxGroupKey", object, default=None, storage_name="tx_group_key"
 )
@@ -482,6 +506,10 @@ _PlainFieldSpec = RuntimeRecord(
         _DefaultFactoryProperty,
         _DefaultFactoryParamNameProperty,
         _DefaultFactoryParamNamesProperty,
+        _HasWorkingDefaultFactoryProperty,
+        _WorkingDefaultFactoryProperty,
+        _WorkingDefaultFactoryParamNameProperty,
+        _WorkingDefaultFactoryParamNamesProperty,
         _TxGroupKeyProperty,
         _ValueSlotNameProperty,
         _CurrentSlotNameProperty,
@@ -513,6 +541,10 @@ _InitVarFieldSpec = RuntimeRecord(
         _DefaultFactoryProperty,
         _DefaultFactoryParamNameProperty,
         _DefaultFactoryParamNamesProperty,
+        _HasWorkingDefaultFactoryProperty,
+        _WorkingDefaultFactoryProperty,
+        _WorkingDefaultFactoryParamNameProperty,
+        _WorkingDefaultFactoryParamNamesProperty,
         _TxGroupKeyProperty,
         _ValueSlotNameProperty,
         _CurrentSlotNameProperty,
@@ -544,6 +576,10 @@ _ClassVarFieldSpec = RuntimeRecord(
         _DefaultFactoryProperty,
         _DefaultFactoryParamNameProperty,
         _DefaultFactoryParamNamesProperty,
+        _HasWorkingDefaultFactoryProperty,
+        _WorkingDefaultFactoryProperty,
+        _WorkingDefaultFactoryParamNameProperty,
+        _WorkingDefaultFactoryParamNamesProperty,
         _TxGroupKeyProperty,
         _ValueSlotNameProperty,
         _CurrentSlotNameProperty,
@@ -622,6 +658,10 @@ _ManagedFieldSpec = RuntimeRecord(
         _DefaultFactoryProperty,
         _DefaultFactoryParamNameProperty,
         _DefaultFactoryParamNamesProperty,
+        _HasWorkingDefaultFactoryProperty,
+        _WorkingDefaultFactoryProperty,
+        _WorkingDefaultFactoryParamNameProperty,
+        _WorkingDefaultFactoryParamNamesProperty,
         _TxGroupKeyProperty,
         _ValueSlotNameProperty,
         _CurrentSlotNameProperty,
@@ -677,9 +717,65 @@ _DefaultFactoryDiagnosticSpec = RuntimeRecord(
         _DiagnosticMessageProperty,
     ),
 )
+_IndexedTransientFieldSpec = RuntimeRecord(
+    "IndexedTransientField",
+    (
+        _FieldIdProperty,
+        _FieldOwnerProperty,
+        _FieldNameProperty,
+        _FieldOrderProperty,
+        _TxGroupKeyProperty,
+        _TxIndexProperty,
+        _CurrentSlotNameProperty,
+        _WorkingSlotNameProperty,
+        _HasWorkingDefaultFactoryProperty,
+        _WorkingDefaultFactoryParamNameProperty,
+    ),
+)
+_TransientFieldSpec = RuntimeRecord(
+    "TransientField",
+    (
+        _FieldIdProperty,
+        _FieldOwnerProperty,
+        _FieldNameProperty,
+        _FieldOrderProperty,
+        _FieldKindProperty,
+        _AnnotationProperty,
+        _InitProperty,
+        _HasDefaultProperty,
+        _DefaultValueProperty,
+        _DefaultValueParamNameProperty,
+        _HasDefaultFactoryProperty,
+        _DefaultFactoryProperty,
+        _DefaultFactoryParamNameProperty,
+        _DefaultFactoryParamNamesProperty,
+        _HasWorkingDefaultFactoryProperty,
+        _WorkingDefaultFactoryProperty,
+        _WorkingDefaultFactoryParamNameProperty,
+        _WorkingDefaultFactoryParamNamesProperty,
+        _TxGroupKeyProperty,
+        _ValueSlotNameProperty,
+        _CurrentSlotNameProperty,
+        _WorkingSlotNameProperty,
+        _StagedSlotNameProperty,
+        _HasFreezeProperty,
+        _FreezeProperty,
+        _FreezeParamNameProperty,
+        _HasThawProperty,
+        _ThawProperty,
+        _ThawParamNameProperty,
+        _HasOptionalNoneProperty,
+    ),
+)
 _LifecycleFieldSpecUnion = RuntimeUnion(
     "LifecycleFieldSpec",
-    (_PlainFieldSpec, _InitVarFieldSpec, _ClassVarFieldSpec, _ManagedFieldSpec),
+    (
+        _PlainFieldSpec,
+        _InitVarFieldSpec,
+        _ClassVarFieldSpec,
+        _ManagedFieldSpec,
+        _TransientFieldSpec,
+    ),
 )
 
 
@@ -1327,6 +1423,10 @@ class PlainField:
         "default_factory",
         "default_factory_param_name",
         "default_factory_param_names",
+        "has_working_default_factory",
+        "working_default_factory",
+        "working_default_factory_param_name",
+        "working_default_factory_param_names",
         "tx_group_key",
         "value_slot_name",
         "current_slot_name",
@@ -1355,6 +1455,10 @@ class PlainField:
     default_factory: object
     default_factory_param_name: str
     default_factory_param_names: object
+    has_working_default_factory: bool
+    working_default_factory: object
+    working_default_factory_param_name: str
+    working_default_factory_param_names: object
     tx_group_key: object
     value_slot_name: str
     current_slot_name: str
@@ -1385,6 +1489,10 @@ class PlainField:
         default_factory: object = None,
         default_factory_param_name: str = "",
         default_factory_param_names: object = (),
+        has_working_default_factory: bool = False,
+        working_default_factory: object = None,
+        working_default_factory_param_name: str = "",
+        working_default_factory_param_names: object = (),
         tx_group_key: object = None,
         value_slot_name: str = "",
         current_slot_name: str = "",
@@ -1447,6 +1555,30 @@ class PlainField:
         object.__setattr__(
             self, "default_factory_param_names", default_factory_param_names
         )
+        if not isinstance(has_working_default_factory, bool):
+            raise TypeError(
+                "HasWorkingDefaultFactory must be bool, got "
+                + type(has_working_default_factory).__name__
+            )
+        object.__setattr__(
+            self, "has_working_default_factory", has_working_default_factory
+        )
+        object.__setattr__(self, "working_default_factory", working_default_factory)
+        if not isinstance(working_default_factory_param_name, str):
+            raise TypeError(
+                "WorkingDefaultFactoryParamName must be str, got "
+                + type(working_default_factory_param_name).__name__
+            )
+        object.__setattr__(
+            self,
+            "working_default_factory_param_name",
+            working_default_factory_param_name,
+        )
+        object.__setattr__(
+            self,
+            "working_default_factory_param_names",
+            working_default_factory_param_names,
+        )
         object.__setattr__(self, "tx_group_key", tx_group_key)
         if not isinstance(value_slot_name, str):
             raise TypeError(
@@ -1508,6 +1640,10 @@ class PlainField:
             "default_factory",
             "default_factory_param_name",
             "default_factory_param_names",
+            "has_working_default_factory",
+            "working_default_factory",
+            "working_default_factory_param_name",
+            "working_default_factory_param_names",
             "tx_group_key",
             "value_slot_name",
             "current_slot_name",
@@ -1544,6 +1680,18 @@ class PlainField:
         pieces.append(
             "default_factory_param_names=" + repr(self.default_factory_param_names)
         )
+        pieces.append(
+            "has_working_default_factory=" + repr(self.has_working_default_factory)
+        )
+        pieces.append("working_default_factory=" + repr(self.working_default_factory))
+        pieces.append(
+            "working_default_factory_param_name="
+            + repr(self.working_default_factory_param_name)
+        )
+        pieces.append(
+            "working_default_factory_param_names="
+            + repr(self.working_default_factory_param_names)
+        )
         pieces.append("tx_group_key=" + repr(self.tx_group_key))
         pieces.append("value_slot_name=" + repr(self.value_slot_name))
         pieces.append("current_slot_name=" + repr(self.current_slot_name))
@@ -1578,6 +1726,10 @@ class InitVarField:
         "default_factory",
         "default_factory_param_name",
         "default_factory_param_names",
+        "has_working_default_factory",
+        "working_default_factory",
+        "working_default_factory_param_name",
+        "working_default_factory_param_names",
         "tx_group_key",
         "value_slot_name",
         "current_slot_name",
@@ -1606,6 +1758,10 @@ class InitVarField:
     default_factory: object
     default_factory_param_name: str
     default_factory_param_names: object
+    has_working_default_factory: bool
+    working_default_factory: object
+    working_default_factory_param_name: str
+    working_default_factory_param_names: object
     tx_group_key: object
     value_slot_name: str
     current_slot_name: str
@@ -1636,6 +1792,10 @@ class InitVarField:
         default_factory: object = None,
         default_factory_param_name: str = "",
         default_factory_param_names: object = (),
+        has_working_default_factory: bool = False,
+        working_default_factory: object = None,
+        working_default_factory_param_name: str = "",
+        working_default_factory_param_names: object = (),
         tx_group_key: object = None,
         value_slot_name: str = "",
         current_slot_name: str = "",
@@ -1698,6 +1858,30 @@ class InitVarField:
         object.__setattr__(
             self, "default_factory_param_names", default_factory_param_names
         )
+        if not isinstance(has_working_default_factory, bool):
+            raise TypeError(
+                "HasWorkingDefaultFactory must be bool, got "
+                + type(has_working_default_factory).__name__
+            )
+        object.__setattr__(
+            self, "has_working_default_factory", has_working_default_factory
+        )
+        object.__setattr__(self, "working_default_factory", working_default_factory)
+        if not isinstance(working_default_factory_param_name, str):
+            raise TypeError(
+                "WorkingDefaultFactoryParamName must be str, got "
+                + type(working_default_factory_param_name).__name__
+            )
+        object.__setattr__(
+            self,
+            "working_default_factory_param_name",
+            working_default_factory_param_name,
+        )
+        object.__setattr__(
+            self,
+            "working_default_factory_param_names",
+            working_default_factory_param_names,
+        )
         object.__setattr__(self, "tx_group_key", tx_group_key)
         if not isinstance(value_slot_name, str):
             raise TypeError(
@@ -1759,6 +1943,10 @@ class InitVarField:
             "default_factory",
             "default_factory_param_name",
             "default_factory_param_names",
+            "has_working_default_factory",
+            "working_default_factory",
+            "working_default_factory_param_name",
+            "working_default_factory_param_names",
             "tx_group_key",
             "value_slot_name",
             "current_slot_name",
@@ -1795,6 +1983,18 @@ class InitVarField:
         pieces.append(
             "default_factory_param_names=" + repr(self.default_factory_param_names)
         )
+        pieces.append(
+            "has_working_default_factory=" + repr(self.has_working_default_factory)
+        )
+        pieces.append("working_default_factory=" + repr(self.working_default_factory))
+        pieces.append(
+            "working_default_factory_param_name="
+            + repr(self.working_default_factory_param_name)
+        )
+        pieces.append(
+            "working_default_factory_param_names="
+            + repr(self.working_default_factory_param_names)
+        )
         pieces.append("tx_group_key=" + repr(self.tx_group_key))
         pieces.append("value_slot_name=" + repr(self.value_slot_name))
         pieces.append("current_slot_name=" + repr(self.current_slot_name))
@@ -1829,6 +2029,10 @@ class ClassVarField:
         "default_factory",
         "default_factory_param_name",
         "default_factory_param_names",
+        "has_working_default_factory",
+        "working_default_factory",
+        "working_default_factory_param_name",
+        "working_default_factory_param_names",
         "tx_group_key",
         "value_slot_name",
         "current_slot_name",
@@ -1857,6 +2061,10 @@ class ClassVarField:
     default_factory: object
     default_factory_param_name: str
     default_factory_param_names: object
+    has_working_default_factory: bool
+    working_default_factory: object
+    working_default_factory_param_name: str
+    working_default_factory_param_names: object
     tx_group_key: object
     value_slot_name: str
     current_slot_name: str
@@ -1887,6 +2095,10 @@ class ClassVarField:
         default_factory: object = None,
         default_factory_param_name: str = "",
         default_factory_param_names: object = (),
+        has_working_default_factory: bool = False,
+        working_default_factory: object = None,
+        working_default_factory_param_name: str = "",
+        working_default_factory_param_names: object = (),
         tx_group_key: object = None,
         value_slot_name: str = "",
         current_slot_name: str = "",
@@ -1949,6 +2161,30 @@ class ClassVarField:
         object.__setattr__(
             self, "default_factory_param_names", default_factory_param_names
         )
+        if not isinstance(has_working_default_factory, bool):
+            raise TypeError(
+                "HasWorkingDefaultFactory must be bool, got "
+                + type(has_working_default_factory).__name__
+            )
+        object.__setattr__(
+            self, "has_working_default_factory", has_working_default_factory
+        )
+        object.__setattr__(self, "working_default_factory", working_default_factory)
+        if not isinstance(working_default_factory_param_name, str):
+            raise TypeError(
+                "WorkingDefaultFactoryParamName must be str, got "
+                + type(working_default_factory_param_name).__name__
+            )
+        object.__setattr__(
+            self,
+            "working_default_factory_param_name",
+            working_default_factory_param_name,
+        )
+        object.__setattr__(
+            self,
+            "working_default_factory_param_names",
+            working_default_factory_param_names,
+        )
         object.__setattr__(self, "tx_group_key", tx_group_key)
         if not isinstance(value_slot_name, str):
             raise TypeError(
@@ -2010,6 +2246,10 @@ class ClassVarField:
             "default_factory",
             "default_factory_param_name",
             "default_factory_param_names",
+            "has_working_default_factory",
+            "working_default_factory",
+            "working_default_factory_param_name",
+            "working_default_factory_param_names",
             "tx_group_key",
             "value_slot_name",
             "current_slot_name",
@@ -2045,6 +2285,18 @@ class ClassVarField:
         )
         pieces.append(
             "default_factory_param_names=" + repr(self.default_factory_param_names)
+        )
+        pieces.append(
+            "has_working_default_factory=" + repr(self.has_working_default_factory)
+        )
+        pieces.append("working_default_factory=" + repr(self.working_default_factory))
+        pieces.append(
+            "working_default_factory_param_name="
+            + repr(self.working_default_factory_param_name)
+        )
+        pieces.append(
+            "working_default_factory_param_names="
+            + repr(self.working_default_factory_param_names)
         )
         pieces.append("tx_group_key=" + repr(self.tx_group_key))
         pieces.append("value_slot_name=" + repr(self.value_slot_name))
@@ -2481,6 +2733,10 @@ class ManagedField:
         "default_factory",
         "default_factory_param_name",
         "default_factory_param_names",
+        "has_working_default_factory",
+        "working_default_factory",
+        "working_default_factory_param_name",
+        "working_default_factory_param_names",
         "tx_group_key",
         "value_slot_name",
         "current_slot_name",
@@ -2509,6 +2765,10 @@ class ManagedField:
     default_factory: object
     default_factory_param_name: str
     default_factory_param_names: object
+    has_working_default_factory: bool
+    working_default_factory: object
+    working_default_factory_param_name: str
+    working_default_factory_param_names: object
     tx_group_key: object
     value_slot_name: str
     current_slot_name: str
@@ -2539,6 +2799,10 @@ class ManagedField:
         default_factory: object = None,
         default_factory_param_name: str = "",
         default_factory_param_names: object = (),
+        has_working_default_factory: bool = False,
+        working_default_factory: object = None,
+        working_default_factory_param_name: str = "",
+        working_default_factory_param_names: object = (),
         tx_group_key: object = None,
         value_slot_name: str = "",
         current_slot_name: str = "",
@@ -2601,6 +2865,30 @@ class ManagedField:
         object.__setattr__(
             self, "default_factory_param_names", default_factory_param_names
         )
+        if not isinstance(has_working_default_factory, bool):
+            raise TypeError(
+                "HasWorkingDefaultFactory must be bool, got "
+                + type(has_working_default_factory).__name__
+            )
+        object.__setattr__(
+            self, "has_working_default_factory", has_working_default_factory
+        )
+        object.__setattr__(self, "working_default_factory", working_default_factory)
+        if not isinstance(working_default_factory_param_name, str):
+            raise TypeError(
+                "WorkingDefaultFactoryParamName must be str, got "
+                + type(working_default_factory_param_name).__name__
+            )
+        object.__setattr__(
+            self,
+            "working_default_factory_param_name",
+            working_default_factory_param_name,
+        )
+        object.__setattr__(
+            self,
+            "working_default_factory_param_names",
+            working_default_factory_param_names,
+        )
         object.__setattr__(self, "tx_group_key", tx_group_key)
         if not isinstance(value_slot_name, str):
             raise TypeError(
@@ -2662,6 +2950,10 @@ class ManagedField:
             "default_factory",
             "default_factory_param_name",
             "default_factory_param_names",
+            "has_working_default_factory",
+            "working_default_factory",
+            "working_default_factory_param_name",
+            "working_default_factory_param_names",
             "tx_group_key",
             "value_slot_name",
             "current_slot_name",
@@ -2697,6 +2989,18 @@ class ManagedField:
         )
         pieces.append(
             "default_factory_param_names=" + repr(self.default_factory_param_names)
+        )
+        pieces.append(
+            "has_working_default_factory=" + repr(self.has_working_default_factory)
+        )
+        pieces.append("working_default_factory=" + repr(self.working_default_factory))
+        pieces.append(
+            "working_default_factory_param_name="
+            + repr(self.working_default_factory_param_name)
+        )
+        pieces.append(
+            "working_default_factory_param_names="
+            + repr(self.working_default_factory_param_names)
         )
         pieces.append("tx_group_key=" + repr(self.tx_group_key))
         pieces.append("value_slot_name=" + repr(self.value_slot_name))
@@ -3055,6 +3359,432 @@ class DefaultFactoryDiagnostic:
 
 
 _DefaultFactoryDiagnosticSpec.bind_record_class(DefaultFactoryDiagnostic)
+
+
+class IndexedTransientField:
+    __slots__ = (
+        "field_id",
+        "field_owner",
+        "field_name",
+        "field_order",
+        "tx_group_key",
+        "tx_index",
+        "current_slot_name",
+        "working_slot_name",
+        "has_working_default_factory",
+        "working_default_factory_param_name",
+    )
+    __dds_record_spec__ = _IndexedTransientFieldSpec
+    field_id: str
+    field_owner: str
+    field_name: str
+    field_order: int
+    tx_group_key: object
+    tx_index: int
+    current_slot_name: str
+    working_slot_name: str
+    has_working_default_factory: bool
+    working_default_factory_param_name: str
+
+    def __init__(
+        self,
+        *,
+        field_id: str,
+        field_owner: str,
+        field_name: str,
+        field_order: int,
+        tx_group_key: object = None,
+        tx_index: int = 0,
+        current_slot_name: str = "",
+        working_slot_name: str = "",
+        has_working_default_factory: bool = False,
+        working_default_factory_param_name: str = "",
+    ):
+        if not isinstance(field_id, str):
+            raise TypeError("FieldId must be str, got " + type(field_id).__name__)
+        object.__setattr__(self, "field_id", field_id)
+        if not isinstance(field_owner, str):
+            raise TypeError("FieldOwner must be str, got " + type(field_owner).__name__)
+        object.__setattr__(self, "field_owner", field_owner)
+        if not isinstance(field_name, str):
+            raise TypeError("FieldName must be str, got " + type(field_name).__name__)
+        object.__setattr__(self, "field_name", field_name)
+        if not isinstance(field_order, int):
+            raise TypeError("FieldOrder must be int, got " + type(field_order).__name__)
+        object.__setattr__(self, "field_order", field_order)
+        object.__setattr__(self, "tx_group_key", tx_group_key)
+        if not isinstance(tx_index, int):
+            raise TypeError("TxIndex must be int, got " + type(tx_index).__name__)
+        object.__setattr__(self, "tx_index", tx_index)
+        if not isinstance(current_slot_name, str):
+            raise TypeError(
+                "CurrentSlotName must be str, got " + type(current_slot_name).__name__
+            )
+        object.__setattr__(self, "current_slot_name", current_slot_name)
+        if not isinstance(working_slot_name, str):
+            raise TypeError(
+                "WorkingSlotName must be str, got " + type(working_slot_name).__name__
+            )
+        object.__setattr__(self, "working_slot_name", working_slot_name)
+        if not isinstance(has_working_default_factory, bool):
+            raise TypeError(
+                "HasWorkingDefaultFactory must be bool, got "
+                + type(has_working_default_factory).__name__
+            )
+        object.__setattr__(
+            self, "has_working_default_factory", has_working_default_factory
+        )
+        if not isinstance(working_default_factory_param_name, str):
+            raise TypeError(
+                "WorkingDefaultFactoryParamName must be str, got "
+                + type(working_default_factory_param_name).__name__
+            )
+        object.__setattr__(
+            self,
+            "working_default_factory_param_name",
+            working_default_factory_param_name,
+        )
+
+    def __setattr__(self, name, value):
+        if name in (
+            "field_id",
+            "field_owner",
+            "field_name",
+            "field_order",
+            "tx_group_key",
+            "tx_index",
+            "current_slot_name",
+            "working_slot_name",
+            "has_working_default_factory",
+            "working_default_factory_param_name",
+        ):
+            raise AttributeError("IndexedTransientField records are immutable")
+        object.__setattr__(self, name, value)
+
+    def __repr__(self):
+        pieces = []
+        pieces.append("field_id=" + repr(self.field_id))
+        pieces.append("field_owner=" + repr(self.field_owner))
+        pieces.append("field_name=" + repr(self.field_name))
+        pieces.append("field_order=" + repr(self.field_order))
+        pieces.append("tx_group_key=" + repr(self.tx_group_key))
+        pieces.append("tx_index=" + repr(self.tx_index))
+        pieces.append("current_slot_name=" + repr(self.current_slot_name))
+        pieces.append("working_slot_name=" + repr(self.working_slot_name))
+        pieces.append(
+            "has_working_default_factory=" + repr(self.has_working_default_factory)
+        )
+        pieces.append(
+            "working_default_factory_param_name="
+            + repr(self.working_default_factory_param_name)
+        )
+        return "IndexedTransientField" + "(" + ", ".join(pieces) + ")"
+
+
+_IndexedTransientFieldSpec.bind_record_class(IndexedTransientField)
+
+
+class TransientField:
+    __slots__ = (
+        "field_id",
+        "field_owner",
+        "field_name",
+        "field_order",
+        "field_kind",
+        "annotation",
+        "init",
+        "has_default",
+        "default_value",
+        "default_value_param_name",
+        "has_default_factory",
+        "default_factory",
+        "default_factory_param_name",
+        "default_factory_param_names",
+        "has_working_default_factory",
+        "working_default_factory",
+        "working_default_factory_param_name",
+        "working_default_factory_param_names",
+        "tx_group_key",
+        "value_slot_name",
+        "current_slot_name",
+        "working_slot_name",
+        "staged_slot_name",
+        "has_freeze",
+        "freeze",
+        "freeze_param_name",
+        "has_thaw",
+        "thaw",
+        "thaw_param_name",
+        "has_optional_none",
+    )
+    __dds_record_spec__ = _TransientFieldSpec
+    field_id: str
+    field_owner: str
+    field_name: str
+    field_order: int
+    field_kind: str
+    annotation: object
+    init: bool
+    has_default: bool
+    default_value: object
+    default_value_param_name: str
+    has_default_factory: bool
+    default_factory: object
+    default_factory_param_name: str
+    default_factory_param_names: object
+    has_working_default_factory: bool
+    working_default_factory: object
+    working_default_factory_param_name: str
+    working_default_factory_param_names: object
+    tx_group_key: object
+    value_slot_name: str
+    current_slot_name: str
+    working_slot_name: str
+    staged_slot_name: str
+    has_freeze: bool
+    freeze: object
+    freeze_param_name: str
+    has_thaw: bool
+    thaw: object
+    thaw_param_name: str
+    has_optional_none: bool
+
+    def __init__(
+        self,
+        *,
+        field_id: str,
+        field_owner: str,
+        field_name: str,
+        field_order: int,
+        field_kind: str = "field",
+        annotation: object = object,
+        init: bool = True,
+        has_default: bool = False,
+        default_value: object = None,
+        default_value_param_name: str = "",
+        has_default_factory: bool = False,
+        default_factory: object = None,
+        default_factory_param_name: str = "",
+        default_factory_param_names: object = (),
+        has_working_default_factory: bool = False,
+        working_default_factory: object = None,
+        working_default_factory_param_name: str = "",
+        working_default_factory_param_names: object = (),
+        tx_group_key: object = None,
+        value_slot_name: str = "",
+        current_slot_name: str = "",
+        working_slot_name: str = "",
+        staged_slot_name: str = "",
+        has_freeze: bool = False,
+        freeze: object = None,
+        freeze_param_name: str = "",
+        has_thaw: bool = False,
+        thaw: object = None,
+        thaw_param_name: str = "",
+        has_optional_none: bool = False,
+    ):
+        if not isinstance(field_id, str):
+            raise TypeError("FieldId must be str, got " + type(field_id).__name__)
+        object.__setattr__(self, "field_id", field_id)
+        if not isinstance(field_owner, str):
+            raise TypeError("FieldOwner must be str, got " + type(field_owner).__name__)
+        object.__setattr__(self, "field_owner", field_owner)
+        if not isinstance(field_name, str):
+            raise TypeError("FieldName must be str, got " + type(field_name).__name__)
+        object.__setattr__(self, "field_name", field_name)
+        if not isinstance(field_order, int):
+            raise TypeError("FieldOrder must be int, got " + type(field_order).__name__)
+        object.__setattr__(self, "field_order", field_order)
+        if not isinstance(field_kind, str):
+            raise TypeError("FieldKind must be str, got " + type(field_kind).__name__)
+        object.__setattr__(self, "field_kind", field_kind)
+        object.__setattr__(self, "annotation", annotation)
+        if not isinstance(init, bool):
+            raise TypeError("Init must be bool, got " + type(init).__name__)
+        object.__setattr__(self, "init", init)
+        if not isinstance(has_default, bool):
+            raise TypeError(
+                "HasDefault must be bool, got " + type(has_default).__name__
+            )
+        object.__setattr__(self, "has_default", has_default)
+        object.__setattr__(self, "default_value", default_value)
+        if not isinstance(default_value_param_name, str):
+            raise TypeError(
+                "DefaultValueParamName must be str, got "
+                + type(default_value_param_name).__name__
+            )
+        object.__setattr__(self, "default_value_param_name", default_value_param_name)
+        if not isinstance(has_default_factory, bool):
+            raise TypeError(
+                "HasDefaultFactory must be bool, got "
+                + type(has_default_factory).__name__
+            )
+        object.__setattr__(self, "has_default_factory", has_default_factory)
+        object.__setattr__(self, "default_factory", default_factory)
+        if not isinstance(default_factory_param_name, str):
+            raise TypeError(
+                "DefaultFactoryParamName must be str, got "
+                + type(default_factory_param_name).__name__
+            )
+        object.__setattr__(
+            self, "default_factory_param_name", default_factory_param_name
+        )
+        object.__setattr__(
+            self, "default_factory_param_names", default_factory_param_names
+        )
+        if not isinstance(has_working_default_factory, bool):
+            raise TypeError(
+                "HasWorkingDefaultFactory must be bool, got "
+                + type(has_working_default_factory).__name__
+            )
+        object.__setattr__(
+            self, "has_working_default_factory", has_working_default_factory
+        )
+        object.__setattr__(self, "working_default_factory", working_default_factory)
+        if not isinstance(working_default_factory_param_name, str):
+            raise TypeError(
+                "WorkingDefaultFactoryParamName must be str, got "
+                + type(working_default_factory_param_name).__name__
+            )
+        object.__setattr__(
+            self,
+            "working_default_factory_param_name",
+            working_default_factory_param_name,
+        )
+        object.__setattr__(
+            self,
+            "working_default_factory_param_names",
+            working_default_factory_param_names,
+        )
+        object.__setattr__(self, "tx_group_key", tx_group_key)
+        if not isinstance(value_slot_name, str):
+            raise TypeError(
+                "ValueSlotName must be str, got " + type(value_slot_name).__name__
+            )
+        object.__setattr__(self, "value_slot_name", value_slot_name)
+        if not isinstance(current_slot_name, str):
+            raise TypeError(
+                "CurrentSlotName must be str, got " + type(current_slot_name).__name__
+            )
+        object.__setattr__(self, "current_slot_name", current_slot_name)
+        if not isinstance(working_slot_name, str):
+            raise TypeError(
+                "WorkingSlotName must be str, got " + type(working_slot_name).__name__
+            )
+        object.__setattr__(self, "working_slot_name", working_slot_name)
+        if not isinstance(staged_slot_name, str):
+            raise TypeError(
+                "StagedSlotName must be str, got " + type(staged_slot_name).__name__
+            )
+        object.__setattr__(self, "staged_slot_name", staged_slot_name)
+        if not isinstance(has_freeze, bool):
+            raise TypeError("HasFreeze must be bool, got " + type(has_freeze).__name__)
+        object.__setattr__(self, "has_freeze", has_freeze)
+        object.__setattr__(self, "freeze", freeze)
+        if not isinstance(freeze_param_name, str):
+            raise TypeError(
+                "FreezeParamName must be str, got " + type(freeze_param_name).__name__
+            )
+        object.__setattr__(self, "freeze_param_name", freeze_param_name)
+        if not isinstance(has_thaw, bool):
+            raise TypeError("HasThaw must be bool, got " + type(has_thaw).__name__)
+        object.__setattr__(self, "has_thaw", has_thaw)
+        object.__setattr__(self, "thaw", thaw)
+        if not isinstance(thaw_param_name, str):
+            raise TypeError(
+                "ThawParamName must be str, got " + type(thaw_param_name).__name__
+            )
+        object.__setattr__(self, "thaw_param_name", thaw_param_name)
+        if not isinstance(has_optional_none, bool):
+            raise TypeError(
+                "HasOptionalNone must be bool, got " + type(has_optional_none).__name__
+            )
+        object.__setattr__(self, "has_optional_none", has_optional_none)
+
+    def __setattr__(self, name, value):
+        if name in (
+            "field_id",
+            "field_owner",
+            "field_name",
+            "field_order",
+            "field_kind",
+            "annotation",
+            "init",
+            "has_default",
+            "default_value",
+            "default_value_param_name",
+            "has_default_factory",
+            "default_factory",
+            "default_factory_param_name",
+            "default_factory_param_names",
+            "has_working_default_factory",
+            "working_default_factory",
+            "working_default_factory_param_name",
+            "working_default_factory_param_names",
+            "tx_group_key",
+            "value_slot_name",
+            "current_slot_name",
+            "working_slot_name",
+            "staged_slot_name",
+            "has_freeze",
+            "freeze",
+            "freeze_param_name",
+            "has_thaw",
+            "thaw",
+            "thaw_param_name",
+            "has_optional_none",
+        ):
+            raise AttributeError("TransientField records are immutable")
+        object.__setattr__(self, name, value)
+
+    def __repr__(self):
+        pieces = []
+        pieces.append("field_id=" + repr(self.field_id))
+        pieces.append("field_owner=" + repr(self.field_owner))
+        pieces.append("field_name=" + repr(self.field_name))
+        pieces.append("field_order=" + repr(self.field_order))
+        pieces.append("field_kind=" + repr(self.field_kind))
+        pieces.append("annotation=" + repr(self.annotation))
+        pieces.append("init=" + repr(self.init))
+        pieces.append("has_default=" + repr(self.has_default))
+        pieces.append("default_value=" + repr(self.default_value))
+        pieces.append("default_value_param_name=" + repr(self.default_value_param_name))
+        pieces.append("has_default_factory=" + repr(self.has_default_factory))
+        pieces.append("default_factory=" + repr(self.default_factory))
+        pieces.append(
+            "default_factory_param_name=" + repr(self.default_factory_param_name)
+        )
+        pieces.append(
+            "default_factory_param_names=" + repr(self.default_factory_param_names)
+        )
+        pieces.append(
+            "has_working_default_factory=" + repr(self.has_working_default_factory)
+        )
+        pieces.append("working_default_factory=" + repr(self.working_default_factory))
+        pieces.append(
+            "working_default_factory_param_name="
+            + repr(self.working_default_factory_param_name)
+        )
+        pieces.append(
+            "working_default_factory_param_names="
+            + repr(self.working_default_factory_param_names)
+        )
+        pieces.append("tx_group_key=" + repr(self.tx_group_key))
+        pieces.append("value_slot_name=" + repr(self.value_slot_name))
+        pieces.append("current_slot_name=" + repr(self.current_slot_name))
+        pieces.append("working_slot_name=" + repr(self.working_slot_name))
+        pieces.append("staged_slot_name=" + repr(self.staged_slot_name))
+        pieces.append("has_freeze=" + repr(self.has_freeze))
+        pieces.append("freeze=" + repr(self.freeze))
+        pieces.append("freeze_param_name=" + repr(self.freeze_param_name))
+        pieces.append("has_thaw=" + repr(self.has_thaw))
+        pieces.append("thaw=" + repr(self.thaw))
+        pieces.append("thaw_param_name=" + repr(self.thaw_param_name))
+        pieces.append("has_optional_none=" + repr(self.has_optional_none))
+        return "TransientField" + "(" + ", ".join(pieces) + ")"
+
+
+_TransientFieldSpec.bind_record_class(TransientField)
 ClassesCollection = RuntimeCollection(
     "Classes", _LifecycleClassSpec, allows_multiple=True, identity=_ClassIdProperty
 )
@@ -3133,6 +3863,12 @@ DefaultFactoryDiagnosticsCollection = RuntimeCollection(
     allows_multiple=True,
     identity=_DiagnosticIdProperty,
 )
+IndexedTransientFieldsCollection = RuntimeCollection(
+    "IndexedTransientFields",
+    _IndexedTransientFieldSpec,
+    allows_multiple=True,
+    identity=_FieldIdProperty,
+)
 PlainFieldsCollection = RuntimeComputedCollection(
     "PlainFields", source=FieldsCollection, when=(_FieldKindProperty.eq("field"),)
 )
@@ -3170,6 +3906,11 @@ AfterRollbackHooksCollection = RuntimeComputedCollection(
 ManagedFieldsCollection = RuntimeComputedCollection(
     "ManagedFields", source=FieldsCollection, when=(_FieldKindProperty.eq("managed"),)
 )
+TransientFieldsCollection = RuntimeComputedCollection(
+    "TransientFields",
+    source=FieldsCollection,
+    when=(_FieldKindProperty.eq("transient"),),
+)
 _RUNTIME_SPEC = RuntimeContainerSpec(
     collections=(
         ClassesCollection,
@@ -3186,6 +3927,7 @@ _RUNTIME_SPEC = RuntimeContainerSpec(
         DefaultFactoryDependenciesCollection,
         DefaultFactoryEvaluationStepsCollection,
         DefaultFactoryDiagnosticsCollection,
+        IndexedTransientFieldsCollection,
     ),
     computed_collections=(
         PlainFieldsCollection,
@@ -3197,6 +3939,7 @@ _RUNTIME_SPEC = RuntimeContainerSpec(
         AfterCommitHooksCollection,
         AfterRollbackHooksCollection,
         ManagedFieldsCollection,
+        TransientFieldsCollection,
     ),
     ports=(),
     port_index=None,
@@ -3233,7 +3976,7 @@ def run_build_transaction_facts(builder):
         for field in fields:
             if field.field_owner != lifecycle_class.class_id:
                 continue
-            if field.field_kind != "managed":
+            if field.field_kind not in {"managed", "transient"}:
                 continue
             tx_group = field.tx_group_key
             if tx_group is None:
@@ -3271,6 +4014,8 @@ def run_build_transaction_facts(builder):
                 ),
                 policy=RejectDuplicate,
             )
+            if field.field_kind != "managed":
+                continue
             ctx.write(
                 IndexedTransactionalFieldsCollection,
                 IndexedTransactionalField(
@@ -3414,6 +4159,8 @@ def run_build_default_factory_facts(builder):
                 state_slot = field.value_slot_name
             elif field.field_kind == "managed":
                 state_slot = field.current_slot_name
+            elif field.field_kind == "transient":
+                state_slot = field.current_slot_name
             ctx.write(
                 DefaultFactoryEvaluationStepsCollection,
                 DefaultFactoryEvaluationStep(
@@ -3440,10 +4187,44 @@ def run_raise_default_factory_diagnostics(builder):
         raise AssemblyDiagnosticError(diagnostic.diagnostic_message)
 
 
+def run_build_transient_facts(builder):
+    ctx = DDSOperationContext(builder, "BuildTransientFacts", ordered_inputs={})
+    from yidl.runtime.transaction_yidl import DEFAULT_TRANSACTION
+
+    tx_groups = {
+        (tx_group.tx_owner, tx_group.tx_group_key): tx_group.tx_index
+        for tx_group in ctx.records(TxGroupsCollection)
+    }
+    for field in ctx.records(FieldsCollection):
+        if field.field_kind != "transient":
+            continue
+        tx_group = field.tx_group_key
+        if tx_group is None:
+            tx_group = DEFAULT_TRANSACTION
+        tx_index = tx_groups[field.field_owner, tx_group]
+        ctx.write(
+            IndexedTransientFieldsCollection,
+            IndexedTransientField(
+                field_id=field.field_id,
+                field_owner=field.field_owner,
+                field_name=field.field_name,
+                field_order=field.field_order,
+                tx_group_key=tx_group,
+                tx_index=tx_index,
+                current_slot_name=field.current_slot_name,
+                working_slot_name=field.working_slot_name,
+                has_working_default_factory=field.has_working_default_factory,
+                working_default_factory_param_name=field.working_default_factory_param_name,
+            ),
+            policy=RejectDuplicate,
+        )
+
+
 def run_operations(builder):
     run_build_transaction_facts(builder)
     run_build_default_factory_facts(builder)
     run_raise_default_factory_diagnostics(builder)
+    run_build_transient_facts(builder)
     return builder
 
 
@@ -3580,6 +4361,20 @@ ASSEMBLY_PROPERTIES = {
     ),
     "DefaultFactoryParamNames": _YidlSimpleNamespace(
         name="DefaultFactoryParamNames", storage_name="default_factory_param_names"
+    ),
+    "HasWorkingDefaultFactory": _YidlSimpleNamespace(
+        name="HasWorkingDefaultFactory", storage_name="has_working_default_factory"
+    ),
+    "WorkingDefaultFactory": _YidlSimpleNamespace(
+        name="WorkingDefaultFactory", storage_name="working_default_factory"
+    ),
+    "WorkingDefaultFactoryParamName": _YidlSimpleNamespace(
+        name="WorkingDefaultFactoryParamName",
+        storage_name="working_default_factory_param_name",
+    ),
+    "WorkingDefaultFactoryParamNames": _YidlSimpleNamespace(
+        name="WorkingDefaultFactoryParamNames",
+        storage_name="working_default_factory_param_names",
     ),
     "TxGroupKey": _YidlSimpleNamespace(name="TxGroupKey", storage_name="tx_group_key"),
     "ValueSlotName": _YidlSimpleNamespace(
@@ -3804,7 +4599,7 @@ def build_lifecycle_class(decorated_cls, builder_params__astichi_param_hole__):
     astichi_hole(function_body)
     astichi_hole(return_statement)""",
         file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-        line_number=205,
+        line_number=211,
     ),
     "BuilderParam": astichi_template(
         from_astichi_code(
@@ -3812,7 +4607,7 @@ def build_lifecycle_class(decorated_cls, builder_params__astichi_param_hole__):
 def astichi_params(*, value_name__astichi_arg__):
     pass""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=223,
+            line_number=229,
         )
     ),
     "TransactionManagerParam": astichi_template(
@@ -3821,14 +4616,14 @@ def astichi_params(*, value_name__astichi_arg__):
 def astichi_params(*, transaction_manager=None):
     pass""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=228,
+            line_number=234,
         )
     ),
     "StateSlotEntry": astichi_template(
         from_astichi_code(
             "astichi_bind_external(slot_name)",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=233,
+            line_number=239,
         )
     ),
     "InitParamRequired": astichi_template(
@@ -3837,7 +4632,7 @@ def astichi_params(*, transaction_manager=None):
 def astichi_params(param_name__astichi_arg__: astichi_bind_external(annotation)):
     pass""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=237,
+            line_number=243,
         )
     ),
     "InitParamDefault": astichi_template(
@@ -3849,7 +4644,7 @@ def astichi_params(
 ):
     pass""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=242,
+            line_number=248,
         )
     ),
     "PlainStateAssignment": astichi_template(
@@ -3860,7 +4655,7 @@ astichi_pass(state, outer_bind=True).astichi_ref(external=state_slot)._ = astich
     outer_bind=True,
 )""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=250,
+            line_number=256,
         )
     ),
     "InitVarLocalDefaultAssignment": astichi_template(
@@ -3871,7 +4666,7 @@ init_value_name__astichi_arg__ = astichi_pass(
     outer_bind=True,
 )""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=257,
+            line_number=263,
         )
     ),
     "PlainProperty": astichi_template(
@@ -3885,7 +4680,7 @@ def property_getter_name__astichi_arg__(self):
 def property_setter_name__astichi_arg__(self, value):
     self._y_state.astichi_ref(external=state_slot)._ = value""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=264,
+            line_number=270,
         )
     ),
     "ClassVarDefaultAssignment": astichi_template(
@@ -3896,7 +4691,7 @@ classvar_name__astichi_arg__ = astichi_pass(
     outer_bind=True,
 )""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=274,
+            line_number=280,
         )
     ),
     "CommitOrderKeyBranch": astichi_template(
@@ -3909,7 +4704,7 @@ match astichi_pass(tx_index, outer_bind=True):
             outer_bind=True,
         )._y_get_default_facade().astichi_ref(external=method_name)()""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=281,
+            line_number=287,
         )
     ),
     "RequiresValidationBranch": astichi_template(
@@ -3919,7 +4714,7 @@ match astichi_pass(tx_index, outer_bind=True):
     case _ if astichi_pass(tx_index, outer_bind=True) == astichi_bind_external(tx_index_value):
         return True""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=290,
+            line_number=296,
         )
     ),
     "ValidateCommitBranch": astichi_template(
@@ -3934,7 +4729,7 @@ match astichi_pass(tx_index, outer_bind=True):
         if result is False:
             return False""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=296,
+            line_number=302,
         )
     ),
     "TransactionHookCall": astichi_template(
@@ -3947,7 +4742,7 @@ match astichi_pass(tx_index, outer_bind=True):
             outer_bind=True,
         )._y_get_default_facade().astichi_ref(external=method_name)()""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=307,
+            line_number=313,
         )
     ),
     "ClassBundle": astichi_template(
@@ -4239,7 +5034,7 @@ class working_facade_class_decl_name__astichi_arg__(
     __slots__ = ()
     astichi_hole(working_facade_properties)""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=316,
+            line_number=322,
             keep_names=(
                 "DEFAULT_TRANSACTION",
                 "TransactionManager",
@@ -4266,14 +5061,14 @@ return_class_module_ref__astichi_arg__.__module__ = astichi_pass(
 ).__module__
 return return_class_result_ref__astichi_arg__""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=607,
+            line_number=613,
         )
     ),
     "PassStatement": astichi_template(
         from_astichi_code(
             "pass",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=623,
+            line_number=629,
         )
     ),
     "BuildTransactionFactsBody": from_astichi_code(
@@ -4314,7 +5109,7 @@ for lifecycle_class in classes:
     for field in fields:
         if field.field_owner != lifecycle_class.class_id:
             continue
-        if field.field_kind != "managed":
+        if field.field_kind not in {"managed", "transient"}:
             continue
 
         tx_group = field.tx_group_key
@@ -4372,6 +5167,8 @@ for lifecycle_class in classes:
             ),
             policy=RejectDuplicate,
         )
+        if field.field_kind != "managed":
+            continue
         ctx.write(
             IndexedTransactionalFieldsCollection,
             IndexedTransactionalField(
@@ -4415,14 +5212,14 @@ astichi_pass(state, outer_bind=True).astichi_ref(external=current_slot)._ = asti
     outer_bind=True,
 )""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_managed.yidl",
-            line_number=209,
+            line_number=211,
         )
     ),
     "ManagedWorkingStateAssignment": astichi_template(
         from_astichi_code(
             "astichi_pass(state, outer_bind=True).astichi_ref(external=working_slot)._ = VOID",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_managed.yidl",
-            line_number=216,
+            line_number=218,
             keep_names=("VOID",),
         )
     ),
@@ -4430,7 +5227,7 @@ astichi_pass(state, outer_bind=True).astichi_ref(external=current_slot)._ = asti
         from_astichi_code(
             "astichi_pass(state, outer_bind=True).astichi_ref(external=staged_slot)._ = VOID",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_managed.yidl",
-            line_number=222,
+            line_number=224,
             keep_names=("VOID",),
         )
     ),
@@ -4450,7 +5247,7 @@ def property_setter_name__astichi_arg__(self, value):
     state._y_ensure_working_transaction(astichi_bind_external(tx_index))
     state.astichi_ref(external=working_slot)._ = value""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_managed.yidl",
-            line_number=228,
+            line_number=230,
             keep_names=("VOID",),
         )
     ),
@@ -4469,7 +5266,7 @@ def property_setter_name__astichi_arg__(self, value):
         + astichi_bind_external(field_name)
     )""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_managed.yidl",
-            line_number=245,
+            line_number=247,
         )
     ),
     "ManagedWorkingProperty": astichi_template(
@@ -4488,7 +5285,7 @@ def property_setter_name__astichi_arg__(self, value):
     state._y_ensure_working_transaction(astichi_bind_external(tx_index))
     state.astichi_ref(external=working_slot)._ = value""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_managed.yidl",
-            line_number=259,
+            line_number=261,
             keep_names=("VOID",),
         )
     ),
@@ -4518,7 +5315,7 @@ def property_setter_name__astichi_arg__(self, value):
     state._y_ensure_working_transaction(astichi_bind_external(working_tx_index))
     state.astichi_ref(external=working_slot)._ = value""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_managed.yidl",
-            line_number=276,
+            line_number=278,
             keep_names=("VOID",),
         )
     ),
@@ -4551,7 +5348,7 @@ def property_setter_name__astichi_arg__(self, value):
     state._y_ensure_working_transaction(astichi_bind_external(working_tx_index))
     state.astichi_ref(external=working_slot)._ = value""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_managed.yidl",
-            line_number=303,
+            line_number=305,
             keep_names=("VOID",),
         )
     ),
@@ -4563,7 +5360,7 @@ if astichi_pass(self, outer_bind=True).astichi_ref(external=working_slot) is not
         astichi_pass(self, outer_bind=True).astichi_ref(external=working_slot)
     )""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_managed.yidl",
-            line_number=333,
+            line_number=335,
             keep_names=("VOID",),
         )
     ),
@@ -4577,7 +5374,7 @@ if astichi_pass(self, outer_bind=True).astichi_ref(external=working_slot) is not
         )
     )""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_managed.yidl",
-            line_number=342,
+            line_number=344,
             keep_names=("VOID",),
         )
     ),
@@ -4593,7 +5390,7 @@ if astichi_pass(self, outer_bind=True).astichi_ref(external=working_slot) is not
         )
     )""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_managed.yidl",
-            line_number=353,
+            line_number=355,
             keep_names=("VOID",),
         )
     ),
@@ -4607,7 +5404,7 @@ if astichi_pass(self, outer_bind=True).astichi_ref(external=staged_slot) is not 
     astichi_pass(self, outer_bind=True).astichi_ref(external=staged_slot)._ = VOID
     astichi_pass(self, outer_bind=True).astichi_ref(external=working_slot)._ = VOID""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_managed.yidl",
-            line_number=366,
+            line_number=368,
             keep_names=("VOID",),
         )
     ),
@@ -4617,7 +5414,7 @@ if astichi_pass(self, outer_bind=True).astichi_ref(external=staged_slot) is not 
 astichi_pass(self, outer_bind=True).astichi_ref(external=staged_slot)._ = VOID
 astichi_pass(self, outer_bind=True).astichi_ref(external=working_slot)._ = VOID""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_managed.yidl",
-            line_number=377,
+            line_number=379,
             keep_names=("VOID",),
         )
     ),
@@ -4628,7 +5425,7 @@ def commit_order_key_function_name__astichi_arg__(self):
     astichi_hole(commit_order_key_tx_body)
     return ()""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_managed.yidl",
-            line_number=384,
+            line_number=386,
         )
     ),
     "RequiresValidationFunction": astichi_template(
@@ -4638,7 +5435,7 @@ def requires_validation_function_name__astichi_arg__(self):
     astichi_hole(requires_validation_tx_body)
     return False""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_managed.yidl",
-            line_number=390,
+            line_number=392,
         )
     ),
     "ValidateCommitFunction": astichi_template(
@@ -4648,7 +5445,7 @@ def validate_commit_function_name__astichi_arg__(self):
     astichi_hole(validate_commit_tx_body)
     return True""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_managed.yidl",
-            line_number=396,
+            line_number=398,
         )
     ),
     "BeforeCommitFunction": astichi_template(
@@ -4657,7 +5454,7 @@ def validate_commit_function_name__astichi_arg__(self):
 def before_commit_function_name__astichi_arg__(self):
     astichi_hole(before_commit_tx_body)""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_managed.yidl",
-            line_number=402,
+            line_number=404,
         )
     ),
     "AfterCommitFunction": astichi_template(
@@ -4666,7 +5463,7 @@ def before_commit_function_name__astichi_arg__(self):
 def after_commit_function_name__astichi_arg__(self):
     astichi_hole(after_commit_tx_body)""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_managed.yidl",
-            line_number=407,
+            line_number=409,
         )
     ),
     "AfterRollbackFunction": astichi_template(
@@ -4675,7 +5472,7 @@ def after_commit_function_name__astichi_arg__(self):
 def after_rollback_function_name__astichi_arg__(self):
     astichi_hole(after_rollback_tx_body)""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_managed.yidl",
-            line_number=412,
+            line_number=414,
         )
     ),
     "CommitOrderKeyHelperCall": astichi_template(
@@ -4686,14 +5483,14 @@ return astichi_pass(
     outer_bind=True,
 )._y_get_default_facade().astichi_ref(external=method_name)()""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_managed.yidl",
-            line_number=417,
+            line_number=419,
         )
     ),
     "RequiresValidationHelperCall": astichi_template(
         from_astichi_code(
             "return True",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_managed.yidl",
-            line_number=424,
+            line_number=426,
         )
     ),
     "ValidateCommitHelperCall": astichi_template(
@@ -4706,7 +5503,7 @@ result = astichi_pass(
 if not result:
     return result""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_managed.yidl",
-            line_number=428,
+            line_number=430,
         )
     ),
     "TransactionHookHelperCall": astichi_template(
@@ -4717,7 +5514,7 @@ astichi_pass(
     outer_bind=True,
 )._y_get_default_facade().astichi_ref(external=method_name)()""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_managed.yidl",
-            line_number=437,
+            line_number=439,
         )
     ),
     "CommitOrderKeyDispatchCall": astichi_template(
@@ -4730,7 +5527,7 @@ match astichi_pass(tx_index, outer_bind=True):
             outer_bind=True,
         ).astichi_ref(external=commit_order_key_function_name)()""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_managed.yidl",
-            line_number=444,
+            line_number=446,
         )
     ),
     "RequiresValidationDispatchCall": astichi_template(
@@ -4743,7 +5540,7 @@ match astichi_pass(tx_index, outer_bind=True):
             outer_bind=True,
         ).astichi_ref(external=requires_validation_function_name)()""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_managed.yidl",
-            line_number=453,
+            line_number=455,
         )
     ),
     "ValidateCommitDispatchCall": astichi_template(
@@ -4756,7 +5553,7 @@ match astichi_pass(tx_index, outer_bind=True):
             outer_bind=True,
         ).astichi_ref(external=validate_commit_function_name)()""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_managed.yidl",
-            line_number=462,
+            line_number=464,
         )
     ),
     "BeforeCommitDispatchCall": astichi_template(
@@ -4769,7 +5566,7 @@ match astichi_pass(tx_index, outer_bind=True):
             outer_bind=True,
         ).astichi_ref(external=before_commit_function_name)()""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_managed.yidl",
-            line_number=471,
+            line_number=473,
         )
     ),
     "AfterCommitDispatchCall": astichi_template(
@@ -4782,7 +5579,7 @@ match astichi_pass(tx_index, outer_bind=True):
             outer_bind=True,
         ).astichi_ref(external=after_commit_function_name)()""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_managed.yidl",
-            line_number=480,
+            line_number=482,
         )
     ),
     "AfterRollbackDispatchCall": astichi_template(
@@ -4795,7 +5592,7 @@ match astichi_pass(tx_index, outer_bind=True):
             outer_bind=True,
         ).astichi_ref(external=after_rollback_function_name)()""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_managed.yidl",
-            line_number=489,
+            line_number=491,
         )
     ),
     "PrepareCommitFieldsFunction": astichi_template(
@@ -4804,7 +5601,7 @@ match astichi_pass(tx_index, outer_bind=True):
 def prepare_commit_fields_function_name__astichi_arg__(self):
     astichi_hole(prepare_commit_fields_body)""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_managed.yidl",
-            line_number=498,
+            line_number=500,
         )
     ),
     "ApplyPreparedCommitFieldsFunction": astichi_template(
@@ -4813,7 +5610,7 @@ def prepare_commit_fields_function_name__astichi_arg__(self):
 def apply_prepared_commit_fields_function_name__astichi_arg__(self):
     astichi_hole(apply_prepared_commit_fields_body)""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_managed.yidl",
-            line_number=503,
+            line_number=505,
         )
     ),
     "RollbackFieldsFunction": astichi_template(
@@ -4822,7 +5619,7 @@ def apply_prepared_commit_fields_function_name__astichi_arg__(self):
 def rollback_fields_function_name__astichi_arg__(self):
     astichi_hole(rollback_fields_body)""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_managed.yidl",
-            line_number=508,
+            line_number=510,
         )
     ),
     "ApplyPreparedCommitDispatchBranch": astichi_template(
@@ -4835,7 +5632,7 @@ match astichi_pass(tx_index, outer_bind=True):
             outer_bind=True,
         ).astichi_ref(external=apply_prepared_commit_fields_function_name)()""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_managed.yidl",
-            line_number=513,
+            line_number=515,
         )
     ),
     "PrepareCommitDispatchBranch": astichi_template(
@@ -4848,7 +5645,7 @@ match astichi_pass(tx_index, outer_bind=True):
             outer_bind=True,
         ).astichi_ref(external=prepare_commit_fields_function_name)()""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_managed.yidl",
-            line_number=522,
+            line_number=524,
         )
     ),
     "RollbackDispatchBranch": astichi_template(
@@ -4861,7 +5658,7 @@ match astichi_pass(tx_index, outer_bind=True):
             outer_bind=True,
         ).astichi_ref(external=rollback_fields_function_name)()""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_managed.yidl",
-            line_number=531,
+            line_number=533,
         )
     ),
     "BuildDefaultFactoryFactsBody": from_astichi_code(
@@ -5018,6 +5815,8 @@ for lifecycle_class in classes:
             state_slot = field.value_slot_name
         elif field.field_kind == "managed":
             state_slot = field.current_slot_name
+        elif field.field_kind == "transient":
+            state_slot = field.current_slot_name
         ctx.write(
             DefaultFactoryEvaluationStepsCollection,
             DefaultFactoryEvaluationStep(
@@ -5057,7 +5856,7 @@ for lifecycle_class in classes:
 for diagnostic in ctx.records(DefaultFactoryDiagnosticsCollection):
     raise AssemblyDiagnosticError(diagnostic.diagnostic_message)""",
         file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_default_factories.yidl",
-        line_number=270,
+        line_number=272,
         keep_names=(
             "ctx",
             "DefaultFactoryDiagnosticsCollection",
@@ -5073,7 +5872,7 @@ def astichi_params(
 ):
     pass""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_default_factories.yidl",
-            line_number=286,
+            line_number=288,
             keep_names=("_HAS_DEFAULT_FACTORY",),
         )
     ),
@@ -5091,7 +5890,7 @@ astichi_pass(state, outer_bind=True).astichi_ref(external=state_slot)._ = astich
     outer_bind=True,
 )""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_default_factories.yidl",
-            line_number=296,
+            line_number=298,
             keep_names=("_HAS_DEFAULT_FACTORY",),
         )
     ),
@@ -5106,7 +5905,7 @@ astichi_pass(state, outer_bind=True).astichi_ref(external=state_slot)._ = astich
     outer_bind=True,
 )""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_default_factories.yidl",
-            line_number=311,
+            line_number=313,
         )
     ),
     "InitVarDefaultFactoryEvalInit": astichi_template(
@@ -5119,7 +5918,7 @@ if astichi_pass(field_name__astichi_arg__, outer_bind=True) is _HAS_DEFAULT_FACT
         )
     )""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_default_factories.yidl",
-            line_number=321,
+            line_number=323,
             keep_names=("_HAS_DEFAULT_FACTORY",),
         )
     ),
@@ -5130,7 +5929,7 @@ field_name__astichi_arg__ = default_factory_name__astichi_arg__(
     **astichi_hole(default_factory_args)
 )""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_default_factories.yidl",
-            line_number=332,
+            line_number=334,
         )
     ),
     "DefaultFactoryStoredArg": astichi_template(
@@ -5143,7 +5942,7 @@ astichi_funcargs(
     ).astichi_ref(external=provider_name)
 )""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_default_factories.yidl",
-            line_number=338,
+            line_number=340,
         )
     ),
     "DefaultFactoryLocalArg": astichi_template(
@@ -5156,7 +5955,124 @@ astichi_funcargs(
     )
 )""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_default_factories.yidl",
-            line_number=347,
+            line_number=349,
+        )
+    ),
+    "BuildTransientFactsBody": from_astichi_code(
+        """\
+from yidl.runtime.transaction_yidl import DEFAULT_TRANSACTION
+
+tx_groups = {
+    (tx_group.tx_owner, tx_group.tx_group_key): tx_group.tx_index
+    for tx_group in ctx.records(TxGroupsCollection)
+}
+for field in ctx.records(FieldsCollection):
+    if field.field_kind != "transient":
+        continue
+    tx_group = field.tx_group_key
+    if tx_group is None:
+        tx_group = DEFAULT_TRANSACTION
+    tx_index = tx_groups[(field.field_owner, tx_group)]
+    ctx.write(
+        IndexedTransientFieldsCollection,
+        IndexedTransientField(
+            field_id=field.field_id,
+            field_owner=field.field_owner,
+            field_name=field.field_name,
+            field_order=field.field_order,
+            tx_group_key=tx_group,
+            tx_index=tx_index,
+            current_slot_name=field.current_slot_name,
+            working_slot_name=field.working_slot_name,
+            has_working_default_factory=field.has_working_default_factory,
+            working_default_factory_param_name=(
+                field.working_default_factory_param_name
+            ),
+        ),
+        policy=RejectDuplicate,
+    )""",
+        file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_transient.yidl",
+        line_number=32,
+        keep_names=(
+            "ctx",
+            "FieldsCollection",
+            "TxGroupsCollection",
+            "IndexedTransientFieldsCollection",
+            "IndexedTransientField",
+            "RejectDuplicate",
+        ),
+    ),
+    "TransientCurrentProperty": astichi_template(
+        from_astichi_code(
+            """\
+@property
+def property_getter_name__astichi_arg__(self):
+    return self._y_state.astichi_ref(external=current_slot)""",
+            file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_transient.yidl",
+            line_number=75,
+        )
+    ),
+    "TransientWorkingStateAssignment": astichi_template(
+        from_astichi_code(
+            "astichi_pass(state, outer_bind=True).astichi_ref(external=working_slot)._ = VOID",
+            file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_transient.yidl",
+            line_number=81,
+            keep_names=("VOID",),
+        )
+    ),
+    "TransientFacadeProperty": astichi_template(
+        from_astichi_code(
+            """\
+@property
+def property_getter_name__astichi_arg__(self):
+    state = self._y_state
+    if state.astichi_ref(external=working_slot) is not VOID:
+        return state.astichi_ref(external=working_slot)
+    return state.astichi_ref(external=current_slot)
+
+@property_setter_target_name__astichi_arg__.setter
+def property_setter_name__astichi_arg__(self, value):
+    state = self._y_state
+    state._y_ensure_working_transaction(astichi_bind_external(tx_index))
+    state.astichi_ref(external=working_slot)._ = value""",
+            file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_transient.yidl",
+            line_number=87,
+            keep_names=("VOID",),
+        )
+    ),
+    "TransientWorkingDefaultFactoryProperty": astichi_template(
+        from_astichi_code(
+            """\
+@property
+def property_getter_name__astichi_arg__(self):
+    state = self._y_state
+    if state.astichi_ref(external=working_slot) is not VOID:
+        return state.astichi_ref(external=working_slot)
+    tx_key = state.__yidl_tx_index_to_key__[astichi_bind_external(tx_index)]
+    if state._y_transaction_manager.active_transaction_for(tx_key) is None:
+        return state.astichi_ref(external=current_slot)
+    state._y_ensure_working_transaction(astichi_bind_external(tx_index))
+    state.astichi_ref(external=working_slot)._ = (
+        working_default_factory_name__astichi_arg__()
+    )
+    return state.astichi_ref(external=working_slot)
+
+@property_setter_target_name__astichi_arg__.setter
+def property_setter_name__astichi_arg__(self, value):
+    state = self._y_state
+    state._y_ensure_working_transaction(astichi_bind_external(tx_index))
+    state.astichi_ref(external=working_slot)._ = value""",
+            file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_transient.yidl",
+            line_number=104,
+            keep_names=("VOID",),
+        )
+    ),
+    "TransientClearWorkingBranch": astichi_template(
+        from_astichi_code(
+            "astichi_pass(self, outer_bind=True).astichi_ref(external=working_slot)._ = VOID",
+            file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_transient.yidl",
+            line_number=128,
+            keep_names=("VOID",),
         )
     ),
 }
@@ -8197,6 +9113,523 @@ ASSEMBLY_CONTRIBUTIONS = {
             ),
         ),
     ),
+    "TransientCurrentStateSlot": ContributionSpec(
+        name="TransientCurrentStateSlot",
+        source_name="StateSlotEntry",
+        source_kind="resource",
+        build_name="TransientCurrentStateSlot",
+        index=ValueRef("FieldOrder"),
+        order=ValueRef("FieldOrder"),
+        target=TargetSpec(
+            name="state_slots",
+            paths=(
+                TargetPathSpec(
+                    kind="build",
+                    path=PathSpec(
+                        segments=(
+                            PathSegmentSpec(kind="name", name="ClassDef", indexes=()),
+                        )
+                    ),
+                ),
+            ),
+        ),
+        bindings=(
+            BindingSpec(
+                kind="external", name="slot_name", value=ValueRef("CurrentSlotName")
+            ),
+        ),
+    ),
+    "TransientWorkingStateSlot": ContributionSpec(
+        name="TransientWorkingStateSlot",
+        source_name="StateSlotEntry",
+        source_kind="resource",
+        build_name="TransientWorkingStateSlot",
+        index=ValueRef("FieldOrder"),
+        order=ValueRef("FieldOrder"),
+        target=TargetSpec(
+            name="state_slots",
+            paths=(
+                TargetPathSpec(
+                    kind="build",
+                    path=PathSpec(
+                        segments=(
+                            PathSegmentSpec(kind="name", name="ClassDef", indexes=()),
+                        )
+                    ),
+                ),
+            ),
+        ),
+        bindings=(
+            BindingSpec(
+                kind="external", name="slot_name", value=ValueRef("WorkingSlotName")
+            ),
+        ),
+    ),
+    "TransientWorkingDefaultFactoryBuilderParam": ContributionSpec(
+        name="TransientWorkingDefaultFactoryBuilderParam",
+        source_name="BuilderParam",
+        source_kind="resource",
+        build_name="TransientWorkingDefaultFactoryBuilderParam",
+        index=ValueRef("FieldOrder"),
+        order=ValueRef("FieldOrder"),
+        target=TargetSpec(
+            name="builder_params",
+            paths=(
+                TargetPathSpec(
+                    kind="build",
+                    path=PathSpec(
+                        segments=(
+                            PathSegmentSpec(kind="name", name="Root", indexes=()),
+                        )
+                    ),
+                ),
+            ),
+        ),
+        bindings=(
+            BindingSpec(
+                kind="ident",
+                name="value_name",
+                value=ValueRef("WorkingDefaultFactoryParamName"),
+            ),
+        ),
+    ),
+    "TransientInitParamRequired": ContributionSpec(
+        name="TransientInitParamRequired",
+        source_name="InitParamRequired",
+        source_kind="resource",
+        build_name="TransientInitParam",
+        index=ValueRef("FieldOrder"),
+        order=ValueRef("FieldOrder"),
+        target=TargetSpec(
+            name="init_params",
+            paths=(
+                TargetPathSpec(
+                    kind="build",
+                    path=PathSpec(
+                        segments=(
+                            PathSegmentSpec(kind="name", name="ClassDef", indexes=()),
+                        )
+                    ),
+                ),
+            ),
+        ),
+        bindings=(
+            BindingSpec(kind="ident", name="param_name", value=ValueRef("FieldName")),
+            BindingSpec(
+                kind="external", name="annotation", value=ValueRef("Annotation")
+            ),
+        ),
+    ),
+    "TransientInitParamDefault": ContributionSpec(
+        name="TransientInitParamDefault",
+        source_name="InitParamDefault",
+        source_kind="resource",
+        build_name="TransientInitParam",
+        index=ValueRef("FieldOrder"),
+        order=ValueRef("FieldOrder"),
+        target=TargetSpec(
+            name="init_params",
+            paths=(
+                TargetPathSpec(
+                    kind="build",
+                    path=PathSpec(
+                        segments=(
+                            PathSegmentSpec(kind="name", name="ClassDef", indexes=()),
+                        )
+                    ),
+                ),
+            ),
+        ),
+        bindings=(
+            BindingSpec(kind="ident", name="param_name", value=ValueRef("FieldName")),
+            BindingSpec(
+                kind="external", name="annotation", value=ValueRef("Annotation")
+            ),
+            BindingSpec(
+                kind="ident",
+                name="default_value_name",
+                value=ValueRef("DefaultValueParamName"),
+            ),
+        ),
+    ),
+    "TransientInitParamDefaultFactory": ContributionSpec(
+        name="TransientInitParamDefaultFactory",
+        source_name="InitParamDefaultFactory",
+        source_kind="resource",
+        build_name="TransientInitParam",
+        index=ValueRef("FieldOrder"),
+        order=ValueRef("FieldOrder"),
+        target=TargetSpec(
+            name="init_params",
+            paths=(
+                TargetPathSpec(
+                    kind="build",
+                    path=PathSpec(
+                        segments=(
+                            PathSegmentSpec(kind="name", name="ClassDef", indexes=()),
+                        )
+                    ),
+                ),
+            ),
+        ),
+        bindings=(
+            BindingSpec(kind="ident", name="param_name", value=ValueRef("FieldName")),
+            BindingSpec(
+                kind="external", name="annotation", value=ValueRef("Annotation")
+            ),
+        ),
+    ),
+    "TransientCurrentInitAssignment": ContributionSpec(
+        name="TransientCurrentInitAssignment",
+        source_name="PlainStateAssignment",
+        source_kind="resource",
+        build_name="TransientCurrentInitAssignment",
+        index=ValueRef("FieldOrder"),
+        order=ValueRef("FieldOrder"),
+        target=TargetSpec(
+            name="state_init_body",
+            paths=(
+                TargetPathSpec(
+                    kind="build",
+                    path=PathSpec(
+                        segments=(
+                            PathSegmentSpec(kind="name", name="ClassDef", indexes=()),
+                        )
+                    ),
+                ),
+            ),
+        ),
+        bindings=(
+            BindingSpec(
+                kind="ident", name="init_value_name", value=ValueRef("FieldName")
+            ),
+            BindingSpec(
+                kind="external", name="state_slot", value=ValueRef("CurrentSlotName")
+            ),
+        ),
+    ),
+    "TransientCurrentDefaultAssignment": ContributionSpec(
+        name="TransientCurrentDefaultAssignment",
+        source_name="PlainStateAssignment",
+        source_kind="resource",
+        build_name="TransientCurrentDefaultAssignment",
+        index=ValueRef("FieldOrder"),
+        order=ValueRef("FieldOrder"),
+        target=TargetSpec(
+            name="state_init_body",
+            paths=(
+                TargetPathSpec(
+                    kind="build",
+                    path=PathSpec(
+                        segments=(
+                            PathSegmentSpec(kind="name", name="ClassDef", indexes=()),
+                        )
+                    ),
+                ),
+            ),
+        ),
+        bindings=(
+            BindingSpec(
+                kind="ident",
+                name="init_value_name",
+                value=ValueRef("DefaultValueParamName"),
+            ),
+            BindingSpec(
+                kind="external", name="state_slot", value=ValueRef("CurrentSlotName")
+            ),
+        ),
+    ),
+    "TransientWorkingInitAssignment": ContributionSpec(
+        name="TransientWorkingInitAssignment",
+        source_name="TransientWorkingStateAssignment",
+        source_kind="resource",
+        build_name="TransientWorkingInitAssignment",
+        index=ValueRef("FieldOrder"),
+        order=ValueRef("FieldOrder"),
+        target=TargetSpec(
+            name="state_init_body",
+            paths=(
+                TargetPathSpec(
+                    kind="build",
+                    path=PathSpec(
+                        segments=(
+                            PathSegmentSpec(kind="name", name="ClassDef", indexes=()),
+                        )
+                    ),
+                ),
+            ),
+        ),
+        bindings=(
+            BindingSpec(
+                kind="external", name="working_slot", value=ValueRef("WorkingSlotName")
+            ),
+        ),
+    ),
+    "TransientCurrentPropertyContribution": ContributionSpec(
+        name="TransientCurrentPropertyContribution",
+        source_name="TransientCurrentProperty",
+        source_kind="resource",
+        build_name="TransientCurrentProperty",
+        index=ValueRef("FieldOrder"),
+        order=ValueRef("FieldOrder"),
+        target=TargetSpec(
+            name="current_facade_properties",
+            paths=(
+                TargetPathSpec(
+                    kind="build",
+                    path=PathSpec(
+                        segments=(
+                            PathSegmentSpec(kind="name", name="ClassDef", indexes=()),
+                        )
+                    ),
+                ),
+            ),
+        ),
+        bindings=(
+            BindingSpec(
+                kind="ident", name="property_getter_name", value=ValueRef("FieldName")
+            ),
+            BindingSpec(
+                kind="external", name="current_slot", value=ValueRef("CurrentSlotName")
+            ),
+        ),
+    ),
+    "TransientDefaultFacadeProperty": ContributionSpec(
+        name="TransientDefaultFacadeProperty",
+        source_name="TransientFacadeProperty",
+        source_kind="resource",
+        build_name="TransientDefaultFacadeProperty",
+        index=ValueRef("FieldOrder"),
+        order=ValueRef("FieldOrder"),
+        target=TargetSpec(
+            name="default_facade_properties",
+            paths=(
+                TargetPathSpec(
+                    kind="build",
+                    path=PathSpec(
+                        segments=(
+                            PathSegmentSpec(kind="name", name="ClassDef", indexes=()),
+                        )
+                    ),
+                ),
+            ),
+        ),
+        bindings=(
+            BindingSpec(
+                kind="ident", name="property_getter_name", value=ValueRef("FieldName")
+            ),
+            BindingSpec(
+                kind="ident",
+                name="property_setter_target_name",
+                value=ValueRef("FieldName"),
+            ),
+            BindingSpec(
+                kind="ident", name="property_setter_name", value=ValueRef("FieldName")
+            ),
+            BindingSpec(
+                kind="external", name="current_slot", value=ValueRef("CurrentSlotName")
+            ),
+            BindingSpec(
+                kind="external", name="working_slot", value=ValueRef("WorkingSlotName")
+            ),
+            BindingSpec(kind="external", name="tx_index", value=ValueRef("TxIndex")),
+        ),
+    ),
+    "TransientDefaultWorkingDefaultFactoryProperty": ContributionSpec(
+        name="TransientDefaultWorkingDefaultFactoryProperty",
+        source_name="TransientWorkingDefaultFactoryProperty",
+        source_kind="resource",
+        build_name="TransientDefaultFacadeProperty",
+        index=ValueRef("FieldOrder"),
+        order=ValueRef("FieldOrder"),
+        target=TargetSpec(
+            name="default_facade_properties",
+            paths=(
+                TargetPathSpec(
+                    kind="build",
+                    path=PathSpec(
+                        segments=(
+                            PathSegmentSpec(kind="name", name="ClassDef", indexes=()),
+                        )
+                    ),
+                ),
+            ),
+        ),
+        bindings=(
+            BindingSpec(
+                kind="ident", name="property_getter_name", value=ValueRef("FieldName")
+            ),
+            BindingSpec(
+                kind="ident",
+                name="property_setter_target_name",
+                value=ValueRef("FieldName"),
+            ),
+            BindingSpec(
+                kind="ident", name="property_setter_name", value=ValueRef("FieldName")
+            ),
+            BindingSpec(
+                kind="ident",
+                name="working_default_factory_name",
+                value=ValueRef("WorkingDefaultFactoryParamName"),
+            ),
+            BindingSpec(
+                kind="external", name="current_slot", value=ValueRef("CurrentSlotName")
+            ),
+            BindingSpec(
+                kind="external", name="working_slot", value=ValueRef("WorkingSlotName")
+            ),
+            BindingSpec(kind="external", name="tx_index", value=ValueRef("TxIndex")),
+        ),
+    ),
+    "TransientWorkingFacadeProperty": ContributionSpec(
+        name="TransientWorkingFacadeProperty",
+        source_name="TransientFacadeProperty",
+        source_kind="resource",
+        build_name="TransientWorkingFacadeProperty",
+        index=ValueRef("FieldOrder"),
+        order=ValueRef("FieldOrder"),
+        target=TargetSpec(
+            name="working_facade_properties",
+            paths=(
+                TargetPathSpec(
+                    kind="build",
+                    path=PathSpec(
+                        segments=(
+                            PathSegmentSpec(kind="name", name="ClassDef", indexes=()),
+                        )
+                    ),
+                ),
+            ),
+        ),
+        bindings=(
+            BindingSpec(
+                kind="ident", name="property_getter_name", value=ValueRef("FieldName")
+            ),
+            BindingSpec(
+                kind="ident",
+                name="property_setter_target_name",
+                value=ValueRef("FieldName"),
+            ),
+            BindingSpec(
+                kind="ident", name="property_setter_name", value=ValueRef("FieldName")
+            ),
+            BindingSpec(
+                kind="external", name="current_slot", value=ValueRef("CurrentSlotName")
+            ),
+            BindingSpec(
+                kind="external", name="working_slot", value=ValueRef("WorkingSlotName")
+            ),
+            BindingSpec(kind="external", name="tx_index", value=ValueRef("TxIndex")),
+        ),
+    ),
+    "TransientWorkingWorkingDefaultFactoryProperty": ContributionSpec(
+        name="TransientWorkingWorkingDefaultFactoryProperty",
+        source_name="TransientWorkingDefaultFactoryProperty",
+        source_kind="resource",
+        build_name="TransientWorkingFacadeProperty",
+        index=ValueRef("FieldOrder"),
+        order=ValueRef("FieldOrder"),
+        target=TargetSpec(
+            name="working_facade_properties",
+            paths=(
+                TargetPathSpec(
+                    kind="build",
+                    path=PathSpec(
+                        segments=(
+                            PathSegmentSpec(kind="name", name="ClassDef", indexes=()),
+                        )
+                    ),
+                ),
+            ),
+        ),
+        bindings=(
+            BindingSpec(
+                kind="ident", name="property_getter_name", value=ValueRef("FieldName")
+            ),
+            BindingSpec(
+                kind="ident",
+                name="property_setter_target_name",
+                value=ValueRef("FieldName"),
+            ),
+            BindingSpec(
+                kind="ident", name="property_setter_name", value=ValueRef("FieldName")
+            ),
+            BindingSpec(
+                kind="ident",
+                name="working_default_factory_name",
+                value=ValueRef("WorkingDefaultFactoryParamName"),
+            ),
+            BindingSpec(
+                kind="external", name="current_slot", value=ValueRef("CurrentSlotName")
+            ),
+            BindingSpec(
+                kind="external", name="working_slot", value=ValueRef("WorkingSlotName")
+            ),
+            BindingSpec(kind="external", name="tx_index", value=ValueRef("TxIndex")),
+        ),
+    ),
+    "TransientApplyPreparedCommit": ContributionSpec(
+        name="TransientApplyPreparedCommit",
+        source_name="TransientClearWorkingBranch",
+        source_kind="resource",
+        build_name="TransientApplyPreparedCommit",
+        index=ValueRef("FieldOrder"),
+        order=ValueRef("FieldOrder"),
+        target=TargetSpec(
+            name="apply_prepared_commit_fields_body",
+            paths=(
+                TargetPathSpec(
+                    kind="build",
+                    path=PathSpec(
+                        segments=(
+                            PathSegmentSpec(kind="name", name="ClassDef", indexes=()),
+                            PathSegmentSpec(
+                                kind="name",
+                                name="ApplyPreparedCommitFields",
+                                indexes=(ValueRef("TxIndex"),),
+                            ),
+                        )
+                    ),
+                ),
+            ),
+        ),
+        bindings=(
+            BindingSpec(
+                kind="external", name="working_slot", value=ValueRef("WorkingSlotName")
+            ),
+        ),
+    ),
+    "TransientRollback": ContributionSpec(
+        name="TransientRollback",
+        source_name="TransientClearWorkingBranch",
+        source_kind="resource",
+        build_name="TransientRollback",
+        index=ValueRef("FieldOrder"),
+        order=ValueRef("FieldOrder"),
+        target=TargetSpec(
+            name="rollback_fields_body",
+            paths=(
+                TargetPathSpec(
+                    kind="build",
+                    path=PathSpec(
+                        segments=(
+                            PathSegmentSpec(kind="name", name="ClassDef", indexes=()),
+                            PathSegmentSpec(
+                                kind="name",
+                                name="RollbackFields",
+                                indexes=(ValueRef("TxIndex"),),
+                            ),
+                        )
+                    ),
+                ),
+            ),
+        ),
+        bindings=(
+            BindingSpec(
+                kind="external", name="working_slot", value=ValueRef("WorkingSlotName")
+            ),
+        ),
+    ),
     "ClassDefinition": ContributionSpec(
         name="ClassDefinition",
         source_name="ClassProduction",
@@ -9558,6 +10991,38 @@ ASSEMBLY_MATCHERS = {
                 contribution_name="InitVarDefaultFactoryEvalNoInitContribution",
                 weight=1.0,
             ),
+            ContributionRuleSpec(
+                name="transient_init",
+                condition=AndConditionSpec(
+                    items=(
+                        EqConditionSpec(
+                            left=ValueRef("EvalFieldKind"),
+                            right=LiteralValueRef("transient"),
+                        ),
+                        EqConditionSpec(
+                            left=ValueRef("EvalInit"), right=LiteralValueRef(True)
+                        ),
+                    )
+                ),
+                contribution_name="StoredDefaultFactoryEvalInitContribution",
+                weight=1.0,
+            ),
+            ContributionRuleSpec(
+                name="transient_no_init",
+                condition=AndConditionSpec(
+                    items=(
+                        EqConditionSpec(
+                            left=ValueRef("EvalFieldKind"),
+                            right=LiteralValueRef("transient"),
+                        ),
+                        EqConditionSpec(
+                            left=ValueRef("EvalInit"), right=LiteralValueRef(False)
+                        ),
+                    )
+                ),
+                contribution_name="StoredDefaultFactoryEvalNoInitContribution",
+                weight=1.0,
+            ),
         ),
     ),
     "DefaultFactoryArgContributions": ContributionMatcherSpec(
@@ -9580,6 +11045,235 @@ ASSEMBLY_MATCHERS = {
                 weight=1.0,
             ),
         ),
+    ),
+    "TransientCurrentStateSlotContributions": ContributionMatcherSpec(
+        name="TransientCurrentStateSlotContributions",
+        inputs=(
+            AssemblyInputSpec(
+                name="field", collection_name="TransientFields", collection=None
+            ),
+        ),
+        default_contribution_name="TransientCurrentStateSlot",
+        rules=(),
+    ),
+    "TransientWorkingStateSlotContributions": ContributionMatcherSpec(
+        name="TransientWorkingStateSlotContributions",
+        inputs=(
+            AssemblyInputSpec(
+                name="field", collection_name="TransientFields", collection=None
+            ),
+        ),
+        default_contribution_name="TransientWorkingStateSlot",
+        rules=(),
+    ),
+    "TransientWorkingDefaultBuilderParamContributions": ContributionMatcherSpec(
+        name="TransientWorkingDefaultBuilderParamContributions",
+        inputs=(
+            AssemblyInputSpec(name="field", collection_name="Fields", collection=None),
+        ),
+        default_contribution_name=None,
+        rules=(
+            ContributionRuleSpec(
+                name="has_working_default_factory",
+                condition=EqConditionSpec(
+                    left=ValueRef("HasWorkingDefaultFactory"),
+                    right=LiteralValueRef(True),
+                ),
+                contribution_name="TransientWorkingDefaultFactoryBuilderParam",
+                weight=1.0,
+            ),
+        ),
+    ),
+    "TransientInitParamContributions": ContributionMatcherSpec(
+        name="TransientInitParamContributions",
+        inputs=(
+            AssemblyInputSpec(
+                name="field", collection_name="TransientFields", collection=None
+            ),
+        ),
+        default_contribution_name=None,
+        rules=(
+            ContributionRuleSpec(
+                name="required",
+                condition=AndConditionSpec(
+                    items=(
+                        EqConditionSpec(
+                            left=ValueRef("Init"), right=LiteralValueRef(True)
+                        ),
+                        EqConditionSpec(
+                            left=ValueRef("HasDefault"), right=LiteralValueRef(False)
+                        ),
+                        EqConditionSpec(
+                            left=ValueRef("HasDefaultFactory"),
+                            right=LiteralValueRef(False),
+                        ),
+                    )
+                ),
+                contribution_name="TransientInitParamRequired",
+                weight=1.0,
+            ),
+            ContributionRuleSpec(
+                name="default_value",
+                condition=AndConditionSpec(
+                    items=(
+                        EqConditionSpec(
+                            left=ValueRef("Init"), right=LiteralValueRef(True)
+                        ),
+                        EqConditionSpec(
+                            left=ValueRef("HasDefault"), right=LiteralValueRef(True)
+                        ),
+                        EqConditionSpec(
+                            left=ValueRef("HasDefaultFactory"),
+                            right=LiteralValueRef(False),
+                        ),
+                    )
+                ),
+                contribution_name="TransientInitParamDefault",
+                weight=1.0,
+            ),
+            ContributionRuleSpec(
+                name="default_factory",
+                condition=AndConditionSpec(
+                    items=(
+                        EqConditionSpec(
+                            left=ValueRef("Init"), right=LiteralValueRef(True)
+                        ),
+                        EqConditionSpec(
+                            left=ValueRef("HasDefaultFactory"),
+                            right=LiteralValueRef(True),
+                        ),
+                    )
+                ),
+                contribution_name="TransientInitParamDefaultFactory",
+                weight=1.0,
+            ),
+        ),
+    ),
+    "TransientCurrentInitAssignmentContributions": ContributionMatcherSpec(
+        name="TransientCurrentInitAssignmentContributions",
+        inputs=(
+            AssemblyInputSpec(
+                name="field", collection_name="TransientFields", collection=None
+            ),
+        ),
+        default_contribution_name=None,
+        rules=(
+            ContributionRuleSpec(
+                name="init_value",
+                condition=AndConditionSpec(
+                    items=(
+                        EqConditionSpec(
+                            left=ValueRef("Init"), right=LiteralValueRef(True)
+                        ),
+                        EqConditionSpec(
+                            left=ValueRef("HasDefaultFactory"),
+                            right=LiteralValueRef(False),
+                        ),
+                    )
+                ),
+                contribution_name="TransientCurrentInitAssignment",
+                weight=1.0,
+            ),
+            ContributionRuleSpec(
+                name="default_value",
+                condition=AndConditionSpec(
+                    items=(
+                        EqConditionSpec(
+                            left=ValueRef("Init"), right=LiteralValueRef(False)
+                        ),
+                        EqConditionSpec(
+                            left=ValueRef("HasDefault"), right=LiteralValueRef(True)
+                        ),
+                        EqConditionSpec(
+                            left=ValueRef("HasDefaultFactory"),
+                            right=LiteralValueRef(False),
+                        ),
+                    )
+                ),
+                contribution_name="TransientCurrentDefaultAssignment",
+                weight=1.0,
+            ),
+        ),
+    ),
+    "TransientWorkingInitAssignmentContributions": ContributionMatcherSpec(
+        name="TransientWorkingInitAssignmentContributions",
+        inputs=(
+            AssemblyInputSpec(
+                name="field", collection_name="TransientFields", collection=None
+            ),
+        ),
+        default_contribution_name="TransientWorkingInitAssignment",
+        rules=(),
+    ),
+    "TransientCurrentPropertyContributions": ContributionMatcherSpec(
+        name="TransientCurrentPropertyContributions",
+        inputs=(
+            AssemblyInputSpec(
+                name="field", collection_name="TransientFields", collection=None
+            ),
+        ),
+        default_contribution_name="TransientCurrentPropertyContribution",
+        rules=(),
+    ),
+    "TransientDefaultFacadePropertyContributions": ContributionMatcherSpec(
+        name="TransientDefaultFacadePropertyContributions",
+        inputs=(
+            AssemblyInputSpec(
+                name="field", collection_name="IndexedTransientFields", collection=None
+            ),
+        ),
+        default_contribution_name="TransientDefaultFacadeProperty",
+        rules=(
+            ContributionRuleSpec(
+                name="working_default_factory",
+                condition=EqConditionSpec(
+                    left=ValueRef("HasWorkingDefaultFactory"),
+                    right=LiteralValueRef(True),
+                ),
+                contribution_name="TransientDefaultWorkingDefaultFactoryProperty",
+                weight=1.0,
+            ),
+        ),
+    ),
+    "TransientWorkingFacadePropertyContributions": ContributionMatcherSpec(
+        name="TransientWorkingFacadePropertyContributions",
+        inputs=(
+            AssemblyInputSpec(
+                name="field", collection_name="IndexedTransientFields", collection=None
+            ),
+        ),
+        default_contribution_name="TransientWorkingFacadeProperty",
+        rules=(
+            ContributionRuleSpec(
+                name="working_default_factory",
+                condition=EqConditionSpec(
+                    left=ValueRef("HasWorkingDefaultFactory"),
+                    right=LiteralValueRef(True),
+                ),
+                contribution_name="TransientWorkingWorkingDefaultFactoryProperty",
+                weight=1.0,
+            ),
+        ),
+    ),
+    "TransientApplyPreparedCommitContributions": ContributionMatcherSpec(
+        name="TransientApplyPreparedCommitContributions",
+        inputs=(
+            AssemblyInputSpec(
+                name="field", collection_name="IndexedTransientFields", collection=None
+            ),
+        ),
+        default_contribution_name="TransientApplyPreparedCommit",
+        rules=(),
+    ),
+    "TransientRollbackContributions": ContributionMatcherSpec(
+        name="TransientRollbackContributions",
+        inputs=(
+            AssemblyInputSpec(
+                name="field", collection_name="IndexedTransientFields", collection=None
+            ),
+        ),
+        default_contribution_name="TransientRollback",
+        rules=(),
     ),
     "ClassDefinitionContributions": ContributionMatcherSpec(
         name="ClassDefinitionContributions",
@@ -10142,6 +11836,15 @@ ASSEMBLY_EDGES = {
         condition=None,
         matcher_name="FieldDefaultBuilderParamContributions",
     ),
+    "ModuleProduction.transient_working_default_params": AssemblyEdgeSpec(
+        name="ModuleProduction.transient_working_default_params",
+        context_inputs=(),
+        from_inputs=(
+            AssemblyInputSpec(name="field", collection_name="Fields", collection=None),
+        ),
+        condition=None,
+        matcher_name="TransientWorkingDefaultBuilderParamContributions",
+    ),
     "ModuleProduction.managed_freeze_params": AssemblyEdgeSpec(
         name="ModuleProduction.managed_freeze_params",
         context_inputs=(),
@@ -10220,6 +11923,23 @@ ASSEMBLY_EDGES = {
         ),
         matcher_name="ManagedCurrentStateSlotContributions",
     ),
+    "ClassProduction.transient_current_state_slots": AssemblyEdgeSpec(
+        name="ClassProduction.transient_current_state_slots",
+        context_inputs=(
+            AssemblyInputSpec(
+                name="lifecycle_class", collection_name="Classes", collection=None
+            ),
+        ),
+        from_inputs=(
+            AssemblyInputSpec(
+                name="field", collection_name="TransientFields", collection=None
+            ),
+        ),
+        condition=EqConditionSpec(
+            left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
+        ),
+        matcher_name="TransientCurrentStateSlotContributions",
+    ),
     "ClassProduction.managed_working_state_slots": AssemblyEdgeSpec(
         name="ClassProduction.managed_working_state_slots",
         context_inputs=(
@@ -10236,6 +11956,23 @@ ASSEMBLY_EDGES = {
             left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
         ),
         matcher_name="ManagedWorkingStateSlotContributions",
+    ),
+    "ClassProduction.transient_working_state_slots": AssemblyEdgeSpec(
+        name="ClassProduction.transient_working_state_slots",
+        context_inputs=(
+            AssemblyInputSpec(
+                name="lifecycle_class", collection_name="Classes", collection=None
+            ),
+        ),
+        from_inputs=(
+            AssemblyInputSpec(
+                name="field", collection_name="TransientFields", collection=None
+            ),
+        ),
+        condition=EqConditionSpec(
+            left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
+        ),
+        matcher_name="TransientWorkingStateSlotContributions",
     ),
     "ClassProduction.managed_staged_state_slots": AssemblyEdgeSpec(
         name="ClassProduction.managed_staged_state_slots",
@@ -10916,6 +12653,23 @@ ASSEMBLY_EDGES = {
         ),
         matcher_name="ManagedInitParamContributions",
     ),
+    "ClassProduction.transient_init_params": AssemblyEdgeSpec(
+        name="ClassProduction.transient_init_params",
+        context_inputs=(
+            AssemblyInputSpec(
+                name="lifecycle_class", collection_name="Classes", collection=None
+            ),
+        ),
+        from_inputs=(
+            AssemblyInputSpec(
+                name="field", collection_name="TransientFields", collection=None
+            ),
+        ),
+        condition=EqConditionSpec(
+            left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
+        ),
+        matcher_name="TransientInitParamContributions",
+    ),
     "ClassProduction.initvar_local_defaults": AssemblyEdgeSpec(
         name="ClassProduction.initvar_local_defaults",
         context_inputs=(
@@ -10967,6 +12721,23 @@ ASSEMBLY_EDGES = {
         ),
         matcher_name="ManagedCurrentInitAssignmentContributions",
     ),
+    "ClassProduction.transient_current_init_assignments": AssemblyEdgeSpec(
+        name="ClassProduction.transient_current_init_assignments",
+        context_inputs=(
+            AssemblyInputSpec(
+                name="lifecycle_class", collection_name="Classes", collection=None
+            ),
+        ),
+        from_inputs=(
+            AssemblyInputSpec(
+                name="field", collection_name="TransientFields", collection=None
+            ),
+        ),
+        condition=EqConditionSpec(
+            left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
+        ),
+        matcher_name="TransientCurrentInitAssignmentContributions",
+    ),
     "ClassProduction.managed_working_init_assignments": AssemblyEdgeSpec(
         name="ClassProduction.managed_working_init_assignments",
         context_inputs=(
@@ -10983,6 +12754,23 @@ ASSEMBLY_EDGES = {
             left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
         ),
         matcher_name="ManagedWorkingInitAssignmentContributions",
+    ),
+    "ClassProduction.transient_working_init_assignments": AssemblyEdgeSpec(
+        name="ClassProduction.transient_working_init_assignments",
+        context_inputs=(
+            AssemblyInputSpec(
+                name="lifecycle_class", collection_name="Classes", collection=None
+            ),
+        ),
+        from_inputs=(
+            AssemblyInputSpec(
+                name="field", collection_name="TransientFields", collection=None
+            ),
+        ),
+        condition=EqConditionSpec(
+            left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
+        ),
+        matcher_name="TransientWorkingInitAssignmentContributions",
     ),
     "ClassProduction.managed_staged_init_assignments": AssemblyEdgeSpec(
         name="ClassProduction.managed_staged_init_assignments",
@@ -11075,6 +12863,23 @@ ASSEMBLY_EDGES = {
         ),
         matcher_name="ManagedDefaultFacadePropertyContributions",
     ),
+    "ClassProduction.transient_default_properties": AssemblyEdgeSpec(
+        name="ClassProduction.transient_default_properties",
+        context_inputs=(
+            AssemblyInputSpec(
+                name="lifecycle_class", collection_name="Classes", collection=None
+            ),
+        ),
+        from_inputs=(
+            AssemblyInputSpec(
+                name="field", collection_name="IndexedTransientFields", collection=None
+            ),
+        ),
+        condition=EqConditionSpec(
+            left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
+        ),
+        matcher_name="TransientDefaultFacadePropertyContributions",
+    ),
     "ClassProduction.managed_current_properties": AssemblyEdgeSpec(
         name="ClassProduction.managed_current_properties",
         context_inputs=(
@@ -11094,6 +12899,23 @@ ASSEMBLY_EDGES = {
         ),
         matcher_name="ManagedCurrentFacadePropertyContributions",
     ),
+    "ClassProduction.transient_current_properties": AssemblyEdgeSpec(
+        name="ClassProduction.transient_current_properties",
+        context_inputs=(
+            AssemblyInputSpec(
+                name="lifecycle_class", collection_name="Classes", collection=None
+            ),
+        ),
+        from_inputs=(
+            AssemblyInputSpec(
+                name="field", collection_name="TransientFields", collection=None
+            ),
+        ),
+        condition=EqConditionSpec(
+            left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
+        ),
+        matcher_name="TransientCurrentPropertyContributions",
+    ),
     "ClassProduction.managed_working_properties": AssemblyEdgeSpec(
         name="ClassProduction.managed_working_properties",
         context_inputs=(
@@ -11112,6 +12934,23 @@ ASSEMBLY_EDGES = {
             left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
         ),
         matcher_name="ManagedWorkingFacadePropertyContributions",
+    ),
+    "ClassProduction.transient_working_properties": AssemblyEdgeSpec(
+        name="ClassProduction.transient_working_properties",
+        context_inputs=(
+            AssemblyInputSpec(
+                name="lifecycle_class", collection_name="Classes", collection=None
+            ),
+        ),
+        from_inputs=(
+            AssemblyInputSpec(
+                name="field", collection_name="IndexedTransientFields", collection=None
+            ),
+        ),
+        condition=EqConditionSpec(
+            left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
+        ),
+        matcher_name="TransientWorkingFacadePropertyContributions",
     ),
     "ClassProduction.apply_prepared_commit_helpers": AssemblyEdgeSpec(
         name="ClassProduction.apply_prepared_commit_helpers",
@@ -11286,6 +13125,23 @@ ASSEMBLY_EDGES = {
         ),
         matcher_name="ManagedApplyPreparedCommitContributions",
     ),
+    "ClassProduction.transient_apply_prepared_commit": AssemblyEdgeSpec(
+        name="ClassProduction.transient_apply_prepared_commit",
+        context_inputs=(
+            AssemblyInputSpec(
+                name="lifecycle_class", collection_name="Classes", collection=None
+            ),
+        ),
+        from_inputs=(
+            AssemblyInputSpec(
+                name="field", collection_name="IndexedTransientFields", collection=None
+            ),
+        ),
+        condition=EqConditionSpec(
+            left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
+        ),
+        matcher_name="TransientApplyPreparedCommitContributions",
+    ),
     "ClassProduction.managed_rollback": AssemblyEdgeSpec(
         name="ClassProduction.managed_rollback",
         context_inputs=(
@@ -11304,6 +13160,23 @@ ASSEMBLY_EDGES = {
             left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
         ),
         matcher_name="ManagedRollbackContributions",
+    ),
+    "ClassProduction.transient_rollback": AssemblyEdgeSpec(
+        name="ClassProduction.transient_rollback",
+        context_inputs=(
+            AssemblyInputSpec(
+                name="lifecycle_class", collection_name="Classes", collection=None
+            ),
+        ),
+        from_inputs=(
+            AssemblyInputSpec(
+                name="field", collection_name="IndexedTransientFields", collection=None
+            ),
+        ),
+        condition=EqConditionSpec(
+            left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
+        ),
+        matcher_name="TransientRollbackContributions",
     ),
 }
 ASSEMBLY_PRODUCTIONS = {
@@ -12179,6 +14052,19 @@ ASSEMBLY_PRODUCTIONS = {
             ),
             InlineApplySpec(
                 edge=AssemblyEdgeSpec(
+                    name="ModuleProduction.transient_working_default_params",
+                    context_inputs=(),
+                    from_inputs=(
+                        AssemblyInputSpec(
+                            name="field", collection_name="Fields", collection=None
+                        ),
+                    ),
+                    condition=None,
+                    matcher_name="TransientWorkingDefaultBuilderParamContributions",
+                )
+            ),
+            InlineApplySpec(
+                edge=AssemblyEdgeSpec(
                     name="ModuleProduction.managed_freeze_params",
                     context_inputs=(),
                     from_inputs=(
@@ -12404,6 +14290,29 @@ ASSEMBLY_PRODUCTIONS = {
             ),
             InlineApplySpec(
                 edge=AssemblyEdgeSpec(
+                    name="ClassProduction.transient_current_state_slots",
+                    context_inputs=(
+                        AssemblyInputSpec(
+                            name="lifecycle_class",
+                            collection_name="Classes",
+                            collection=None,
+                        ),
+                    ),
+                    from_inputs=(
+                        AssemblyInputSpec(
+                            name="field",
+                            collection_name="TransientFields",
+                            collection=None,
+                        ),
+                    ),
+                    condition=EqConditionSpec(
+                        left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
+                    ),
+                    matcher_name="TransientCurrentStateSlotContributions",
+                )
+            ),
+            InlineApplySpec(
+                edge=AssemblyEdgeSpec(
                     name="ClassProduction.managed_working_state_slots",
                     context_inputs=(
                         AssemblyInputSpec(
@@ -12423,6 +14332,29 @@ ASSEMBLY_PRODUCTIONS = {
                         left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
                     ),
                     matcher_name="ManagedWorkingStateSlotContributions",
+                )
+            ),
+            InlineApplySpec(
+                edge=AssemblyEdgeSpec(
+                    name="ClassProduction.transient_working_state_slots",
+                    context_inputs=(
+                        AssemblyInputSpec(
+                            name="lifecycle_class",
+                            collection_name="Classes",
+                            collection=None,
+                        ),
+                    ),
+                    from_inputs=(
+                        AssemblyInputSpec(
+                            name="field",
+                            collection_name="TransientFields",
+                            collection=None,
+                        ),
+                    ),
+                    condition=EqConditionSpec(
+                        left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
+                    ),
+                    matcher_name="TransientWorkingStateSlotContributions",
                 )
             ),
             InlineApplySpec(
@@ -13356,6 +15288,29 @@ ASSEMBLY_PRODUCTIONS = {
             ),
             InlineApplySpec(
                 edge=AssemblyEdgeSpec(
+                    name="ClassProduction.transient_init_params",
+                    context_inputs=(
+                        AssemblyInputSpec(
+                            name="lifecycle_class",
+                            collection_name="Classes",
+                            collection=None,
+                        ),
+                    ),
+                    from_inputs=(
+                        AssemblyInputSpec(
+                            name="field",
+                            collection_name="TransientFields",
+                            collection=None,
+                        ),
+                    ),
+                    condition=EqConditionSpec(
+                        left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
+                    ),
+                    matcher_name="TransientInitParamContributions",
+                )
+            ),
+            InlineApplySpec(
+                edge=AssemblyEdgeSpec(
                     name="ClassProduction.initvar_local_defaults",
                     context_inputs=(
                         AssemblyInputSpec(
@@ -13423,6 +15378,29 @@ ASSEMBLY_PRODUCTIONS = {
             ),
             InlineApplySpec(
                 edge=AssemblyEdgeSpec(
+                    name="ClassProduction.transient_current_init_assignments",
+                    context_inputs=(
+                        AssemblyInputSpec(
+                            name="lifecycle_class",
+                            collection_name="Classes",
+                            collection=None,
+                        ),
+                    ),
+                    from_inputs=(
+                        AssemblyInputSpec(
+                            name="field",
+                            collection_name="TransientFields",
+                            collection=None,
+                        ),
+                    ),
+                    condition=EqConditionSpec(
+                        left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
+                    ),
+                    matcher_name="TransientCurrentInitAssignmentContributions",
+                )
+            ),
+            InlineApplySpec(
+                edge=AssemblyEdgeSpec(
                     name="ClassProduction.managed_working_init_assignments",
                     context_inputs=(
                         AssemblyInputSpec(
@@ -13442,6 +15420,29 @@ ASSEMBLY_PRODUCTIONS = {
                         left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
                     ),
                     matcher_name="ManagedWorkingInitAssignmentContributions",
+                )
+            ),
+            InlineApplySpec(
+                edge=AssemblyEdgeSpec(
+                    name="ClassProduction.transient_working_init_assignments",
+                    context_inputs=(
+                        AssemblyInputSpec(
+                            name="lifecycle_class",
+                            collection_name="Classes",
+                            collection=None,
+                        ),
+                    ),
+                    from_inputs=(
+                        AssemblyInputSpec(
+                            name="field",
+                            collection_name="TransientFields",
+                            collection=None,
+                        ),
+                    ),
+                    condition=EqConditionSpec(
+                        left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
+                    ),
+                    matcher_name="TransientWorkingInitAssignmentContributions",
                 )
             ),
             InlineApplySpec(
@@ -13559,6 +15560,29 @@ ASSEMBLY_PRODUCTIONS = {
             ),
             InlineApplySpec(
                 edge=AssemblyEdgeSpec(
+                    name="ClassProduction.transient_default_properties",
+                    context_inputs=(
+                        AssemblyInputSpec(
+                            name="lifecycle_class",
+                            collection_name="Classes",
+                            collection=None,
+                        ),
+                    ),
+                    from_inputs=(
+                        AssemblyInputSpec(
+                            name="field",
+                            collection_name="IndexedTransientFields",
+                            collection=None,
+                        ),
+                    ),
+                    condition=EqConditionSpec(
+                        left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
+                    ),
+                    matcher_name="TransientDefaultFacadePropertyContributions",
+                )
+            ),
+            InlineApplySpec(
+                edge=AssemblyEdgeSpec(
                     name="ClassProduction.managed_current_properties",
                     context_inputs=(
                         AssemblyInputSpec(
@@ -13582,6 +15606,29 @@ ASSEMBLY_PRODUCTIONS = {
             ),
             InlineApplySpec(
                 edge=AssemblyEdgeSpec(
+                    name="ClassProduction.transient_current_properties",
+                    context_inputs=(
+                        AssemblyInputSpec(
+                            name="lifecycle_class",
+                            collection_name="Classes",
+                            collection=None,
+                        ),
+                    ),
+                    from_inputs=(
+                        AssemblyInputSpec(
+                            name="field",
+                            collection_name="TransientFields",
+                            collection=None,
+                        ),
+                    ),
+                    condition=EqConditionSpec(
+                        left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
+                    ),
+                    matcher_name="TransientCurrentPropertyContributions",
+                )
+            ),
+            InlineApplySpec(
+                edge=AssemblyEdgeSpec(
                     name="ClassProduction.managed_working_properties",
                     context_inputs=(
                         AssemblyInputSpec(
@@ -13601,6 +15648,29 @@ ASSEMBLY_PRODUCTIONS = {
                         left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
                     ),
                     matcher_name="ManagedWorkingFacadePropertyContributions",
+                )
+            ),
+            InlineApplySpec(
+                edge=AssemblyEdgeSpec(
+                    name="ClassProduction.transient_working_properties",
+                    context_inputs=(
+                        AssemblyInputSpec(
+                            name="lifecycle_class",
+                            collection_name="Classes",
+                            collection=None,
+                        ),
+                    ),
+                    from_inputs=(
+                        AssemblyInputSpec(
+                            name="field",
+                            collection_name="IndexedTransientFields",
+                            collection=None,
+                        ),
+                    ),
+                    condition=EqConditionSpec(
+                        left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
+                    ),
+                    matcher_name="TransientWorkingFacadePropertyContributions",
                 )
             ),
             InlineApplySpec(
@@ -13840,6 +15910,29 @@ ASSEMBLY_PRODUCTIONS = {
             ),
             InlineApplySpec(
                 edge=AssemblyEdgeSpec(
+                    name="ClassProduction.transient_apply_prepared_commit",
+                    context_inputs=(
+                        AssemblyInputSpec(
+                            name="lifecycle_class",
+                            collection_name="Classes",
+                            collection=None,
+                        ),
+                    ),
+                    from_inputs=(
+                        AssemblyInputSpec(
+                            name="field",
+                            collection_name="IndexedTransientFields",
+                            collection=None,
+                        ),
+                    ),
+                    condition=EqConditionSpec(
+                        left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
+                    ),
+                    matcher_name="TransientApplyPreparedCommitContributions",
+                )
+            ),
+            InlineApplySpec(
+                edge=AssemblyEdgeSpec(
                     name="ClassProduction.managed_rollback",
                     context_inputs=(
                         AssemblyInputSpec(
@@ -13859,6 +15952,29 @@ ASSEMBLY_PRODUCTIONS = {
                         left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
                     ),
                     matcher_name="ManagedRollbackContributions",
+                )
+            ),
+            InlineApplySpec(
+                edge=AssemblyEdgeSpec(
+                    name="ClassProduction.transient_rollback",
+                    context_inputs=(
+                        AssemblyInputSpec(
+                            name="lifecycle_class",
+                            collection_name="Classes",
+                            collection=None,
+                        ),
+                    ),
+                    from_inputs=(
+                        AssemblyInputSpec(
+                            name="field",
+                            collection_name="IndexedTransientFields",
+                            collection=None,
+                        ),
+                    ),
+                    condition=EqConditionSpec(
+                        left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
+                    ),
+                    matcher_name="TransientRollbackContributions",
                 )
             ),
         ),
