@@ -18,6 +18,8 @@ def _increment_factory_for(param_name: str):
 LIFECYCLE_PERF_CLASSES: dict[int, type[object]] = {}
 
 # ---- 5 fields per group (15 total fields) ----
+from collections.abc import Mapping
+from yidl.runtime.bindings import BindingBase, BindingDict
 import weakref
 from yidl.runtime.lifecycle import _HAS_DEFAULT_FACTORY
 from yidl.runtime.transaction_yidl import DEFAULT_TRANSACTION
@@ -26,10 +28,26 @@ VOID = object()
 
 def build_lifecycle_class(decorated_cls, *, _PerfLifecycle5_lifecycle_definition, _PerfLifecycle5_annotations, _PerfLifecycle5_tx_groups, _PerfLifecycle5_plain_0_default, _PerfLifecycle5_plain_1_default, _PerfLifecycle5_plain_2_default, _PerfLifecycle5_plain_3_default, _PerfLifecycle5_plain_4_default, _PerfLifecycle5_count_0_default, _PerfLifecycle5_count_1_default, _PerfLifecycle5_count_2_default, _PerfLifecycle5_count_3_default, _PerfLifecycle5_count_4_default, _PerfLifecycle5_derived_0_default_factory, _PerfLifecycle5_derived_1_default_factory, _PerfLifecycle5_derived_2_default_factory, _PerfLifecycle5_derived_3_default_factory, _PerfLifecycle5_derived_4_default_factory):
 
+    def _y_validate_binding_value(field_name, value):
+        if value is not None and (not isinstance(value, BindingBase)):
+            raise TypeError('binding field ' + repr(field_name) + ' expects BindingBase or None')
+        return value
+
+    def _y_validate_binding_map_value(field_name, value):
+        if value is None:
+            return None
+        if not isinstance(value, Mapping):
+            raise TypeError('binding map field ' + repr(field_name) + ' expects a mapping or None')
+        result = value if isinstance(value, BindingDict) else BindingDict(value)
+        for key, item in result.items():
+            if not isinstance(item, BindingBase):
+                raise TypeError('binding map field ' + repr(field_name) + ' expects BindingBase values; key ' + repr(key) + ' has ' + type(item).__name__)
+        return result
+
     class PerfLifecycle5_State:
-        __slots__ = ('_y_transaction_manager', '_y_default_ref', '_y_current_ref', '_y_working_ref', '_y_plain_0_value', '_y_plain_1_value', '_y_plain_2_value', '_y_plain_3_value', '_y_plain_4_value', '_y_count_0_current', '_y_count_0_working', '_y_count_1_current', '_y_count_1_working', '_y_count_2_current', '_y_count_2_working', '_y_count_3_current', '_y_count_3_working', '_y_count_4_current', '_y_count_4_working', '_y_derived_0_current', '_y_derived_0_working', '_y_derived_1_current', '_y_derived_1_working', '_y_derived_2_current', '_y_derived_2_working', '_y_derived_3_current', '_y_derived_3_working', '_y_derived_4_current', '_y_derived_4_working', '_y_working_tx_ids')
-        __yidl_tx_index_to_group__ = _PerfLifecycle5_tx_groups
-        __yidl_tx_group_to_index__ = {group: index for index, group in enumerate(_PerfLifecycle5_tx_groups)}
+        __slots__ = ('_y_transaction_manager', '_y_default_ref', '_y_current_ref', '_y_working_ref', '_y_plain_0_value', '_y_plain_1_value', '_y_plain_2_value', '_y_plain_3_value', '_y_plain_4_value', '_y_count_0_current', '_y_count_0_working', '_y_count_0_staged', '_y_count_1_current', '_y_count_1_working', '_y_count_1_staged', '_y_count_2_current', '_y_count_2_working', '_y_count_2_staged', '_y_count_3_current', '_y_count_3_working', '_y_count_3_staged', '_y_count_4_current', '_y_count_4_working', '_y_count_4_staged', '_y_derived_0_current', '_y_derived_0_working', '_y_derived_0_staged', '_y_derived_1_current', '_y_derived_1_working', '_y_derived_1_staged', '_y_derived_2_current', '_y_derived_2_working', '_y_derived_2_staged', '_y_derived_3_current', '_y_derived_3_working', '_y_derived_3_staged', '_y_derived_4_current', '_y_derived_4_working', '_y_derived_4_staged', '_y_working_tx_ids')
+        __yidl_tx_index_to_key__ = _PerfLifecycle5_tx_groups
+        __yidl_tx_key_to_index__ = {key: index for index, key in enumerate(_PerfLifecycle5_tx_groups)}
 
         def _y_get_default_facade(self):
             ref = self._y_default_ref
@@ -37,6 +55,10 @@ def build_lifecycle_class(decorated_cls, *, _PerfLifecycle5_lifecycle_definition
             if facade is None:
                 facade = object.__new__(PerfLifecycle5)
                 object.__setattr__(facade, '_y_state', self)
+                current_ref = self._y_current_ref
+                working_ref = self._y_working_ref
+                object.__setattr__(facade, '_y_current_facade', None if current_ref is None else current_ref())
+                object.__setattr__(facade, '_y_working_facade', None if working_ref is None else working_ref())
                 self._y_default_ref = weakref.ref(facade)
             return facade
 
@@ -47,6 +69,10 @@ def build_lifecycle_class(decorated_cls, *, _PerfLifecycle5_lifecycle_definition
                 facade = object.__new__(PerfLifecycle5_Current)
                 object.__setattr__(facade, '_y_state', self)
                 self._y_current_ref = weakref.ref(facade)
+                default_ref = self._y_default_ref
+                default = None if default_ref is None else default_ref()
+                if default is not None:
+                    object.__setattr__(default, '_y_current_facade', facade)
             return facade
 
         def _y_get_working_facade(self):
@@ -56,11 +82,15 @@ def build_lifecycle_class(decorated_cls, *, _PerfLifecycle5_lifecycle_definition
                 facade = object.__new__(PerfLifecycle5_Working)
                 object.__setattr__(facade, '_y_state', self)
                 self._y_working_ref = weakref.ref(facade)
+                default_ref = self._y_default_ref
+                default = None if default_ref is None else default_ref()
+                if default is not None:
+                    object.__setattr__(default, '_y_working_facade', facade)
             return facade
 
         def _y_require_active_transaction(self, tx_index):
-            tx_group = self.__yidl_tx_index_to_group__[tx_index]
-            transaction = self._y_transaction_manager.active_transaction_for(tx_group)
+            tx_key = self.__yidl_tx_index_to_key__[tx_index]
+            transaction = self._y_transaction_manager.active_transaction_for(tx_key)
             if transaction is None:
                 if self._y_working_tx_ids[tx_index] is not None:
                     raise RuntimeError('stale yidl working value without an active transaction')
@@ -73,95 +103,208 @@ def build_lifecycle_class(decorated_cls, *, _PerfLifecycle5_lifecycle_definition
         def _y_ensure_working_transaction(self, tx_index):
             transaction = self._y_require_active_transaction(tx_index)
             if self._y_working_tx_ids[tx_index] is None:
-                tx_group = self.__yidl_tx_index_to_group__[tx_index]
-                self._y_working_tx_ids[tx_index] = self._y_transaction_manager.enlist(self, tx_group)
+                tx_key = self.__yidl_tx_index_to_key__[tx_index]
+                self._y_working_tx_ids[tx_index] = self._y_transaction_manager.enlist(self, tx_key)
             return transaction
 
-        def commit_order_key_for(self, tx_group=DEFAULT_TRANSACTION):
+        def commit_order_key_for(self, tx_key=DEFAULT_TRANSACTION):
+            tx_index = self.__yidl_tx_key_to_index__[tx_key]
+            if False:
+                pass
+            elif tx_index == 0:
+                return self._commit_order_key_tx_0()
+            elif True:
+                return ()
+
+        def requires_validation_for(self, tx_key=DEFAULT_TRANSACTION):
+            tx_index = self.__yidl_tx_key_to_index__[tx_key]
+            if False:
+                pass
+            elif tx_index == 0:
+                return self._requires_validation_tx_0()
+            elif True:
+                return False
+
+        def validate_commit_for(self, tx_key=DEFAULT_TRANSACTION):
+            tx_index = self.__yidl_tx_key_to_index__[tx_key]
+            if False:
+                pass
+            elif tx_index == 0:
+                return self._validate_commit_tx_0()
+            elif True:
+                return True
+
+        def _prepare_commit_tx_by_key(self, tx_key=DEFAULT_TRANSACTION, tx_token=None):
+            tx_index = self.__yidl_tx_key_to_index__[tx_key]
+            if self._y_working_tx_ids[tx_index] != tx_token:
+                raise RuntimeError('stale yidl transaction token')
+            if False:
+                pass
+            elif tx_index == 0:
+                self._before_commit_tx_0()
+            elif True:
+                pass
+            if False:
+                pass
+            elif tx_index == 0:
+                self._prepare_commit_tx_0_fields()
+            elif True:
+                pass
+            return self._y_get_default_facade()
+
+        def _apply_prepared_commit_tx_by_key(self, tx_key=DEFAULT_TRANSACTION, tx_token=None):
+            tx_index = self.__yidl_tx_key_to_index__[tx_key]
+            if self._y_working_tx_ids[tx_index] != tx_token:
+                raise RuntimeError('stale yidl transaction token')
+            if False:
+                pass
+            elif tx_index == 0:
+                self._apply_prepared_commit_tx_0_fields()
+            elif True:
+                pass
+            self._y_working_tx_ids[tx_index] = None
+            return self._y_get_default_facade()
+
+        def _after_commit_tx_by_key(self, tx_key=DEFAULT_TRANSACTION, tx_token=None):
+            del tx_token
+            tx_index = self.__yidl_tx_key_to_index__[tx_key]
+            if False:
+                pass
+            elif tx_index == 0:
+                self._after_commit_tx_0()
+            elif True:
+                pass
+            return self._y_get_default_facade()
+
+        def _rollback_tx_by_key(self, tx_key=DEFAULT_TRANSACTION, tx_token=None):
+            tx_index = self.__yidl_tx_key_to_index__[tx_key]
+            del tx_token
+            if False:
+                pass
+            elif tx_index == 0:
+                self._rollback_tx_0_fields()
+            elif True:
+                pass
+            self._y_working_tx_ids[tx_index] = None
+            return self._y_get_default_facade()
+
+        def _after_rollback_tx_by_key(self, tx_key=DEFAULT_TRANSACTION, tx_token=None):
+            del tx_token
+            tx_index = self.__yidl_tx_key_to_index__[tx_key]
+            if False:
+                pass
+            elif tx_index == 0:
+                self._after_rollback_tx_0()
+            elif True:
+                pass
+            return self._y_get_default_facade()
+
+        def _commit_order_key_tx_0(self):
             return ()
 
-        def requires_validation_for(self, tx_group=DEFAULT_TRANSACTION):
+        def _requires_validation_tx_0(self):
             return False
 
-        def validate_commit_for(self, tx_group=DEFAULT_TRANSACTION):
+        def _validate_commit_tx_0(self):
             return True
 
-        def _commit_transaction(self, tx_id, tx_group=DEFAULT_TRANSACTION):
-            tx_index = self.__yidl_tx_group_to_index__[tx_group]
-            if self._y_working_tx_ids[tx_index] != tx_id:
-                return self._y_get_default_facade()
-            if tx_index == 0:
-                if self._y_count_0_working is not VOID:
-                    self._y_count_0_current = self._y_count_0_working
-                    self._y_count_0_working = VOID
-            if tx_index == 0:
-                if self._y_count_1_working is not VOID:
-                    self._y_count_1_current = self._y_count_1_working
-                    self._y_count_1_working = VOID
-            if tx_index == 0:
-                if self._y_count_2_working is not VOID:
-                    self._y_count_2_current = self._y_count_2_working
-                    self._y_count_2_working = VOID
-            if tx_index == 0:
-                if self._y_count_3_working is not VOID:
-                    self._y_count_3_current = self._y_count_3_working
-                    self._y_count_3_working = VOID
-            if tx_index == 0:
-                if self._y_count_4_working is not VOID:
-                    self._y_count_4_current = self._y_count_4_working
-                    self._y_count_4_working = VOID
-            if tx_index == 0:
-                if self._y_derived_0_working is not VOID:
-                    self._y_derived_0_current = self._y_derived_0_working
-                    self._y_derived_0_working = VOID
-            if tx_index == 0:
-                if self._y_derived_1_working is not VOID:
-                    self._y_derived_1_current = self._y_derived_1_working
-                    self._y_derived_1_working = VOID
-            if tx_index == 0:
-                if self._y_derived_2_working is not VOID:
-                    self._y_derived_2_current = self._y_derived_2_working
-                    self._y_derived_2_working = VOID
-            if tx_index == 0:
-                if self._y_derived_3_working is not VOID:
-                    self._y_derived_3_current = self._y_derived_3_working
-                    self._y_derived_3_working = VOID
-            if tx_index == 0:
-                if self._y_derived_4_working is not VOID:
-                    self._y_derived_4_current = self._y_derived_4_working
-                    self._y_derived_4_working = VOID
-            self._y_working_tx_ids[tx_index] = None
-            return self._y_get_default_facade()
+        def _before_commit_tx_0(self):
+            pass
 
-        def _rollback_transaction(self, tx_id, tx_group=DEFAULT_TRANSACTION):
-            tx_index = self.__yidl_tx_group_to_index__[tx_group]
-            if self._y_working_tx_ids[tx_index] != tx_id:
-                return self._y_get_default_facade()
-            if tx_index == 0:
+        def _after_commit_tx_0(self):
+            pass
+
+        def _apply_prepared_commit_tx_0_fields(self):
+            if self._y_count_0_staged is not VOID:
+                self._y_count_0_current = self._y_count_0_staged
+                self._y_count_0_staged = VOID
                 self._y_count_0_working = VOID
-            if tx_index == 0:
+            if self._y_count_1_staged is not VOID:
+                self._y_count_1_current = self._y_count_1_staged
+                self._y_count_1_staged = VOID
                 self._y_count_1_working = VOID
-            if tx_index == 0:
+            if self._y_count_2_staged is not VOID:
+                self._y_count_2_current = self._y_count_2_staged
+                self._y_count_2_staged = VOID
                 self._y_count_2_working = VOID
-            if tx_index == 0:
+            if self._y_count_3_staged is not VOID:
+                self._y_count_3_current = self._y_count_3_staged
+                self._y_count_3_staged = VOID
                 self._y_count_3_working = VOID
-            if tx_index == 0:
+            if self._y_count_4_staged is not VOID:
+                self._y_count_4_current = self._y_count_4_staged
+                self._y_count_4_staged = VOID
                 self._y_count_4_working = VOID
-            if tx_index == 0:
+            if self._y_derived_0_staged is not VOID:
+                self._y_derived_0_current = self._y_derived_0_staged
+                self._y_derived_0_staged = VOID
                 self._y_derived_0_working = VOID
-            if tx_index == 0:
+            if self._y_derived_1_staged is not VOID:
+                self._y_derived_1_current = self._y_derived_1_staged
+                self._y_derived_1_staged = VOID
                 self._y_derived_1_working = VOID
-            if tx_index == 0:
+            if self._y_derived_2_staged is not VOID:
+                self._y_derived_2_current = self._y_derived_2_staged
+                self._y_derived_2_staged = VOID
                 self._y_derived_2_working = VOID
-            if tx_index == 0:
+            if self._y_derived_3_staged is not VOID:
+                self._y_derived_3_current = self._y_derived_3_staged
+                self._y_derived_3_staged = VOID
                 self._y_derived_3_working = VOID
-            if tx_index == 0:
+            if self._y_derived_4_staged is not VOID:
+                self._y_derived_4_current = self._y_derived_4_staged
+                self._y_derived_4_staged = VOID
                 self._y_derived_4_working = VOID
-            self._y_working_tx_ids[tx_index] = None
-            return self._y_get_default_facade()
+
+        def _prepare_commit_tx_0_fields(self):
+            if self._y_count_0_working is not VOID:
+                self._y_count_0_staged = self._y_count_0_working
+            if self._y_count_1_working is not VOID:
+                self._y_count_1_staged = self._y_count_1_working
+            if self._y_count_2_working is not VOID:
+                self._y_count_2_staged = self._y_count_2_working
+            if self._y_count_3_working is not VOID:
+                self._y_count_3_staged = self._y_count_3_working
+            if self._y_count_4_working is not VOID:
+                self._y_count_4_staged = self._y_count_4_working
+            if self._y_derived_0_working is not VOID:
+                self._y_derived_0_staged = self._y_derived_0_working
+            if self._y_derived_1_working is not VOID:
+                self._y_derived_1_staged = self._y_derived_1_working
+            if self._y_derived_2_working is not VOID:
+                self._y_derived_2_staged = self._y_derived_2_working
+            if self._y_derived_3_working is not VOID:
+                self._y_derived_3_staged = self._y_derived_3_working
+            if self._y_derived_4_working is not VOID:
+                self._y_derived_4_staged = self._y_derived_4_working
+
+        def _after_rollback_tx_0(self):
+            pass
+
+        def _rollback_tx_0_fields(self):
+            self._y_count_0_staged = VOID
+            self._y_count_0_working = VOID
+            self._y_count_1_staged = VOID
+            self._y_count_1_working = VOID
+            self._y_count_2_staged = VOID
+            self._y_count_2_working = VOID
+            self._y_count_3_staged = VOID
+            self._y_count_3_working = VOID
+            self._y_count_4_staged = VOID
+            self._y_count_4_working = VOID
+            self._y_derived_0_staged = VOID
+            self._y_derived_0_working = VOID
+            self._y_derived_1_staged = VOID
+            self._y_derived_1_working = VOID
+            self._y_derived_2_staged = VOID
+            self._y_derived_2_working = VOID
+            self._y_derived_3_staged = VOID
+            self._y_derived_3_working = VOID
+            self._y_derived_4_staged = VOID
+            self._y_derived_4_working = VOID
 
     class PerfLifecycle5_FacadeBase(decorated_cls):
-        __slots__ = ('_y_state',)
+        __slots__ = ('_y_state',) if hasattr(decorated_cls, '__weakref__') else ('_y_state', '__weakref__')
         _y_lifecycle_field_names = frozenset(('plain_0', 'plain_1', 'plain_2', 'plain_3', 'plain_4', 'count_0', 'count_1', 'count_2', 'count_3', 'count_4', 'derived_0', 'derived_1', 'derived_2', 'derived_3', 'derived_4'))
 
         def __setattr__(self, name, value):
@@ -194,20 +337,20 @@ def build_lifecycle_class(decorated_cls, *, _PerfLifecycle5_lifecycle_definition
         def working(self):
             return self._y_state._y_get_working_facade()
 
-        def begin(self, *tx_groups):
-            return self._y_state._y_transaction_manager.begin(*tx_groups)
+        def begin(self, *tx_keys):
+            return self._y_state._y_transaction_manager.begin(*tx_keys)
 
-        def validate(self, *tx_groups):
-            return self._y_state._y_transaction_manager.validate(*tx_groups)
+        def validate(self, *tx_keys):
+            return self._y_state._y_transaction_manager.validate(*tx_keys)
 
-        def commit_only(self, *tx_groups):
-            return self._y_state._y_transaction_manager.commit_only(*tx_groups)
+        def commit_only(self, *tx_keys):
+            return self._y_state._y_transaction_manager.commit_only(*tx_keys)
 
-        def commit(self, *tx_groups):
-            return self._y_state._y_transaction_manager.commit(*tx_groups)
+        def commit(self, *tx_keys):
+            return self._y_state._y_transaction_manager.commit(*tx_keys)
 
-        def rollback(self, *tx_groups):
-            return self._y_state._y_transaction_manager.rollback(*tx_groups)
+        def rollback(self, *tx_keys):
+            return self._y_state._y_transaction_manager.rollback(*tx_keys)
 
         @property
         def plain_0(self):
@@ -250,13 +393,13 @@ def build_lifecycle_class(decorated_cls, *, _PerfLifecycle5_lifecycle_definition
             self._y_state._y_plain_4_value = value
 
     class PerfLifecycle5(PerfLifecycle5_FacadeBase):
-        __slots__ = ()
+        __slots__ = ('_y_current_facade', '_y_working_facade')
         __annotations__ = _PerfLifecycle5_annotations
         __yidl_lifecycle_generated__ = True
         __yidl_lifecycle_user_class__ = decorated_cls
         __yidl_lifecycle_definition__ = _PerfLifecycle5_lifecycle_definition
-        __yidl_tx_index_to_group__ = _PerfLifecycle5_tx_groups
-        __yidl_tx_group_to_index__ = {group: index for index, group in enumerate(_PerfLifecycle5_tx_groups)}
+        __yidl_tx_index_to_key__ = _PerfLifecycle5_tx_groups
+        __yidl_tx_key_to_index__ = {key: index for index, key in enumerate(_PerfLifecycle5_tx_groups)}
 
         @property
         def count_0(self):
@@ -391,6 +534,8 @@ def build_lifecycle_class(decorated_cls, *, _PerfLifecycle5_lifecycle_definition
         def __init__(self, plain_0: 'int'=_PerfLifecycle5_plain_0_default, plain_1: 'int'=_PerfLifecycle5_plain_1_default, plain_2: 'int'=_PerfLifecycle5_plain_2_default, plain_3: 'int'=_PerfLifecycle5_plain_3_default, plain_4: 'int'=_PerfLifecycle5_plain_4_default, count_0: 'int'=_PerfLifecycle5_count_0_default, count_1: 'int'=_PerfLifecycle5_count_1_default, count_2: 'int'=_PerfLifecycle5_count_2_default, count_3: 'int'=_PerfLifecycle5_count_3_default, count_4: 'int'=_PerfLifecycle5_count_4_default, derived_0: 'int'=_HAS_DEFAULT_FACTORY, derived_1: 'int'=_HAS_DEFAULT_FACTORY, derived_2: 'int'=_HAS_DEFAULT_FACTORY, derived_3: 'int'=_HAS_DEFAULT_FACTORY, derived_4: 'int'=_HAS_DEFAULT_FACTORY, *, transaction_manager=None):
             state = object.__new__(PerfLifecycle5_State)
             object.__setattr__(self, '_y_state', state)
+            object.__setattr__(self, '_y_current_facade', None)
+            object.__setattr__(self, '_y_working_facade', None)
             state._y_transaction_manager = transaction_manager or TransactionManager(tx_groups=tuple((group for group in _PerfLifecycle5_tx_groups if group != DEFAULT_TRANSACTION)))
             state._y_default_ref = weakref.ref(self)
             state._y_current_ref = None
@@ -402,19 +547,29 @@ def build_lifecycle_class(decorated_cls, *, _PerfLifecycle5_lifecycle_definition
             state._y_plain_4_value = plain_4
             state._y_count_0_current = count_0
             state._y_count_0_working = VOID
+            state._y_count_0_staged = VOID
             state._y_count_1_current = count_1
             state._y_count_1_working = VOID
+            state._y_count_1_staged = VOID
             state._y_count_2_current = count_2
             state._y_count_2_working = VOID
+            state._y_count_2_staged = VOID
             state._y_count_3_current = count_3
             state._y_count_3_working = VOID
+            state._y_count_3_staged = VOID
             state._y_count_4_current = count_4
             state._y_count_4_working = VOID
+            state._y_count_4_staged = VOID
             state._y_derived_0_working = VOID
+            state._y_derived_0_staged = VOID
             state._y_derived_1_working = VOID
+            state._y_derived_1_staged = VOID
             state._y_derived_2_working = VOID
+            state._y_derived_2_staged = VOID
             state._y_derived_3_working = VOID
+            state._y_derived_3_staged = VOID
             state._y_derived_4_working = VOID
+            state._y_derived_4_staged = VOID
             if derived_0 is _HAS_DEFAULT_FACTORY:
                 derived_0 = _PerfLifecycle5_derived_0_default_factory(count_0=self.count_0)
             state._y_derived_0_current = derived_0
@@ -710,6 +865,8 @@ PerfLifecycle5 = build_lifecycle_class(
 LIFECYCLE_PERF_CLASSES[5] = PerfLifecycle5
 
 # ---- 10 fields per group (30 total fields) ----
+from collections.abc import Mapping
+from yidl.runtime.bindings import BindingBase, BindingDict
 import weakref
 from yidl.runtime.lifecycle import _HAS_DEFAULT_FACTORY
 from yidl.runtime.transaction_yidl import DEFAULT_TRANSACTION
@@ -718,10 +875,26 @@ VOID = object()
 
 def build_lifecycle_class(decorated_cls, *, _PerfLifecycle10_lifecycle_definition, _PerfLifecycle10_annotations, _PerfLifecycle10_tx_groups, _PerfLifecycle10_plain_0_default, _PerfLifecycle10_plain_1_default, _PerfLifecycle10_plain_2_default, _PerfLifecycle10_plain_3_default, _PerfLifecycle10_plain_4_default, _PerfLifecycle10_plain_5_default, _PerfLifecycle10_plain_6_default, _PerfLifecycle10_plain_7_default, _PerfLifecycle10_plain_8_default, _PerfLifecycle10_plain_9_default, _PerfLifecycle10_count_0_default, _PerfLifecycle10_count_1_default, _PerfLifecycle10_count_2_default, _PerfLifecycle10_count_3_default, _PerfLifecycle10_count_4_default, _PerfLifecycle10_count_5_default, _PerfLifecycle10_count_6_default, _PerfLifecycle10_count_7_default, _PerfLifecycle10_count_8_default, _PerfLifecycle10_count_9_default, _PerfLifecycle10_derived_0_default_factory, _PerfLifecycle10_derived_1_default_factory, _PerfLifecycle10_derived_2_default_factory, _PerfLifecycle10_derived_3_default_factory, _PerfLifecycle10_derived_4_default_factory, _PerfLifecycle10_derived_5_default_factory, _PerfLifecycle10_derived_6_default_factory, _PerfLifecycle10_derived_7_default_factory, _PerfLifecycle10_derived_8_default_factory, _PerfLifecycle10_derived_9_default_factory):
 
+    def _y_validate_binding_value(field_name, value):
+        if value is not None and (not isinstance(value, BindingBase)):
+            raise TypeError('binding field ' + repr(field_name) + ' expects BindingBase or None')
+        return value
+
+    def _y_validate_binding_map_value(field_name, value):
+        if value is None:
+            return None
+        if not isinstance(value, Mapping):
+            raise TypeError('binding map field ' + repr(field_name) + ' expects a mapping or None')
+        result = value if isinstance(value, BindingDict) else BindingDict(value)
+        for key, item in result.items():
+            if not isinstance(item, BindingBase):
+                raise TypeError('binding map field ' + repr(field_name) + ' expects BindingBase values; key ' + repr(key) + ' has ' + type(item).__name__)
+        return result
+
     class PerfLifecycle10_State:
-        __slots__ = ('_y_transaction_manager', '_y_default_ref', '_y_current_ref', '_y_working_ref', '_y_plain_0_value', '_y_plain_1_value', '_y_plain_2_value', '_y_plain_3_value', '_y_plain_4_value', '_y_plain_5_value', '_y_plain_6_value', '_y_plain_7_value', '_y_plain_8_value', '_y_plain_9_value', '_y_count_0_current', '_y_count_0_working', '_y_count_1_current', '_y_count_1_working', '_y_count_2_current', '_y_count_2_working', '_y_count_3_current', '_y_count_3_working', '_y_count_4_current', '_y_count_4_working', '_y_count_5_current', '_y_count_5_working', '_y_count_6_current', '_y_count_6_working', '_y_count_7_current', '_y_count_7_working', '_y_count_8_current', '_y_count_8_working', '_y_count_9_current', '_y_count_9_working', '_y_derived_0_current', '_y_derived_0_working', '_y_derived_1_current', '_y_derived_1_working', '_y_derived_2_current', '_y_derived_2_working', '_y_derived_3_current', '_y_derived_3_working', '_y_derived_4_current', '_y_derived_4_working', '_y_derived_5_current', '_y_derived_5_working', '_y_derived_6_current', '_y_derived_6_working', '_y_derived_7_current', '_y_derived_7_working', '_y_derived_8_current', '_y_derived_8_working', '_y_derived_9_current', '_y_derived_9_working', '_y_working_tx_ids')
-        __yidl_tx_index_to_group__ = _PerfLifecycle10_tx_groups
-        __yidl_tx_group_to_index__ = {group: index for index, group in enumerate(_PerfLifecycle10_tx_groups)}
+        __slots__ = ('_y_transaction_manager', '_y_default_ref', '_y_current_ref', '_y_working_ref', '_y_plain_0_value', '_y_plain_1_value', '_y_plain_2_value', '_y_plain_3_value', '_y_plain_4_value', '_y_plain_5_value', '_y_plain_6_value', '_y_plain_7_value', '_y_plain_8_value', '_y_plain_9_value', '_y_count_0_current', '_y_count_0_working', '_y_count_0_staged', '_y_count_1_current', '_y_count_1_working', '_y_count_1_staged', '_y_count_2_current', '_y_count_2_working', '_y_count_2_staged', '_y_count_3_current', '_y_count_3_working', '_y_count_3_staged', '_y_count_4_current', '_y_count_4_working', '_y_count_4_staged', '_y_count_5_current', '_y_count_5_working', '_y_count_5_staged', '_y_count_6_current', '_y_count_6_working', '_y_count_6_staged', '_y_count_7_current', '_y_count_7_working', '_y_count_7_staged', '_y_count_8_current', '_y_count_8_working', '_y_count_8_staged', '_y_count_9_current', '_y_count_9_working', '_y_count_9_staged', '_y_derived_0_current', '_y_derived_0_working', '_y_derived_0_staged', '_y_derived_1_current', '_y_derived_1_working', '_y_derived_1_staged', '_y_derived_2_current', '_y_derived_2_working', '_y_derived_2_staged', '_y_derived_3_current', '_y_derived_3_working', '_y_derived_3_staged', '_y_derived_4_current', '_y_derived_4_working', '_y_derived_4_staged', '_y_derived_5_current', '_y_derived_5_working', '_y_derived_5_staged', '_y_derived_6_current', '_y_derived_6_working', '_y_derived_6_staged', '_y_derived_7_current', '_y_derived_7_working', '_y_derived_7_staged', '_y_derived_8_current', '_y_derived_8_working', '_y_derived_8_staged', '_y_derived_9_current', '_y_derived_9_working', '_y_derived_9_staged', '_y_working_tx_ids')
+        __yidl_tx_index_to_key__ = _PerfLifecycle10_tx_groups
+        __yidl_tx_key_to_index__ = {key: index for index, key in enumerate(_PerfLifecycle10_tx_groups)}
 
         def _y_get_default_facade(self):
             ref = self._y_default_ref
@@ -729,6 +902,10 @@ def build_lifecycle_class(decorated_cls, *, _PerfLifecycle10_lifecycle_definitio
             if facade is None:
                 facade = object.__new__(PerfLifecycle10)
                 object.__setattr__(facade, '_y_state', self)
+                current_ref = self._y_current_ref
+                working_ref = self._y_working_ref
+                object.__setattr__(facade, '_y_current_facade', None if current_ref is None else current_ref())
+                object.__setattr__(facade, '_y_working_facade', None if working_ref is None else working_ref())
                 self._y_default_ref = weakref.ref(facade)
             return facade
 
@@ -739,6 +916,10 @@ def build_lifecycle_class(decorated_cls, *, _PerfLifecycle10_lifecycle_definitio
                 facade = object.__new__(PerfLifecycle10_Current)
                 object.__setattr__(facade, '_y_state', self)
                 self._y_current_ref = weakref.ref(facade)
+                default_ref = self._y_default_ref
+                default = None if default_ref is None else default_ref()
+                if default is not None:
+                    object.__setattr__(default, '_y_current_facade', facade)
             return facade
 
         def _y_get_working_facade(self):
@@ -748,11 +929,15 @@ def build_lifecycle_class(decorated_cls, *, _PerfLifecycle10_lifecycle_definitio
                 facade = object.__new__(PerfLifecycle10_Working)
                 object.__setattr__(facade, '_y_state', self)
                 self._y_working_ref = weakref.ref(facade)
+                default_ref = self._y_default_ref
+                default = None if default_ref is None else default_ref()
+                if default is not None:
+                    object.__setattr__(default, '_y_working_facade', facade)
             return facade
 
         def _y_require_active_transaction(self, tx_index):
-            tx_group = self.__yidl_tx_index_to_group__[tx_index]
-            transaction = self._y_transaction_manager.active_transaction_for(tx_group)
+            tx_key = self.__yidl_tx_index_to_key__[tx_index]
+            transaction = self._y_transaction_manager.active_transaction_for(tx_key)
             if transaction is None:
                 if self._y_working_tx_ids[tx_index] is not None:
                     raise RuntimeError('stale yidl working value without an active transaction')
@@ -765,155 +950,288 @@ def build_lifecycle_class(decorated_cls, *, _PerfLifecycle10_lifecycle_definitio
         def _y_ensure_working_transaction(self, tx_index):
             transaction = self._y_require_active_transaction(tx_index)
             if self._y_working_tx_ids[tx_index] is None:
-                tx_group = self.__yidl_tx_index_to_group__[tx_index]
-                self._y_working_tx_ids[tx_index] = self._y_transaction_manager.enlist(self, tx_group)
+                tx_key = self.__yidl_tx_index_to_key__[tx_index]
+                self._y_working_tx_ids[tx_index] = self._y_transaction_manager.enlist(self, tx_key)
             return transaction
 
-        def commit_order_key_for(self, tx_group=DEFAULT_TRANSACTION):
+        def commit_order_key_for(self, tx_key=DEFAULT_TRANSACTION):
+            tx_index = self.__yidl_tx_key_to_index__[tx_key]
+            if False:
+                pass
+            elif tx_index == 0:
+                return self._commit_order_key_tx_0()
+            elif True:
+                return ()
+
+        def requires_validation_for(self, tx_key=DEFAULT_TRANSACTION):
+            tx_index = self.__yidl_tx_key_to_index__[tx_key]
+            if False:
+                pass
+            elif tx_index == 0:
+                return self._requires_validation_tx_0()
+            elif True:
+                return False
+
+        def validate_commit_for(self, tx_key=DEFAULT_TRANSACTION):
+            tx_index = self.__yidl_tx_key_to_index__[tx_key]
+            if False:
+                pass
+            elif tx_index == 0:
+                return self._validate_commit_tx_0()
+            elif True:
+                return True
+
+        def _prepare_commit_tx_by_key(self, tx_key=DEFAULT_TRANSACTION, tx_token=None):
+            tx_index = self.__yidl_tx_key_to_index__[tx_key]
+            if self._y_working_tx_ids[tx_index] != tx_token:
+                raise RuntimeError('stale yidl transaction token')
+            if False:
+                pass
+            elif tx_index == 0:
+                self._before_commit_tx_0()
+            elif True:
+                pass
+            if False:
+                pass
+            elif tx_index == 0:
+                self._prepare_commit_tx_0_fields()
+            elif True:
+                pass
+            return self._y_get_default_facade()
+
+        def _apply_prepared_commit_tx_by_key(self, tx_key=DEFAULT_TRANSACTION, tx_token=None):
+            tx_index = self.__yidl_tx_key_to_index__[tx_key]
+            if self._y_working_tx_ids[tx_index] != tx_token:
+                raise RuntimeError('stale yidl transaction token')
+            if False:
+                pass
+            elif tx_index == 0:
+                self._apply_prepared_commit_tx_0_fields()
+            elif True:
+                pass
+            self._y_working_tx_ids[tx_index] = None
+            return self._y_get_default_facade()
+
+        def _after_commit_tx_by_key(self, tx_key=DEFAULT_TRANSACTION, tx_token=None):
+            del tx_token
+            tx_index = self.__yidl_tx_key_to_index__[tx_key]
+            if False:
+                pass
+            elif tx_index == 0:
+                self._after_commit_tx_0()
+            elif True:
+                pass
+            return self._y_get_default_facade()
+
+        def _rollback_tx_by_key(self, tx_key=DEFAULT_TRANSACTION, tx_token=None):
+            tx_index = self.__yidl_tx_key_to_index__[tx_key]
+            del tx_token
+            if False:
+                pass
+            elif tx_index == 0:
+                self._rollback_tx_0_fields()
+            elif True:
+                pass
+            self._y_working_tx_ids[tx_index] = None
+            return self._y_get_default_facade()
+
+        def _after_rollback_tx_by_key(self, tx_key=DEFAULT_TRANSACTION, tx_token=None):
+            del tx_token
+            tx_index = self.__yidl_tx_key_to_index__[tx_key]
+            if False:
+                pass
+            elif tx_index == 0:
+                self._after_rollback_tx_0()
+            elif True:
+                pass
+            return self._y_get_default_facade()
+
+        def _commit_order_key_tx_0(self):
             return ()
 
-        def requires_validation_for(self, tx_group=DEFAULT_TRANSACTION):
+        def _requires_validation_tx_0(self):
             return False
 
-        def validate_commit_for(self, tx_group=DEFAULT_TRANSACTION):
+        def _validate_commit_tx_0(self):
             return True
 
-        def _commit_transaction(self, tx_id, tx_group=DEFAULT_TRANSACTION):
-            tx_index = self.__yidl_tx_group_to_index__[tx_group]
-            if self._y_working_tx_ids[tx_index] != tx_id:
-                return self._y_get_default_facade()
-            if tx_index == 0:
-                if self._y_count_0_working is not VOID:
-                    self._y_count_0_current = self._y_count_0_working
-                    self._y_count_0_working = VOID
-            if tx_index == 0:
-                if self._y_count_1_working is not VOID:
-                    self._y_count_1_current = self._y_count_1_working
-                    self._y_count_1_working = VOID
-            if tx_index == 0:
-                if self._y_count_2_working is not VOID:
-                    self._y_count_2_current = self._y_count_2_working
-                    self._y_count_2_working = VOID
-            if tx_index == 0:
-                if self._y_count_3_working is not VOID:
-                    self._y_count_3_current = self._y_count_3_working
-                    self._y_count_3_working = VOID
-            if tx_index == 0:
-                if self._y_count_4_working is not VOID:
-                    self._y_count_4_current = self._y_count_4_working
-                    self._y_count_4_working = VOID
-            if tx_index == 0:
-                if self._y_count_5_working is not VOID:
-                    self._y_count_5_current = self._y_count_5_working
-                    self._y_count_5_working = VOID
-            if tx_index == 0:
-                if self._y_count_6_working is not VOID:
-                    self._y_count_6_current = self._y_count_6_working
-                    self._y_count_6_working = VOID
-            if tx_index == 0:
-                if self._y_count_7_working is not VOID:
-                    self._y_count_7_current = self._y_count_7_working
-                    self._y_count_7_working = VOID
-            if tx_index == 0:
-                if self._y_count_8_working is not VOID:
-                    self._y_count_8_current = self._y_count_8_working
-                    self._y_count_8_working = VOID
-            if tx_index == 0:
-                if self._y_count_9_working is not VOID:
-                    self._y_count_9_current = self._y_count_9_working
-                    self._y_count_9_working = VOID
-            if tx_index == 0:
-                if self._y_derived_0_working is not VOID:
-                    self._y_derived_0_current = self._y_derived_0_working
-                    self._y_derived_0_working = VOID
-            if tx_index == 0:
-                if self._y_derived_1_working is not VOID:
-                    self._y_derived_1_current = self._y_derived_1_working
-                    self._y_derived_1_working = VOID
-            if tx_index == 0:
-                if self._y_derived_2_working is not VOID:
-                    self._y_derived_2_current = self._y_derived_2_working
-                    self._y_derived_2_working = VOID
-            if tx_index == 0:
-                if self._y_derived_3_working is not VOID:
-                    self._y_derived_3_current = self._y_derived_3_working
-                    self._y_derived_3_working = VOID
-            if tx_index == 0:
-                if self._y_derived_4_working is not VOID:
-                    self._y_derived_4_current = self._y_derived_4_working
-                    self._y_derived_4_working = VOID
-            if tx_index == 0:
-                if self._y_derived_5_working is not VOID:
-                    self._y_derived_5_current = self._y_derived_5_working
-                    self._y_derived_5_working = VOID
-            if tx_index == 0:
-                if self._y_derived_6_working is not VOID:
-                    self._y_derived_6_current = self._y_derived_6_working
-                    self._y_derived_6_working = VOID
-            if tx_index == 0:
-                if self._y_derived_7_working is not VOID:
-                    self._y_derived_7_current = self._y_derived_7_working
-                    self._y_derived_7_working = VOID
-            if tx_index == 0:
-                if self._y_derived_8_working is not VOID:
-                    self._y_derived_8_current = self._y_derived_8_working
-                    self._y_derived_8_working = VOID
-            if tx_index == 0:
-                if self._y_derived_9_working is not VOID:
-                    self._y_derived_9_current = self._y_derived_9_working
-                    self._y_derived_9_working = VOID
-            self._y_working_tx_ids[tx_index] = None
-            return self._y_get_default_facade()
+        def _before_commit_tx_0(self):
+            pass
 
-        def _rollback_transaction(self, tx_id, tx_group=DEFAULT_TRANSACTION):
-            tx_index = self.__yidl_tx_group_to_index__[tx_group]
-            if self._y_working_tx_ids[tx_index] != tx_id:
-                return self._y_get_default_facade()
-            if tx_index == 0:
+        def _after_commit_tx_0(self):
+            pass
+
+        def _apply_prepared_commit_tx_0_fields(self):
+            if self._y_count_0_staged is not VOID:
+                self._y_count_0_current = self._y_count_0_staged
+                self._y_count_0_staged = VOID
                 self._y_count_0_working = VOID
-            if tx_index == 0:
+            if self._y_count_1_staged is not VOID:
+                self._y_count_1_current = self._y_count_1_staged
+                self._y_count_1_staged = VOID
                 self._y_count_1_working = VOID
-            if tx_index == 0:
+            if self._y_count_2_staged is not VOID:
+                self._y_count_2_current = self._y_count_2_staged
+                self._y_count_2_staged = VOID
                 self._y_count_2_working = VOID
-            if tx_index == 0:
+            if self._y_count_3_staged is not VOID:
+                self._y_count_3_current = self._y_count_3_staged
+                self._y_count_3_staged = VOID
                 self._y_count_3_working = VOID
-            if tx_index == 0:
+            if self._y_count_4_staged is not VOID:
+                self._y_count_4_current = self._y_count_4_staged
+                self._y_count_4_staged = VOID
                 self._y_count_4_working = VOID
-            if tx_index == 0:
+            if self._y_count_5_staged is not VOID:
+                self._y_count_5_current = self._y_count_5_staged
+                self._y_count_5_staged = VOID
                 self._y_count_5_working = VOID
-            if tx_index == 0:
+            if self._y_count_6_staged is not VOID:
+                self._y_count_6_current = self._y_count_6_staged
+                self._y_count_6_staged = VOID
                 self._y_count_6_working = VOID
-            if tx_index == 0:
+            if self._y_count_7_staged is not VOID:
+                self._y_count_7_current = self._y_count_7_staged
+                self._y_count_7_staged = VOID
                 self._y_count_7_working = VOID
-            if tx_index == 0:
+            if self._y_count_8_staged is not VOID:
+                self._y_count_8_current = self._y_count_8_staged
+                self._y_count_8_staged = VOID
                 self._y_count_8_working = VOID
-            if tx_index == 0:
+            if self._y_count_9_staged is not VOID:
+                self._y_count_9_current = self._y_count_9_staged
+                self._y_count_9_staged = VOID
                 self._y_count_9_working = VOID
-            if tx_index == 0:
+            if self._y_derived_0_staged is not VOID:
+                self._y_derived_0_current = self._y_derived_0_staged
+                self._y_derived_0_staged = VOID
                 self._y_derived_0_working = VOID
-            if tx_index == 0:
+            if self._y_derived_1_staged is not VOID:
+                self._y_derived_1_current = self._y_derived_1_staged
+                self._y_derived_1_staged = VOID
                 self._y_derived_1_working = VOID
-            if tx_index == 0:
+            if self._y_derived_2_staged is not VOID:
+                self._y_derived_2_current = self._y_derived_2_staged
+                self._y_derived_2_staged = VOID
                 self._y_derived_2_working = VOID
-            if tx_index == 0:
+            if self._y_derived_3_staged is not VOID:
+                self._y_derived_3_current = self._y_derived_3_staged
+                self._y_derived_3_staged = VOID
                 self._y_derived_3_working = VOID
-            if tx_index == 0:
+            if self._y_derived_4_staged is not VOID:
+                self._y_derived_4_current = self._y_derived_4_staged
+                self._y_derived_4_staged = VOID
                 self._y_derived_4_working = VOID
-            if tx_index == 0:
+            if self._y_derived_5_staged is not VOID:
+                self._y_derived_5_current = self._y_derived_5_staged
+                self._y_derived_5_staged = VOID
                 self._y_derived_5_working = VOID
-            if tx_index == 0:
+            if self._y_derived_6_staged is not VOID:
+                self._y_derived_6_current = self._y_derived_6_staged
+                self._y_derived_6_staged = VOID
                 self._y_derived_6_working = VOID
-            if tx_index == 0:
+            if self._y_derived_7_staged is not VOID:
+                self._y_derived_7_current = self._y_derived_7_staged
+                self._y_derived_7_staged = VOID
                 self._y_derived_7_working = VOID
-            if tx_index == 0:
+            if self._y_derived_8_staged is not VOID:
+                self._y_derived_8_current = self._y_derived_8_staged
+                self._y_derived_8_staged = VOID
                 self._y_derived_8_working = VOID
-            if tx_index == 0:
+            if self._y_derived_9_staged is not VOID:
+                self._y_derived_9_current = self._y_derived_9_staged
+                self._y_derived_9_staged = VOID
                 self._y_derived_9_working = VOID
-            self._y_working_tx_ids[tx_index] = None
-            return self._y_get_default_facade()
+
+        def _prepare_commit_tx_0_fields(self):
+            if self._y_count_0_working is not VOID:
+                self._y_count_0_staged = self._y_count_0_working
+            if self._y_count_1_working is not VOID:
+                self._y_count_1_staged = self._y_count_1_working
+            if self._y_count_2_working is not VOID:
+                self._y_count_2_staged = self._y_count_2_working
+            if self._y_count_3_working is not VOID:
+                self._y_count_3_staged = self._y_count_3_working
+            if self._y_count_4_working is not VOID:
+                self._y_count_4_staged = self._y_count_4_working
+            if self._y_count_5_working is not VOID:
+                self._y_count_5_staged = self._y_count_5_working
+            if self._y_count_6_working is not VOID:
+                self._y_count_6_staged = self._y_count_6_working
+            if self._y_count_7_working is not VOID:
+                self._y_count_7_staged = self._y_count_7_working
+            if self._y_count_8_working is not VOID:
+                self._y_count_8_staged = self._y_count_8_working
+            if self._y_count_9_working is not VOID:
+                self._y_count_9_staged = self._y_count_9_working
+            if self._y_derived_0_working is not VOID:
+                self._y_derived_0_staged = self._y_derived_0_working
+            if self._y_derived_1_working is not VOID:
+                self._y_derived_1_staged = self._y_derived_1_working
+            if self._y_derived_2_working is not VOID:
+                self._y_derived_2_staged = self._y_derived_2_working
+            if self._y_derived_3_working is not VOID:
+                self._y_derived_3_staged = self._y_derived_3_working
+            if self._y_derived_4_working is not VOID:
+                self._y_derived_4_staged = self._y_derived_4_working
+            if self._y_derived_5_working is not VOID:
+                self._y_derived_5_staged = self._y_derived_5_working
+            if self._y_derived_6_working is not VOID:
+                self._y_derived_6_staged = self._y_derived_6_working
+            if self._y_derived_7_working is not VOID:
+                self._y_derived_7_staged = self._y_derived_7_working
+            if self._y_derived_8_working is not VOID:
+                self._y_derived_8_staged = self._y_derived_8_working
+            if self._y_derived_9_working is not VOID:
+                self._y_derived_9_staged = self._y_derived_9_working
+
+        def _after_rollback_tx_0(self):
+            pass
+
+        def _rollback_tx_0_fields(self):
+            self._y_count_0_staged = VOID
+            self._y_count_0_working = VOID
+            self._y_count_1_staged = VOID
+            self._y_count_1_working = VOID
+            self._y_count_2_staged = VOID
+            self._y_count_2_working = VOID
+            self._y_count_3_staged = VOID
+            self._y_count_3_working = VOID
+            self._y_count_4_staged = VOID
+            self._y_count_4_working = VOID
+            self._y_count_5_staged = VOID
+            self._y_count_5_working = VOID
+            self._y_count_6_staged = VOID
+            self._y_count_6_working = VOID
+            self._y_count_7_staged = VOID
+            self._y_count_7_working = VOID
+            self._y_count_8_staged = VOID
+            self._y_count_8_working = VOID
+            self._y_count_9_staged = VOID
+            self._y_count_9_working = VOID
+            self._y_derived_0_staged = VOID
+            self._y_derived_0_working = VOID
+            self._y_derived_1_staged = VOID
+            self._y_derived_1_working = VOID
+            self._y_derived_2_staged = VOID
+            self._y_derived_2_working = VOID
+            self._y_derived_3_staged = VOID
+            self._y_derived_3_working = VOID
+            self._y_derived_4_staged = VOID
+            self._y_derived_4_working = VOID
+            self._y_derived_5_staged = VOID
+            self._y_derived_5_working = VOID
+            self._y_derived_6_staged = VOID
+            self._y_derived_6_working = VOID
+            self._y_derived_7_staged = VOID
+            self._y_derived_7_working = VOID
+            self._y_derived_8_staged = VOID
+            self._y_derived_8_working = VOID
+            self._y_derived_9_staged = VOID
+            self._y_derived_9_working = VOID
 
     class PerfLifecycle10_FacadeBase(decorated_cls):
-        __slots__ = ('_y_state',)
+        __slots__ = ('_y_state',) if hasattr(decorated_cls, '__weakref__') else ('_y_state', '__weakref__')
         _y_lifecycle_field_names = frozenset(('plain_0', 'plain_1', 'plain_2', 'plain_3', 'plain_4', 'plain_5', 'plain_6', 'plain_7', 'plain_8', 'plain_9', 'count_0', 'count_1', 'count_2', 'count_3', 'count_4', 'count_5', 'count_6', 'count_7', 'count_8', 'count_9', 'derived_0', 'derived_1', 'derived_2', 'derived_3', 'derived_4', 'derived_5', 'derived_6', 'derived_7', 'derived_8', 'derived_9'))
 
         def __setattr__(self, name, value):
@@ -946,20 +1264,20 @@ def build_lifecycle_class(decorated_cls, *, _PerfLifecycle10_lifecycle_definitio
         def working(self):
             return self._y_state._y_get_working_facade()
 
-        def begin(self, *tx_groups):
-            return self._y_state._y_transaction_manager.begin(*tx_groups)
+        def begin(self, *tx_keys):
+            return self._y_state._y_transaction_manager.begin(*tx_keys)
 
-        def validate(self, *tx_groups):
-            return self._y_state._y_transaction_manager.validate(*tx_groups)
+        def validate(self, *tx_keys):
+            return self._y_state._y_transaction_manager.validate(*tx_keys)
 
-        def commit_only(self, *tx_groups):
-            return self._y_state._y_transaction_manager.commit_only(*tx_groups)
+        def commit_only(self, *tx_keys):
+            return self._y_state._y_transaction_manager.commit_only(*tx_keys)
 
-        def commit(self, *tx_groups):
-            return self._y_state._y_transaction_manager.commit(*tx_groups)
+        def commit(self, *tx_keys):
+            return self._y_state._y_transaction_manager.commit(*tx_keys)
 
-        def rollback(self, *tx_groups):
-            return self._y_state._y_transaction_manager.rollback(*tx_groups)
+        def rollback(self, *tx_keys):
+            return self._y_state._y_transaction_manager.rollback(*tx_keys)
 
         @property
         def plain_0(self):
@@ -1042,13 +1360,13 @@ def build_lifecycle_class(decorated_cls, *, _PerfLifecycle10_lifecycle_definitio
             self._y_state._y_plain_9_value = value
 
     class PerfLifecycle10(PerfLifecycle10_FacadeBase):
-        __slots__ = ()
+        __slots__ = ('_y_current_facade', '_y_working_facade')
         __annotations__ = _PerfLifecycle10_annotations
         __yidl_lifecycle_generated__ = True
         __yidl_lifecycle_user_class__ = decorated_cls
         __yidl_lifecycle_definition__ = _PerfLifecycle10_lifecycle_definition
-        __yidl_tx_index_to_group__ = _PerfLifecycle10_tx_groups
-        __yidl_tx_group_to_index__ = {group: index for index, group in enumerate(_PerfLifecycle10_tx_groups)}
+        __yidl_tx_index_to_key__ = _PerfLifecycle10_tx_groups
+        __yidl_tx_key_to_index__ = {key: index for index, key in enumerate(_PerfLifecycle10_tx_groups)}
 
         @property
         def count_0(self):
@@ -1313,6 +1631,8 @@ def build_lifecycle_class(decorated_cls, *, _PerfLifecycle10_lifecycle_definitio
         def __init__(self, plain_0: 'int'=_PerfLifecycle10_plain_0_default, plain_1: 'int'=_PerfLifecycle10_plain_1_default, plain_2: 'int'=_PerfLifecycle10_plain_2_default, plain_3: 'int'=_PerfLifecycle10_plain_3_default, plain_4: 'int'=_PerfLifecycle10_plain_4_default, plain_5: 'int'=_PerfLifecycle10_plain_5_default, plain_6: 'int'=_PerfLifecycle10_plain_6_default, plain_7: 'int'=_PerfLifecycle10_plain_7_default, plain_8: 'int'=_PerfLifecycle10_plain_8_default, plain_9: 'int'=_PerfLifecycle10_plain_9_default, count_0: 'int'=_PerfLifecycle10_count_0_default, count_1: 'int'=_PerfLifecycle10_count_1_default, count_2: 'int'=_PerfLifecycle10_count_2_default, count_3: 'int'=_PerfLifecycle10_count_3_default, count_4: 'int'=_PerfLifecycle10_count_4_default, count_5: 'int'=_PerfLifecycle10_count_5_default, count_6: 'int'=_PerfLifecycle10_count_6_default, count_7: 'int'=_PerfLifecycle10_count_7_default, count_8: 'int'=_PerfLifecycle10_count_8_default, count_9: 'int'=_PerfLifecycle10_count_9_default, derived_0: 'int'=_HAS_DEFAULT_FACTORY, derived_1: 'int'=_HAS_DEFAULT_FACTORY, derived_2: 'int'=_HAS_DEFAULT_FACTORY, derived_3: 'int'=_HAS_DEFAULT_FACTORY, derived_4: 'int'=_HAS_DEFAULT_FACTORY, derived_5: 'int'=_HAS_DEFAULT_FACTORY, derived_6: 'int'=_HAS_DEFAULT_FACTORY, derived_7: 'int'=_HAS_DEFAULT_FACTORY, derived_8: 'int'=_HAS_DEFAULT_FACTORY, derived_9: 'int'=_HAS_DEFAULT_FACTORY, *, transaction_manager=None):
             state = object.__new__(PerfLifecycle10_State)
             object.__setattr__(self, '_y_state', state)
+            object.__setattr__(self, '_y_current_facade', None)
+            object.__setattr__(self, '_y_working_facade', None)
             state._y_transaction_manager = transaction_manager or TransactionManager(tx_groups=tuple((group for group in _PerfLifecycle10_tx_groups if group != DEFAULT_TRANSACTION)))
             state._y_default_ref = weakref.ref(self)
             state._y_current_ref = None
@@ -1329,34 +1649,54 @@ def build_lifecycle_class(decorated_cls, *, _PerfLifecycle10_lifecycle_definitio
             state._y_plain_9_value = plain_9
             state._y_count_0_current = count_0
             state._y_count_0_working = VOID
+            state._y_count_0_staged = VOID
             state._y_count_1_current = count_1
             state._y_count_1_working = VOID
+            state._y_count_1_staged = VOID
             state._y_count_2_current = count_2
             state._y_count_2_working = VOID
+            state._y_count_2_staged = VOID
             state._y_count_3_current = count_3
             state._y_count_3_working = VOID
+            state._y_count_3_staged = VOID
             state._y_count_4_current = count_4
             state._y_count_4_working = VOID
+            state._y_count_4_staged = VOID
             state._y_count_5_current = count_5
             state._y_count_5_working = VOID
+            state._y_count_5_staged = VOID
             state._y_count_6_current = count_6
             state._y_count_6_working = VOID
+            state._y_count_6_staged = VOID
             state._y_count_7_current = count_7
             state._y_count_7_working = VOID
+            state._y_count_7_staged = VOID
             state._y_count_8_current = count_8
             state._y_count_8_working = VOID
+            state._y_count_8_staged = VOID
             state._y_count_9_current = count_9
             state._y_count_9_working = VOID
+            state._y_count_9_staged = VOID
             state._y_derived_0_working = VOID
+            state._y_derived_0_staged = VOID
             state._y_derived_1_working = VOID
+            state._y_derived_1_staged = VOID
             state._y_derived_2_working = VOID
+            state._y_derived_2_staged = VOID
             state._y_derived_3_working = VOID
+            state._y_derived_3_staged = VOID
             state._y_derived_4_working = VOID
+            state._y_derived_4_staged = VOID
             state._y_derived_5_working = VOID
+            state._y_derived_5_staged = VOID
             state._y_derived_6_working = VOID
+            state._y_derived_6_staged = VOID
             state._y_derived_7_working = VOID
+            state._y_derived_7_staged = VOID
             state._y_derived_8_working = VOID
+            state._y_derived_8_staged = VOID
             state._y_derived_9_working = VOID
+            state._y_derived_9_staged = VOID
             if derived_0 is _HAS_DEFAULT_FACTORY:
                 derived_0 = _PerfLifecycle10_derived_0_default_factory(count_0=self.count_0)
             state._y_derived_0_current = derived_0
@@ -1917,6 +2257,8 @@ PerfLifecycle10 = build_lifecycle_class(
 LIFECYCLE_PERF_CLASSES[10] = PerfLifecycle10
 
 # ---- 15 fields per group (45 total fields) ----
+from collections.abc import Mapping
+from yidl.runtime.bindings import BindingBase, BindingDict
 import weakref
 from yidl.runtime.lifecycle import _HAS_DEFAULT_FACTORY
 from yidl.runtime.transaction_yidl import DEFAULT_TRANSACTION
@@ -1925,10 +2267,26 @@ VOID = object()
 
 def build_lifecycle_class(decorated_cls, *, _PerfLifecycle15_lifecycle_definition, _PerfLifecycle15_annotations, _PerfLifecycle15_tx_groups, _PerfLifecycle15_plain_0_default, _PerfLifecycle15_plain_1_default, _PerfLifecycle15_plain_2_default, _PerfLifecycle15_plain_3_default, _PerfLifecycle15_plain_4_default, _PerfLifecycle15_plain_5_default, _PerfLifecycle15_plain_6_default, _PerfLifecycle15_plain_7_default, _PerfLifecycle15_plain_8_default, _PerfLifecycle15_plain_9_default, _PerfLifecycle15_plain_10_default, _PerfLifecycle15_plain_11_default, _PerfLifecycle15_plain_12_default, _PerfLifecycle15_plain_13_default, _PerfLifecycle15_plain_14_default, _PerfLifecycle15_count_0_default, _PerfLifecycle15_count_1_default, _PerfLifecycle15_count_2_default, _PerfLifecycle15_count_3_default, _PerfLifecycle15_count_4_default, _PerfLifecycle15_count_5_default, _PerfLifecycle15_count_6_default, _PerfLifecycle15_count_7_default, _PerfLifecycle15_count_8_default, _PerfLifecycle15_count_9_default, _PerfLifecycle15_count_10_default, _PerfLifecycle15_count_11_default, _PerfLifecycle15_count_12_default, _PerfLifecycle15_count_13_default, _PerfLifecycle15_count_14_default, _PerfLifecycle15_derived_0_default_factory, _PerfLifecycle15_derived_1_default_factory, _PerfLifecycle15_derived_2_default_factory, _PerfLifecycle15_derived_3_default_factory, _PerfLifecycle15_derived_4_default_factory, _PerfLifecycle15_derived_5_default_factory, _PerfLifecycle15_derived_6_default_factory, _PerfLifecycle15_derived_7_default_factory, _PerfLifecycle15_derived_8_default_factory, _PerfLifecycle15_derived_9_default_factory, _PerfLifecycle15_derived_10_default_factory, _PerfLifecycle15_derived_11_default_factory, _PerfLifecycle15_derived_12_default_factory, _PerfLifecycle15_derived_13_default_factory, _PerfLifecycle15_derived_14_default_factory):
 
+    def _y_validate_binding_value(field_name, value):
+        if value is not None and (not isinstance(value, BindingBase)):
+            raise TypeError('binding field ' + repr(field_name) + ' expects BindingBase or None')
+        return value
+
+    def _y_validate_binding_map_value(field_name, value):
+        if value is None:
+            return None
+        if not isinstance(value, Mapping):
+            raise TypeError('binding map field ' + repr(field_name) + ' expects a mapping or None')
+        result = value if isinstance(value, BindingDict) else BindingDict(value)
+        for key, item in result.items():
+            if not isinstance(item, BindingBase):
+                raise TypeError('binding map field ' + repr(field_name) + ' expects BindingBase values; key ' + repr(key) + ' has ' + type(item).__name__)
+        return result
+
     class PerfLifecycle15_State:
-        __slots__ = ('_y_transaction_manager', '_y_default_ref', '_y_current_ref', '_y_working_ref', '_y_plain_0_value', '_y_plain_1_value', '_y_plain_2_value', '_y_plain_3_value', '_y_plain_4_value', '_y_plain_5_value', '_y_plain_6_value', '_y_plain_7_value', '_y_plain_8_value', '_y_plain_9_value', '_y_plain_10_value', '_y_plain_11_value', '_y_plain_12_value', '_y_plain_13_value', '_y_plain_14_value', '_y_count_0_current', '_y_count_0_working', '_y_count_1_current', '_y_count_1_working', '_y_count_2_current', '_y_count_2_working', '_y_count_3_current', '_y_count_3_working', '_y_count_4_current', '_y_count_4_working', '_y_count_5_current', '_y_count_5_working', '_y_count_6_current', '_y_count_6_working', '_y_count_7_current', '_y_count_7_working', '_y_count_8_current', '_y_count_8_working', '_y_count_9_current', '_y_count_9_working', '_y_count_10_current', '_y_count_10_working', '_y_count_11_current', '_y_count_11_working', '_y_count_12_current', '_y_count_12_working', '_y_count_13_current', '_y_count_13_working', '_y_count_14_current', '_y_count_14_working', '_y_derived_0_current', '_y_derived_0_working', '_y_derived_1_current', '_y_derived_1_working', '_y_derived_2_current', '_y_derived_2_working', '_y_derived_3_current', '_y_derived_3_working', '_y_derived_4_current', '_y_derived_4_working', '_y_derived_5_current', '_y_derived_5_working', '_y_derived_6_current', '_y_derived_6_working', '_y_derived_7_current', '_y_derived_7_working', '_y_derived_8_current', '_y_derived_8_working', '_y_derived_9_current', '_y_derived_9_working', '_y_derived_10_current', '_y_derived_10_working', '_y_derived_11_current', '_y_derived_11_working', '_y_derived_12_current', '_y_derived_12_working', '_y_derived_13_current', '_y_derived_13_working', '_y_derived_14_current', '_y_derived_14_working', '_y_working_tx_ids')
-        __yidl_tx_index_to_group__ = _PerfLifecycle15_tx_groups
-        __yidl_tx_group_to_index__ = {group: index for index, group in enumerate(_PerfLifecycle15_tx_groups)}
+        __slots__ = ('_y_transaction_manager', '_y_default_ref', '_y_current_ref', '_y_working_ref', '_y_plain_0_value', '_y_plain_1_value', '_y_plain_2_value', '_y_plain_3_value', '_y_plain_4_value', '_y_plain_5_value', '_y_plain_6_value', '_y_plain_7_value', '_y_plain_8_value', '_y_plain_9_value', '_y_plain_10_value', '_y_plain_11_value', '_y_plain_12_value', '_y_plain_13_value', '_y_plain_14_value', '_y_count_0_current', '_y_count_0_working', '_y_count_0_staged', '_y_count_1_current', '_y_count_1_working', '_y_count_1_staged', '_y_count_2_current', '_y_count_2_working', '_y_count_2_staged', '_y_count_3_current', '_y_count_3_working', '_y_count_3_staged', '_y_count_4_current', '_y_count_4_working', '_y_count_4_staged', '_y_count_5_current', '_y_count_5_working', '_y_count_5_staged', '_y_count_6_current', '_y_count_6_working', '_y_count_6_staged', '_y_count_7_current', '_y_count_7_working', '_y_count_7_staged', '_y_count_8_current', '_y_count_8_working', '_y_count_8_staged', '_y_count_9_current', '_y_count_9_working', '_y_count_9_staged', '_y_count_10_current', '_y_count_10_working', '_y_count_10_staged', '_y_count_11_current', '_y_count_11_working', '_y_count_11_staged', '_y_count_12_current', '_y_count_12_working', '_y_count_12_staged', '_y_count_13_current', '_y_count_13_working', '_y_count_13_staged', '_y_count_14_current', '_y_count_14_working', '_y_count_14_staged', '_y_derived_0_current', '_y_derived_0_working', '_y_derived_0_staged', '_y_derived_1_current', '_y_derived_1_working', '_y_derived_1_staged', '_y_derived_2_current', '_y_derived_2_working', '_y_derived_2_staged', '_y_derived_3_current', '_y_derived_3_working', '_y_derived_3_staged', '_y_derived_4_current', '_y_derived_4_working', '_y_derived_4_staged', '_y_derived_5_current', '_y_derived_5_working', '_y_derived_5_staged', '_y_derived_6_current', '_y_derived_6_working', '_y_derived_6_staged', '_y_derived_7_current', '_y_derived_7_working', '_y_derived_7_staged', '_y_derived_8_current', '_y_derived_8_working', '_y_derived_8_staged', '_y_derived_9_current', '_y_derived_9_working', '_y_derived_9_staged', '_y_derived_10_current', '_y_derived_10_working', '_y_derived_10_staged', '_y_derived_11_current', '_y_derived_11_working', '_y_derived_11_staged', '_y_derived_12_current', '_y_derived_12_working', '_y_derived_12_staged', '_y_derived_13_current', '_y_derived_13_working', '_y_derived_13_staged', '_y_derived_14_current', '_y_derived_14_working', '_y_derived_14_staged', '_y_working_tx_ids')
+        __yidl_tx_index_to_key__ = _PerfLifecycle15_tx_groups
+        __yidl_tx_key_to_index__ = {key: index for index, key in enumerate(_PerfLifecycle15_tx_groups)}
 
         def _y_get_default_facade(self):
             ref = self._y_default_ref
@@ -1936,6 +2294,10 @@ def build_lifecycle_class(decorated_cls, *, _PerfLifecycle15_lifecycle_definitio
             if facade is None:
                 facade = object.__new__(PerfLifecycle15)
                 object.__setattr__(facade, '_y_state', self)
+                current_ref = self._y_current_ref
+                working_ref = self._y_working_ref
+                object.__setattr__(facade, '_y_current_facade', None if current_ref is None else current_ref())
+                object.__setattr__(facade, '_y_working_facade', None if working_ref is None else working_ref())
                 self._y_default_ref = weakref.ref(facade)
             return facade
 
@@ -1946,6 +2308,10 @@ def build_lifecycle_class(decorated_cls, *, _PerfLifecycle15_lifecycle_definitio
                 facade = object.__new__(PerfLifecycle15_Current)
                 object.__setattr__(facade, '_y_state', self)
                 self._y_current_ref = weakref.ref(facade)
+                default_ref = self._y_default_ref
+                default = None if default_ref is None else default_ref()
+                if default is not None:
+                    object.__setattr__(default, '_y_current_facade', facade)
             return facade
 
         def _y_get_working_facade(self):
@@ -1955,11 +2321,15 @@ def build_lifecycle_class(decorated_cls, *, _PerfLifecycle15_lifecycle_definitio
                 facade = object.__new__(PerfLifecycle15_Working)
                 object.__setattr__(facade, '_y_state', self)
                 self._y_working_ref = weakref.ref(facade)
+                default_ref = self._y_default_ref
+                default = None if default_ref is None else default_ref()
+                if default is not None:
+                    object.__setattr__(default, '_y_working_facade', facade)
             return facade
 
         def _y_require_active_transaction(self, tx_index):
-            tx_group = self.__yidl_tx_index_to_group__[tx_index]
-            transaction = self._y_transaction_manager.active_transaction_for(tx_group)
+            tx_key = self.__yidl_tx_index_to_key__[tx_index]
+            transaction = self._y_transaction_manager.active_transaction_for(tx_key)
             if transaction is None:
                 if self._y_working_tx_ids[tx_index] is not None:
                     raise RuntimeError('stale yidl working value without an active transaction')
@@ -1972,215 +2342,368 @@ def build_lifecycle_class(decorated_cls, *, _PerfLifecycle15_lifecycle_definitio
         def _y_ensure_working_transaction(self, tx_index):
             transaction = self._y_require_active_transaction(tx_index)
             if self._y_working_tx_ids[tx_index] is None:
-                tx_group = self.__yidl_tx_index_to_group__[tx_index]
-                self._y_working_tx_ids[tx_index] = self._y_transaction_manager.enlist(self, tx_group)
+                tx_key = self.__yidl_tx_index_to_key__[tx_index]
+                self._y_working_tx_ids[tx_index] = self._y_transaction_manager.enlist(self, tx_key)
             return transaction
 
-        def commit_order_key_for(self, tx_group=DEFAULT_TRANSACTION):
+        def commit_order_key_for(self, tx_key=DEFAULT_TRANSACTION):
+            tx_index = self.__yidl_tx_key_to_index__[tx_key]
+            if False:
+                pass
+            elif tx_index == 0:
+                return self._commit_order_key_tx_0()
+            elif True:
+                return ()
+
+        def requires_validation_for(self, tx_key=DEFAULT_TRANSACTION):
+            tx_index = self.__yidl_tx_key_to_index__[tx_key]
+            if False:
+                pass
+            elif tx_index == 0:
+                return self._requires_validation_tx_0()
+            elif True:
+                return False
+
+        def validate_commit_for(self, tx_key=DEFAULT_TRANSACTION):
+            tx_index = self.__yidl_tx_key_to_index__[tx_key]
+            if False:
+                pass
+            elif tx_index == 0:
+                return self._validate_commit_tx_0()
+            elif True:
+                return True
+
+        def _prepare_commit_tx_by_key(self, tx_key=DEFAULT_TRANSACTION, tx_token=None):
+            tx_index = self.__yidl_tx_key_to_index__[tx_key]
+            if self._y_working_tx_ids[tx_index] != tx_token:
+                raise RuntimeError('stale yidl transaction token')
+            if False:
+                pass
+            elif tx_index == 0:
+                self._before_commit_tx_0()
+            elif True:
+                pass
+            if False:
+                pass
+            elif tx_index == 0:
+                self._prepare_commit_tx_0_fields()
+            elif True:
+                pass
+            return self._y_get_default_facade()
+
+        def _apply_prepared_commit_tx_by_key(self, tx_key=DEFAULT_TRANSACTION, tx_token=None):
+            tx_index = self.__yidl_tx_key_to_index__[tx_key]
+            if self._y_working_tx_ids[tx_index] != tx_token:
+                raise RuntimeError('stale yidl transaction token')
+            if False:
+                pass
+            elif tx_index == 0:
+                self._apply_prepared_commit_tx_0_fields()
+            elif True:
+                pass
+            self._y_working_tx_ids[tx_index] = None
+            return self._y_get_default_facade()
+
+        def _after_commit_tx_by_key(self, tx_key=DEFAULT_TRANSACTION, tx_token=None):
+            del tx_token
+            tx_index = self.__yidl_tx_key_to_index__[tx_key]
+            if False:
+                pass
+            elif tx_index == 0:
+                self._after_commit_tx_0()
+            elif True:
+                pass
+            return self._y_get_default_facade()
+
+        def _rollback_tx_by_key(self, tx_key=DEFAULT_TRANSACTION, tx_token=None):
+            tx_index = self.__yidl_tx_key_to_index__[tx_key]
+            del tx_token
+            if False:
+                pass
+            elif tx_index == 0:
+                self._rollback_tx_0_fields()
+            elif True:
+                pass
+            self._y_working_tx_ids[tx_index] = None
+            return self._y_get_default_facade()
+
+        def _after_rollback_tx_by_key(self, tx_key=DEFAULT_TRANSACTION, tx_token=None):
+            del tx_token
+            tx_index = self.__yidl_tx_key_to_index__[tx_key]
+            if False:
+                pass
+            elif tx_index == 0:
+                self._after_rollback_tx_0()
+            elif True:
+                pass
+            return self._y_get_default_facade()
+
+        def _commit_order_key_tx_0(self):
             return ()
 
-        def requires_validation_for(self, tx_group=DEFAULT_TRANSACTION):
+        def _requires_validation_tx_0(self):
             return False
 
-        def validate_commit_for(self, tx_group=DEFAULT_TRANSACTION):
+        def _validate_commit_tx_0(self):
             return True
 
-        def _commit_transaction(self, tx_id, tx_group=DEFAULT_TRANSACTION):
-            tx_index = self.__yidl_tx_group_to_index__[tx_group]
-            if self._y_working_tx_ids[tx_index] != tx_id:
-                return self._y_get_default_facade()
-            if tx_index == 0:
-                if self._y_count_0_working is not VOID:
-                    self._y_count_0_current = self._y_count_0_working
-                    self._y_count_0_working = VOID
-            if tx_index == 0:
-                if self._y_count_1_working is not VOID:
-                    self._y_count_1_current = self._y_count_1_working
-                    self._y_count_1_working = VOID
-            if tx_index == 0:
-                if self._y_count_2_working is not VOID:
-                    self._y_count_2_current = self._y_count_2_working
-                    self._y_count_2_working = VOID
-            if tx_index == 0:
-                if self._y_count_3_working is not VOID:
-                    self._y_count_3_current = self._y_count_3_working
-                    self._y_count_3_working = VOID
-            if tx_index == 0:
-                if self._y_count_4_working is not VOID:
-                    self._y_count_4_current = self._y_count_4_working
-                    self._y_count_4_working = VOID
-            if tx_index == 0:
-                if self._y_count_5_working is not VOID:
-                    self._y_count_5_current = self._y_count_5_working
-                    self._y_count_5_working = VOID
-            if tx_index == 0:
-                if self._y_count_6_working is not VOID:
-                    self._y_count_6_current = self._y_count_6_working
-                    self._y_count_6_working = VOID
-            if tx_index == 0:
-                if self._y_count_7_working is not VOID:
-                    self._y_count_7_current = self._y_count_7_working
-                    self._y_count_7_working = VOID
-            if tx_index == 0:
-                if self._y_count_8_working is not VOID:
-                    self._y_count_8_current = self._y_count_8_working
-                    self._y_count_8_working = VOID
-            if tx_index == 0:
-                if self._y_count_9_working is not VOID:
-                    self._y_count_9_current = self._y_count_9_working
-                    self._y_count_9_working = VOID
-            if tx_index == 0:
-                if self._y_count_10_working is not VOID:
-                    self._y_count_10_current = self._y_count_10_working
-                    self._y_count_10_working = VOID
-            if tx_index == 0:
-                if self._y_count_11_working is not VOID:
-                    self._y_count_11_current = self._y_count_11_working
-                    self._y_count_11_working = VOID
-            if tx_index == 0:
-                if self._y_count_12_working is not VOID:
-                    self._y_count_12_current = self._y_count_12_working
-                    self._y_count_12_working = VOID
-            if tx_index == 0:
-                if self._y_count_13_working is not VOID:
-                    self._y_count_13_current = self._y_count_13_working
-                    self._y_count_13_working = VOID
-            if tx_index == 0:
-                if self._y_count_14_working is not VOID:
-                    self._y_count_14_current = self._y_count_14_working
-                    self._y_count_14_working = VOID
-            if tx_index == 0:
-                if self._y_derived_0_working is not VOID:
-                    self._y_derived_0_current = self._y_derived_0_working
-                    self._y_derived_0_working = VOID
-            if tx_index == 0:
-                if self._y_derived_1_working is not VOID:
-                    self._y_derived_1_current = self._y_derived_1_working
-                    self._y_derived_1_working = VOID
-            if tx_index == 0:
-                if self._y_derived_2_working is not VOID:
-                    self._y_derived_2_current = self._y_derived_2_working
-                    self._y_derived_2_working = VOID
-            if tx_index == 0:
-                if self._y_derived_3_working is not VOID:
-                    self._y_derived_3_current = self._y_derived_3_working
-                    self._y_derived_3_working = VOID
-            if tx_index == 0:
-                if self._y_derived_4_working is not VOID:
-                    self._y_derived_4_current = self._y_derived_4_working
-                    self._y_derived_4_working = VOID
-            if tx_index == 0:
-                if self._y_derived_5_working is not VOID:
-                    self._y_derived_5_current = self._y_derived_5_working
-                    self._y_derived_5_working = VOID
-            if tx_index == 0:
-                if self._y_derived_6_working is not VOID:
-                    self._y_derived_6_current = self._y_derived_6_working
-                    self._y_derived_6_working = VOID
-            if tx_index == 0:
-                if self._y_derived_7_working is not VOID:
-                    self._y_derived_7_current = self._y_derived_7_working
-                    self._y_derived_7_working = VOID
-            if tx_index == 0:
-                if self._y_derived_8_working is not VOID:
-                    self._y_derived_8_current = self._y_derived_8_working
-                    self._y_derived_8_working = VOID
-            if tx_index == 0:
-                if self._y_derived_9_working is not VOID:
-                    self._y_derived_9_current = self._y_derived_9_working
-                    self._y_derived_9_working = VOID
-            if tx_index == 0:
-                if self._y_derived_10_working is not VOID:
-                    self._y_derived_10_current = self._y_derived_10_working
-                    self._y_derived_10_working = VOID
-            if tx_index == 0:
-                if self._y_derived_11_working is not VOID:
-                    self._y_derived_11_current = self._y_derived_11_working
-                    self._y_derived_11_working = VOID
-            if tx_index == 0:
-                if self._y_derived_12_working is not VOID:
-                    self._y_derived_12_current = self._y_derived_12_working
-                    self._y_derived_12_working = VOID
-            if tx_index == 0:
-                if self._y_derived_13_working is not VOID:
-                    self._y_derived_13_current = self._y_derived_13_working
-                    self._y_derived_13_working = VOID
-            if tx_index == 0:
-                if self._y_derived_14_working is not VOID:
-                    self._y_derived_14_current = self._y_derived_14_working
-                    self._y_derived_14_working = VOID
-            self._y_working_tx_ids[tx_index] = None
-            return self._y_get_default_facade()
+        def _before_commit_tx_0(self):
+            pass
 
-        def _rollback_transaction(self, tx_id, tx_group=DEFAULT_TRANSACTION):
-            tx_index = self.__yidl_tx_group_to_index__[tx_group]
-            if self._y_working_tx_ids[tx_index] != tx_id:
-                return self._y_get_default_facade()
-            if tx_index == 0:
+        def _after_commit_tx_0(self):
+            pass
+
+        def _apply_prepared_commit_tx_0_fields(self):
+            if self._y_count_0_staged is not VOID:
+                self._y_count_0_current = self._y_count_0_staged
+                self._y_count_0_staged = VOID
                 self._y_count_0_working = VOID
-            if tx_index == 0:
+            if self._y_count_1_staged is not VOID:
+                self._y_count_1_current = self._y_count_1_staged
+                self._y_count_1_staged = VOID
                 self._y_count_1_working = VOID
-            if tx_index == 0:
+            if self._y_count_2_staged is not VOID:
+                self._y_count_2_current = self._y_count_2_staged
+                self._y_count_2_staged = VOID
                 self._y_count_2_working = VOID
-            if tx_index == 0:
+            if self._y_count_3_staged is not VOID:
+                self._y_count_3_current = self._y_count_3_staged
+                self._y_count_3_staged = VOID
                 self._y_count_3_working = VOID
-            if tx_index == 0:
+            if self._y_count_4_staged is not VOID:
+                self._y_count_4_current = self._y_count_4_staged
+                self._y_count_4_staged = VOID
                 self._y_count_4_working = VOID
-            if tx_index == 0:
+            if self._y_count_5_staged is not VOID:
+                self._y_count_5_current = self._y_count_5_staged
+                self._y_count_5_staged = VOID
                 self._y_count_5_working = VOID
-            if tx_index == 0:
+            if self._y_count_6_staged is not VOID:
+                self._y_count_6_current = self._y_count_6_staged
+                self._y_count_6_staged = VOID
                 self._y_count_6_working = VOID
-            if tx_index == 0:
+            if self._y_count_7_staged is not VOID:
+                self._y_count_7_current = self._y_count_7_staged
+                self._y_count_7_staged = VOID
                 self._y_count_7_working = VOID
-            if tx_index == 0:
+            if self._y_count_8_staged is not VOID:
+                self._y_count_8_current = self._y_count_8_staged
+                self._y_count_8_staged = VOID
                 self._y_count_8_working = VOID
-            if tx_index == 0:
+            if self._y_count_9_staged is not VOID:
+                self._y_count_9_current = self._y_count_9_staged
+                self._y_count_9_staged = VOID
                 self._y_count_9_working = VOID
-            if tx_index == 0:
+            if self._y_count_10_staged is not VOID:
+                self._y_count_10_current = self._y_count_10_staged
+                self._y_count_10_staged = VOID
                 self._y_count_10_working = VOID
-            if tx_index == 0:
+            if self._y_count_11_staged is not VOID:
+                self._y_count_11_current = self._y_count_11_staged
+                self._y_count_11_staged = VOID
                 self._y_count_11_working = VOID
-            if tx_index == 0:
+            if self._y_count_12_staged is not VOID:
+                self._y_count_12_current = self._y_count_12_staged
+                self._y_count_12_staged = VOID
                 self._y_count_12_working = VOID
-            if tx_index == 0:
+            if self._y_count_13_staged is not VOID:
+                self._y_count_13_current = self._y_count_13_staged
+                self._y_count_13_staged = VOID
                 self._y_count_13_working = VOID
-            if tx_index == 0:
+            if self._y_count_14_staged is not VOID:
+                self._y_count_14_current = self._y_count_14_staged
+                self._y_count_14_staged = VOID
                 self._y_count_14_working = VOID
-            if tx_index == 0:
+            if self._y_derived_0_staged is not VOID:
+                self._y_derived_0_current = self._y_derived_0_staged
+                self._y_derived_0_staged = VOID
                 self._y_derived_0_working = VOID
-            if tx_index == 0:
+            if self._y_derived_1_staged is not VOID:
+                self._y_derived_1_current = self._y_derived_1_staged
+                self._y_derived_1_staged = VOID
                 self._y_derived_1_working = VOID
-            if tx_index == 0:
+            if self._y_derived_2_staged is not VOID:
+                self._y_derived_2_current = self._y_derived_2_staged
+                self._y_derived_2_staged = VOID
                 self._y_derived_2_working = VOID
-            if tx_index == 0:
+            if self._y_derived_3_staged is not VOID:
+                self._y_derived_3_current = self._y_derived_3_staged
+                self._y_derived_3_staged = VOID
                 self._y_derived_3_working = VOID
-            if tx_index == 0:
+            if self._y_derived_4_staged is not VOID:
+                self._y_derived_4_current = self._y_derived_4_staged
+                self._y_derived_4_staged = VOID
                 self._y_derived_4_working = VOID
-            if tx_index == 0:
+            if self._y_derived_5_staged is not VOID:
+                self._y_derived_5_current = self._y_derived_5_staged
+                self._y_derived_5_staged = VOID
                 self._y_derived_5_working = VOID
-            if tx_index == 0:
+            if self._y_derived_6_staged is not VOID:
+                self._y_derived_6_current = self._y_derived_6_staged
+                self._y_derived_6_staged = VOID
                 self._y_derived_6_working = VOID
-            if tx_index == 0:
+            if self._y_derived_7_staged is not VOID:
+                self._y_derived_7_current = self._y_derived_7_staged
+                self._y_derived_7_staged = VOID
                 self._y_derived_7_working = VOID
-            if tx_index == 0:
+            if self._y_derived_8_staged is not VOID:
+                self._y_derived_8_current = self._y_derived_8_staged
+                self._y_derived_8_staged = VOID
                 self._y_derived_8_working = VOID
-            if tx_index == 0:
+            if self._y_derived_9_staged is not VOID:
+                self._y_derived_9_current = self._y_derived_9_staged
+                self._y_derived_9_staged = VOID
                 self._y_derived_9_working = VOID
-            if tx_index == 0:
+            if self._y_derived_10_staged is not VOID:
+                self._y_derived_10_current = self._y_derived_10_staged
+                self._y_derived_10_staged = VOID
                 self._y_derived_10_working = VOID
-            if tx_index == 0:
+            if self._y_derived_11_staged is not VOID:
+                self._y_derived_11_current = self._y_derived_11_staged
+                self._y_derived_11_staged = VOID
                 self._y_derived_11_working = VOID
-            if tx_index == 0:
+            if self._y_derived_12_staged is not VOID:
+                self._y_derived_12_current = self._y_derived_12_staged
+                self._y_derived_12_staged = VOID
                 self._y_derived_12_working = VOID
-            if tx_index == 0:
+            if self._y_derived_13_staged is not VOID:
+                self._y_derived_13_current = self._y_derived_13_staged
+                self._y_derived_13_staged = VOID
                 self._y_derived_13_working = VOID
-            if tx_index == 0:
+            if self._y_derived_14_staged is not VOID:
+                self._y_derived_14_current = self._y_derived_14_staged
+                self._y_derived_14_staged = VOID
                 self._y_derived_14_working = VOID
-            self._y_working_tx_ids[tx_index] = None
-            return self._y_get_default_facade()
+
+        def _prepare_commit_tx_0_fields(self):
+            if self._y_count_0_working is not VOID:
+                self._y_count_0_staged = self._y_count_0_working
+            if self._y_count_1_working is not VOID:
+                self._y_count_1_staged = self._y_count_1_working
+            if self._y_count_2_working is not VOID:
+                self._y_count_2_staged = self._y_count_2_working
+            if self._y_count_3_working is not VOID:
+                self._y_count_3_staged = self._y_count_3_working
+            if self._y_count_4_working is not VOID:
+                self._y_count_4_staged = self._y_count_4_working
+            if self._y_count_5_working is not VOID:
+                self._y_count_5_staged = self._y_count_5_working
+            if self._y_count_6_working is not VOID:
+                self._y_count_6_staged = self._y_count_6_working
+            if self._y_count_7_working is not VOID:
+                self._y_count_7_staged = self._y_count_7_working
+            if self._y_count_8_working is not VOID:
+                self._y_count_8_staged = self._y_count_8_working
+            if self._y_count_9_working is not VOID:
+                self._y_count_9_staged = self._y_count_9_working
+            if self._y_count_10_working is not VOID:
+                self._y_count_10_staged = self._y_count_10_working
+            if self._y_count_11_working is not VOID:
+                self._y_count_11_staged = self._y_count_11_working
+            if self._y_count_12_working is not VOID:
+                self._y_count_12_staged = self._y_count_12_working
+            if self._y_count_13_working is not VOID:
+                self._y_count_13_staged = self._y_count_13_working
+            if self._y_count_14_working is not VOID:
+                self._y_count_14_staged = self._y_count_14_working
+            if self._y_derived_0_working is not VOID:
+                self._y_derived_0_staged = self._y_derived_0_working
+            if self._y_derived_1_working is not VOID:
+                self._y_derived_1_staged = self._y_derived_1_working
+            if self._y_derived_2_working is not VOID:
+                self._y_derived_2_staged = self._y_derived_2_working
+            if self._y_derived_3_working is not VOID:
+                self._y_derived_3_staged = self._y_derived_3_working
+            if self._y_derived_4_working is not VOID:
+                self._y_derived_4_staged = self._y_derived_4_working
+            if self._y_derived_5_working is not VOID:
+                self._y_derived_5_staged = self._y_derived_5_working
+            if self._y_derived_6_working is not VOID:
+                self._y_derived_6_staged = self._y_derived_6_working
+            if self._y_derived_7_working is not VOID:
+                self._y_derived_7_staged = self._y_derived_7_working
+            if self._y_derived_8_working is not VOID:
+                self._y_derived_8_staged = self._y_derived_8_working
+            if self._y_derived_9_working is not VOID:
+                self._y_derived_9_staged = self._y_derived_9_working
+            if self._y_derived_10_working is not VOID:
+                self._y_derived_10_staged = self._y_derived_10_working
+            if self._y_derived_11_working is not VOID:
+                self._y_derived_11_staged = self._y_derived_11_working
+            if self._y_derived_12_working is not VOID:
+                self._y_derived_12_staged = self._y_derived_12_working
+            if self._y_derived_13_working is not VOID:
+                self._y_derived_13_staged = self._y_derived_13_working
+            if self._y_derived_14_working is not VOID:
+                self._y_derived_14_staged = self._y_derived_14_working
+
+        def _after_rollback_tx_0(self):
+            pass
+
+        def _rollback_tx_0_fields(self):
+            self._y_count_0_staged = VOID
+            self._y_count_0_working = VOID
+            self._y_count_1_staged = VOID
+            self._y_count_1_working = VOID
+            self._y_count_2_staged = VOID
+            self._y_count_2_working = VOID
+            self._y_count_3_staged = VOID
+            self._y_count_3_working = VOID
+            self._y_count_4_staged = VOID
+            self._y_count_4_working = VOID
+            self._y_count_5_staged = VOID
+            self._y_count_5_working = VOID
+            self._y_count_6_staged = VOID
+            self._y_count_6_working = VOID
+            self._y_count_7_staged = VOID
+            self._y_count_7_working = VOID
+            self._y_count_8_staged = VOID
+            self._y_count_8_working = VOID
+            self._y_count_9_staged = VOID
+            self._y_count_9_working = VOID
+            self._y_count_10_staged = VOID
+            self._y_count_10_working = VOID
+            self._y_count_11_staged = VOID
+            self._y_count_11_working = VOID
+            self._y_count_12_staged = VOID
+            self._y_count_12_working = VOID
+            self._y_count_13_staged = VOID
+            self._y_count_13_working = VOID
+            self._y_count_14_staged = VOID
+            self._y_count_14_working = VOID
+            self._y_derived_0_staged = VOID
+            self._y_derived_0_working = VOID
+            self._y_derived_1_staged = VOID
+            self._y_derived_1_working = VOID
+            self._y_derived_2_staged = VOID
+            self._y_derived_2_working = VOID
+            self._y_derived_3_staged = VOID
+            self._y_derived_3_working = VOID
+            self._y_derived_4_staged = VOID
+            self._y_derived_4_working = VOID
+            self._y_derived_5_staged = VOID
+            self._y_derived_5_working = VOID
+            self._y_derived_6_staged = VOID
+            self._y_derived_6_working = VOID
+            self._y_derived_7_staged = VOID
+            self._y_derived_7_working = VOID
+            self._y_derived_8_staged = VOID
+            self._y_derived_8_working = VOID
+            self._y_derived_9_staged = VOID
+            self._y_derived_9_working = VOID
+            self._y_derived_10_staged = VOID
+            self._y_derived_10_working = VOID
+            self._y_derived_11_staged = VOID
+            self._y_derived_11_working = VOID
+            self._y_derived_12_staged = VOID
+            self._y_derived_12_working = VOID
+            self._y_derived_13_staged = VOID
+            self._y_derived_13_working = VOID
+            self._y_derived_14_staged = VOID
+            self._y_derived_14_working = VOID
 
     class PerfLifecycle15_FacadeBase(decorated_cls):
-        __slots__ = ('_y_state',)
+        __slots__ = ('_y_state',) if hasattr(decorated_cls, '__weakref__') else ('_y_state', '__weakref__')
         _y_lifecycle_field_names = frozenset(('plain_0', 'plain_1', 'plain_2', 'plain_3', 'plain_4', 'plain_5', 'plain_6', 'plain_7', 'plain_8', 'plain_9', 'plain_10', 'plain_11', 'plain_12', 'plain_13', 'plain_14', 'count_0', 'count_1', 'count_2', 'count_3', 'count_4', 'count_5', 'count_6', 'count_7', 'count_8', 'count_9', 'count_10', 'count_11', 'count_12', 'count_13', 'count_14', 'derived_0', 'derived_1', 'derived_2', 'derived_3', 'derived_4', 'derived_5', 'derived_6', 'derived_7', 'derived_8', 'derived_9', 'derived_10', 'derived_11', 'derived_12', 'derived_13', 'derived_14'))
 
         def __setattr__(self, name, value):
@@ -2213,20 +2736,20 @@ def build_lifecycle_class(decorated_cls, *, _PerfLifecycle15_lifecycle_definitio
         def working(self):
             return self._y_state._y_get_working_facade()
 
-        def begin(self, *tx_groups):
-            return self._y_state._y_transaction_manager.begin(*tx_groups)
+        def begin(self, *tx_keys):
+            return self._y_state._y_transaction_manager.begin(*tx_keys)
 
-        def validate(self, *tx_groups):
-            return self._y_state._y_transaction_manager.validate(*tx_groups)
+        def validate(self, *tx_keys):
+            return self._y_state._y_transaction_manager.validate(*tx_keys)
 
-        def commit_only(self, *tx_groups):
-            return self._y_state._y_transaction_manager.commit_only(*tx_groups)
+        def commit_only(self, *tx_keys):
+            return self._y_state._y_transaction_manager.commit_only(*tx_keys)
 
-        def commit(self, *tx_groups):
-            return self._y_state._y_transaction_manager.commit(*tx_groups)
+        def commit(self, *tx_keys):
+            return self._y_state._y_transaction_manager.commit(*tx_keys)
 
-        def rollback(self, *tx_groups):
-            return self._y_state._y_transaction_manager.rollback(*tx_groups)
+        def rollback(self, *tx_keys):
+            return self._y_state._y_transaction_manager.rollback(*tx_keys)
 
         @property
         def plain_0(self):
@@ -2349,13 +2872,13 @@ def build_lifecycle_class(decorated_cls, *, _PerfLifecycle15_lifecycle_definitio
             self._y_state._y_plain_14_value = value
 
     class PerfLifecycle15(PerfLifecycle15_FacadeBase):
-        __slots__ = ()
+        __slots__ = ('_y_current_facade', '_y_working_facade')
         __annotations__ = _PerfLifecycle15_annotations
         __yidl_lifecycle_generated__ = True
         __yidl_lifecycle_user_class__ = decorated_cls
         __yidl_lifecycle_definition__ = _PerfLifecycle15_lifecycle_definition
-        __yidl_tx_index_to_group__ = _PerfLifecycle15_tx_groups
-        __yidl_tx_group_to_index__ = {group: index for index, group in enumerate(_PerfLifecycle15_tx_groups)}
+        __yidl_tx_index_to_key__ = _PerfLifecycle15_tx_groups
+        __yidl_tx_key_to_index__ = {key: index for index, key in enumerate(_PerfLifecycle15_tx_groups)}
 
         @property
         def count_0(self):
@@ -2750,6 +3273,8 @@ def build_lifecycle_class(decorated_cls, *, _PerfLifecycle15_lifecycle_definitio
         def __init__(self, plain_0: 'int'=_PerfLifecycle15_plain_0_default, plain_1: 'int'=_PerfLifecycle15_plain_1_default, plain_2: 'int'=_PerfLifecycle15_plain_2_default, plain_3: 'int'=_PerfLifecycle15_plain_3_default, plain_4: 'int'=_PerfLifecycle15_plain_4_default, plain_5: 'int'=_PerfLifecycle15_plain_5_default, plain_6: 'int'=_PerfLifecycle15_plain_6_default, plain_7: 'int'=_PerfLifecycle15_plain_7_default, plain_8: 'int'=_PerfLifecycle15_plain_8_default, plain_9: 'int'=_PerfLifecycle15_plain_9_default, plain_10: 'int'=_PerfLifecycle15_plain_10_default, plain_11: 'int'=_PerfLifecycle15_plain_11_default, plain_12: 'int'=_PerfLifecycle15_plain_12_default, plain_13: 'int'=_PerfLifecycle15_plain_13_default, plain_14: 'int'=_PerfLifecycle15_plain_14_default, count_0: 'int'=_PerfLifecycle15_count_0_default, count_1: 'int'=_PerfLifecycle15_count_1_default, count_2: 'int'=_PerfLifecycle15_count_2_default, count_3: 'int'=_PerfLifecycle15_count_3_default, count_4: 'int'=_PerfLifecycle15_count_4_default, count_5: 'int'=_PerfLifecycle15_count_5_default, count_6: 'int'=_PerfLifecycle15_count_6_default, count_7: 'int'=_PerfLifecycle15_count_7_default, count_8: 'int'=_PerfLifecycle15_count_8_default, count_9: 'int'=_PerfLifecycle15_count_9_default, count_10: 'int'=_PerfLifecycle15_count_10_default, count_11: 'int'=_PerfLifecycle15_count_11_default, count_12: 'int'=_PerfLifecycle15_count_12_default, count_13: 'int'=_PerfLifecycle15_count_13_default, count_14: 'int'=_PerfLifecycle15_count_14_default, derived_0: 'int'=_HAS_DEFAULT_FACTORY, derived_1: 'int'=_HAS_DEFAULT_FACTORY, derived_2: 'int'=_HAS_DEFAULT_FACTORY, derived_3: 'int'=_HAS_DEFAULT_FACTORY, derived_4: 'int'=_HAS_DEFAULT_FACTORY, derived_5: 'int'=_HAS_DEFAULT_FACTORY, derived_6: 'int'=_HAS_DEFAULT_FACTORY, derived_7: 'int'=_HAS_DEFAULT_FACTORY, derived_8: 'int'=_HAS_DEFAULT_FACTORY, derived_9: 'int'=_HAS_DEFAULT_FACTORY, derived_10: 'int'=_HAS_DEFAULT_FACTORY, derived_11: 'int'=_HAS_DEFAULT_FACTORY, derived_12: 'int'=_HAS_DEFAULT_FACTORY, derived_13: 'int'=_HAS_DEFAULT_FACTORY, derived_14: 'int'=_HAS_DEFAULT_FACTORY, *, transaction_manager=None):
             state = object.__new__(PerfLifecycle15_State)
             object.__setattr__(self, '_y_state', state)
+            object.__setattr__(self, '_y_current_facade', None)
+            object.__setattr__(self, '_y_working_facade', None)
             state._y_transaction_manager = transaction_manager or TransactionManager(tx_groups=tuple((group for group in _PerfLifecycle15_tx_groups if group != DEFAULT_TRANSACTION)))
             state._y_default_ref = weakref.ref(self)
             state._y_current_ref = None
@@ -2771,49 +3296,79 @@ def build_lifecycle_class(decorated_cls, *, _PerfLifecycle15_lifecycle_definitio
             state._y_plain_14_value = plain_14
             state._y_count_0_current = count_0
             state._y_count_0_working = VOID
+            state._y_count_0_staged = VOID
             state._y_count_1_current = count_1
             state._y_count_1_working = VOID
+            state._y_count_1_staged = VOID
             state._y_count_2_current = count_2
             state._y_count_2_working = VOID
+            state._y_count_2_staged = VOID
             state._y_count_3_current = count_3
             state._y_count_3_working = VOID
+            state._y_count_3_staged = VOID
             state._y_count_4_current = count_4
             state._y_count_4_working = VOID
+            state._y_count_4_staged = VOID
             state._y_count_5_current = count_5
             state._y_count_5_working = VOID
+            state._y_count_5_staged = VOID
             state._y_count_6_current = count_6
             state._y_count_6_working = VOID
+            state._y_count_6_staged = VOID
             state._y_count_7_current = count_7
             state._y_count_7_working = VOID
+            state._y_count_7_staged = VOID
             state._y_count_8_current = count_8
             state._y_count_8_working = VOID
+            state._y_count_8_staged = VOID
             state._y_count_9_current = count_9
             state._y_count_9_working = VOID
+            state._y_count_9_staged = VOID
             state._y_count_10_current = count_10
             state._y_count_10_working = VOID
+            state._y_count_10_staged = VOID
             state._y_count_11_current = count_11
             state._y_count_11_working = VOID
+            state._y_count_11_staged = VOID
             state._y_count_12_current = count_12
             state._y_count_12_working = VOID
+            state._y_count_12_staged = VOID
             state._y_count_13_current = count_13
             state._y_count_13_working = VOID
+            state._y_count_13_staged = VOID
             state._y_count_14_current = count_14
             state._y_count_14_working = VOID
+            state._y_count_14_staged = VOID
             state._y_derived_0_working = VOID
+            state._y_derived_0_staged = VOID
             state._y_derived_1_working = VOID
+            state._y_derived_1_staged = VOID
             state._y_derived_2_working = VOID
+            state._y_derived_2_staged = VOID
             state._y_derived_3_working = VOID
+            state._y_derived_3_staged = VOID
             state._y_derived_4_working = VOID
+            state._y_derived_4_staged = VOID
             state._y_derived_5_working = VOID
+            state._y_derived_5_staged = VOID
             state._y_derived_6_working = VOID
+            state._y_derived_6_staged = VOID
             state._y_derived_7_working = VOID
+            state._y_derived_7_staged = VOID
             state._y_derived_8_working = VOID
+            state._y_derived_8_staged = VOID
             state._y_derived_9_working = VOID
+            state._y_derived_9_staged = VOID
             state._y_derived_10_working = VOID
+            state._y_derived_10_staged = VOID
             state._y_derived_11_working = VOID
+            state._y_derived_11_staged = VOID
             state._y_derived_12_working = VOID
+            state._y_derived_12_staged = VOID
             state._y_derived_13_working = VOID
+            state._y_derived_13_staged = VOID
             state._y_derived_14_working = VOID
+            state._y_derived_14_staged = VOID
             if derived_0 is _HAS_DEFAULT_FACTORY:
                 derived_0 = _PerfLifecycle15_derived_0_default_factory(count_0=self.count_0)
             state._y_derived_0_current = derived_0

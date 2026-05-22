@@ -151,35 +151,47 @@ def build_lifecycle_class(
 
         def commit_order_key_for(self, tx_key=DEFAULT_TRANSACTION):
             tx_index = self.__yidl_tx_key_to_index__[tx_key]
-            match tx_index:
-                case _ if tx_index == 0:
-                    return self._commit_order_key_tx_0()
-            return ()
+            if False:
+                pass
+            elif tx_index == 0:
+                return self._commit_order_key_tx_0()
+            elif True:
+                return ()
 
         def requires_validation_for(self, tx_key=DEFAULT_TRANSACTION):
             tx_index = self.__yidl_tx_key_to_index__[tx_key]
-            match tx_index:
-                case _ if tx_index == 0:
-                    return self._requires_validation_tx_0()
-            return False
+            if False:
+                pass
+            elif tx_index == 0:
+                return self._requires_validation_tx_0()
+            elif True:
+                return False
 
         def validate_commit_for(self, tx_key=DEFAULT_TRANSACTION):
             tx_index = self.__yidl_tx_key_to_index__[tx_key]
-            match tx_index:
-                case _ if tx_index == 0:
-                    return self._validate_commit_tx_0()
-            return True
+            if False:
+                pass
+            elif tx_index == 0:
+                return self._validate_commit_tx_0()
+            elif True:
+                return True
 
         def _prepare_commit_tx_by_key(self, tx_key=DEFAULT_TRANSACTION, tx_token=None):
             tx_index = self.__yidl_tx_key_to_index__[tx_key]
             if self._y_working_tx_ids[tx_index] != tx_token:
                 raise RuntimeError("stale yidl transaction token")
-            match tx_index:
-                case _ if tx_index == 0:
-                    self._before_commit_tx_0()
-            match tx_index:
-                case _ if tx_index == 0:
-                    self._prepare_commit_tx_0_fields()
+            if False:
+                pass
+            elif tx_index == 0:
+                self._before_commit_tx_0()
+            elif True:
+                pass
+            if False:
+                pass
+            elif tx_index == 0:
+                self._prepare_commit_tx_0_fields()
+            elif True:
+                pass
             return self._y_get_default_facade()
 
         def _apply_prepared_commit_tx_by_key(
@@ -188,35 +200,47 @@ def build_lifecycle_class(
             tx_index = self.__yidl_tx_key_to_index__[tx_key]
             if self._y_working_tx_ids[tx_index] != tx_token:
                 raise RuntimeError("stale yidl transaction token")
-            match tx_index:
-                case _ if tx_index == 0:
-                    self._apply_prepared_commit_tx_0_fields()
+            if False:
+                pass
+            elif tx_index == 0:
+                self._apply_prepared_commit_tx_0_fields()
+            elif True:
+                pass
             self._y_working_tx_ids[tx_index] = None
             return self._y_get_default_facade()
 
         def _after_commit_tx_by_key(self, tx_key=DEFAULT_TRANSACTION, tx_token=None):
             del tx_token
             tx_index = self.__yidl_tx_key_to_index__[tx_key]
-            match tx_index:
-                case _ if tx_index == 0:
-                    self._after_commit_tx_0()
+            if False:
+                pass
+            elif tx_index == 0:
+                self._after_commit_tx_0()
+            elif True:
+                pass
             return self._y_get_default_facade()
 
         def _rollback_tx_by_key(self, tx_key=DEFAULT_TRANSACTION, tx_token=None):
             tx_index = self.__yidl_tx_key_to_index__[tx_key]
             del tx_token
-            match tx_index:
-                case _ if tx_index == 0:
-                    self._rollback_tx_0_fields()
+            if False:
+                pass
+            elif tx_index == 0:
+                self._rollback_tx_0_fields()
+            elif True:
+                pass
             self._y_working_tx_ids[tx_index] = None
             return self._y_get_default_facade()
 
         def _after_rollback_tx_by_key(self, tx_key=DEFAULT_TRANSACTION, tx_token=None):
             del tx_token
             tx_index = self.__yidl_tx_key_to_index__[tx_key]
-            match tx_index:
-                case _ if tx_index == 0:
-                    self._after_rollback_tx_0()
+            if False:
+                pass
+            elif tx_index == 0:
+                self._after_rollback_tx_0()
+            elif True:
+                pass
             return self._y_get_default_facade()
 
         def _commit_order_key_tx_0(self):

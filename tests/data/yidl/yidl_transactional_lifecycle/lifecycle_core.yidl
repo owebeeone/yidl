@@ -286,38 +286,64 @@ concept LifecycleCore {
     ]$
 
     resource CommitOrderKeyBranch = template $[
-        match astichi_pass(tx_index, outer_bind=True):
-            case _ if astichi_pass(tx_index, outer_bind=True) == astichi_bind_external(tx_index_value):
-                return astichi_pass(
-                    self,
-                    outer_bind=True,
-                )._y_get_default_facade().astichi_ref(external=method_name)()
+        def astichi_elif():
+            astichi_import(tx_index)
+            astichi_import(self)
+
+            if tx_index == astichi_bind_external(tx_index_value):
+                return self._y_get_default_facade().astichi_ref(external=method_name)()
     ]$
 
     resource RequiresValidationBranch = template $[
-        match astichi_pass(tx_index, outer_bind=True):
-            case _ if astichi_pass(tx_index, outer_bind=True) == astichi_bind_external(tx_index_value):
+        def astichi_elif():
+            astichi_import(tx_index)
+
+            if tx_index == astichi_bind_external(tx_index_value):
                 return True
     ]$
 
     resource ValidateCommitBranch = template $[
-        match astichi_pass(tx_index, outer_bind=True):
-            case _ if astichi_pass(tx_index, outer_bind=True) == astichi_bind_external(tx_index_value):
-                result = astichi_pass(
-                    self,
-                    outer_bind=True,
-                )._y_get_default_facade().astichi_ref(external=method_name)()
+        def astichi_elif():
+            astichi_import(tx_index)
+            astichi_import(self)
+
+            if tx_index == astichi_bind_external(tx_index_value):
+                result = self._y_get_default_facade().astichi_ref(external=method_name)()
                 if result is False:
                     return False
     ]$
 
     resource TransactionHookCall = template $[
-        match astichi_pass(tx_index, outer_bind=True):
-            case _ if astichi_pass(tx_index, outer_bind=True) == astichi_bind_external(tx_index_value):
-                astichi_pass(
-                    self,
-                    outer_bind=True,
-                )._y_get_default_facade().astichi_ref(external=method_name)()
+        def astichi_elif():
+            astichi_import(tx_index)
+            astichi_import(self)
+
+            if tx_index == astichi_bind_external(tx_index_value):
+                self._y_get_default_facade().astichi_ref(external=method_name)()
+    ]$
+
+    resource CommitOrderKeyFallbackBranch = template $[
+        def astichi_elif():
+            if True:
+                return ()
+    ]$
+
+    resource RequiresValidationFallbackBranch = template $[
+        def astichi_elif():
+            if True:
+                return False
+    ]$
+
+    resource ValidateCommitFallbackBranch = template $[
+        def astichi_elif():
+            if True:
+                return True
+    ]$
+
+    resource PassFallbackBranch = template $[
+        def astichi_elif():
+            if True:
+                pass
     ]$
 
     resource ClassBundle = template $[
@@ -414,58 +440,86 @@ concept LifecycleCore {
 
             def commit_order_key_for(self, tx_key=DEFAULT_TRANSACTION):
                 tx_index = self.__yidl_tx_key_to_index__[tx_key]
-                astichi_hole(commit_order_key_body)
-                return ()
+                if False:
+                    pass
+                elif astichi_elif(commit_order_key_body):
+                    pass
 
             def requires_validation_for(self, tx_key=DEFAULT_TRANSACTION):
                 tx_index = self.__yidl_tx_key_to_index__[tx_key]
-                astichi_hole(requires_validation_body)
-                return False
+                if False:
+                    pass
+                elif astichi_elif(requires_validation_body):
+                    pass
 
             def validate_commit_for(self, tx_key=DEFAULT_TRANSACTION):
                 tx_index = self.__yidl_tx_key_to_index__[tx_key]
-                astichi_hole(validate_commit_body)
-                return True
+                if False:
+                    pass
+                elif astichi_elif(validate_commit_body):
+                    pass
 
             def _prepare_commit_tx_by_key(self, tx_key=DEFAULT_TRANSACTION, tx_token=None):
                 tx_index = self.__yidl_tx_key_to_index__[tx_key]
                 if self._y_working_tx_ids[tx_index] != tx_token:
                     raise RuntimeError("stale yidl transaction token")
-                astichi_hole(before_commit_body)
-                astichi_hole(prepare_commit_transaction_dispatch_body)
+                if False:
+                    pass
+                elif astichi_elif(before_commit_body):
+                    pass
+                if False:
+                    pass
+                elif astichi_elif(prepare_commit_transaction_dispatch_body):
+                    pass
                 return self._y_get_default_facade()
 
             def _apply_prepared_commit_tx_by_key(self, tx_key=DEFAULT_TRANSACTION, tx_token=None):
                 tx_index = self.__yidl_tx_key_to_index__[tx_key]
                 if self._y_working_tx_ids[tx_index] != tx_token:
                     raise RuntimeError("stale yidl transaction token")
-                astichi_hole(commit_transaction_dispatch_body)
-                astichi_hole(commit_transaction_body)
+                if False:
+                    pass
+                elif astichi_elif(commit_transaction_dispatch_body):
+                    pass
+                with astichi_hole(commit_transaction_body) as astichi_fallback:
+                    pass
                 self._y_working_tx_ids[tx_index] = None
                 return self._y_get_default_facade()
 
             def _after_commit_tx_by_key(self, tx_key=DEFAULT_TRANSACTION, tx_token=None):
                 del tx_token
                 tx_index = self.__yidl_tx_key_to_index__[tx_key]
-                astichi_hole(after_commit_body)
+                if False:
+                    pass
+                elif astichi_elif(after_commit_body):
+                    pass
                 return self._y_get_default_facade()
 
             def _rollback_tx_by_key(self, tx_key=DEFAULT_TRANSACTION, tx_token=None):
                 tx_index = self.__yidl_tx_key_to_index__[tx_key]
                 del tx_token
-                astichi_hole(rollback_transaction_dispatch_body)
-                astichi_hole(rollback_transaction_body)
+                if False:
+                    pass
+                elif astichi_elif(rollback_transaction_dispatch_body):
+                    pass
+                with astichi_hole(rollback_transaction_body) as astichi_fallback:
+                    pass
                 self._y_working_tx_ids[tx_index] = None
                 return self._y_get_default_facade()
 
             def _after_rollback_tx_by_key(self, tx_key=DEFAULT_TRANSACTION, tx_token=None):
                 del tx_token
                 tx_index = self.__yidl_tx_key_to_index__[tx_key]
-                astichi_hole(after_rollback_body)
+                if False:
+                    pass
+                elif astichi_elif(after_rollback_body):
+                    pass
                 return self._y_get_default_facade()
 
-            astichi_hole(commit_transaction_helpers)
-            astichi_hole(rollback_transaction_helpers)
+            with astichi_hole(commit_transaction_helpers) as astichi_fallback:
+                pass
+            with astichi_hole(rollback_transaction_helpers) as astichi_fallback:
+                pass
 
 
         class facade_base_decl_name__astichi_arg__(
@@ -531,8 +585,10 @@ concept LifecycleCore {
             def rollback(self, *tx_keys):
                 return self._y_state._y_transaction_manager.rollback(*tx_keys)
 
-            astichi_hole(facade_base_body)
-            astichi_hole(facade_properties)
+            with astichi_hole(facade_base_body) as astichi_fallback:
+                pass
+            with astichi_hole(facade_properties) as astichi_fallback:
+                pass
 
 
         class default_facade_class_decl_name__astichi_arg__(
@@ -565,7 +621,8 @@ concept LifecycleCore {
                 )
             }
 
-            astichi_hole(default_facade_properties)
+            with astichi_hole(default_facade_properties) as astichi_fallback:
+                pass
 
             def __init__(self, init_params__astichi_param_hole__):
                 state = object.__new__(state_class_ref__astichi_arg__)
@@ -584,7 +641,8 @@ concept LifecycleCore {
                 state._y_default_ref = weakref.ref(self)
                 state._y_current_ref = None
                 state._y_working_ref = None
-                astichi_hole(state_init_body)
+                with astichi_hole(state_init_body) as astichi_fallback:
+                    pass
                 state._y_working_tx_ids = [
                     None
                     for _group in astichi_pass(
@@ -598,14 +656,16 @@ concept LifecycleCore {
             facade_base_current_base_name__astichi_arg__
         ):
             __slots__ = ()
-            astichi_hole(current_facade_properties)
+            with astichi_hole(current_facade_properties) as astichi_fallback:
+                pass
 
 
         class working_facade_class_decl_name__astichi_arg__(
             facade_base_working_base_name__astichi_arg__
         ):
             __slots__ = ()
-            astichi_hole(working_facade_properties)
+            with astichi_hole(working_facade_properties) as astichi_fallback:
+                pass
     ]$ {
         keep DEFAULT_TRANSACTION, TransactionManager, VOID, weakref
         keep _HAS_DEFAULT_FACTORY
@@ -625,10 +685,6 @@ concept LifecycleCore {
             outer_bind=True,
         ).__module__
         return return_class_result_ref__astichi_arg__
-    ]$
-
-    resource PassStatement = template $[
-        pass
     ]$
 
     contribution LifecycleDefinitionBuilderParam = BuilderParam {
@@ -679,190 +735,90 @@ concept LifecycleCore {
         ident value_name = DefaultValueParamName
     }
 
-    contribution FacadeBaseBodyPass = PassStatement {
-        as FacadeBaseBodyPass
-        index 0
-        order 0
-
-        target facade_base_body {
-            build /ClassDef
-        }
-    }
-
-    contribution FacadePropertiesPass = PassStatement {
-        as FacadePropertiesPass
-        index 0
-        order 0
-
-        target facade_properties {
-            build /ClassDef
-        }
-    }
-
-    contribution DefaultFacadePropertiesPass = PassStatement {
-        as DefaultFacadePropertiesPass
-        index 0
-        order 0
-
-        target default_facade_properties {
-            build /ClassDef
-        }
-    }
-
-    contribution CurrentFacadePropertiesPass = PassStatement {
-        as CurrentFacadePropertiesPass
-        index 0
-        order 0
-
-        target current_facade_properties {
-            build /ClassDef
-        }
-    }
-
-    contribution WorkingFacadePropertiesPass = PassStatement {
-        as WorkingFacadePropertiesPass
-        index 0
-        order 0
-
-        target working_facade_properties {
-            build /ClassDef
-        }
-    }
-
-    contribution StateInitBodyPass = PassStatement {
-        as StateInitBodyPass
-        index 0
-        order 0
-
-        target state_init_body {
-            build /ClassDef
-        }
-    }
-
-    contribution CommitTransactionBodyPass = PassStatement {
-        as CommitTransactionBodyPass
-        index 0
-        order 0
-
-        target commit_transaction_body {
-            build /ClassDef
-        }
-    }
-
-    contribution CommitTransactionDispatchBodyPass = PassStatement {
-        as CommitTransactionDispatchBodyPass
-        index 0
-        order 0
-
-        target commit_transaction_dispatch_body {
-            build /ClassDef
-        }
-    }
-
-    contribution CommitTransactionHelpersPass = PassStatement {
-        as CommitTransactionHelpersPass
-        index 0
-        order 0
-
-        target commit_transaction_helpers {
-            build /ClassDef
-        }
-    }
-
-    contribution RollbackTransactionHelpersPass = PassStatement {
-        as RollbackTransactionHelpersPass
-        index 0
-        order 0
-
-        target rollback_transaction_helpers {
-            build /ClassDef
-        }
-    }
-
-    contribution PrepareCommitTransactionDispatchBodyPass = PassStatement {
-        as PrepareCommitTransactionDispatchBodyPass
-        index 0
-        order 0
-
-        target prepare_commit_transaction_dispatch_body {
-            build /ClassDef
-        }
-    }
-
-    contribution RollbackTransactionBodyPass = PassStatement {
-        as RollbackTransactionBodyPass
-        index 0
-        order 0
-
-        target rollback_transaction_body {
-            build /ClassDef
-        }
-    }
-
-    contribution RollbackTransactionDispatchBodyPass = PassStatement {
-        as RollbackTransactionDispatchBodyPass
-        index 0
-        order 0
-
-        target rollback_transaction_dispatch_body {
-            build /ClassDef
-        }
-    }
-
-    contribution CommitOrderKeyBodyPass = PassStatement {
-        as CommitOrderKeyBodyPass
-        index 0
-        order 0
+    contribution CommitOrderKeyFallback = CommitOrderKeyFallbackBranch {
+        as CommitOrderKeyFallback
+        index 1000000
+        order 1000000
 
         target commit_order_key_body {
             build /ClassDef
         }
     }
 
-    contribution RequiresValidationBodyPass = PassStatement {
-        as RequiresValidationBodyPass
-        index 0
-        order 0
+    contribution RequiresValidationFallback = RequiresValidationFallbackBranch {
+        as RequiresValidationFallback
+        index 1000000
+        order 1000000
 
         target requires_validation_body {
             build /ClassDef
         }
     }
 
-    contribution ValidateCommitBodyPass = PassStatement {
-        as ValidateCommitBodyPass
-        index 0
-        order 0
+    contribution ValidateCommitFallback = ValidateCommitFallbackBranch {
+        as ValidateCommitFallback
+        index 1000000
+        order 1000000
 
         target validate_commit_body {
             build /ClassDef
         }
     }
 
-    contribution BeforeCommitBodyPass = PassStatement {
-        as BeforeCommitBodyPass
-        index 0
-        order 0
+    contribution BeforeCommitFallback = PassFallbackBranch {
+        as BeforeCommitFallback
+        index 1000000
+        order 1000000
 
         target before_commit_body {
             build /ClassDef
         }
     }
 
-    contribution AfterCommitBodyPass = PassStatement {
-        as AfterCommitBodyPass
-        index 0
-        order 0
+    contribution PrepareCommitDispatchFallback = PassFallbackBranch {
+        as PrepareCommitDispatchFallback
+        index 1000000
+        order 1000000
+
+        target prepare_commit_transaction_dispatch_body {
+            build /ClassDef
+        }
+    }
+
+    contribution CommitDispatchFallback = PassFallbackBranch {
+        as CommitDispatchFallback
+        index 1000000
+        order 1000000
+
+        target commit_transaction_dispatch_body {
+            build /ClassDef
+        }
+    }
+
+    contribution AfterCommitFallback = PassFallbackBranch {
+        as AfterCommitFallback
+        index 1000000
+        order 1000000
 
         target after_commit_body {
             build /ClassDef
         }
     }
 
-    contribution AfterRollbackBodyPass = PassStatement {
-        as AfterRollbackBodyPass
-        index 0
-        order 0
+    contribution RollbackDispatchFallback = PassFallbackBranch {
+        as RollbackDispatchFallback
+        index 1000000
+        order 1000000
+
+        target rollback_transaction_dispatch_body {
+            build /ClassDef
+        }
+    }
+
+    contribution AfterRollbackFallback = PassFallbackBranch {
+        as AfterRollbackFallback
+        index 1000000
+        order 1000000
 
         target after_rollback_body {
             build /ClassDef
@@ -1134,80 +1090,40 @@ concept LifecycleCore {
         default -> TransactionManagerInitParam
     }
 
-    matcher FacadeBaseBodyPassContributions(lifecycle_class: Classes) -> contribution {
-        default -> FacadeBaseBodyPass
+    matcher CommitOrderKeyFallbackContributions(lifecycle_class: Classes) -> contribution {
+        default -> CommitOrderKeyFallback
     }
 
-    matcher FacadePropertiesPassContributions(lifecycle_class: Classes) -> contribution {
-        default -> FacadePropertiesPass
+    matcher RequiresValidationFallbackContributions(lifecycle_class: Classes) -> contribution {
+        default -> RequiresValidationFallback
     }
 
-    matcher DefaultFacadePropertiesPassContributions(lifecycle_class: Classes) -> contribution {
-        default -> DefaultFacadePropertiesPass
+    matcher ValidateCommitFallbackContributions(lifecycle_class: Classes) -> contribution {
+        default -> ValidateCommitFallback
     }
 
-    matcher CurrentFacadePropertiesPassContributions(lifecycle_class: Classes) -> contribution {
-        default -> CurrentFacadePropertiesPass
+    matcher BeforeCommitFallbackContributions(lifecycle_class: Classes) -> contribution {
+        default -> BeforeCommitFallback
     }
 
-    matcher WorkingFacadePropertiesPassContributions(lifecycle_class: Classes) -> contribution {
-        default -> WorkingFacadePropertiesPass
+    matcher PrepareCommitDispatchFallbackContributions(lifecycle_class: Classes) -> contribution {
+        default -> PrepareCommitDispatchFallback
     }
 
-    matcher StateInitBodyPassContributions(lifecycle_class: Classes) -> contribution {
-        default -> StateInitBodyPass
+    matcher CommitDispatchFallbackContributions(lifecycle_class: Classes) -> contribution {
+        default -> CommitDispatchFallback
     }
 
-    matcher CommitTransactionBodyPassContributions(lifecycle_class: Classes) -> contribution {
-        default -> CommitTransactionBodyPass
+    matcher AfterCommitFallbackContributions(lifecycle_class: Classes) -> contribution {
+        default -> AfterCommitFallback
     }
 
-    matcher CommitTransactionDispatchBodyPassContributions(lifecycle_class: Classes) -> contribution {
-        default -> CommitTransactionDispatchBodyPass
+    matcher RollbackDispatchFallbackContributions(lifecycle_class: Classes) -> contribution {
+        default -> RollbackDispatchFallback
     }
 
-    matcher CommitTransactionHelpersPassContributions(lifecycle_class: Classes) -> contribution {
-        default -> CommitTransactionHelpersPass
-    }
-
-    matcher RollbackTransactionHelpersPassContributions(lifecycle_class: Classes) -> contribution {
-        default -> RollbackTransactionHelpersPass
-    }
-
-    matcher PrepareCommitTransactionDispatchBodyPassContributions(lifecycle_class: Classes) -> contribution {
-        default -> PrepareCommitTransactionDispatchBodyPass
-    }
-
-    matcher RollbackTransactionBodyPassContributions(lifecycle_class: Classes) -> contribution {
-        default -> RollbackTransactionBodyPass
-    }
-
-    matcher RollbackTransactionDispatchBodyPassContributions(lifecycle_class: Classes) -> contribution {
-        default -> RollbackTransactionDispatchBodyPass
-    }
-
-    matcher CommitOrderKeyBodyPassContributions(lifecycle_class: Classes) -> contribution {
-        default -> CommitOrderKeyBodyPass
-    }
-
-    matcher RequiresValidationBodyPassContributions(lifecycle_class: Classes) -> contribution {
-        default -> RequiresValidationBodyPass
-    }
-
-    matcher ValidateCommitBodyPassContributions(lifecycle_class: Classes) -> contribution {
-        default -> ValidateCommitBodyPass
-    }
-
-    matcher BeforeCommitBodyPassContributions(lifecycle_class: Classes) -> contribution {
-        default -> BeforeCommitBodyPass
-    }
-
-    matcher AfterCommitBodyPassContributions(lifecycle_class: Classes) -> contribution {
-        default -> AfterCommitBodyPass
-    }
-
-    matcher AfterRollbackBodyPassContributions(lifecycle_class: Classes) -> contribution {
-        default -> AfterRollbackBodyPass
+    matcher AfterRollbackFallbackContributions(lifecycle_class: Classes) -> contribution {
+        default -> AfterRollbackFallback
     }
 
     matcher PlainStateSlotContributions(field: PlainFields) -> contribution {
@@ -1354,62 +1270,32 @@ concept LifecycleCore {
         apply transaction_manager_param
             using TransactionManagerInitParamContributions
 
-        apply facade_base_body_pass
-            using FacadeBaseBodyPassContributions
+        apply commit_order_key_fallback
+            using CommitOrderKeyFallbackContributions
 
-        apply facade_properties_pass
-            using FacadePropertiesPassContributions
+        apply requires_validation_fallback
+            using RequiresValidationFallbackContributions
 
-        apply default_facade_properties_pass
-            using DefaultFacadePropertiesPassContributions
+        apply validate_commit_fallback
+            using ValidateCommitFallbackContributions
 
-        apply current_facade_properties_pass
-            using CurrentFacadePropertiesPassContributions
+        apply before_commit_fallback
+            using BeforeCommitFallbackContributions
 
-        apply working_facade_properties_pass
-            using WorkingFacadePropertiesPassContributions
+        apply prepare_commit_dispatch_fallback
+            using PrepareCommitDispatchFallbackContributions
 
-        apply state_init_body_pass
-            using StateInitBodyPassContributions
+        apply commit_dispatch_fallback
+            using CommitDispatchFallbackContributions
 
-        apply commit_transaction_body_pass
-            using CommitTransactionBodyPassContributions
+        apply after_commit_fallback
+            using AfterCommitFallbackContributions
 
-        apply commit_transaction_dispatch_body_pass
-            using CommitTransactionDispatchBodyPassContributions
+        apply rollback_dispatch_fallback
+            using RollbackDispatchFallbackContributions
 
-        apply commit_transaction_helpers_pass
-            using CommitTransactionHelpersPassContributions
-
-        apply rollback_transaction_helpers_pass
-            using RollbackTransactionHelpersPassContributions
-
-        apply prepare_commit_transaction_dispatch_body_pass
-            using PrepareCommitTransactionDispatchBodyPassContributions
-
-        apply rollback_transaction_body_pass
-            using RollbackTransactionBodyPassContributions
-
-        apply rollback_transaction_dispatch_body_pass
-            using RollbackTransactionDispatchBodyPassContributions
-
-        apply commit_order_key_body_pass
-            using CommitOrderKeyBodyPassContributions
-
-        apply requires_validation_body_pass
-            using RequiresValidationBodyPassContributions
-
-        apply validate_commit_body_pass
-            using ValidateCommitBodyPassContributions
-
-        apply before_commit_body_pass
-            using BeforeCommitBodyPassContributions
-
-        apply after_commit_body_pass
-            using AfterCommitBodyPassContributions
-
-        apply after_rollback_body_pass
-            using AfterRollbackBodyPassContributions
+        apply after_rollback_fallback
+            using AfterRollbackFallbackContributions
 
         apply classvars
             from field: ClassVarFields

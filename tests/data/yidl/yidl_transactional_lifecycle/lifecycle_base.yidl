@@ -151,62 +151,32 @@ concept LifecycleBase extends owned.LifecycleOwned {
         apply transaction_manager_param
             using TransactionManagerInitParamContributions
 
-        apply facade_base_body_pass
-            using FacadeBaseBodyPassContributions
+        apply commit_order_key_fallback
+            using CommitOrderKeyFallbackContributions
 
-        apply facade_properties_pass
-            using FacadePropertiesPassContributions
+        apply requires_validation_fallback
+            using RequiresValidationFallbackContributions
 
-        apply default_facade_properties_pass
-            using DefaultFacadePropertiesPassContributions
+        apply validate_commit_fallback
+            using ValidateCommitFallbackContributions
 
-        apply current_facade_properties_pass
-            using CurrentFacadePropertiesPassContributions
+        apply before_commit_fallback
+            using BeforeCommitFallbackContributions
 
-        apply working_facade_properties_pass
-            using WorkingFacadePropertiesPassContributions
+        apply prepare_commit_dispatch_fallback
+            using PrepareCommitDispatchFallbackContributions
 
-        apply state_init_body_pass
-            using StateInitBodyPassContributions
+        apply commit_dispatch_fallback
+            using CommitDispatchFallbackContributions
 
-        apply commit_transaction_body_pass
-            using CommitTransactionBodyPassContributions
+        apply after_commit_fallback
+            using AfterCommitFallbackContributions
 
-        apply commit_transaction_dispatch_body_pass
-            using CommitTransactionDispatchBodyPassContributions
+        apply rollback_dispatch_fallback
+            using RollbackDispatchFallbackContributions
 
-        apply commit_transaction_helpers_pass
-            using CommitTransactionHelpersPassContributions
-
-        apply rollback_transaction_helpers_pass
-            using RollbackTransactionHelpersPassContributions
-
-        apply prepare_commit_transaction_dispatch_body_pass
-            using PrepareCommitTransactionDispatchBodyPassContributions
-
-        apply rollback_transaction_body_pass
-            using RollbackTransactionBodyPassContributions
-
-        apply rollback_transaction_dispatch_body_pass
-            using RollbackTransactionDispatchBodyPassContributions
-
-        apply commit_order_key_body_pass
-            using CommitOrderKeyBodyPassContributions
-
-        apply requires_validation_body_pass
-            using RequiresValidationBodyPassContributions
-
-        apply validate_commit_body_pass
-            using ValidateCommitBodyPassContributions
-
-        apply before_commit_body_pass
-            using BeforeCommitBodyPassContributions
-
-        apply after_commit_body_pass
-            using AfterCommitBodyPassContributions
-
-        apply after_rollback_body_pass
-            using AfterRollbackBodyPassContributions
+        apply after_rollback_fallback
+            using AfterRollbackFallbackContributions
 
         apply commit_order_key_helpers
             from tx_group: TxGroups
@@ -237,36 +207,6 @@ concept LifecycleBase extends owned.LifecycleOwned {
             from tx_group: TxGroups
             where TxOwner == ClassId
             using AfterRollbackHelperContributions
-
-        apply commit_order_key_helper_body_pass
-            from tx_group: TxGroups
-            where TxOwner == ClassId
-            using CommitOrderKeyHelperBodyPassContributions
-
-        apply requires_validation_helper_body_pass
-            from tx_group: TxGroups
-            where TxOwner == ClassId
-            using RequiresValidationHelperBodyPassContributions
-
-        apply validate_commit_helper_body_pass
-            from tx_group: TxGroups
-            where TxOwner == ClassId
-            using ValidateCommitHelperBodyPassContributions
-
-        apply before_commit_helper_body_pass
-            from tx_group: TxGroups
-            where TxOwner == ClassId
-            using BeforeCommitHelperBodyPassContributions
-
-        apply after_commit_helper_body_pass
-            from tx_group: TxGroups
-            where TxOwner == ClassId
-            using AfterCommitHelperBodyPassContributions
-
-        apply after_rollback_helper_body_pass
-            from tx_group: TxGroups
-            where TxOwner == ClassId
-            using AfterRollbackHelperBodyPassContributions
 
         apply commit_order_key_dispatch
             from tx_group: TxGroups
@@ -512,21 +452,6 @@ concept LifecycleBase extends owned.LifecycleOwned {
             from tx_group: TxGroups
             where TxOwner == ClassId
             using RollbackFieldsContributions
-
-        apply apply_prepared_commit_helper_body_pass
-            from tx_group: TxGroups
-            where TxOwner == ClassId
-            using ApplyPreparedCommitFieldsBodyPassContributions
-
-        apply prepare_commit_helper_body_pass
-            from tx_group: TxGroups
-            where TxOwner == ClassId
-            using PrepareCommitFieldsBodyPassContributions
-
-        apply rollback_helper_body_pass
-            from tx_group: TxGroups
-            where TxOwner == ClassId
-            using RollbackFieldsBodyPassContributions
 
         apply prepare_commit_dispatch
             from tx_group: TxGroups

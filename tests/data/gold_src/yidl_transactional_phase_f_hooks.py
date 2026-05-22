@@ -210,9 +210,9 @@ def _assert_source_shape(sources: Mapping[str, str]) -> None:
         assert 'if tx_key == "default_transaction":' not in generated
         assert 'if tx_key == "audit":' not in generated
         assert "tx_index = self.__yidl_tx_key_to_index__[tx_key]" in generated
-        assert "match tx_index:" in generated
-        assert "case _ if tx_index == 0:" in generated
-        assert "case _ if tx_index == 1:" in generated
+        assert "if False:\n                pass\n            elif tx_index == 0:" in generated
+        assert "elif tx_index == 1:" in generated
+        assert "elif True:" in generated
         assert "def _prepare_commit_tx_by_key(" in generated
         assert "def _apply_prepared_commit_tx_by_key(" in generated
         assert "def _after_commit_tx_by_key(" in generated

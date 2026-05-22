@@ -106,25 +106,37 @@ def build_lifecycle_class(
 
         def commit_order_key_for(self, tx_key=DEFAULT_TRANSACTION):
             tx_index = self.__yidl_tx_key_to_index__[tx_key]
-            pass
-            return ()
+            if False:
+                pass
+            elif True:
+                return ()
 
         def requires_validation_for(self, tx_key=DEFAULT_TRANSACTION):
             tx_index = self.__yidl_tx_key_to_index__[tx_key]
-            pass
-            return False
+            if False:
+                pass
+            elif True:
+                return False
 
         def validate_commit_for(self, tx_key=DEFAULT_TRANSACTION):
             tx_index = self.__yidl_tx_key_to_index__[tx_key]
-            pass
-            return True
+            if False:
+                pass
+            elif True:
+                return True
 
         def _prepare_commit_tx_by_key(self, tx_key=DEFAULT_TRANSACTION, tx_token=None):
             tx_index = self.__yidl_tx_key_to_index__[tx_key]
             if self._y_working_tx_ids[tx_index] != tx_token:
                 raise RuntimeError("stale yidl transaction token")
-            pass
-            pass
+            if False:
+                pass
+            elif True:
+                pass
+            if False:
+                pass
+            elif True:
+                pass
             return self._y_get_default_facade()
 
         def _apply_prepared_commit_tx_by_key(
@@ -133,7 +145,10 @@ def build_lifecycle_class(
             tx_index = self.__yidl_tx_key_to_index__[tx_key]
             if self._y_working_tx_ids[tx_index] != tx_token:
                 raise RuntimeError("stale yidl transaction token")
-            pass
+            if False:
+                pass
+            elif True:
+                pass
             pass
             self._y_working_tx_ids[tx_index] = None
             return self._y_get_default_facade()
@@ -141,13 +156,19 @@ def build_lifecycle_class(
         def _after_commit_tx_by_key(self, tx_key=DEFAULT_TRANSACTION, tx_token=None):
             del tx_token
             tx_index = self.__yidl_tx_key_to_index__[tx_key]
-            pass
+            if False:
+                pass
+            elif True:
+                pass
             return self._y_get_default_facade()
 
         def _rollback_tx_by_key(self, tx_key=DEFAULT_TRANSACTION, tx_token=None):
             tx_index = self.__yidl_tx_key_to_index__[tx_key]
             del tx_token
-            pass
+            if False:
+                pass
+            elif True:
+                pass
             pass
             self._y_working_tx_ids[tx_index] = None
             return self._y_get_default_facade()
@@ -155,7 +176,10 @@ def build_lifecycle_class(
         def _after_rollback_tx_by_key(self, tx_key=DEFAULT_TRANSACTION, tx_token=None):
             del tx_token
             tx_index = self.__yidl_tx_key_to_index__[tx_key]
-            pass
+            if False:
+                pass
+            elif True:
+                pass
             return self._y_get_default_facade()
 
         pass
@@ -218,9 +242,7 @@ def build_lifecycle_class(
         def rollback(self, *tx_keys):
             return self._y_state._y_transaction_manager.rollback(*tx_keys)
 
-        pass
         KIND = _Counter_KIND_default
-        pass
 
         @property
         def plain(self):
@@ -265,7 +287,6 @@ def build_lifecycle_class(
             state._y_default_ref = weakref.ref(self)
             state._y_current_ref = None
             state._y_working_ref = None
-            pass
             state._y_plain_value = plain
             state._y_working_tx_ids = [None for _group in _Counter_tx_groups]
 

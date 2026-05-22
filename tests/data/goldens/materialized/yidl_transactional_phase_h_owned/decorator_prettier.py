@@ -6070,12 +6070,12 @@ classvar_name__astichi_arg__ = astichi_pass(
     "CommitOrderKeyBranch": astichi_template(
         from_astichi_code(
             """\
-match astichi_pass(tx_index, outer_bind=True):
-    case _ if astichi_pass(tx_index, outer_bind=True) == astichi_bind_external(tx_index_value):
-        return astichi_pass(
-            self,
-            outer_bind=True,
-        )._y_get_default_facade().astichi_ref(external=method_name)()""",
+def astichi_elif():
+    astichi_import(tx_index)
+    astichi_import(self)
+
+    if tx_index == astichi_bind_external(tx_index_value):
+        return self._y_get_default_facade().astichi_ref(external=method_name)()""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
             line_number=289,
         )
@@ -6083,8 +6083,10 @@ match astichi_pass(tx_index, outer_bind=True):
     "RequiresValidationBranch": astichi_template(
         from_astichi_code(
             """\
-match astichi_pass(tx_index, outer_bind=True):
-    case _ if astichi_pass(tx_index, outer_bind=True) == astichi_bind_external(tx_index_value):
+def astichi_elif():
+    astichi_import(tx_index)
+
+    if tx_index == astichi_bind_external(tx_index_value):
         return True""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
             line_number=298,
@@ -6093,29 +6095,69 @@ match astichi_pass(tx_index, outer_bind=True):
     "ValidateCommitBranch": astichi_template(
         from_astichi_code(
             """\
-match astichi_pass(tx_index, outer_bind=True):
-    case _ if astichi_pass(tx_index, outer_bind=True) == astichi_bind_external(tx_index_value):
-        result = astichi_pass(
-            self,
-            outer_bind=True,
-        )._y_get_default_facade().astichi_ref(external=method_name)()
+def astichi_elif():
+    astichi_import(tx_index)
+    astichi_import(self)
+
+    if tx_index == astichi_bind_external(tx_index_value):
+        result = self._y_get_default_facade().astichi_ref(external=method_name)()
         if result is False:
             return False""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=304,
+            line_number=306,
         )
     ),
     "TransactionHookCall": astichi_template(
         from_astichi_code(
             """\
-match astichi_pass(tx_index, outer_bind=True):
-    case _ if astichi_pass(tx_index, outer_bind=True) == astichi_bind_external(tx_index_value):
-        astichi_pass(
-            self,
-            outer_bind=True,
-        )._y_get_default_facade().astichi_ref(external=method_name)()""",
+def astichi_elif():
+    astichi_import(tx_index)
+    astichi_import(self)
+
+    if tx_index == astichi_bind_external(tx_index_value):
+        self._y_get_default_facade().astichi_ref(external=method_name)()""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=315,
+            line_number=317,
+        )
+    ),
+    "CommitOrderKeyFallbackBranch": astichi_template(
+        from_astichi_code(
+            """\
+def astichi_elif():
+    if True:
+        return ()""",
+            file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
+            line_number=326,
+        )
+    ),
+    "RequiresValidationFallbackBranch": astichi_template(
+        from_astichi_code(
+            """\
+def astichi_elif():
+    if True:
+        return False""",
+            file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
+            line_number=332,
+        )
+    ),
+    "ValidateCommitFallbackBranch": astichi_template(
+        from_astichi_code(
+            """\
+def astichi_elif():
+    if True:
+        return True""",
+            file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
+            line_number=338,
+        )
+    ),
+    "PassFallbackBranch": astichi_template(
+        from_astichi_code(
+            """\
+def astichi_elif():
+    if True:
+        pass""",
+            file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
+            line_number=344,
         )
     ),
     "ClassBundle": astichi_template(
@@ -6214,58 +6256,86 @@ class state_class_decl_name__astichi_arg__:
 
     def commit_order_key_for(self, tx_key=DEFAULT_TRANSACTION):
         tx_index = self.__yidl_tx_key_to_index__[tx_key]
-        astichi_hole(commit_order_key_body)
-        return ()
+        if False:
+            pass
+        elif astichi_elif(commit_order_key_body):
+            pass
 
     def requires_validation_for(self, tx_key=DEFAULT_TRANSACTION):
         tx_index = self.__yidl_tx_key_to_index__[tx_key]
-        astichi_hole(requires_validation_body)
-        return False
+        if False:
+            pass
+        elif astichi_elif(requires_validation_body):
+            pass
 
     def validate_commit_for(self, tx_key=DEFAULT_TRANSACTION):
         tx_index = self.__yidl_tx_key_to_index__[tx_key]
-        astichi_hole(validate_commit_body)
-        return True
+        if False:
+            pass
+        elif astichi_elif(validate_commit_body):
+            pass
 
     def _prepare_commit_tx_by_key(self, tx_key=DEFAULT_TRANSACTION, tx_token=None):
         tx_index = self.__yidl_tx_key_to_index__[tx_key]
         if self._y_working_tx_ids[tx_index] != tx_token:
             raise RuntimeError("stale yidl transaction token")
-        astichi_hole(before_commit_body)
-        astichi_hole(prepare_commit_transaction_dispatch_body)
+        if False:
+            pass
+        elif astichi_elif(before_commit_body):
+            pass
+        if False:
+            pass
+        elif astichi_elif(prepare_commit_transaction_dispatch_body):
+            pass
         return self._y_get_default_facade()
 
     def _apply_prepared_commit_tx_by_key(self, tx_key=DEFAULT_TRANSACTION, tx_token=None):
         tx_index = self.__yidl_tx_key_to_index__[tx_key]
         if self._y_working_tx_ids[tx_index] != tx_token:
             raise RuntimeError("stale yidl transaction token")
-        astichi_hole(commit_transaction_dispatch_body)
-        astichi_hole(commit_transaction_body)
+        if False:
+            pass
+        elif astichi_elif(commit_transaction_dispatch_body):
+            pass
+        with astichi_hole(commit_transaction_body) as astichi_fallback:
+            pass
         self._y_working_tx_ids[tx_index] = None
         return self._y_get_default_facade()
 
     def _after_commit_tx_by_key(self, tx_key=DEFAULT_TRANSACTION, tx_token=None):
         del tx_token
         tx_index = self.__yidl_tx_key_to_index__[tx_key]
-        astichi_hole(after_commit_body)
+        if False:
+            pass
+        elif astichi_elif(after_commit_body):
+            pass
         return self._y_get_default_facade()
 
     def _rollback_tx_by_key(self, tx_key=DEFAULT_TRANSACTION, tx_token=None):
         tx_index = self.__yidl_tx_key_to_index__[tx_key]
         del tx_token
-        astichi_hole(rollback_transaction_dispatch_body)
-        astichi_hole(rollback_transaction_body)
+        if False:
+            pass
+        elif astichi_elif(rollback_transaction_dispatch_body):
+            pass
+        with astichi_hole(rollback_transaction_body) as astichi_fallback:
+            pass
         self._y_working_tx_ids[tx_index] = None
         return self._y_get_default_facade()
 
     def _after_rollback_tx_by_key(self, tx_key=DEFAULT_TRANSACTION, tx_token=None):
         del tx_token
         tx_index = self.__yidl_tx_key_to_index__[tx_key]
-        astichi_hole(after_rollback_body)
+        if False:
+            pass
+        elif astichi_elif(after_rollback_body):
+            pass
         return self._y_get_default_facade()
 
-    astichi_hole(commit_transaction_helpers)
-    astichi_hole(rollback_transaction_helpers)
+    with astichi_hole(commit_transaction_helpers) as astichi_fallback:
+        pass
+    with astichi_hole(rollback_transaction_helpers) as astichi_fallback:
+        pass
 
 
 class facade_base_decl_name__astichi_arg__(
@@ -6331,8 +6401,10 @@ class facade_base_decl_name__astichi_arg__(
     def rollback(self, *tx_keys):
         return self._y_state._y_transaction_manager.rollback(*tx_keys)
 
-    astichi_hole(facade_base_body)
-    astichi_hole(facade_properties)
+    with astichi_hole(facade_base_body) as astichi_fallback:
+        pass
+    with astichi_hole(facade_properties) as astichi_fallback:
+        pass
 
 
 class default_facade_class_decl_name__astichi_arg__(
@@ -6365,7 +6437,8 @@ class default_facade_class_decl_name__astichi_arg__(
         )
     }
 
-    astichi_hole(default_facade_properties)
+    with astichi_hole(default_facade_properties) as astichi_fallback:
+        pass
 
     def __init__(self, init_params__astichi_param_hole__):
         state = object.__new__(state_class_ref__astichi_arg__)
@@ -6384,7 +6457,8 @@ class default_facade_class_decl_name__astichi_arg__(
         state._y_default_ref = weakref.ref(self)
         state._y_current_ref = None
         state._y_working_ref = None
-        astichi_hole(state_init_body)
+        with astichi_hole(state_init_body) as astichi_fallback:
+            pass
         state._y_working_tx_ids = [
             None
             for _group in astichi_pass(
@@ -6398,16 +6472,18 @@ class current_facade_class_decl_name__astichi_arg__(
     facade_base_current_base_name__astichi_arg__
 ):
     __slots__ = ()
-    astichi_hole(current_facade_properties)
+    with astichi_hole(current_facade_properties) as astichi_fallback:
+        pass
 
 
 class working_facade_class_decl_name__astichi_arg__(
     facade_base_working_base_name__astichi_arg__
 ):
     __slots__ = ()
-    astichi_hole(working_facade_properties)""",
+    with astichi_hole(working_facade_properties) as astichi_fallback:
+        pass""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=324,
+            line_number=350,
             keep_names=(
                 "DEFAULT_TRANSACTION",
                 "TransactionManager",
@@ -6434,14 +6510,7 @@ return_class_module_ref__astichi_arg__.__module__ = astichi_pass(
 ).__module__
 return return_class_result_ref__astichi_arg__""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=615,
-        )
-    ),
-    "PassStatement": astichi_template(
-        from_astichi_code(
-            "pass",
-            file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=631,
+            line_number=675,
         )
     ),
     "BuildTransactionFactsBody": from_astichi_code(
@@ -6795,7 +6864,8 @@ astichi_pass(self, outer_bind=True).astichi_ref(external=working_slot)._ = VOID"
         from_astichi_code(
             """\
 def commit_order_key_function_name__astichi_arg__(self):
-    astichi_hole(commit_order_key_tx_body)
+    with astichi_hole(commit_order_key_tx_body) as astichi_fallback:
+        pass
     return ()""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_managed.yidl",
             line_number=386,
@@ -6805,47 +6875,52 @@ def commit_order_key_function_name__astichi_arg__(self):
         from_astichi_code(
             """\
 def requires_validation_function_name__astichi_arg__(self):
-    astichi_hole(requires_validation_tx_body)
+    with astichi_hole(requires_validation_tx_body) as astichi_fallback:
+        pass
     return False""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_managed.yidl",
-            line_number=392,
+            line_number=393,
         )
     ),
     "ValidateCommitFunction": astichi_template(
         from_astichi_code(
             """\
 def validate_commit_function_name__astichi_arg__(self):
-    astichi_hole(validate_commit_tx_body)
+    with astichi_hole(validate_commit_tx_body) as astichi_fallback:
+        pass
     return True""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_managed.yidl",
-            line_number=398,
+            line_number=400,
         )
     ),
     "BeforeCommitFunction": astichi_template(
         from_astichi_code(
             """\
 def before_commit_function_name__astichi_arg__(self):
-    astichi_hole(before_commit_tx_body)""",
+    with astichi_hole(before_commit_tx_body) as astichi_fallback:
+        pass""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_managed.yidl",
-            line_number=404,
+            line_number=407,
         )
     ),
     "AfterCommitFunction": astichi_template(
         from_astichi_code(
             """\
 def after_commit_function_name__astichi_arg__(self):
-    astichi_hole(after_commit_tx_body)""",
+    with astichi_hole(after_commit_tx_body) as astichi_fallback:
+        pass""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_managed.yidl",
-            line_number=409,
+            line_number=413,
         )
     ),
     "AfterRollbackFunction": astichi_template(
         from_astichi_code(
             """\
 def after_rollback_function_name__astichi_arg__(self):
-    astichi_hole(after_rollback_tx_body)""",
+    with astichi_hole(after_rollback_tx_body) as astichi_fallback:
+        pass""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_managed.yidl",
-            line_number=414,
+            line_number=419,
         )
     ),
     "CommitOrderKeyHelperCall": astichi_template(
@@ -6856,14 +6931,14 @@ return astichi_pass(
     outer_bind=True,
 )._y_get_default_facade().astichi_ref(external=method_name)()""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_managed.yidl",
-            line_number=419,
+            line_number=425,
         )
     ),
     "RequiresValidationHelperCall": astichi_template(
         from_astichi_code(
             "return True",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_managed.yidl",
-            line_number=426,
+            line_number=432,
         )
     ),
     "ValidateCommitHelperCall": astichi_template(
@@ -6876,7 +6951,7 @@ result = astichi_pass(
 if not result:
     return result""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_managed.yidl",
-            line_number=430,
+            line_number=436,
         )
     ),
     "TransactionHookHelperCall": astichi_template(
@@ -6887,151 +6962,154 @@ astichi_pass(
     outer_bind=True,
 )._y_get_default_facade().astichi_ref(external=method_name)()""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_managed.yidl",
-            line_number=439,
+            line_number=445,
         )
     ),
     "CommitOrderKeyDispatchCall": astichi_template(
         from_astichi_code(
             """\
-match astichi_pass(tx_index, outer_bind=True):
-    case _ if astichi_pass(tx_index, outer_bind=True) == astichi_bind_external(tx_index_value):
-        return astichi_pass(
-            self,
-            outer_bind=True,
-        ).astichi_ref(external=commit_order_key_function_name)()""",
+def astichi_elif():
+    astichi_import(tx_index)
+    astichi_import(self)
+
+    if tx_index == astichi_bind_external(tx_index_value):
+        return self.astichi_ref(external=commit_order_key_function_name)()""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_managed.yidl",
-            line_number=446,
+            line_number=452,
         )
     ),
     "RequiresValidationDispatchCall": astichi_template(
         from_astichi_code(
             """\
-match astichi_pass(tx_index, outer_bind=True):
-    case _ if astichi_pass(tx_index, outer_bind=True) == astichi_bind_external(tx_index_value):
-        return astichi_pass(
-            self,
-            outer_bind=True,
-        ).astichi_ref(external=requires_validation_function_name)()""",
+def astichi_elif():
+    astichi_import(tx_index)
+    astichi_import(self)
+
+    if tx_index == astichi_bind_external(tx_index_value):
+        return self.astichi_ref(external=requires_validation_function_name)()""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_managed.yidl",
-            line_number=455,
+            line_number=461,
         )
     ),
     "ValidateCommitDispatchCall": astichi_template(
         from_astichi_code(
             """\
-match astichi_pass(tx_index, outer_bind=True):
-    case _ if astichi_pass(tx_index, outer_bind=True) == astichi_bind_external(tx_index_value):
-        return astichi_pass(
-            self,
-            outer_bind=True,
-        ).astichi_ref(external=validate_commit_function_name)()""",
+def astichi_elif():
+    astichi_import(tx_index)
+    astichi_import(self)
+
+    if tx_index == astichi_bind_external(tx_index_value):
+        return self.astichi_ref(external=validate_commit_function_name)()""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_managed.yidl",
-            line_number=464,
+            line_number=470,
         )
     ),
     "BeforeCommitDispatchCall": astichi_template(
         from_astichi_code(
             """\
-match astichi_pass(tx_index, outer_bind=True):
-    case _ if astichi_pass(tx_index, outer_bind=True) == astichi_bind_external(tx_index_value):
-        astichi_pass(
-            self,
-            outer_bind=True,
-        ).astichi_ref(external=before_commit_function_name)()""",
+def astichi_elif():
+    astichi_import(tx_index)
+    astichi_import(self)
+
+    if tx_index == astichi_bind_external(tx_index_value):
+        self.astichi_ref(external=before_commit_function_name)()""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_managed.yidl",
-            line_number=473,
+            line_number=479,
         )
     ),
     "AfterCommitDispatchCall": astichi_template(
         from_astichi_code(
             """\
-match astichi_pass(tx_index, outer_bind=True):
-    case _ if astichi_pass(tx_index, outer_bind=True) == astichi_bind_external(tx_index_value):
-        astichi_pass(
-            self,
-            outer_bind=True,
-        ).astichi_ref(external=after_commit_function_name)()""",
+def astichi_elif():
+    astichi_import(tx_index)
+    astichi_import(self)
+
+    if tx_index == astichi_bind_external(tx_index_value):
+        self.astichi_ref(external=after_commit_function_name)()""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_managed.yidl",
-            line_number=482,
+            line_number=488,
         )
     ),
     "AfterRollbackDispatchCall": astichi_template(
         from_astichi_code(
             """\
-match astichi_pass(tx_index, outer_bind=True):
-    case _ if astichi_pass(tx_index, outer_bind=True) == astichi_bind_external(tx_index_value):
-        astichi_pass(
-            self,
-            outer_bind=True,
-        ).astichi_ref(external=after_rollback_function_name)()""",
+def astichi_elif():
+    astichi_import(tx_index)
+    astichi_import(self)
+
+    if tx_index == astichi_bind_external(tx_index_value):
+        self.astichi_ref(external=after_rollback_function_name)()""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_managed.yidl",
-            line_number=491,
+            line_number=497,
         )
     ),
     "PrepareCommitFieldsFunction": astichi_template(
         from_astichi_code(
             """\
 def prepare_commit_fields_function_name__astichi_arg__(self):
-    astichi_hole(prepare_commit_fields_body)""",
+    with astichi_hole(prepare_commit_fields_body) as astichi_fallback:
+        pass""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_managed.yidl",
-            line_number=500,
+            line_number=506,
         )
     ),
     "ApplyPreparedCommitFieldsFunction": astichi_template(
         from_astichi_code(
             """\
 def apply_prepared_commit_fields_function_name__astichi_arg__(self):
-    astichi_hole(apply_prepared_commit_fields_body)""",
+    with astichi_hole(apply_prepared_commit_fields_body) as astichi_fallback:
+        pass""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_managed.yidl",
-            line_number=505,
+            line_number=512,
         )
     ),
     "RollbackFieldsFunction": astichi_template(
         from_astichi_code(
             """\
 def rollback_fields_function_name__astichi_arg__(self):
-    astichi_hole(rollback_fields_body)""",
+    with astichi_hole(rollback_fields_body) as astichi_fallback:
+        pass""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_managed.yidl",
-            line_number=510,
+            line_number=518,
         )
     ),
     "ApplyPreparedCommitDispatchBranch": astichi_template(
         from_astichi_code(
             """\
-match astichi_pass(tx_index, outer_bind=True):
-    case _ if astichi_pass(tx_index, outer_bind=True) == astichi_bind_external(tx_index_value):
-        astichi_pass(
-            self,
-            outer_bind=True,
-        ).astichi_ref(external=apply_prepared_commit_fields_function_name)()""",
+def astichi_elif():
+    astichi_import(tx_index)
+    astichi_import(self)
+
+    if tx_index == astichi_bind_external(tx_index_value):
+        self.astichi_ref(external=apply_prepared_commit_fields_function_name)()""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_managed.yidl",
-            line_number=515,
+            line_number=524,
         )
     ),
     "PrepareCommitDispatchBranch": astichi_template(
         from_astichi_code(
             """\
-match astichi_pass(tx_index, outer_bind=True):
-    case _ if astichi_pass(tx_index, outer_bind=True) == astichi_bind_external(tx_index_value):
-        astichi_pass(
-            self,
-            outer_bind=True,
-        ).astichi_ref(external=prepare_commit_fields_function_name)()""",
+def astichi_elif():
+    astichi_import(tx_index)
+    astichi_import(self)
+
+    if tx_index == astichi_bind_external(tx_index_value):
+        self.astichi_ref(external=prepare_commit_fields_function_name)()""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_managed.yidl",
-            line_number=524,
+            line_number=533,
         )
     ),
     "RollbackDispatchBranch": astichi_template(
         from_astichi_code(
             """\
-match astichi_pass(tx_index, outer_bind=True):
-    case _ if astichi_pass(tx_index, outer_bind=True) == astichi_bind_external(tx_index_value):
-        astichi_pass(
-            self,
-            outer_bind=True,
-        ).astichi_ref(external=rollback_fields_function_name)()""",
+def astichi_elif():
+    astichi_import(tx_index)
+    astichi_import(self)
+
+    if tx_index == astichi_bind_external(tx_index_value):
+        self.astichi_ref(external=rollback_fields_function_name)()""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_managed.yidl",
-            line_number=533,
+            line_number=542,
         )
     ),
     "BuildDefaultFactoryFactsBody": from_astichi_code(
@@ -8264,299 +8342,13 @@ ASSEMBLY_CONTRIBUTIONS = {
             ),
         ),
     ),
-    "FacadeBaseBodyPass": ContributionSpec(
-        name="FacadeBaseBodyPass",
-        source_name="PassStatement",
+    "CommitOrderKeyFallback": ContributionSpec(
+        name="CommitOrderKeyFallback",
+        source_name="CommitOrderKeyFallbackBranch",
         source_kind="resource",
-        build_name="FacadeBaseBodyPass",
-        index=LiteralValueRef(0),
-        order=LiteralValueRef(0),
-        target=TargetSpec(
-            name="facade_base_body",
-            paths=(
-                TargetPathSpec(
-                    kind="build",
-                    path=PathSpec(
-                        segments=(
-                            PathSegmentSpec(kind="name", name="ClassDef", indexes=()),
-                        )
-                    ),
-                ),
-            ),
-        ),
-        bindings=(),
-    ),
-    "FacadePropertiesPass": ContributionSpec(
-        name="FacadePropertiesPass",
-        source_name="PassStatement",
-        source_kind="resource",
-        build_name="FacadePropertiesPass",
-        index=LiteralValueRef(0),
-        order=LiteralValueRef(0),
-        target=TargetSpec(
-            name="facade_properties",
-            paths=(
-                TargetPathSpec(
-                    kind="build",
-                    path=PathSpec(
-                        segments=(
-                            PathSegmentSpec(kind="name", name="ClassDef", indexes=()),
-                        )
-                    ),
-                ),
-            ),
-        ),
-        bindings=(),
-    ),
-    "DefaultFacadePropertiesPass": ContributionSpec(
-        name="DefaultFacadePropertiesPass",
-        source_name="PassStatement",
-        source_kind="resource",
-        build_name="DefaultFacadePropertiesPass",
-        index=LiteralValueRef(0),
-        order=LiteralValueRef(0),
-        target=TargetSpec(
-            name="default_facade_properties",
-            paths=(
-                TargetPathSpec(
-                    kind="build",
-                    path=PathSpec(
-                        segments=(
-                            PathSegmentSpec(kind="name", name="ClassDef", indexes=()),
-                        )
-                    ),
-                ),
-            ),
-        ),
-        bindings=(),
-    ),
-    "CurrentFacadePropertiesPass": ContributionSpec(
-        name="CurrentFacadePropertiesPass",
-        source_name="PassStatement",
-        source_kind="resource",
-        build_name="CurrentFacadePropertiesPass",
-        index=LiteralValueRef(0),
-        order=LiteralValueRef(0),
-        target=TargetSpec(
-            name="current_facade_properties",
-            paths=(
-                TargetPathSpec(
-                    kind="build",
-                    path=PathSpec(
-                        segments=(
-                            PathSegmentSpec(kind="name", name="ClassDef", indexes=()),
-                        )
-                    ),
-                ),
-            ),
-        ),
-        bindings=(),
-    ),
-    "WorkingFacadePropertiesPass": ContributionSpec(
-        name="WorkingFacadePropertiesPass",
-        source_name="PassStatement",
-        source_kind="resource",
-        build_name="WorkingFacadePropertiesPass",
-        index=LiteralValueRef(0),
-        order=LiteralValueRef(0),
-        target=TargetSpec(
-            name="working_facade_properties",
-            paths=(
-                TargetPathSpec(
-                    kind="build",
-                    path=PathSpec(
-                        segments=(
-                            PathSegmentSpec(kind="name", name="ClassDef", indexes=()),
-                        )
-                    ),
-                ),
-            ),
-        ),
-        bindings=(),
-    ),
-    "StateInitBodyPass": ContributionSpec(
-        name="StateInitBodyPass",
-        source_name="PassStatement",
-        source_kind="resource",
-        build_name="StateInitBodyPass",
-        index=LiteralValueRef(0),
-        order=LiteralValueRef(0),
-        target=TargetSpec(
-            name="state_init_body",
-            paths=(
-                TargetPathSpec(
-                    kind="build",
-                    path=PathSpec(
-                        segments=(
-                            PathSegmentSpec(kind="name", name="ClassDef", indexes=()),
-                        )
-                    ),
-                ),
-            ),
-        ),
-        bindings=(),
-    ),
-    "CommitTransactionBodyPass": ContributionSpec(
-        name="CommitTransactionBodyPass",
-        source_name="PassStatement",
-        source_kind="resource",
-        build_name="CommitTransactionBodyPass",
-        index=LiteralValueRef(0),
-        order=LiteralValueRef(0),
-        target=TargetSpec(
-            name="commit_transaction_body",
-            paths=(
-                TargetPathSpec(
-                    kind="build",
-                    path=PathSpec(
-                        segments=(
-                            PathSegmentSpec(kind="name", name="ClassDef", indexes=()),
-                        )
-                    ),
-                ),
-            ),
-        ),
-        bindings=(),
-    ),
-    "CommitTransactionDispatchBodyPass": ContributionSpec(
-        name="CommitTransactionDispatchBodyPass",
-        source_name="PassStatement",
-        source_kind="resource",
-        build_name="CommitTransactionDispatchBodyPass",
-        index=LiteralValueRef(0),
-        order=LiteralValueRef(0),
-        target=TargetSpec(
-            name="commit_transaction_dispatch_body",
-            paths=(
-                TargetPathSpec(
-                    kind="build",
-                    path=PathSpec(
-                        segments=(
-                            PathSegmentSpec(kind="name", name="ClassDef", indexes=()),
-                        )
-                    ),
-                ),
-            ),
-        ),
-        bindings=(),
-    ),
-    "CommitTransactionHelpersPass": ContributionSpec(
-        name="CommitTransactionHelpersPass",
-        source_name="PassStatement",
-        source_kind="resource",
-        build_name="CommitTransactionHelpersPass",
-        index=LiteralValueRef(0),
-        order=LiteralValueRef(0),
-        target=TargetSpec(
-            name="commit_transaction_helpers",
-            paths=(
-                TargetPathSpec(
-                    kind="build",
-                    path=PathSpec(
-                        segments=(
-                            PathSegmentSpec(kind="name", name="ClassDef", indexes=()),
-                        )
-                    ),
-                ),
-            ),
-        ),
-        bindings=(),
-    ),
-    "RollbackTransactionHelpersPass": ContributionSpec(
-        name="RollbackTransactionHelpersPass",
-        source_name="PassStatement",
-        source_kind="resource",
-        build_name="RollbackTransactionHelpersPass",
-        index=LiteralValueRef(0),
-        order=LiteralValueRef(0),
-        target=TargetSpec(
-            name="rollback_transaction_helpers",
-            paths=(
-                TargetPathSpec(
-                    kind="build",
-                    path=PathSpec(
-                        segments=(
-                            PathSegmentSpec(kind="name", name="ClassDef", indexes=()),
-                        )
-                    ),
-                ),
-            ),
-        ),
-        bindings=(),
-    ),
-    "PrepareCommitTransactionDispatchBodyPass": ContributionSpec(
-        name="PrepareCommitTransactionDispatchBodyPass",
-        source_name="PassStatement",
-        source_kind="resource",
-        build_name="PrepareCommitTransactionDispatchBodyPass",
-        index=LiteralValueRef(0),
-        order=LiteralValueRef(0),
-        target=TargetSpec(
-            name="prepare_commit_transaction_dispatch_body",
-            paths=(
-                TargetPathSpec(
-                    kind="build",
-                    path=PathSpec(
-                        segments=(
-                            PathSegmentSpec(kind="name", name="ClassDef", indexes=()),
-                        )
-                    ),
-                ),
-            ),
-        ),
-        bindings=(),
-    ),
-    "RollbackTransactionBodyPass": ContributionSpec(
-        name="RollbackTransactionBodyPass",
-        source_name="PassStatement",
-        source_kind="resource",
-        build_name="RollbackTransactionBodyPass",
-        index=LiteralValueRef(0),
-        order=LiteralValueRef(0),
-        target=TargetSpec(
-            name="rollback_transaction_body",
-            paths=(
-                TargetPathSpec(
-                    kind="build",
-                    path=PathSpec(
-                        segments=(
-                            PathSegmentSpec(kind="name", name="ClassDef", indexes=()),
-                        )
-                    ),
-                ),
-            ),
-        ),
-        bindings=(),
-    ),
-    "RollbackTransactionDispatchBodyPass": ContributionSpec(
-        name="RollbackTransactionDispatchBodyPass",
-        source_name="PassStatement",
-        source_kind="resource",
-        build_name="RollbackTransactionDispatchBodyPass",
-        index=LiteralValueRef(0),
-        order=LiteralValueRef(0),
-        target=TargetSpec(
-            name="rollback_transaction_dispatch_body",
-            paths=(
-                TargetPathSpec(
-                    kind="build",
-                    path=PathSpec(
-                        segments=(
-                            PathSegmentSpec(kind="name", name="ClassDef", indexes=()),
-                        )
-                    ),
-                ),
-            ),
-        ),
-        bindings=(),
-    ),
-    "CommitOrderKeyBodyPass": ContributionSpec(
-        name="CommitOrderKeyBodyPass",
-        source_name="PassStatement",
-        source_kind="resource",
-        build_name="CommitOrderKeyBodyPass",
-        index=LiteralValueRef(0),
-        order=LiteralValueRef(0),
+        build_name="CommitOrderKeyFallback",
+        index=LiteralValueRef(1000000),
+        order=LiteralValueRef(1000000),
         target=TargetSpec(
             name="commit_order_key_body",
             paths=(
@@ -8572,13 +8364,13 @@ ASSEMBLY_CONTRIBUTIONS = {
         ),
         bindings=(),
     ),
-    "RequiresValidationBodyPass": ContributionSpec(
-        name="RequiresValidationBodyPass",
-        source_name="PassStatement",
+    "RequiresValidationFallback": ContributionSpec(
+        name="RequiresValidationFallback",
+        source_name="RequiresValidationFallbackBranch",
         source_kind="resource",
-        build_name="RequiresValidationBodyPass",
-        index=LiteralValueRef(0),
-        order=LiteralValueRef(0),
+        build_name="RequiresValidationFallback",
+        index=LiteralValueRef(1000000),
+        order=LiteralValueRef(1000000),
         target=TargetSpec(
             name="requires_validation_body",
             paths=(
@@ -8594,13 +8386,13 @@ ASSEMBLY_CONTRIBUTIONS = {
         ),
         bindings=(),
     ),
-    "ValidateCommitBodyPass": ContributionSpec(
-        name="ValidateCommitBodyPass",
-        source_name="PassStatement",
+    "ValidateCommitFallback": ContributionSpec(
+        name="ValidateCommitFallback",
+        source_name="ValidateCommitFallbackBranch",
         source_kind="resource",
-        build_name="ValidateCommitBodyPass",
-        index=LiteralValueRef(0),
-        order=LiteralValueRef(0),
+        build_name="ValidateCommitFallback",
+        index=LiteralValueRef(1000000),
+        order=LiteralValueRef(1000000),
         target=TargetSpec(
             name="validate_commit_body",
             paths=(
@@ -8616,13 +8408,13 @@ ASSEMBLY_CONTRIBUTIONS = {
         ),
         bindings=(),
     ),
-    "BeforeCommitBodyPass": ContributionSpec(
-        name="BeforeCommitBodyPass",
-        source_name="PassStatement",
+    "BeforeCommitFallback": ContributionSpec(
+        name="BeforeCommitFallback",
+        source_name="PassFallbackBranch",
         source_kind="resource",
-        build_name="BeforeCommitBodyPass",
-        index=LiteralValueRef(0),
-        order=LiteralValueRef(0),
+        build_name="BeforeCommitFallback",
+        index=LiteralValueRef(1000000),
+        order=LiteralValueRef(1000000),
         target=TargetSpec(
             name="before_commit_body",
             paths=(
@@ -8638,13 +8430,57 @@ ASSEMBLY_CONTRIBUTIONS = {
         ),
         bindings=(),
     ),
-    "AfterCommitBodyPass": ContributionSpec(
-        name="AfterCommitBodyPass",
-        source_name="PassStatement",
+    "PrepareCommitDispatchFallback": ContributionSpec(
+        name="PrepareCommitDispatchFallback",
+        source_name="PassFallbackBranch",
         source_kind="resource",
-        build_name="AfterCommitBodyPass",
-        index=LiteralValueRef(0),
-        order=LiteralValueRef(0),
+        build_name="PrepareCommitDispatchFallback",
+        index=LiteralValueRef(1000000),
+        order=LiteralValueRef(1000000),
+        target=TargetSpec(
+            name="prepare_commit_transaction_dispatch_body",
+            paths=(
+                TargetPathSpec(
+                    kind="build",
+                    path=PathSpec(
+                        segments=(
+                            PathSegmentSpec(kind="name", name="ClassDef", indexes=()),
+                        )
+                    ),
+                ),
+            ),
+        ),
+        bindings=(),
+    ),
+    "CommitDispatchFallback": ContributionSpec(
+        name="CommitDispatchFallback",
+        source_name="PassFallbackBranch",
+        source_kind="resource",
+        build_name="CommitDispatchFallback",
+        index=LiteralValueRef(1000000),
+        order=LiteralValueRef(1000000),
+        target=TargetSpec(
+            name="commit_transaction_dispatch_body",
+            paths=(
+                TargetPathSpec(
+                    kind="build",
+                    path=PathSpec(
+                        segments=(
+                            PathSegmentSpec(kind="name", name="ClassDef", indexes=()),
+                        )
+                    ),
+                ),
+            ),
+        ),
+        bindings=(),
+    ),
+    "AfterCommitFallback": ContributionSpec(
+        name="AfterCommitFallback",
+        source_name="PassFallbackBranch",
+        source_kind="resource",
+        build_name="AfterCommitFallback",
+        index=LiteralValueRef(1000000),
+        order=LiteralValueRef(1000000),
         target=TargetSpec(
             name="after_commit_body",
             paths=(
@@ -8660,13 +8496,35 @@ ASSEMBLY_CONTRIBUTIONS = {
         ),
         bindings=(),
     ),
-    "AfterRollbackBodyPass": ContributionSpec(
-        name="AfterRollbackBodyPass",
-        source_name="PassStatement",
+    "RollbackDispatchFallback": ContributionSpec(
+        name="RollbackDispatchFallback",
+        source_name="PassFallbackBranch",
         source_kind="resource",
-        build_name="AfterRollbackBodyPass",
-        index=LiteralValueRef(0),
-        order=LiteralValueRef(0),
+        build_name="RollbackDispatchFallback",
+        index=LiteralValueRef(1000000),
+        order=LiteralValueRef(1000000),
+        target=TargetSpec(
+            name="rollback_transaction_dispatch_body",
+            paths=(
+                TargetPathSpec(
+                    kind="build",
+                    path=PathSpec(
+                        segments=(
+                            PathSegmentSpec(kind="name", name="ClassDef", indexes=()),
+                        )
+                    ),
+                ),
+            ),
+        ),
+        bindings=(),
+    ),
+    "AfterRollbackFallback": ContributionSpec(
+        name="AfterRollbackFallback",
+        source_name="PassFallbackBranch",
+        source_kind="resource",
+        build_name="AfterRollbackFallback",
+        index=LiteralValueRef(1000000),
+        order=LiteralValueRef(1000000),
         target=TargetSpec(
             name="after_rollback_body",
             paths=(
@@ -10103,168 +9961,6 @@ ASSEMBLY_CONTRIBUTIONS = {
             ),
         ),
     ),
-    "CommitOrderKeyHelperBodyPass": ContributionSpec(
-        name="CommitOrderKeyHelperBodyPass",
-        source_name="PassStatement",
-        source_kind="resource",
-        build_name="CommitOrderKeyHelperBodyPass",
-        index=ValueRef("TxIndex"),
-        order=LiteralValueRef(0),
-        target=TargetSpec(
-            name="commit_order_key_tx_body",
-            paths=(
-                TargetPathSpec(
-                    kind="build",
-                    path=PathSpec(
-                        segments=(
-                            PathSegmentSpec(kind="name", name="ClassDef", indexes=()),
-                            PathSegmentSpec(
-                                kind="name",
-                                name="CommitOrderKeyFunction",
-                                indexes=(ValueRef("TxIndex"),),
-                            ),
-                        )
-                    ),
-                ),
-            ),
-        ),
-        bindings=(),
-    ),
-    "RequiresValidationHelperBodyPass": ContributionSpec(
-        name="RequiresValidationHelperBodyPass",
-        source_name="PassStatement",
-        source_kind="resource",
-        build_name="RequiresValidationHelperBodyPass",
-        index=ValueRef("TxIndex"),
-        order=LiteralValueRef(0),
-        target=TargetSpec(
-            name="requires_validation_tx_body",
-            paths=(
-                TargetPathSpec(
-                    kind="build",
-                    path=PathSpec(
-                        segments=(
-                            PathSegmentSpec(kind="name", name="ClassDef", indexes=()),
-                            PathSegmentSpec(
-                                kind="name",
-                                name="RequiresValidationFunction",
-                                indexes=(ValueRef("TxIndex"),),
-                            ),
-                        )
-                    ),
-                ),
-            ),
-        ),
-        bindings=(),
-    ),
-    "ValidateCommitHelperBodyPass": ContributionSpec(
-        name="ValidateCommitHelperBodyPass",
-        source_name="PassStatement",
-        source_kind="resource",
-        build_name="ValidateCommitHelperBodyPass",
-        index=ValueRef("TxIndex"),
-        order=LiteralValueRef(0),
-        target=TargetSpec(
-            name="validate_commit_tx_body",
-            paths=(
-                TargetPathSpec(
-                    kind="build",
-                    path=PathSpec(
-                        segments=(
-                            PathSegmentSpec(kind="name", name="ClassDef", indexes=()),
-                            PathSegmentSpec(
-                                kind="name",
-                                name="ValidateCommitFunction",
-                                indexes=(ValueRef("TxIndex"),),
-                            ),
-                        )
-                    ),
-                ),
-            ),
-        ),
-        bindings=(),
-    ),
-    "BeforeCommitHelperBodyPass": ContributionSpec(
-        name="BeforeCommitHelperBodyPass",
-        source_name="PassStatement",
-        source_kind="resource",
-        build_name="BeforeCommitHelperBodyPass",
-        index=ValueRef("TxIndex"),
-        order=LiteralValueRef(0),
-        target=TargetSpec(
-            name="before_commit_tx_body",
-            paths=(
-                TargetPathSpec(
-                    kind="build",
-                    path=PathSpec(
-                        segments=(
-                            PathSegmentSpec(kind="name", name="ClassDef", indexes=()),
-                            PathSegmentSpec(
-                                kind="name",
-                                name="BeforeCommitFunction",
-                                indexes=(ValueRef("TxIndex"),),
-                            ),
-                        )
-                    ),
-                ),
-            ),
-        ),
-        bindings=(),
-    ),
-    "AfterCommitHelperBodyPass": ContributionSpec(
-        name="AfterCommitHelperBodyPass",
-        source_name="PassStatement",
-        source_kind="resource",
-        build_name="AfterCommitHelperBodyPass",
-        index=ValueRef("TxIndex"),
-        order=LiteralValueRef(0),
-        target=TargetSpec(
-            name="after_commit_tx_body",
-            paths=(
-                TargetPathSpec(
-                    kind="build",
-                    path=PathSpec(
-                        segments=(
-                            PathSegmentSpec(kind="name", name="ClassDef", indexes=()),
-                            PathSegmentSpec(
-                                kind="name",
-                                name="AfterCommitFunction",
-                                indexes=(ValueRef("TxIndex"),),
-                            ),
-                        )
-                    ),
-                ),
-            ),
-        ),
-        bindings=(),
-    ),
-    "AfterRollbackHelperBodyPass": ContributionSpec(
-        name="AfterRollbackHelperBodyPass",
-        source_name="PassStatement",
-        source_kind="resource",
-        build_name="AfterRollbackHelperBodyPass",
-        index=ValueRef("TxIndex"),
-        order=LiteralValueRef(0),
-        target=TargetSpec(
-            name="after_rollback_tx_body",
-            paths=(
-                TargetPathSpec(
-                    kind="build",
-                    path=PathSpec(
-                        segments=(
-                            PathSegmentSpec(kind="name", name="ClassDef", indexes=()),
-                            PathSegmentSpec(
-                                kind="name",
-                                name="AfterRollbackFunction",
-                                indexes=(ValueRef("TxIndex"),),
-                            ),
-                        )
-                    ),
-                ),
-            ),
-        ),
-        bindings=(),
-    ),
     "CommitOrderKeyDispatch": ContributionSpec(
         name="CommitOrderKeyDispatch",
         source_name="CommitOrderKeyDispatchCall",
@@ -10632,87 +10328,6 @@ ASSEMBLY_CONTRIBUTIONS = {
                 kind="external", name="method_name", value=ValueRef("MethodName")
             ),
         ),
-    ),
-    "PrepareCommitFieldsBodyPass": ContributionSpec(
-        name="PrepareCommitFieldsBodyPass",
-        source_name="PassStatement",
-        source_kind="resource",
-        build_name="PrepareCommitFieldsBodyPass",
-        index=ValueRef("TxIndex"),
-        order=LiteralValueRef(0),
-        target=TargetSpec(
-            name="prepare_commit_fields_body",
-            paths=(
-                TargetPathSpec(
-                    kind="build",
-                    path=PathSpec(
-                        segments=(
-                            PathSegmentSpec(kind="name", name="ClassDef", indexes=()),
-                            PathSegmentSpec(
-                                kind="name",
-                                name="PrepareCommitFields",
-                                indexes=(ValueRef("TxIndex"),),
-                            ),
-                        )
-                    ),
-                ),
-            ),
-        ),
-        bindings=(),
-    ),
-    "ApplyPreparedCommitFieldsBodyPass": ContributionSpec(
-        name="ApplyPreparedCommitFieldsBodyPass",
-        source_name="PassStatement",
-        source_kind="resource",
-        build_name="ApplyPreparedCommitFieldsBodyPass",
-        index=ValueRef("TxIndex"),
-        order=LiteralValueRef(0),
-        target=TargetSpec(
-            name="apply_prepared_commit_fields_body",
-            paths=(
-                TargetPathSpec(
-                    kind="build",
-                    path=PathSpec(
-                        segments=(
-                            PathSegmentSpec(kind="name", name="ClassDef", indexes=()),
-                            PathSegmentSpec(
-                                kind="name",
-                                name="ApplyPreparedCommitFields",
-                                indexes=(ValueRef("TxIndex"),),
-                            ),
-                        )
-                    ),
-                ),
-            ),
-        ),
-        bindings=(),
-    ),
-    "RollbackFieldsBodyPass": ContributionSpec(
-        name="RollbackFieldsBodyPass",
-        source_name="PassStatement",
-        source_kind="resource",
-        build_name="RollbackFieldsBodyPass",
-        index=ValueRef("TxIndex"),
-        order=LiteralValueRef(0),
-        target=TargetSpec(
-            name="rollback_fields_body",
-            paths=(
-                TargetPathSpec(
-                    kind="build",
-                    path=PathSpec(
-                        segments=(
-                            PathSegmentSpec(kind="name", name="ClassDef", indexes=()),
-                            PathSegmentSpec(
-                                kind="name",
-                                name="RollbackFields",
-                                indexes=(ValueRef("TxIndex"),),
-                            ),
-                        )
-                    ),
-                ),
-            ),
-        ),
-        bindings=(),
     ),
     "PrepareCommitFields": ContributionSpec(
         name="PrepareCommitFields",
@@ -13458,194 +13073,94 @@ ASSEMBLY_MATCHERS = {
         default_contribution_name="TransactionManagerInitParam",
         rules=(),
     ),
-    "FacadeBaseBodyPassContributions": ContributionMatcherSpec(
-        name="FacadeBaseBodyPassContributions",
+    "CommitOrderKeyFallbackContributions": ContributionMatcherSpec(
+        name="CommitOrderKeyFallbackContributions",
         inputs=(
             AssemblyInputSpec(
                 name="lifecycle_class", collection_name="Classes", collection=None
             ),
         ),
-        default_contribution_name="FacadeBaseBodyPass",
+        default_contribution_name="CommitOrderKeyFallback",
         rules=(),
     ),
-    "FacadePropertiesPassContributions": ContributionMatcherSpec(
-        name="FacadePropertiesPassContributions",
+    "RequiresValidationFallbackContributions": ContributionMatcherSpec(
+        name="RequiresValidationFallbackContributions",
         inputs=(
             AssemblyInputSpec(
                 name="lifecycle_class", collection_name="Classes", collection=None
             ),
         ),
-        default_contribution_name="FacadePropertiesPass",
+        default_contribution_name="RequiresValidationFallback",
         rules=(),
     ),
-    "DefaultFacadePropertiesPassContributions": ContributionMatcherSpec(
-        name="DefaultFacadePropertiesPassContributions",
+    "ValidateCommitFallbackContributions": ContributionMatcherSpec(
+        name="ValidateCommitFallbackContributions",
         inputs=(
             AssemblyInputSpec(
                 name="lifecycle_class", collection_name="Classes", collection=None
             ),
         ),
-        default_contribution_name="DefaultFacadePropertiesPass",
+        default_contribution_name="ValidateCommitFallback",
         rules=(),
     ),
-    "CurrentFacadePropertiesPassContributions": ContributionMatcherSpec(
-        name="CurrentFacadePropertiesPassContributions",
+    "BeforeCommitFallbackContributions": ContributionMatcherSpec(
+        name="BeforeCommitFallbackContributions",
         inputs=(
             AssemblyInputSpec(
                 name="lifecycle_class", collection_name="Classes", collection=None
             ),
         ),
-        default_contribution_name="CurrentFacadePropertiesPass",
+        default_contribution_name="BeforeCommitFallback",
         rules=(),
     ),
-    "WorkingFacadePropertiesPassContributions": ContributionMatcherSpec(
-        name="WorkingFacadePropertiesPassContributions",
+    "PrepareCommitDispatchFallbackContributions": ContributionMatcherSpec(
+        name="PrepareCommitDispatchFallbackContributions",
         inputs=(
             AssemblyInputSpec(
                 name="lifecycle_class", collection_name="Classes", collection=None
             ),
         ),
-        default_contribution_name="WorkingFacadePropertiesPass",
+        default_contribution_name="PrepareCommitDispatchFallback",
         rules=(),
     ),
-    "StateInitBodyPassContributions": ContributionMatcherSpec(
-        name="StateInitBodyPassContributions",
+    "CommitDispatchFallbackContributions": ContributionMatcherSpec(
+        name="CommitDispatchFallbackContributions",
         inputs=(
             AssemblyInputSpec(
                 name="lifecycle_class", collection_name="Classes", collection=None
             ),
         ),
-        default_contribution_name="StateInitBodyPass",
+        default_contribution_name="CommitDispatchFallback",
         rules=(),
     ),
-    "CommitTransactionBodyPassContributions": ContributionMatcherSpec(
-        name="CommitTransactionBodyPassContributions",
+    "AfterCommitFallbackContributions": ContributionMatcherSpec(
+        name="AfterCommitFallbackContributions",
         inputs=(
             AssemblyInputSpec(
                 name="lifecycle_class", collection_name="Classes", collection=None
             ),
         ),
-        default_contribution_name="CommitTransactionBodyPass",
+        default_contribution_name="AfterCommitFallback",
         rules=(),
     ),
-    "CommitTransactionDispatchBodyPassContributions": ContributionMatcherSpec(
-        name="CommitTransactionDispatchBodyPassContributions",
+    "RollbackDispatchFallbackContributions": ContributionMatcherSpec(
+        name="RollbackDispatchFallbackContributions",
         inputs=(
             AssemblyInputSpec(
                 name="lifecycle_class", collection_name="Classes", collection=None
             ),
         ),
-        default_contribution_name="CommitTransactionDispatchBodyPass",
+        default_contribution_name="RollbackDispatchFallback",
         rules=(),
     ),
-    "CommitTransactionHelpersPassContributions": ContributionMatcherSpec(
-        name="CommitTransactionHelpersPassContributions",
+    "AfterRollbackFallbackContributions": ContributionMatcherSpec(
+        name="AfterRollbackFallbackContributions",
         inputs=(
             AssemblyInputSpec(
                 name="lifecycle_class", collection_name="Classes", collection=None
             ),
         ),
-        default_contribution_name="CommitTransactionHelpersPass",
-        rules=(),
-    ),
-    "RollbackTransactionHelpersPassContributions": ContributionMatcherSpec(
-        name="RollbackTransactionHelpersPassContributions",
-        inputs=(
-            AssemblyInputSpec(
-                name="lifecycle_class", collection_name="Classes", collection=None
-            ),
-        ),
-        default_contribution_name="RollbackTransactionHelpersPass",
-        rules=(),
-    ),
-    "PrepareCommitTransactionDispatchBodyPassContributions": ContributionMatcherSpec(
-        name="PrepareCommitTransactionDispatchBodyPassContributions",
-        inputs=(
-            AssemblyInputSpec(
-                name="lifecycle_class", collection_name="Classes", collection=None
-            ),
-        ),
-        default_contribution_name="PrepareCommitTransactionDispatchBodyPass",
-        rules=(),
-    ),
-    "RollbackTransactionBodyPassContributions": ContributionMatcherSpec(
-        name="RollbackTransactionBodyPassContributions",
-        inputs=(
-            AssemblyInputSpec(
-                name="lifecycle_class", collection_name="Classes", collection=None
-            ),
-        ),
-        default_contribution_name="RollbackTransactionBodyPass",
-        rules=(),
-    ),
-    "RollbackTransactionDispatchBodyPassContributions": ContributionMatcherSpec(
-        name="RollbackTransactionDispatchBodyPassContributions",
-        inputs=(
-            AssemblyInputSpec(
-                name="lifecycle_class", collection_name="Classes", collection=None
-            ),
-        ),
-        default_contribution_name="RollbackTransactionDispatchBodyPass",
-        rules=(),
-    ),
-    "CommitOrderKeyBodyPassContributions": ContributionMatcherSpec(
-        name="CommitOrderKeyBodyPassContributions",
-        inputs=(
-            AssemblyInputSpec(
-                name="lifecycle_class", collection_name="Classes", collection=None
-            ),
-        ),
-        default_contribution_name="CommitOrderKeyBodyPass",
-        rules=(),
-    ),
-    "RequiresValidationBodyPassContributions": ContributionMatcherSpec(
-        name="RequiresValidationBodyPassContributions",
-        inputs=(
-            AssemblyInputSpec(
-                name="lifecycle_class", collection_name="Classes", collection=None
-            ),
-        ),
-        default_contribution_name="RequiresValidationBodyPass",
-        rules=(),
-    ),
-    "ValidateCommitBodyPassContributions": ContributionMatcherSpec(
-        name="ValidateCommitBodyPassContributions",
-        inputs=(
-            AssemblyInputSpec(
-                name="lifecycle_class", collection_name="Classes", collection=None
-            ),
-        ),
-        default_contribution_name="ValidateCommitBodyPass",
-        rules=(),
-    ),
-    "BeforeCommitBodyPassContributions": ContributionMatcherSpec(
-        name="BeforeCommitBodyPassContributions",
-        inputs=(
-            AssemblyInputSpec(
-                name="lifecycle_class", collection_name="Classes", collection=None
-            ),
-        ),
-        default_contribution_name="BeforeCommitBodyPass",
-        rules=(),
-    ),
-    "AfterCommitBodyPassContributions": ContributionMatcherSpec(
-        name="AfterCommitBodyPassContributions",
-        inputs=(
-            AssemblyInputSpec(
-                name="lifecycle_class", collection_name="Classes", collection=None
-            ),
-        ),
-        default_contribution_name="AfterCommitBodyPass",
-        rules=(),
-    ),
-    "AfterRollbackBodyPassContributions": ContributionMatcherSpec(
-        name="AfterRollbackBodyPassContributions",
-        inputs=(
-            AssemblyInputSpec(
-                name="lifecycle_class", collection_name="Classes", collection=None
-            ),
-        ),
-        default_contribution_name="AfterRollbackBodyPass",
+        default_contribution_name="AfterRollbackFallback",
         rules=(),
     ),
     "PlainStateSlotContributions": ContributionMatcherSpec(
@@ -14363,66 +13878,6 @@ ASSEMBLY_MATCHERS = {
         default_contribution_name="AfterRollbackHelper",
         rules=(),
     ),
-    "CommitOrderKeyHelperBodyPassContributions": ContributionMatcherSpec(
-        name="CommitOrderKeyHelperBodyPassContributions",
-        inputs=(
-            AssemblyInputSpec(
-                name="tx_group", collection_name="TxGroups", collection=None
-            ),
-        ),
-        default_contribution_name="CommitOrderKeyHelperBodyPass",
-        rules=(),
-    ),
-    "RequiresValidationHelperBodyPassContributions": ContributionMatcherSpec(
-        name="RequiresValidationHelperBodyPassContributions",
-        inputs=(
-            AssemblyInputSpec(
-                name="tx_group", collection_name="TxGroups", collection=None
-            ),
-        ),
-        default_contribution_name="RequiresValidationHelperBodyPass",
-        rules=(),
-    ),
-    "ValidateCommitHelperBodyPassContributions": ContributionMatcherSpec(
-        name="ValidateCommitHelperBodyPassContributions",
-        inputs=(
-            AssemblyInputSpec(
-                name="tx_group", collection_name="TxGroups", collection=None
-            ),
-        ),
-        default_contribution_name="ValidateCommitHelperBodyPass",
-        rules=(),
-    ),
-    "BeforeCommitHelperBodyPassContributions": ContributionMatcherSpec(
-        name="BeforeCommitHelperBodyPassContributions",
-        inputs=(
-            AssemblyInputSpec(
-                name="tx_group", collection_name="TxGroups", collection=None
-            ),
-        ),
-        default_contribution_name="BeforeCommitHelperBodyPass",
-        rules=(),
-    ),
-    "AfterCommitHelperBodyPassContributions": ContributionMatcherSpec(
-        name="AfterCommitHelperBodyPassContributions",
-        inputs=(
-            AssemblyInputSpec(
-                name="tx_group", collection_name="TxGroups", collection=None
-            ),
-        ),
-        default_contribution_name="AfterCommitHelperBodyPass",
-        rules=(),
-    ),
-    "AfterRollbackHelperBodyPassContributions": ContributionMatcherSpec(
-        name="AfterRollbackHelperBodyPassContributions",
-        inputs=(
-            AssemblyInputSpec(
-                name="tx_group", collection_name="TxGroups", collection=None
-            ),
-        ),
-        default_contribution_name="AfterRollbackHelperBodyPass",
-        rules=(),
-    ),
     "CommitOrderKeyDispatchContributions": ContributionMatcherSpec(
         name="CommitOrderKeyDispatchContributions",
         inputs=(
@@ -14481,36 +13936,6 @@ ASSEMBLY_MATCHERS = {
             ),
         ),
         default_contribution_name="AfterRollbackDispatch",
-        rules=(),
-    ),
-    "PrepareCommitFieldsBodyPassContributions": ContributionMatcherSpec(
-        name="PrepareCommitFieldsBodyPassContributions",
-        inputs=(
-            AssemblyInputSpec(
-                name="tx_group", collection_name="TxGroups", collection=None
-            ),
-        ),
-        default_contribution_name="PrepareCommitFieldsBodyPass",
-        rules=(),
-    ),
-    "ApplyPreparedCommitFieldsBodyPassContributions": ContributionMatcherSpec(
-        name="ApplyPreparedCommitFieldsBodyPassContributions",
-        inputs=(
-            AssemblyInputSpec(
-                name="tx_group", collection_name="TxGroups", collection=None
-            ),
-        ),
-        default_contribution_name="ApplyPreparedCommitFieldsBodyPass",
-        rules=(),
-    ),
-    "RollbackFieldsBodyPassContributions": ContributionMatcherSpec(
-        name="RollbackFieldsBodyPassContributions",
-        inputs=(
-            AssemblyInputSpec(
-                name="tx_group", collection_name="TxGroups", collection=None
-            ),
-        ),
-        default_contribution_name="RollbackFieldsBodyPass",
         rules=(),
     ),
     "ApplyPreparedCommitFieldsContributions": ContributionMatcherSpec(
@@ -15885,8 +15310,8 @@ ASSEMBLY_EDGES = {
         condition=None,
         matcher_name="TransactionManagerInitParamContributions",
     ),
-    "CoreClassProduction.facade_base_body_pass": AssemblyEdgeSpec(
-        name="CoreClassProduction.facade_base_body_pass",
+    "CoreClassProduction.commit_order_key_fallback": AssemblyEdgeSpec(
+        name="CoreClassProduction.commit_order_key_fallback",
         context_inputs=(
             AssemblyInputSpec(
                 name="lifecycle_class", collection_name="Classes", collection=None
@@ -15894,10 +15319,10 @@ ASSEMBLY_EDGES = {
         ),
         from_inputs=(),
         condition=None,
-        matcher_name="FacadeBaseBodyPassContributions",
+        matcher_name="CommitOrderKeyFallbackContributions",
     ),
-    "CoreClassProduction.facade_properties_pass": AssemblyEdgeSpec(
-        name="CoreClassProduction.facade_properties_pass",
+    "CoreClassProduction.requires_validation_fallback": AssemblyEdgeSpec(
+        name="CoreClassProduction.requires_validation_fallback",
         context_inputs=(
             AssemblyInputSpec(
                 name="lifecycle_class", collection_name="Classes", collection=None
@@ -15905,10 +15330,10 @@ ASSEMBLY_EDGES = {
         ),
         from_inputs=(),
         condition=None,
-        matcher_name="FacadePropertiesPassContributions",
+        matcher_name="RequiresValidationFallbackContributions",
     ),
-    "CoreClassProduction.default_facade_properties_pass": AssemblyEdgeSpec(
-        name="CoreClassProduction.default_facade_properties_pass",
+    "CoreClassProduction.validate_commit_fallback": AssemblyEdgeSpec(
+        name="CoreClassProduction.validate_commit_fallback",
         context_inputs=(
             AssemblyInputSpec(
                 name="lifecycle_class", collection_name="Classes", collection=None
@@ -15916,10 +15341,10 @@ ASSEMBLY_EDGES = {
         ),
         from_inputs=(),
         condition=None,
-        matcher_name="DefaultFacadePropertiesPassContributions",
+        matcher_name="ValidateCommitFallbackContributions",
     ),
-    "CoreClassProduction.current_facade_properties_pass": AssemblyEdgeSpec(
-        name="CoreClassProduction.current_facade_properties_pass",
+    "CoreClassProduction.before_commit_fallback": AssemblyEdgeSpec(
+        name="CoreClassProduction.before_commit_fallback",
         context_inputs=(
             AssemblyInputSpec(
                 name="lifecycle_class", collection_name="Classes", collection=None
@@ -15927,10 +15352,10 @@ ASSEMBLY_EDGES = {
         ),
         from_inputs=(),
         condition=None,
-        matcher_name="CurrentFacadePropertiesPassContributions",
+        matcher_name="BeforeCommitFallbackContributions",
     ),
-    "CoreClassProduction.working_facade_properties_pass": AssemblyEdgeSpec(
-        name="CoreClassProduction.working_facade_properties_pass",
+    "CoreClassProduction.prepare_commit_dispatch_fallback": AssemblyEdgeSpec(
+        name="CoreClassProduction.prepare_commit_dispatch_fallback",
         context_inputs=(
             AssemblyInputSpec(
                 name="lifecycle_class", collection_name="Classes", collection=None
@@ -15938,10 +15363,10 @@ ASSEMBLY_EDGES = {
         ),
         from_inputs=(),
         condition=None,
-        matcher_name="WorkingFacadePropertiesPassContributions",
+        matcher_name="PrepareCommitDispatchFallbackContributions",
     ),
-    "CoreClassProduction.state_init_body_pass": AssemblyEdgeSpec(
-        name="CoreClassProduction.state_init_body_pass",
+    "CoreClassProduction.commit_dispatch_fallback": AssemblyEdgeSpec(
+        name="CoreClassProduction.commit_dispatch_fallback",
         context_inputs=(
             AssemblyInputSpec(
                 name="lifecycle_class", collection_name="Classes", collection=None
@@ -15949,10 +15374,10 @@ ASSEMBLY_EDGES = {
         ),
         from_inputs=(),
         condition=None,
-        matcher_name="StateInitBodyPassContributions",
+        matcher_name="CommitDispatchFallbackContributions",
     ),
-    "CoreClassProduction.commit_transaction_body_pass": AssemblyEdgeSpec(
-        name="CoreClassProduction.commit_transaction_body_pass",
+    "CoreClassProduction.after_commit_fallback": AssemblyEdgeSpec(
+        name="CoreClassProduction.after_commit_fallback",
         context_inputs=(
             AssemblyInputSpec(
                 name="lifecycle_class", collection_name="Classes", collection=None
@@ -15960,10 +15385,10 @@ ASSEMBLY_EDGES = {
         ),
         from_inputs=(),
         condition=None,
-        matcher_name="CommitTransactionBodyPassContributions",
+        matcher_name="AfterCommitFallbackContributions",
     ),
-    "CoreClassProduction.commit_transaction_dispatch_body_pass": AssemblyEdgeSpec(
-        name="CoreClassProduction.commit_transaction_dispatch_body_pass",
+    "CoreClassProduction.rollback_dispatch_fallback": AssemblyEdgeSpec(
+        name="CoreClassProduction.rollback_dispatch_fallback",
         context_inputs=(
             AssemblyInputSpec(
                 name="lifecycle_class", collection_name="Classes", collection=None
@@ -15971,10 +15396,10 @@ ASSEMBLY_EDGES = {
         ),
         from_inputs=(),
         condition=None,
-        matcher_name="CommitTransactionDispatchBodyPassContributions",
+        matcher_name="RollbackDispatchFallbackContributions",
     ),
-    "CoreClassProduction.commit_transaction_helpers_pass": AssemblyEdgeSpec(
-        name="CoreClassProduction.commit_transaction_helpers_pass",
+    "CoreClassProduction.after_rollback_fallback": AssemblyEdgeSpec(
+        name="CoreClassProduction.after_rollback_fallback",
         context_inputs=(
             AssemblyInputSpec(
                 name="lifecycle_class", collection_name="Classes", collection=None
@@ -15982,117 +15407,7 @@ ASSEMBLY_EDGES = {
         ),
         from_inputs=(),
         condition=None,
-        matcher_name="CommitTransactionHelpersPassContributions",
-    ),
-    "CoreClassProduction.rollback_transaction_helpers_pass": AssemblyEdgeSpec(
-        name="CoreClassProduction.rollback_transaction_helpers_pass",
-        context_inputs=(
-            AssemblyInputSpec(
-                name="lifecycle_class", collection_name="Classes", collection=None
-            ),
-        ),
-        from_inputs=(),
-        condition=None,
-        matcher_name="RollbackTransactionHelpersPassContributions",
-    ),
-    "CoreClassProduction.prepare_commit_transaction_dispatch_body_pass": AssemblyEdgeSpec(
-        name="CoreClassProduction.prepare_commit_transaction_dispatch_body_pass",
-        context_inputs=(
-            AssemblyInputSpec(
-                name="lifecycle_class", collection_name="Classes", collection=None
-            ),
-        ),
-        from_inputs=(),
-        condition=None,
-        matcher_name="PrepareCommitTransactionDispatchBodyPassContributions",
-    ),
-    "CoreClassProduction.rollback_transaction_body_pass": AssemblyEdgeSpec(
-        name="CoreClassProduction.rollback_transaction_body_pass",
-        context_inputs=(
-            AssemblyInputSpec(
-                name="lifecycle_class", collection_name="Classes", collection=None
-            ),
-        ),
-        from_inputs=(),
-        condition=None,
-        matcher_name="RollbackTransactionBodyPassContributions",
-    ),
-    "CoreClassProduction.rollback_transaction_dispatch_body_pass": AssemblyEdgeSpec(
-        name="CoreClassProduction.rollback_transaction_dispatch_body_pass",
-        context_inputs=(
-            AssemblyInputSpec(
-                name="lifecycle_class", collection_name="Classes", collection=None
-            ),
-        ),
-        from_inputs=(),
-        condition=None,
-        matcher_name="RollbackTransactionDispatchBodyPassContributions",
-    ),
-    "CoreClassProduction.commit_order_key_body_pass": AssemblyEdgeSpec(
-        name="CoreClassProduction.commit_order_key_body_pass",
-        context_inputs=(
-            AssemblyInputSpec(
-                name="lifecycle_class", collection_name="Classes", collection=None
-            ),
-        ),
-        from_inputs=(),
-        condition=None,
-        matcher_name="CommitOrderKeyBodyPassContributions",
-    ),
-    "CoreClassProduction.requires_validation_body_pass": AssemblyEdgeSpec(
-        name="CoreClassProduction.requires_validation_body_pass",
-        context_inputs=(
-            AssemblyInputSpec(
-                name="lifecycle_class", collection_name="Classes", collection=None
-            ),
-        ),
-        from_inputs=(),
-        condition=None,
-        matcher_name="RequiresValidationBodyPassContributions",
-    ),
-    "CoreClassProduction.validate_commit_body_pass": AssemblyEdgeSpec(
-        name="CoreClassProduction.validate_commit_body_pass",
-        context_inputs=(
-            AssemblyInputSpec(
-                name="lifecycle_class", collection_name="Classes", collection=None
-            ),
-        ),
-        from_inputs=(),
-        condition=None,
-        matcher_name="ValidateCommitBodyPassContributions",
-    ),
-    "CoreClassProduction.before_commit_body_pass": AssemblyEdgeSpec(
-        name="CoreClassProduction.before_commit_body_pass",
-        context_inputs=(
-            AssemblyInputSpec(
-                name="lifecycle_class", collection_name="Classes", collection=None
-            ),
-        ),
-        from_inputs=(),
-        condition=None,
-        matcher_name="BeforeCommitBodyPassContributions",
-    ),
-    "CoreClassProduction.after_commit_body_pass": AssemblyEdgeSpec(
-        name="CoreClassProduction.after_commit_body_pass",
-        context_inputs=(
-            AssemblyInputSpec(
-                name="lifecycle_class", collection_name="Classes", collection=None
-            ),
-        ),
-        from_inputs=(),
-        condition=None,
-        matcher_name="AfterCommitBodyPassContributions",
-    ),
-    "CoreClassProduction.after_rollback_body_pass": AssemblyEdgeSpec(
-        name="CoreClassProduction.after_rollback_body_pass",
-        context_inputs=(
-            AssemblyInputSpec(
-                name="lifecycle_class", collection_name="Classes", collection=None
-            ),
-        ),
-        from_inputs=(),
-        condition=None,
-        matcher_name="AfterRollbackBodyPassContributions",
+        matcher_name="AfterRollbackFallbackContributions",
     ),
     "CoreClassProduction.classvars": AssemblyEdgeSpec(
         name="CoreClassProduction.classvars",
@@ -16604,8 +15919,8 @@ ASSEMBLY_EDGES = {
         condition=None,
         matcher_name="TransactionManagerInitParamContributions",
     ),
-    "ClassProduction.facade_base_body_pass": AssemblyEdgeSpec(
-        name="ClassProduction.facade_base_body_pass",
+    "ClassProduction.commit_order_key_fallback": AssemblyEdgeSpec(
+        name="ClassProduction.commit_order_key_fallback",
         context_inputs=(
             AssemblyInputSpec(
                 name="lifecycle_class", collection_name="Classes", collection=None
@@ -16613,10 +15928,10 @@ ASSEMBLY_EDGES = {
         ),
         from_inputs=(),
         condition=None,
-        matcher_name="FacadeBaseBodyPassContributions",
+        matcher_name="CommitOrderKeyFallbackContributions",
     ),
-    "ClassProduction.facade_properties_pass": AssemblyEdgeSpec(
-        name="ClassProduction.facade_properties_pass",
+    "ClassProduction.requires_validation_fallback": AssemblyEdgeSpec(
+        name="ClassProduction.requires_validation_fallback",
         context_inputs=(
             AssemblyInputSpec(
                 name="lifecycle_class", collection_name="Classes", collection=None
@@ -16624,10 +15939,10 @@ ASSEMBLY_EDGES = {
         ),
         from_inputs=(),
         condition=None,
-        matcher_name="FacadePropertiesPassContributions",
+        matcher_name="RequiresValidationFallbackContributions",
     ),
-    "ClassProduction.default_facade_properties_pass": AssemblyEdgeSpec(
-        name="ClassProduction.default_facade_properties_pass",
+    "ClassProduction.validate_commit_fallback": AssemblyEdgeSpec(
+        name="ClassProduction.validate_commit_fallback",
         context_inputs=(
             AssemblyInputSpec(
                 name="lifecycle_class", collection_name="Classes", collection=None
@@ -16635,10 +15950,10 @@ ASSEMBLY_EDGES = {
         ),
         from_inputs=(),
         condition=None,
-        matcher_name="DefaultFacadePropertiesPassContributions",
+        matcher_name="ValidateCommitFallbackContributions",
     ),
-    "ClassProduction.current_facade_properties_pass": AssemblyEdgeSpec(
-        name="ClassProduction.current_facade_properties_pass",
+    "ClassProduction.before_commit_fallback": AssemblyEdgeSpec(
+        name="ClassProduction.before_commit_fallback",
         context_inputs=(
             AssemblyInputSpec(
                 name="lifecycle_class", collection_name="Classes", collection=None
@@ -16646,10 +15961,10 @@ ASSEMBLY_EDGES = {
         ),
         from_inputs=(),
         condition=None,
-        matcher_name="CurrentFacadePropertiesPassContributions",
+        matcher_name="BeforeCommitFallbackContributions",
     ),
-    "ClassProduction.working_facade_properties_pass": AssemblyEdgeSpec(
-        name="ClassProduction.working_facade_properties_pass",
+    "ClassProduction.prepare_commit_dispatch_fallback": AssemblyEdgeSpec(
+        name="ClassProduction.prepare_commit_dispatch_fallback",
         context_inputs=(
             AssemblyInputSpec(
                 name="lifecycle_class", collection_name="Classes", collection=None
@@ -16657,10 +15972,10 @@ ASSEMBLY_EDGES = {
         ),
         from_inputs=(),
         condition=None,
-        matcher_name="WorkingFacadePropertiesPassContributions",
+        matcher_name="PrepareCommitDispatchFallbackContributions",
     ),
-    "ClassProduction.state_init_body_pass": AssemblyEdgeSpec(
-        name="ClassProduction.state_init_body_pass",
+    "ClassProduction.commit_dispatch_fallback": AssemblyEdgeSpec(
+        name="ClassProduction.commit_dispatch_fallback",
         context_inputs=(
             AssemblyInputSpec(
                 name="lifecycle_class", collection_name="Classes", collection=None
@@ -16668,10 +15983,10 @@ ASSEMBLY_EDGES = {
         ),
         from_inputs=(),
         condition=None,
-        matcher_name="StateInitBodyPassContributions",
+        matcher_name="CommitDispatchFallbackContributions",
     ),
-    "ClassProduction.commit_transaction_body_pass": AssemblyEdgeSpec(
-        name="ClassProduction.commit_transaction_body_pass",
+    "ClassProduction.after_commit_fallback": AssemblyEdgeSpec(
+        name="ClassProduction.after_commit_fallback",
         context_inputs=(
             AssemblyInputSpec(
                 name="lifecycle_class", collection_name="Classes", collection=None
@@ -16679,10 +15994,10 @@ ASSEMBLY_EDGES = {
         ),
         from_inputs=(),
         condition=None,
-        matcher_name="CommitTransactionBodyPassContributions",
+        matcher_name="AfterCommitFallbackContributions",
     ),
-    "ClassProduction.commit_transaction_dispatch_body_pass": AssemblyEdgeSpec(
-        name="ClassProduction.commit_transaction_dispatch_body_pass",
+    "ClassProduction.rollback_dispatch_fallback": AssemblyEdgeSpec(
+        name="ClassProduction.rollback_dispatch_fallback",
         context_inputs=(
             AssemblyInputSpec(
                 name="lifecycle_class", collection_name="Classes", collection=None
@@ -16690,10 +16005,10 @@ ASSEMBLY_EDGES = {
         ),
         from_inputs=(),
         condition=None,
-        matcher_name="CommitTransactionDispatchBodyPassContributions",
+        matcher_name="RollbackDispatchFallbackContributions",
     ),
-    "ClassProduction.commit_transaction_helpers_pass": AssemblyEdgeSpec(
-        name="ClassProduction.commit_transaction_helpers_pass",
+    "ClassProduction.after_rollback_fallback": AssemblyEdgeSpec(
+        name="ClassProduction.after_rollback_fallback",
         context_inputs=(
             AssemblyInputSpec(
                 name="lifecycle_class", collection_name="Classes", collection=None
@@ -16701,117 +16016,7 @@ ASSEMBLY_EDGES = {
         ),
         from_inputs=(),
         condition=None,
-        matcher_name="CommitTransactionHelpersPassContributions",
-    ),
-    "ClassProduction.rollback_transaction_helpers_pass": AssemblyEdgeSpec(
-        name="ClassProduction.rollback_transaction_helpers_pass",
-        context_inputs=(
-            AssemblyInputSpec(
-                name="lifecycle_class", collection_name="Classes", collection=None
-            ),
-        ),
-        from_inputs=(),
-        condition=None,
-        matcher_name="RollbackTransactionHelpersPassContributions",
-    ),
-    "ClassProduction.prepare_commit_transaction_dispatch_body_pass": AssemblyEdgeSpec(
-        name="ClassProduction.prepare_commit_transaction_dispatch_body_pass",
-        context_inputs=(
-            AssemblyInputSpec(
-                name="lifecycle_class", collection_name="Classes", collection=None
-            ),
-        ),
-        from_inputs=(),
-        condition=None,
-        matcher_name="PrepareCommitTransactionDispatchBodyPassContributions",
-    ),
-    "ClassProduction.rollback_transaction_body_pass": AssemblyEdgeSpec(
-        name="ClassProduction.rollback_transaction_body_pass",
-        context_inputs=(
-            AssemblyInputSpec(
-                name="lifecycle_class", collection_name="Classes", collection=None
-            ),
-        ),
-        from_inputs=(),
-        condition=None,
-        matcher_name="RollbackTransactionBodyPassContributions",
-    ),
-    "ClassProduction.rollback_transaction_dispatch_body_pass": AssemblyEdgeSpec(
-        name="ClassProduction.rollback_transaction_dispatch_body_pass",
-        context_inputs=(
-            AssemblyInputSpec(
-                name="lifecycle_class", collection_name="Classes", collection=None
-            ),
-        ),
-        from_inputs=(),
-        condition=None,
-        matcher_name="RollbackTransactionDispatchBodyPassContributions",
-    ),
-    "ClassProduction.commit_order_key_body_pass": AssemblyEdgeSpec(
-        name="ClassProduction.commit_order_key_body_pass",
-        context_inputs=(
-            AssemblyInputSpec(
-                name="lifecycle_class", collection_name="Classes", collection=None
-            ),
-        ),
-        from_inputs=(),
-        condition=None,
-        matcher_name="CommitOrderKeyBodyPassContributions",
-    ),
-    "ClassProduction.requires_validation_body_pass": AssemblyEdgeSpec(
-        name="ClassProduction.requires_validation_body_pass",
-        context_inputs=(
-            AssemblyInputSpec(
-                name="lifecycle_class", collection_name="Classes", collection=None
-            ),
-        ),
-        from_inputs=(),
-        condition=None,
-        matcher_name="RequiresValidationBodyPassContributions",
-    ),
-    "ClassProduction.validate_commit_body_pass": AssemblyEdgeSpec(
-        name="ClassProduction.validate_commit_body_pass",
-        context_inputs=(
-            AssemblyInputSpec(
-                name="lifecycle_class", collection_name="Classes", collection=None
-            ),
-        ),
-        from_inputs=(),
-        condition=None,
-        matcher_name="ValidateCommitBodyPassContributions",
-    ),
-    "ClassProduction.before_commit_body_pass": AssemblyEdgeSpec(
-        name="ClassProduction.before_commit_body_pass",
-        context_inputs=(
-            AssemblyInputSpec(
-                name="lifecycle_class", collection_name="Classes", collection=None
-            ),
-        ),
-        from_inputs=(),
-        condition=None,
-        matcher_name="BeforeCommitBodyPassContributions",
-    ),
-    "ClassProduction.after_commit_body_pass": AssemblyEdgeSpec(
-        name="ClassProduction.after_commit_body_pass",
-        context_inputs=(
-            AssemblyInputSpec(
-                name="lifecycle_class", collection_name="Classes", collection=None
-            ),
-        ),
-        from_inputs=(),
-        condition=None,
-        matcher_name="AfterCommitBodyPassContributions",
-    ),
-    "ClassProduction.after_rollback_body_pass": AssemblyEdgeSpec(
-        name="ClassProduction.after_rollback_body_pass",
-        context_inputs=(
-            AssemblyInputSpec(
-                name="lifecycle_class", collection_name="Classes", collection=None
-            ),
-        ),
-        from_inputs=(),
-        condition=None,
-        matcher_name="AfterRollbackBodyPassContributions",
+        matcher_name="AfterRollbackFallbackContributions",
     ),
     "ClassProduction.commit_order_key_helpers": AssemblyEdgeSpec(
         name="ClassProduction.commit_order_key_helpers",
@@ -16902,96 +16107,6 @@ ASSEMBLY_EDGES = {
         ),
         condition=EqConditionSpec(left=ValueRef("TxOwner"), right=ValueRef("ClassId")),
         matcher_name="AfterRollbackHelperContributions",
-    ),
-    "ClassProduction.commit_order_key_helper_body_pass": AssemblyEdgeSpec(
-        name="ClassProduction.commit_order_key_helper_body_pass",
-        context_inputs=(
-            AssemblyInputSpec(
-                name="lifecycle_class", collection_name="Classes", collection=None
-            ),
-        ),
-        from_inputs=(
-            AssemblyInputSpec(
-                name="tx_group", collection_name="TxGroups", collection=None
-            ),
-        ),
-        condition=EqConditionSpec(left=ValueRef("TxOwner"), right=ValueRef("ClassId")),
-        matcher_name="CommitOrderKeyHelperBodyPassContributions",
-    ),
-    "ClassProduction.requires_validation_helper_body_pass": AssemblyEdgeSpec(
-        name="ClassProduction.requires_validation_helper_body_pass",
-        context_inputs=(
-            AssemblyInputSpec(
-                name="lifecycle_class", collection_name="Classes", collection=None
-            ),
-        ),
-        from_inputs=(
-            AssemblyInputSpec(
-                name="tx_group", collection_name="TxGroups", collection=None
-            ),
-        ),
-        condition=EqConditionSpec(left=ValueRef("TxOwner"), right=ValueRef("ClassId")),
-        matcher_name="RequiresValidationHelperBodyPassContributions",
-    ),
-    "ClassProduction.validate_commit_helper_body_pass": AssemblyEdgeSpec(
-        name="ClassProduction.validate_commit_helper_body_pass",
-        context_inputs=(
-            AssemblyInputSpec(
-                name="lifecycle_class", collection_name="Classes", collection=None
-            ),
-        ),
-        from_inputs=(
-            AssemblyInputSpec(
-                name="tx_group", collection_name="TxGroups", collection=None
-            ),
-        ),
-        condition=EqConditionSpec(left=ValueRef("TxOwner"), right=ValueRef("ClassId")),
-        matcher_name="ValidateCommitHelperBodyPassContributions",
-    ),
-    "ClassProduction.before_commit_helper_body_pass": AssemblyEdgeSpec(
-        name="ClassProduction.before_commit_helper_body_pass",
-        context_inputs=(
-            AssemblyInputSpec(
-                name="lifecycle_class", collection_name="Classes", collection=None
-            ),
-        ),
-        from_inputs=(
-            AssemblyInputSpec(
-                name="tx_group", collection_name="TxGroups", collection=None
-            ),
-        ),
-        condition=EqConditionSpec(left=ValueRef("TxOwner"), right=ValueRef("ClassId")),
-        matcher_name="BeforeCommitHelperBodyPassContributions",
-    ),
-    "ClassProduction.after_commit_helper_body_pass": AssemblyEdgeSpec(
-        name="ClassProduction.after_commit_helper_body_pass",
-        context_inputs=(
-            AssemblyInputSpec(
-                name="lifecycle_class", collection_name="Classes", collection=None
-            ),
-        ),
-        from_inputs=(
-            AssemblyInputSpec(
-                name="tx_group", collection_name="TxGroups", collection=None
-            ),
-        ),
-        condition=EqConditionSpec(left=ValueRef("TxOwner"), right=ValueRef("ClassId")),
-        matcher_name="AfterCommitHelperBodyPassContributions",
-    ),
-    "ClassProduction.after_rollback_helper_body_pass": AssemblyEdgeSpec(
-        name="ClassProduction.after_rollback_helper_body_pass",
-        context_inputs=(
-            AssemblyInputSpec(
-                name="lifecycle_class", collection_name="Classes", collection=None
-            ),
-        ),
-        from_inputs=(
-            AssemblyInputSpec(
-                name="tx_group", collection_name="TxGroups", collection=None
-            ),
-        ),
-        condition=EqConditionSpec(left=ValueRef("TxOwner"), right=ValueRef("ClassId")),
-        matcher_name="AfterRollbackHelperBodyPassContributions",
     ),
     "ClassProduction.commit_order_key_dispatch": AssemblyEdgeSpec(
         name="ClassProduction.commit_order_key_dispatch",
@@ -17824,51 +16939,6 @@ ASSEMBLY_EDGES = {
         condition=EqConditionSpec(left=ValueRef("TxOwner"), right=ValueRef("ClassId")),
         matcher_name="RollbackFieldsContributions",
     ),
-    "ClassProduction.apply_prepared_commit_helper_body_pass": AssemblyEdgeSpec(
-        name="ClassProduction.apply_prepared_commit_helper_body_pass",
-        context_inputs=(
-            AssemblyInputSpec(
-                name="lifecycle_class", collection_name="Classes", collection=None
-            ),
-        ),
-        from_inputs=(
-            AssemblyInputSpec(
-                name="tx_group", collection_name="TxGroups", collection=None
-            ),
-        ),
-        condition=EqConditionSpec(left=ValueRef("TxOwner"), right=ValueRef("ClassId")),
-        matcher_name="ApplyPreparedCommitFieldsBodyPassContributions",
-    ),
-    "ClassProduction.prepare_commit_helper_body_pass": AssemblyEdgeSpec(
-        name="ClassProduction.prepare_commit_helper_body_pass",
-        context_inputs=(
-            AssemblyInputSpec(
-                name="lifecycle_class", collection_name="Classes", collection=None
-            ),
-        ),
-        from_inputs=(
-            AssemblyInputSpec(
-                name="tx_group", collection_name="TxGroups", collection=None
-            ),
-        ),
-        condition=EqConditionSpec(left=ValueRef("TxOwner"), right=ValueRef("ClassId")),
-        matcher_name="PrepareCommitFieldsBodyPassContributions",
-    ),
-    "ClassProduction.rollback_helper_body_pass": AssemblyEdgeSpec(
-        name="ClassProduction.rollback_helper_body_pass",
-        context_inputs=(
-            AssemblyInputSpec(
-                name="lifecycle_class", collection_name="Classes", collection=None
-            ),
-        ),
-        from_inputs=(
-            AssemblyInputSpec(
-                name="tx_group", collection_name="TxGroups", collection=None
-            ),
-        ),
-        condition=EqConditionSpec(left=ValueRef("TxOwner"), right=ValueRef("ClassId")),
-        matcher_name="RollbackFieldsBodyPassContributions",
-    ),
     "ClassProduction.prepare_commit_dispatch": AssemblyEdgeSpec(
         name="ClassProduction.prepare_commit_dispatch",
         context_inputs=(
@@ -18310,7 +17380,7 @@ ASSEMBLY_PRODUCTIONS = {
             ),
             InlineApplySpec(
                 edge=AssemblyEdgeSpec(
-                    name="CoreClassProduction.facade_base_body_pass",
+                    name="CoreClassProduction.commit_order_key_fallback",
                     context_inputs=(
                         AssemblyInputSpec(
                             name="lifecycle_class",
@@ -18320,12 +17390,12 @@ ASSEMBLY_PRODUCTIONS = {
                     ),
                     from_inputs=(),
                     condition=None,
-                    matcher_name="FacadeBaseBodyPassContributions",
+                    matcher_name="CommitOrderKeyFallbackContributions",
                 )
             ),
             InlineApplySpec(
                 edge=AssemblyEdgeSpec(
-                    name="CoreClassProduction.facade_properties_pass",
+                    name="CoreClassProduction.requires_validation_fallback",
                     context_inputs=(
                         AssemblyInputSpec(
                             name="lifecycle_class",
@@ -18335,12 +17405,12 @@ ASSEMBLY_PRODUCTIONS = {
                     ),
                     from_inputs=(),
                     condition=None,
-                    matcher_name="FacadePropertiesPassContributions",
+                    matcher_name="RequiresValidationFallbackContributions",
                 )
             ),
             InlineApplySpec(
                 edge=AssemblyEdgeSpec(
-                    name="CoreClassProduction.default_facade_properties_pass",
+                    name="CoreClassProduction.validate_commit_fallback",
                     context_inputs=(
                         AssemblyInputSpec(
                             name="lifecycle_class",
@@ -18350,12 +17420,12 @@ ASSEMBLY_PRODUCTIONS = {
                     ),
                     from_inputs=(),
                     condition=None,
-                    matcher_name="DefaultFacadePropertiesPassContributions",
+                    matcher_name="ValidateCommitFallbackContributions",
                 )
             ),
             InlineApplySpec(
                 edge=AssemblyEdgeSpec(
-                    name="CoreClassProduction.current_facade_properties_pass",
+                    name="CoreClassProduction.before_commit_fallback",
                     context_inputs=(
                         AssemblyInputSpec(
                             name="lifecycle_class",
@@ -18365,12 +17435,12 @@ ASSEMBLY_PRODUCTIONS = {
                     ),
                     from_inputs=(),
                     condition=None,
-                    matcher_name="CurrentFacadePropertiesPassContributions",
+                    matcher_name="BeforeCommitFallbackContributions",
                 )
             ),
             InlineApplySpec(
                 edge=AssemblyEdgeSpec(
-                    name="CoreClassProduction.working_facade_properties_pass",
+                    name="CoreClassProduction.prepare_commit_dispatch_fallback",
                     context_inputs=(
                         AssemblyInputSpec(
                             name="lifecycle_class",
@@ -18380,12 +17450,12 @@ ASSEMBLY_PRODUCTIONS = {
                     ),
                     from_inputs=(),
                     condition=None,
-                    matcher_name="WorkingFacadePropertiesPassContributions",
+                    matcher_name="PrepareCommitDispatchFallbackContributions",
                 )
             ),
             InlineApplySpec(
                 edge=AssemblyEdgeSpec(
-                    name="CoreClassProduction.state_init_body_pass",
+                    name="CoreClassProduction.commit_dispatch_fallback",
                     context_inputs=(
                         AssemblyInputSpec(
                             name="lifecycle_class",
@@ -18395,12 +17465,12 @@ ASSEMBLY_PRODUCTIONS = {
                     ),
                     from_inputs=(),
                     condition=None,
-                    matcher_name="StateInitBodyPassContributions",
+                    matcher_name="CommitDispatchFallbackContributions",
                 )
             ),
             InlineApplySpec(
                 edge=AssemblyEdgeSpec(
-                    name="CoreClassProduction.commit_transaction_body_pass",
+                    name="CoreClassProduction.after_commit_fallback",
                     context_inputs=(
                         AssemblyInputSpec(
                             name="lifecycle_class",
@@ -18410,12 +17480,12 @@ ASSEMBLY_PRODUCTIONS = {
                     ),
                     from_inputs=(),
                     condition=None,
-                    matcher_name="CommitTransactionBodyPassContributions",
+                    matcher_name="AfterCommitFallbackContributions",
                 )
             ),
             InlineApplySpec(
                 edge=AssemblyEdgeSpec(
-                    name="CoreClassProduction.commit_transaction_dispatch_body_pass",
+                    name="CoreClassProduction.rollback_dispatch_fallback",
                     context_inputs=(
                         AssemblyInputSpec(
                             name="lifecycle_class",
@@ -18425,12 +17495,12 @@ ASSEMBLY_PRODUCTIONS = {
                     ),
                     from_inputs=(),
                     condition=None,
-                    matcher_name="CommitTransactionDispatchBodyPassContributions",
+                    matcher_name="RollbackDispatchFallbackContributions",
                 )
             ),
             InlineApplySpec(
                 edge=AssemblyEdgeSpec(
-                    name="CoreClassProduction.commit_transaction_helpers_pass",
+                    name="CoreClassProduction.after_rollback_fallback",
                     context_inputs=(
                         AssemblyInputSpec(
                             name="lifecycle_class",
@@ -18440,157 +17510,7 @@ ASSEMBLY_PRODUCTIONS = {
                     ),
                     from_inputs=(),
                     condition=None,
-                    matcher_name="CommitTransactionHelpersPassContributions",
-                )
-            ),
-            InlineApplySpec(
-                edge=AssemblyEdgeSpec(
-                    name="CoreClassProduction.rollback_transaction_helpers_pass",
-                    context_inputs=(
-                        AssemblyInputSpec(
-                            name="lifecycle_class",
-                            collection_name="Classes",
-                            collection=None,
-                        ),
-                    ),
-                    from_inputs=(),
-                    condition=None,
-                    matcher_name="RollbackTransactionHelpersPassContributions",
-                )
-            ),
-            InlineApplySpec(
-                edge=AssemblyEdgeSpec(
-                    name="CoreClassProduction.prepare_commit_transaction_dispatch_body_pass",
-                    context_inputs=(
-                        AssemblyInputSpec(
-                            name="lifecycle_class",
-                            collection_name="Classes",
-                            collection=None,
-                        ),
-                    ),
-                    from_inputs=(),
-                    condition=None,
-                    matcher_name="PrepareCommitTransactionDispatchBodyPassContributions",
-                )
-            ),
-            InlineApplySpec(
-                edge=AssemblyEdgeSpec(
-                    name="CoreClassProduction.rollback_transaction_body_pass",
-                    context_inputs=(
-                        AssemblyInputSpec(
-                            name="lifecycle_class",
-                            collection_name="Classes",
-                            collection=None,
-                        ),
-                    ),
-                    from_inputs=(),
-                    condition=None,
-                    matcher_name="RollbackTransactionBodyPassContributions",
-                )
-            ),
-            InlineApplySpec(
-                edge=AssemblyEdgeSpec(
-                    name="CoreClassProduction.rollback_transaction_dispatch_body_pass",
-                    context_inputs=(
-                        AssemblyInputSpec(
-                            name="lifecycle_class",
-                            collection_name="Classes",
-                            collection=None,
-                        ),
-                    ),
-                    from_inputs=(),
-                    condition=None,
-                    matcher_name="RollbackTransactionDispatchBodyPassContributions",
-                )
-            ),
-            InlineApplySpec(
-                edge=AssemblyEdgeSpec(
-                    name="CoreClassProduction.commit_order_key_body_pass",
-                    context_inputs=(
-                        AssemblyInputSpec(
-                            name="lifecycle_class",
-                            collection_name="Classes",
-                            collection=None,
-                        ),
-                    ),
-                    from_inputs=(),
-                    condition=None,
-                    matcher_name="CommitOrderKeyBodyPassContributions",
-                )
-            ),
-            InlineApplySpec(
-                edge=AssemblyEdgeSpec(
-                    name="CoreClassProduction.requires_validation_body_pass",
-                    context_inputs=(
-                        AssemblyInputSpec(
-                            name="lifecycle_class",
-                            collection_name="Classes",
-                            collection=None,
-                        ),
-                    ),
-                    from_inputs=(),
-                    condition=None,
-                    matcher_name="RequiresValidationBodyPassContributions",
-                )
-            ),
-            InlineApplySpec(
-                edge=AssemblyEdgeSpec(
-                    name="CoreClassProduction.validate_commit_body_pass",
-                    context_inputs=(
-                        AssemblyInputSpec(
-                            name="lifecycle_class",
-                            collection_name="Classes",
-                            collection=None,
-                        ),
-                    ),
-                    from_inputs=(),
-                    condition=None,
-                    matcher_name="ValidateCommitBodyPassContributions",
-                )
-            ),
-            InlineApplySpec(
-                edge=AssemblyEdgeSpec(
-                    name="CoreClassProduction.before_commit_body_pass",
-                    context_inputs=(
-                        AssemblyInputSpec(
-                            name="lifecycle_class",
-                            collection_name="Classes",
-                            collection=None,
-                        ),
-                    ),
-                    from_inputs=(),
-                    condition=None,
-                    matcher_name="BeforeCommitBodyPassContributions",
-                )
-            ),
-            InlineApplySpec(
-                edge=AssemblyEdgeSpec(
-                    name="CoreClassProduction.after_commit_body_pass",
-                    context_inputs=(
-                        AssemblyInputSpec(
-                            name="lifecycle_class",
-                            collection_name="Classes",
-                            collection=None,
-                        ),
-                    ),
-                    from_inputs=(),
-                    condition=None,
-                    matcher_name="AfterCommitBodyPassContributions",
-                )
-            ),
-            InlineApplySpec(
-                edge=AssemblyEdgeSpec(
-                    name="CoreClassProduction.after_rollback_body_pass",
-                    context_inputs=(
-                        AssemblyInputSpec(
-                            name="lifecycle_class",
-                            collection_name="Classes",
-                            collection=None,
-                        ),
-                    ),
-                    from_inputs=(),
-                    condition=None,
-                    matcher_name="AfterRollbackBodyPassContributions",
+                    matcher_name="AfterRollbackFallbackContributions",
                 )
             ),
             InlineApplySpec(
@@ -19399,7 +18319,7 @@ ASSEMBLY_PRODUCTIONS = {
             ),
             InlineApplySpec(
                 edge=AssemblyEdgeSpec(
-                    name="ClassProduction.facade_base_body_pass",
+                    name="ClassProduction.commit_order_key_fallback",
                     context_inputs=(
                         AssemblyInputSpec(
                             name="lifecycle_class",
@@ -19409,12 +18329,12 @@ ASSEMBLY_PRODUCTIONS = {
                     ),
                     from_inputs=(),
                     condition=None,
-                    matcher_name="FacadeBaseBodyPassContributions",
+                    matcher_name="CommitOrderKeyFallbackContributions",
                 )
             ),
             InlineApplySpec(
                 edge=AssemblyEdgeSpec(
-                    name="ClassProduction.facade_properties_pass",
+                    name="ClassProduction.requires_validation_fallback",
                     context_inputs=(
                         AssemblyInputSpec(
                             name="lifecycle_class",
@@ -19424,12 +18344,12 @@ ASSEMBLY_PRODUCTIONS = {
                     ),
                     from_inputs=(),
                     condition=None,
-                    matcher_name="FacadePropertiesPassContributions",
+                    matcher_name="RequiresValidationFallbackContributions",
                 )
             ),
             InlineApplySpec(
                 edge=AssemblyEdgeSpec(
-                    name="ClassProduction.default_facade_properties_pass",
+                    name="ClassProduction.validate_commit_fallback",
                     context_inputs=(
                         AssemblyInputSpec(
                             name="lifecycle_class",
@@ -19439,12 +18359,12 @@ ASSEMBLY_PRODUCTIONS = {
                     ),
                     from_inputs=(),
                     condition=None,
-                    matcher_name="DefaultFacadePropertiesPassContributions",
+                    matcher_name="ValidateCommitFallbackContributions",
                 )
             ),
             InlineApplySpec(
                 edge=AssemblyEdgeSpec(
-                    name="ClassProduction.current_facade_properties_pass",
+                    name="ClassProduction.before_commit_fallback",
                     context_inputs=(
                         AssemblyInputSpec(
                             name="lifecycle_class",
@@ -19454,12 +18374,12 @@ ASSEMBLY_PRODUCTIONS = {
                     ),
                     from_inputs=(),
                     condition=None,
-                    matcher_name="CurrentFacadePropertiesPassContributions",
+                    matcher_name="BeforeCommitFallbackContributions",
                 )
             ),
             InlineApplySpec(
                 edge=AssemblyEdgeSpec(
-                    name="ClassProduction.working_facade_properties_pass",
+                    name="ClassProduction.prepare_commit_dispatch_fallback",
                     context_inputs=(
                         AssemblyInputSpec(
                             name="lifecycle_class",
@@ -19469,12 +18389,12 @@ ASSEMBLY_PRODUCTIONS = {
                     ),
                     from_inputs=(),
                     condition=None,
-                    matcher_name="WorkingFacadePropertiesPassContributions",
+                    matcher_name="PrepareCommitDispatchFallbackContributions",
                 )
             ),
             InlineApplySpec(
                 edge=AssemblyEdgeSpec(
-                    name="ClassProduction.state_init_body_pass",
+                    name="ClassProduction.commit_dispatch_fallback",
                     context_inputs=(
                         AssemblyInputSpec(
                             name="lifecycle_class",
@@ -19484,12 +18404,12 @@ ASSEMBLY_PRODUCTIONS = {
                     ),
                     from_inputs=(),
                     condition=None,
-                    matcher_name="StateInitBodyPassContributions",
+                    matcher_name="CommitDispatchFallbackContributions",
                 )
             ),
             InlineApplySpec(
                 edge=AssemblyEdgeSpec(
-                    name="ClassProduction.commit_transaction_body_pass",
+                    name="ClassProduction.after_commit_fallback",
                     context_inputs=(
                         AssemblyInputSpec(
                             name="lifecycle_class",
@@ -19499,12 +18419,12 @@ ASSEMBLY_PRODUCTIONS = {
                     ),
                     from_inputs=(),
                     condition=None,
-                    matcher_name="CommitTransactionBodyPassContributions",
+                    matcher_name="AfterCommitFallbackContributions",
                 )
             ),
             InlineApplySpec(
                 edge=AssemblyEdgeSpec(
-                    name="ClassProduction.commit_transaction_dispatch_body_pass",
+                    name="ClassProduction.rollback_dispatch_fallback",
                     context_inputs=(
                         AssemblyInputSpec(
                             name="lifecycle_class",
@@ -19514,12 +18434,12 @@ ASSEMBLY_PRODUCTIONS = {
                     ),
                     from_inputs=(),
                     condition=None,
-                    matcher_name="CommitTransactionDispatchBodyPassContributions",
+                    matcher_name="RollbackDispatchFallbackContributions",
                 )
             ),
             InlineApplySpec(
                 edge=AssemblyEdgeSpec(
-                    name="ClassProduction.commit_transaction_helpers_pass",
+                    name="ClassProduction.after_rollback_fallback",
                     context_inputs=(
                         AssemblyInputSpec(
                             name="lifecycle_class",
@@ -19529,157 +18449,7 @@ ASSEMBLY_PRODUCTIONS = {
                     ),
                     from_inputs=(),
                     condition=None,
-                    matcher_name="CommitTransactionHelpersPassContributions",
-                )
-            ),
-            InlineApplySpec(
-                edge=AssemblyEdgeSpec(
-                    name="ClassProduction.rollback_transaction_helpers_pass",
-                    context_inputs=(
-                        AssemblyInputSpec(
-                            name="lifecycle_class",
-                            collection_name="Classes",
-                            collection=None,
-                        ),
-                    ),
-                    from_inputs=(),
-                    condition=None,
-                    matcher_name="RollbackTransactionHelpersPassContributions",
-                )
-            ),
-            InlineApplySpec(
-                edge=AssemblyEdgeSpec(
-                    name="ClassProduction.prepare_commit_transaction_dispatch_body_pass",
-                    context_inputs=(
-                        AssemblyInputSpec(
-                            name="lifecycle_class",
-                            collection_name="Classes",
-                            collection=None,
-                        ),
-                    ),
-                    from_inputs=(),
-                    condition=None,
-                    matcher_name="PrepareCommitTransactionDispatchBodyPassContributions",
-                )
-            ),
-            InlineApplySpec(
-                edge=AssemblyEdgeSpec(
-                    name="ClassProduction.rollback_transaction_body_pass",
-                    context_inputs=(
-                        AssemblyInputSpec(
-                            name="lifecycle_class",
-                            collection_name="Classes",
-                            collection=None,
-                        ),
-                    ),
-                    from_inputs=(),
-                    condition=None,
-                    matcher_name="RollbackTransactionBodyPassContributions",
-                )
-            ),
-            InlineApplySpec(
-                edge=AssemblyEdgeSpec(
-                    name="ClassProduction.rollback_transaction_dispatch_body_pass",
-                    context_inputs=(
-                        AssemblyInputSpec(
-                            name="lifecycle_class",
-                            collection_name="Classes",
-                            collection=None,
-                        ),
-                    ),
-                    from_inputs=(),
-                    condition=None,
-                    matcher_name="RollbackTransactionDispatchBodyPassContributions",
-                )
-            ),
-            InlineApplySpec(
-                edge=AssemblyEdgeSpec(
-                    name="ClassProduction.commit_order_key_body_pass",
-                    context_inputs=(
-                        AssemblyInputSpec(
-                            name="lifecycle_class",
-                            collection_name="Classes",
-                            collection=None,
-                        ),
-                    ),
-                    from_inputs=(),
-                    condition=None,
-                    matcher_name="CommitOrderKeyBodyPassContributions",
-                )
-            ),
-            InlineApplySpec(
-                edge=AssemblyEdgeSpec(
-                    name="ClassProduction.requires_validation_body_pass",
-                    context_inputs=(
-                        AssemblyInputSpec(
-                            name="lifecycle_class",
-                            collection_name="Classes",
-                            collection=None,
-                        ),
-                    ),
-                    from_inputs=(),
-                    condition=None,
-                    matcher_name="RequiresValidationBodyPassContributions",
-                )
-            ),
-            InlineApplySpec(
-                edge=AssemblyEdgeSpec(
-                    name="ClassProduction.validate_commit_body_pass",
-                    context_inputs=(
-                        AssemblyInputSpec(
-                            name="lifecycle_class",
-                            collection_name="Classes",
-                            collection=None,
-                        ),
-                    ),
-                    from_inputs=(),
-                    condition=None,
-                    matcher_name="ValidateCommitBodyPassContributions",
-                )
-            ),
-            InlineApplySpec(
-                edge=AssemblyEdgeSpec(
-                    name="ClassProduction.before_commit_body_pass",
-                    context_inputs=(
-                        AssemblyInputSpec(
-                            name="lifecycle_class",
-                            collection_name="Classes",
-                            collection=None,
-                        ),
-                    ),
-                    from_inputs=(),
-                    condition=None,
-                    matcher_name="BeforeCommitBodyPassContributions",
-                )
-            ),
-            InlineApplySpec(
-                edge=AssemblyEdgeSpec(
-                    name="ClassProduction.after_commit_body_pass",
-                    context_inputs=(
-                        AssemblyInputSpec(
-                            name="lifecycle_class",
-                            collection_name="Classes",
-                            collection=None,
-                        ),
-                    ),
-                    from_inputs=(),
-                    condition=None,
-                    matcher_name="AfterCommitBodyPassContributions",
-                )
-            ),
-            InlineApplySpec(
-                edge=AssemblyEdgeSpec(
-                    name="ClassProduction.after_rollback_body_pass",
-                    context_inputs=(
-                        AssemblyInputSpec(
-                            name="lifecycle_class",
-                            collection_name="Classes",
-                            collection=None,
-                        ),
-                    ),
-                    from_inputs=(),
-                    condition=None,
-                    matcher_name="AfterRollbackBodyPassContributions",
+                    matcher_name="AfterRollbackFallbackContributions",
                 )
             ),
             InlineApplySpec(
@@ -19806,132 +18576,6 @@ ASSEMBLY_PRODUCTIONS = {
                         left=ValueRef("TxOwner"), right=ValueRef("ClassId")
                     ),
                     matcher_name="AfterRollbackHelperContributions",
-                )
-            ),
-            InlineApplySpec(
-                edge=AssemblyEdgeSpec(
-                    name="ClassProduction.commit_order_key_helper_body_pass",
-                    context_inputs=(
-                        AssemblyInputSpec(
-                            name="lifecycle_class",
-                            collection_name="Classes",
-                            collection=None,
-                        ),
-                    ),
-                    from_inputs=(
-                        AssemblyInputSpec(
-                            name="tx_group", collection_name="TxGroups", collection=None
-                        ),
-                    ),
-                    condition=EqConditionSpec(
-                        left=ValueRef("TxOwner"), right=ValueRef("ClassId")
-                    ),
-                    matcher_name="CommitOrderKeyHelperBodyPassContributions",
-                )
-            ),
-            InlineApplySpec(
-                edge=AssemblyEdgeSpec(
-                    name="ClassProduction.requires_validation_helper_body_pass",
-                    context_inputs=(
-                        AssemblyInputSpec(
-                            name="lifecycle_class",
-                            collection_name="Classes",
-                            collection=None,
-                        ),
-                    ),
-                    from_inputs=(
-                        AssemblyInputSpec(
-                            name="tx_group", collection_name="TxGroups", collection=None
-                        ),
-                    ),
-                    condition=EqConditionSpec(
-                        left=ValueRef("TxOwner"), right=ValueRef("ClassId")
-                    ),
-                    matcher_name="RequiresValidationHelperBodyPassContributions",
-                )
-            ),
-            InlineApplySpec(
-                edge=AssemblyEdgeSpec(
-                    name="ClassProduction.validate_commit_helper_body_pass",
-                    context_inputs=(
-                        AssemblyInputSpec(
-                            name="lifecycle_class",
-                            collection_name="Classes",
-                            collection=None,
-                        ),
-                    ),
-                    from_inputs=(
-                        AssemblyInputSpec(
-                            name="tx_group", collection_name="TxGroups", collection=None
-                        ),
-                    ),
-                    condition=EqConditionSpec(
-                        left=ValueRef("TxOwner"), right=ValueRef("ClassId")
-                    ),
-                    matcher_name="ValidateCommitHelperBodyPassContributions",
-                )
-            ),
-            InlineApplySpec(
-                edge=AssemblyEdgeSpec(
-                    name="ClassProduction.before_commit_helper_body_pass",
-                    context_inputs=(
-                        AssemblyInputSpec(
-                            name="lifecycle_class",
-                            collection_name="Classes",
-                            collection=None,
-                        ),
-                    ),
-                    from_inputs=(
-                        AssemblyInputSpec(
-                            name="tx_group", collection_name="TxGroups", collection=None
-                        ),
-                    ),
-                    condition=EqConditionSpec(
-                        left=ValueRef("TxOwner"), right=ValueRef("ClassId")
-                    ),
-                    matcher_name="BeforeCommitHelperBodyPassContributions",
-                )
-            ),
-            InlineApplySpec(
-                edge=AssemblyEdgeSpec(
-                    name="ClassProduction.after_commit_helper_body_pass",
-                    context_inputs=(
-                        AssemblyInputSpec(
-                            name="lifecycle_class",
-                            collection_name="Classes",
-                            collection=None,
-                        ),
-                    ),
-                    from_inputs=(
-                        AssemblyInputSpec(
-                            name="tx_group", collection_name="TxGroups", collection=None
-                        ),
-                    ),
-                    condition=EqConditionSpec(
-                        left=ValueRef("TxOwner"), right=ValueRef("ClassId")
-                    ),
-                    matcher_name="AfterCommitHelperBodyPassContributions",
-                )
-            ),
-            InlineApplySpec(
-                edge=AssemblyEdgeSpec(
-                    name="ClassProduction.after_rollback_helper_body_pass",
-                    context_inputs=(
-                        AssemblyInputSpec(
-                            name="lifecycle_class",
-                            collection_name="Classes",
-                            collection=None,
-                        ),
-                    ),
-                    from_inputs=(
-                        AssemblyInputSpec(
-                            name="tx_group", collection_name="TxGroups", collection=None
-                        ),
-                    ),
-                    condition=EqConditionSpec(
-                        left=ValueRef("TxOwner"), right=ValueRef("ClassId")
-                    ),
-                    matcher_name="AfterRollbackHelperBodyPassContributions",
                 )
             ),
             InlineApplySpec(
@@ -21029,69 +19673,6 @@ ASSEMBLY_PRODUCTIONS = {
                         left=ValueRef("TxOwner"), right=ValueRef("ClassId")
                     ),
                     matcher_name="RollbackFieldsContributions",
-                )
-            ),
-            InlineApplySpec(
-                edge=AssemblyEdgeSpec(
-                    name="ClassProduction.apply_prepared_commit_helper_body_pass",
-                    context_inputs=(
-                        AssemblyInputSpec(
-                            name="lifecycle_class",
-                            collection_name="Classes",
-                            collection=None,
-                        ),
-                    ),
-                    from_inputs=(
-                        AssemblyInputSpec(
-                            name="tx_group", collection_name="TxGroups", collection=None
-                        ),
-                    ),
-                    condition=EqConditionSpec(
-                        left=ValueRef("TxOwner"), right=ValueRef("ClassId")
-                    ),
-                    matcher_name="ApplyPreparedCommitFieldsBodyPassContributions",
-                )
-            ),
-            InlineApplySpec(
-                edge=AssemblyEdgeSpec(
-                    name="ClassProduction.prepare_commit_helper_body_pass",
-                    context_inputs=(
-                        AssemblyInputSpec(
-                            name="lifecycle_class",
-                            collection_name="Classes",
-                            collection=None,
-                        ),
-                    ),
-                    from_inputs=(
-                        AssemblyInputSpec(
-                            name="tx_group", collection_name="TxGroups", collection=None
-                        ),
-                    ),
-                    condition=EqConditionSpec(
-                        left=ValueRef("TxOwner"), right=ValueRef("ClassId")
-                    ),
-                    matcher_name="PrepareCommitFieldsBodyPassContributions",
-                )
-            ),
-            InlineApplySpec(
-                edge=AssemblyEdgeSpec(
-                    name="ClassProduction.rollback_helper_body_pass",
-                    context_inputs=(
-                        AssemblyInputSpec(
-                            name="lifecycle_class",
-                            collection_name="Classes",
-                            collection=None,
-                        ),
-                    ),
-                    from_inputs=(
-                        AssemblyInputSpec(
-                            name="tx_group", collection_name="TxGroups", collection=None
-                        ),
-                    ),
-                    condition=EqConditionSpec(
-                        left=ValueRef("TxOwner"), right=ValueRef("ClassId")
-                    ),
-                    matcher_name="RollbackFieldsBodyPassContributions",
                 )
             ),
             InlineApplySpec(

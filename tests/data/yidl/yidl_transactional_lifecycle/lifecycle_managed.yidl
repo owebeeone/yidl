@@ -384,35 +384,41 @@ concept LifecycleManaged extends core.LifecycleCore {
 
     resource CommitOrderKeyFunction = template $[
         def commit_order_key_function_name__astichi_arg__(self):
-            astichi_hole(commit_order_key_tx_body)
+            with astichi_hole(commit_order_key_tx_body) as astichi_fallback:
+                pass
             return ()
     ]$
 
     resource RequiresValidationFunction = template $[
         def requires_validation_function_name__astichi_arg__(self):
-            astichi_hole(requires_validation_tx_body)
+            with astichi_hole(requires_validation_tx_body) as astichi_fallback:
+                pass
             return False
     ]$
 
     resource ValidateCommitFunction = template $[
         def validate_commit_function_name__astichi_arg__(self):
-            astichi_hole(validate_commit_tx_body)
+            with astichi_hole(validate_commit_tx_body) as astichi_fallback:
+                pass
             return True
     ]$
 
     resource BeforeCommitFunction = template $[
         def before_commit_function_name__astichi_arg__(self):
-            astichi_hole(before_commit_tx_body)
+            with astichi_hole(before_commit_tx_body) as astichi_fallback:
+                pass
     ]$
 
     resource AfterCommitFunction = template $[
         def after_commit_function_name__astichi_arg__(self):
-            astichi_hole(after_commit_tx_body)
+            with astichi_hole(after_commit_tx_body) as astichi_fallback:
+                pass
     ]$
 
     resource AfterRollbackFunction = template $[
         def after_rollback_function_name__astichi_arg__(self):
-            astichi_hole(after_rollback_tx_body)
+            with astichi_hole(after_rollback_tx_body) as astichi_fallback:
+                pass
     ]$
 
     resource CommitOrderKeyHelperCall = template $[
@@ -443,99 +449,102 @@ concept LifecycleManaged extends core.LifecycleCore {
     ]$
 
     resource CommitOrderKeyDispatchCall = template $[
-        match astichi_pass(tx_index, outer_bind=True):
-            case _ if astichi_pass(tx_index, outer_bind=True) == astichi_bind_external(tx_index_value):
-                return astichi_pass(
-                    self,
-                    outer_bind=True,
-                ).astichi_ref(external=commit_order_key_function_name)()
+        def astichi_elif():
+            astichi_import(tx_index)
+            astichi_import(self)
+
+            if tx_index == astichi_bind_external(tx_index_value):
+                return self.astichi_ref(external=commit_order_key_function_name)()
     ]$
 
     resource RequiresValidationDispatchCall = template $[
-        match astichi_pass(tx_index, outer_bind=True):
-            case _ if astichi_pass(tx_index, outer_bind=True) == astichi_bind_external(tx_index_value):
-                return astichi_pass(
-                    self,
-                    outer_bind=True,
-                ).astichi_ref(external=requires_validation_function_name)()
+        def astichi_elif():
+            astichi_import(tx_index)
+            astichi_import(self)
+
+            if tx_index == astichi_bind_external(tx_index_value):
+                return self.astichi_ref(external=requires_validation_function_name)()
     ]$
 
     resource ValidateCommitDispatchCall = template $[
-        match astichi_pass(tx_index, outer_bind=True):
-            case _ if astichi_pass(tx_index, outer_bind=True) == astichi_bind_external(tx_index_value):
-                return astichi_pass(
-                    self,
-                    outer_bind=True,
-                ).astichi_ref(external=validate_commit_function_name)()
+        def astichi_elif():
+            astichi_import(tx_index)
+            astichi_import(self)
+
+            if tx_index == astichi_bind_external(tx_index_value):
+                return self.astichi_ref(external=validate_commit_function_name)()
     ]$
 
     resource BeforeCommitDispatchCall = template $[
-        match astichi_pass(tx_index, outer_bind=True):
-            case _ if astichi_pass(tx_index, outer_bind=True) == astichi_bind_external(tx_index_value):
-                astichi_pass(
-                    self,
-                    outer_bind=True,
-                ).astichi_ref(external=before_commit_function_name)()
+        def astichi_elif():
+            astichi_import(tx_index)
+            astichi_import(self)
+
+            if tx_index == astichi_bind_external(tx_index_value):
+                self.astichi_ref(external=before_commit_function_name)()
     ]$
 
     resource AfterCommitDispatchCall = template $[
-        match astichi_pass(tx_index, outer_bind=True):
-            case _ if astichi_pass(tx_index, outer_bind=True) == astichi_bind_external(tx_index_value):
-                astichi_pass(
-                    self,
-                    outer_bind=True,
-                ).astichi_ref(external=after_commit_function_name)()
+        def astichi_elif():
+            astichi_import(tx_index)
+            astichi_import(self)
+
+            if tx_index == astichi_bind_external(tx_index_value):
+                self.astichi_ref(external=after_commit_function_name)()
     ]$
 
     resource AfterRollbackDispatchCall = template $[
-        match astichi_pass(tx_index, outer_bind=True):
-            case _ if astichi_pass(tx_index, outer_bind=True) == astichi_bind_external(tx_index_value):
-                astichi_pass(
-                    self,
-                    outer_bind=True,
-                ).astichi_ref(external=after_rollback_function_name)()
+        def astichi_elif():
+            astichi_import(tx_index)
+            astichi_import(self)
+
+            if tx_index == astichi_bind_external(tx_index_value):
+                self.astichi_ref(external=after_rollback_function_name)()
     ]$
 
     resource PrepareCommitFieldsFunction = template $[
         def prepare_commit_fields_function_name__astichi_arg__(self):
-            astichi_hole(prepare_commit_fields_body)
+            with astichi_hole(prepare_commit_fields_body) as astichi_fallback:
+                pass
     ]$
 
     resource ApplyPreparedCommitFieldsFunction = template $[
         def apply_prepared_commit_fields_function_name__astichi_arg__(self):
-            astichi_hole(apply_prepared_commit_fields_body)
+            with astichi_hole(apply_prepared_commit_fields_body) as astichi_fallback:
+                pass
     ]$
 
     resource RollbackFieldsFunction = template $[
         def rollback_fields_function_name__astichi_arg__(self):
-            astichi_hole(rollback_fields_body)
+            with astichi_hole(rollback_fields_body) as astichi_fallback:
+                pass
     ]$
 
     resource ApplyPreparedCommitDispatchBranch = template $[
-        match astichi_pass(tx_index, outer_bind=True):
-            case _ if astichi_pass(tx_index, outer_bind=True) == astichi_bind_external(tx_index_value):
-                astichi_pass(
-                    self,
-                    outer_bind=True,
-                ).astichi_ref(external=apply_prepared_commit_fields_function_name)()
+        def astichi_elif():
+            astichi_import(tx_index)
+            astichi_import(self)
+
+            if tx_index == astichi_bind_external(tx_index_value):
+                self.astichi_ref(external=apply_prepared_commit_fields_function_name)()
     ]$
 
     resource PrepareCommitDispatchBranch = template $[
-        match astichi_pass(tx_index, outer_bind=True):
-            case _ if astichi_pass(tx_index, outer_bind=True) == astichi_bind_external(tx_index_value):
-                astichi_pass(
-                    self,
-                    outer_bind=True,
-                ).astichi_ref(external=prepare_commit_fields_function_name)()
+        def astichi_elif():
+            astichi_import(tx_index)
+            astichi_import(self)
+
+            if tx_index == astichi_bind_external(tx_index_value):
+                self.astichi_ref(external=prepare_commit_fields_function_name)()
     ]$
 
     resource RollbackDispatchBranch = template $[
-        match astichi_pass(tx_index, outer_bind=True):
-            case _ if astichi_pass(tx_index, outer_bind=True) == astichi_bind_external(tx_index_value):
-                astichi_pass(
-                    self,
-                    outer_bind=True,
-                ).astichi_ref(external=rollback_fields_function_name)()
+        def astichi_elif():
+            astichi_import(tx_index)
+            astichi_import(self)
+
+            if tx_index == astichi_bind_external(tx_index_value):
+                self.astichi_ref(external=rollback_fields_function_name)()
     ]$
 
     contribution ManagedCurrentStateSlot = StateSlotEntry {
@@ -901,66 +910,6 @@ concept LifecycleManaged extends core.LifecycleCore {
         ident after_rollback_function_name = AfterRollbackFunctionName
     }
 
-    contribution CommitOrderKeyHelperBodyPass = PassStatement {
-        as CommitOrderKeyHelperBodyPass
-        index TxIndex
-        order 0
-
-        target commit_order_key_tx_body {
-            build /ClassDef/CommitOrderKeyFunction[TxIndex]
-        }
-    }
-
-    contribution RequiresValidationHelperBodyPass = PassStatement {
-        as RequiresValidationHelperBodyPass
-        index TxIndex
-        order 0
-
-        target requires_validation_tx_body {
-            build /ClassDef/RequiresValidationFunction[TxIndex]
-        }
-    }
-
-    contribution ValidateCommitHelperBodyPass = PassStatement {
-        as ValidateCommitHelperBodyPass
-        index TxIndex
-        order 0
-
-        target validate_commit_tx_body {
-            build /ClassDef/ValidateCommitFunction[TxIndex]
-        }
-    }
-
-    contribution BeforeCommitHelperBodyPass = PassStatement {
-        as BeforeCommitHelperBodyPass
-        index TxIndex
-        order 0
-
-        target before_commit_tx_body {
-            build /ClassDef/BeforeCommitFunction[TxIndex]
-        }
-    }
-
-    contribution AfterCommitHelperBodyPass = PassStatement {
-        as AfterCommitHelperBodyPass
-        index TxIndex
-        order 0
-
-        target after_commit_tx_body {
-            build /ClassDef/AfterCommitFunction[TxIndex]
-        }
-    }
-
-    contribution AfterRollbackHelperBodyPass = PassStatement {
-        as AfterRollbackHelperBodyPass
-        index TxIndex
-        order 0
-
-        target after_rollback_tx_body {
-            build /ClassDef/AfterRollbackFunction[TxIndex]
-        }
-    }
-
     contribution CommitOrderKeyDispatch = CommitOrderKeyDispatchCall {
         as CommitOrderKeyDispatch
         index TxIndex
@@ -1107,36 +1056,6 @@ concept LifecycleManaged extends core.LifecycleCore {
         }
 
         external method_name = MethodName
-    }
-
-    contribution PrepareCommitFieldsBodyPass = PassStatement {
-        as PrepareCommitFieldsBodyPass
-        index TxIndex
-        order 0
-
-        target prepare_commit_fields_body {
-            build /ClassDef/PrepareCommitFields[TxIndex]
-        }
-    }
-
-    contribution ApplyPreparedCommitFieldsBodyPass = PassStatement {
-        as ApplyPreparedCommitFieldsBodyPass
-        index TxIndex
-        order 0
-
-        target apply_prepared_commit_fields_body {
-            build /ClassDef/ApplyPreparedCommitFields[TxIndex]
-        }
-    }
-
-    contribution RollbackFieldsBodyPass = PassStatement {
-        as RollbackFieldsBodyPass
-        index TxIndex
-        order 0
-
-        target rollback_fields_body {
-            build /ClassDef/RollbackFields[TxIndex]
-        }
     }
 
     contribution PrepareCommitFields = PrepareCommitFieldsFunction {
@@ -1308,30 +1227,6 @@ concept LifecycleManaged extends core.LifecycleCore {
         default -> AfterRollbackHelper
     }
 
-    matcher CommitOrderKeyHelperBodyPassContributions(tx_group: TxGroups) -> contribution {
-        default -> CommitOrderKeyHelperBodyPass
-    }
-
-    matcher RequiresValidationHelperBodyPassContributions(tx_group: TxGroups) -> contribution {
-        default -> RequiresValidationHelperBodyPass
-    }
-
-    matcher ValidateCommitHelperBodyPassContributions(tx_group: TxGroups) -> contribution {
-        default -> ValidateCommitHelperBodyPass
-    }
-
-    matcher BeforeCommitHelperBodyPassContributions(tx_group: TxGroups) -> contribution {
-        default -> BeforeCommitHelperBodyPass
-    }
-
-    matcher AfterCommitHelperBodyPassContributions(tx_group: TxGroups) -> contribution {
-        default -> AfterCommitHelperBodyPass
-    }
-
-    matcher AfterRollbackHelperBodyPassContributions(tx_group: TxGroups) -> contribution {
-        default -> AfterRollbackHelperBodyPass
-    }
-
     matcher CommitOrderKeyDispatchContributions(tx_group: TxGroups) -> contribution {
         default -> CommitOrderKeyDispatch
     }
@@ -1378,18 +1273,6 @@ concept LifecycleManaged extends core.LifecycleCore {
 
     matcher AfterRollbackHookContributions(method: AfterRollbackHooks) -> contribution {
         rule helper when MethodKind == "after_rollback" -> AfterRollbackHelperMethodCall
-    }
-
-    matcher PrepareCommitFieldsBodyPassContributions(tx_group: TxGroups) -> contribution {
-        default -> PrepareCommitFieldsBodyPass
-    }
-
-    matcher ApplyPreparedCommitFieldsBodyPassContributions(tx_group: TxGroups) -> contribution {
-        default -> ApplyPreparedCommitFieldsBodyPass
-    }
-
-    matcher RollbackFieldsBodyPassContributions(tx_group: TxGroups) -> contribution {
-        default -> RollbackFieldsBodyPass
     }
 
     matcher ApplyPreparedCommitFieldsContributions(tx_group: TxGroups) -> contribution {
