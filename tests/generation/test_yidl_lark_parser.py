@@ -1307,6 +1307,126 @@ def test_yidl_lark_child_exposes_inherited_assembly_runtime() -> None:
     assert "VALUE = 'parent'" in rendered
 
 
+def test_yidl_lark_composable_production_phases_flatten_in_source_order() -> None:
+    source = """
+    module phases
+
+    concept PhaseExample {
+        resource Root = code $[
+            VALUE = []
+            astichi_hole(body)
+        ]$
+        resource AddA = code `VALUE.append("a")`
+        resource AddB = code `VALUE.append("b")`
+        resource AddC = code `VALUE.append("c")`
+
+        contribution AddA = AddA {
+            target body { build /Root }
+        }
+        contribution AddB = AddB {
+            target body { build /Root }
+        }
+        contribution AddC = AddC {
+            target body { build /Root }
+        }
+
+        matcher AddAContributions() -> contribution {
+            default -> AddA
+        }
+        matcher AddBContributions() -> contribution {
+            default -> AddB
+        }
+        matcher AddCContributions() -> contribution {
+            default -> AddC
+        }
+
+        production ModuleProduction -> composable {
+            root Root = Root
+            phase first {
+                apply add_a using AddAContributions
+            }
+            apply add_b using AddBContributions
+            phase second {
+                apply add_c using AddCContributions
+            }
+        }
+
+        assembly Module = ModuleProduction
+    }
+    """
+
+    concept = compile_yidl_files({"phases.yidl": source}, "phases.yidl").concepts[
+        "PhaseExample"
+    ]
+    production = concept.composable_productions["ModuleProduction"]
+
+    assert [_apply_name(apply) for apply in production.applies] == [
+        "ModuleProduction.add_a",
+        "ModuleProduction.add_b",
+        "ModuleProduction.add_c",
+    ]
+
+    generated = emit_concept_runtime_source(
+        concept.plan.build_data_definition(),
+        resources=concept.resources,
+        assembly_plan=concept,
+    )
+    namespace: dict[str, object] = {}
+    exec(generated, namespace)
+    rendered = namespace["build_Module"](namespace["new_builder"]().freeze())
+    emitted = rendered.emit_commented()
+    assert emitted.index(".append('a')") < emitted.index(".append('b')")
+    assert emitted.index(".append('b')") < emitted.index(".append('c')")
+
+
+def test_yidl_lark_composable_production_duplicate_phase_rejects() -> None:
+    source = """
+    module phases
+
+    concept PhaseExample {
+        resource Root = code `VALUE = []`
+
+        production ModuleProduction -> composable {
+            root Root = Root
+            phase repeat {
+            }
+            phase repeat {
+            }
+        }
+    }
+    """
+
+    with pytest.raises(YidlSymbolError, match="repeats phase"):
+        compile_yidl_files({"phases.yidl": source}, "phases.yidl")
+
+
+def test_yidl_lark_composable_production_phase_rejects_root_member() -> None:
+    source = """
+    module phases
+
+    concept PhaseExample {
+        resource Root = code `VALUE = []`
+
+        production ModuleProduction -> composable {
+            root Root = Root
+            phase invalid {
+                root Other = Root
+            }
+        }
+    }
+    """
+
+    with pytest.raises(YidlSyntaxError):
+        compile_yidl_files({"phases.yidl": source}, "phases.yidl")
+
+
+def _apply_name(apply: object) -> str:
+    edge = getattr(apply, "edge", None)
+    if edge is not None:
+        return str(edge.name)
+    return str(apply.edge_name)
+
+
 def test_yidl_lark_diamond_inheritance_dedupes_inherited_maps() -> None:
     source = """
     module diamond

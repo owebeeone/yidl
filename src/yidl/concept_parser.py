@@ -1371,6 +1371,7 @@ class _ConceptCompiler:
         )
         root: RootSpec | None = None
         applies: list[ApplySpec] = []
+        phase_names: set[str] = set()
         for member in _wrapped_children(tree, "composable_production_member"):
             if member.data == "root_decl":
                 if root is not None:
@@ -1379,13 +1380,20 @@ class _ConceptCompiler:
                 continue
             if member.data == "apply_decl":
                 apply_spec = self._apply_spec(name, inputs, member)
-                if isinstance(apply_spec, InlineApplySpec):
-                    if apply_spec.edge.name in self._local_assembly_edges:
-                        raise YidlSymbolError(
-                            f"assembly edge {apply_spec.edge.name!r} is already defined"
-                        )
-                    self._local_assembly_edges[apply_spec.edge.name] = apply_spec.edge
+                self._register_inline_apply_edge(apply_spec)
                 applies.append(apply_spec)
+                continue
+            if member.data == "phase_decl":
+                phase_name = _token_text(member.children[0])
+                if phase_name in phase_names:
+                    raise YidlSymbolError(
+                        f"production {name!r} repeats phase {phase_name!r}"
+                    )
+                phase_names.add(phase_name)
+                for apply_tree in _children(member, "apply_decl"):
+                    apply_spec = self._apply_spec(name, inputs, apply_tree)
+                    self._register_inline_apply_edge(apply_spec)
+                    applies.append(apply_spec)
                 continue
             raise YidlSymbolError(
                 f"production {name!r} has invalid member {member.data!r}"
@@ -1400,6 +1408,15 @@ class _ConceptCompiler:
             root=root,
             applies=tuple(applies),
         )
+
+    def _register_inline_apply_edge(self, apply_spec: ApplySpec) -> None:
+        if not isinstance(apply_spec, InlineApplySpec):
+            return
+        if apply_spec.edge.name in self._local_assembly_edges:
+            raise YidlSymbolError(
+                f"assembly edge {apply_spec.edge.name!r} is already defined"
+            )
+        self._local_assembly_edges[apply_spec.edge.name] = apply_spec.edge
 
     def _compile_assembly_edge(self, tree: Tree) -> AssemblyEdgeSpec:
         name = _token_text(tree.children[0])
