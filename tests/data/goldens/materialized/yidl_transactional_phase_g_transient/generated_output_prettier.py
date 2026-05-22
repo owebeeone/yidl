@@ -28,6 +28,7 @@ def build_lifecycle_class(
             "_y_default_ref",
             "_y_current_ref",
             "_y_working_ref",
+            "_y_seed_initvar",
             "_y_label_current",
             "_y_label_working",
             "_y_items_current",
@@ -375,7 +376,12 @@ def build_lifecycle_class(
             if state._y_transaction_manager.active_transaction_for(tx_key) is None:
                 return state._y_buffer_current
             state._y_ensure_working_transaction(0)
-            state._y_buffer_working = _Scratch_buffer_working_default_factory()
+            state._y_buffer_working = _Scratch_buffer_working_default_factory(
+                self=state._y_get_default_facade(),
+                current=state._y_get_current_facade(),
+                working=state._y_get_working_facade(),
+                seed=state._y_seed_initvar,
+            )
             return state._y_buffer_working
 
         @buffer.setter
@@ -440,6 +446,7 @@ def build_lifecycle_class(
             if items is _HAS_DEFAULT_FACTORY:
                 items = _Scratch_items_default_factory(seed=seed)
             state._y_items_current = items
+            state._y_seed_initvar = seed
             state._y_working_tx_ids = [None for _group in _Scratch_tx_groups]
 
     class Scratch_Current(Scratch_FacadeBase):
@@ -499,7 +506,12 @@ def build_lifecycle_class(
             if state._y_transaction_manager.active_transaction_for(tx_key) is None:
                 return state._y_buffer_current
             state._y_ensure_working_transaction(0)
-            state._y_buffer_working = _Scratch_buffer_working_default_factory()
+            state._y_buffer_working = _Scratch_buffer_working_default_factory(
+                self=state._y_get_default_facade(),
+                current=state._y_get_current_facade(),
+                working=state._y_get_working_facade(),
+                seed=state._y_seed_initvar,
+            )
             return state._y_buffer_working
 
         @buffer.setter

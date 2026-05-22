@@ -54,7 +54,12 @@ def _fixture_class() -> type[object]:
         items: list[int] = transient(default_factory=lambda seed: [seed])
         buffer: list[int] | None = transient(
             default=None,
-            working_default_factory=list,
+            working_default_factory=lambda self, current, working, seed: [
+                seed,
+                self.label,
+                current.label,
+                working.label,
+            ],
         )
         audit_buffer: list[int] | None = transient(
             "audit",
@@ -85,6 +90,7 @@ def _assert_scratch_class(generated: type[object]) -> None:
     assert generated.__name__ == "Scratch"
     assert generated.__yidl_tx_index_to_key__ == (DEFAULT_TRANSACTION, "audit")
 
+    assert item._y_state._y_seed_initvar == 4
     assert item.label == "ready"
     assert item.current.label == "ready"
     assert item.items == [4]
@@ -102,10 +108,10 @@ def _assert_scratch_class(generated: type[object]) -> None:
 
     with item.begin(DEFAULT_TRANSACTION):
         assert item.current.buffer is None
-        assert item.buffer == []
+        assert item.buffer == [4, "ready", "ready", "ready"]
         item.buffer.append(1)
-        assert item.buffer == [1]
-        assert item.working.buffer == [1]
+        assert item.buffer == [4, "ready", "ready", "ready", 1]
+        assert item.working.buffer == [4, "ready", "ready", "ready", 1]
         assert item.current.buffer is None
         assert item.audit_buffer is None
 
@@ -151,7 +157,11 @@ def _assert_source_shape(sources: Mapping[str, str]) -> None:
     prettier_source = sources["generated_output_prettier.py"]
     for generated in (source, prettier_source):
         assert "_Scratch_items_default_factory(seed=seed)" in generated
-        assert "_Scratch_buffer_working_default_factory()" in generated
+        assert "_Scratch_buffer_working_default_factory(" in generated
+        assert "self=state._y_get_default_facade()" in generated
+        assert "current=state._y_get_current_facade()" in generated
+        assert "working=state._y_get_working_facade()" in generated
+        assert "seed=state._y_seed_initvar" in generated
         assert "_Scratch_audit_buffer_working_default_factory()" in generated
         assert "state._y_ensure_working_transaction(0)" in generated
         assert "state._y_ensure_working_transaction(1)" in generated

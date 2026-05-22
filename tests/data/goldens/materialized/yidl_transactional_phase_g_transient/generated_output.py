@@ -8,7 +8,7 @@ VOID = object()
 def build_lifecycle_class(decorated_cls, *, _Scratch_lifecycle_definition, _Scratch_annotations, _Scratch_tx_groups, _Scratch_seed_default, _Scratch_label_default, _Scratch_items_default_factory, _Scratch_buffer_default, _Scratch_buffer_working_default_factory, _Scratch_audit_buffer_default, _Scratch_audit_buffer_working_default_factory):
 
     class Scratch_State:
-        __slots__ = ('_y_transaction_manager', '_y_default_ref', '_y_current_ref', '_y_working_ref', '_y_label_current', '_y_label_working', '_y_items_current', '_y_items_working', '_y_buffer_current', '_y_buffer_working', '_y_audit_buffer_current', '_y_audit_buffer_working', '_y_working_tx_ids')
+        __slots__ = ('_y_transaction_manager', '_y_default_ref', '_y_current_ref', '_y_working_ref', '_y_seed_initvar', '_y_label_current', '_y_label_working', '_y_items_current', '_y_items_working', '_y_buffer_current', '_y_buffer_working', '_y_audit_buffer_current', '_y_audit_buffer_working', '_y_working_tx_ids')
         __yidl_tx_index_to_key__ = _Scratch_tx_groups
         __yidl_tx_key_to_index__ = {key: index for index, key in enumerate(_Scratch_tx_groups)}
 
@@ -316,7 +316,7 @@ def build_lifecycle_class(decorated_cls, *, _Scratch_lifecycle_definition, _Scra
             if state._y_transaction_manager.active_transaction_for(tx_key) is None:
                 return state._y_buffer_current
             state._y_ensure_working_transaction(0)
-            state._y_buffer_working = _Scratch_buffer_working_default_factory()
+            state._y_buffer_working = _Scratch_buffer_working_default_factory(self=state._y_get_default_facade(), current=state._y_get_current_facade(), working=state._y_get_working_facade(), seed=state._y_seed_initvar)
             return state._y_buffer_working
 
         @buffer.setter
@@ -362,6 +362,7 @@ def build_lifecycle_class(decorated_cls, *, _Scratch_lifecycle_definition, _Scra
             if items is _HAS_DEFAULT_FACTORY:
                 items = _Scratch_items_default_factory(seed=seed)
             state._y_items_current = items
+            state._y_seed_initvar = seed
             state._y_working_tx_ids = [None for _group in _Scratch_tx_groups]
 
     class Scratch_Current(Scratch_FacadeBase):
@@ -421,7 +422,7 @@ def build_lifecycle_class(decorated_cls, *, _Scratch_lifecycle_definition, _Scra
             if state._y_transaction_manager.active_transaction_for(tx_key) is None:
                 return state._y_buffer_current
             state._y_ensure_working_transaction(0)
-            state._y_buffer_working = _Scratch_buffer_working_default_factory()
+            state._y_buffer_working = _Scratch_buffer_working_default_factory(self=state._y_get_default_facade(), current=state._y_get_current_facade(), working=state._y_get_working_facade(), seed=state._y_seed_initvar)
             return state._y_buffer_working
 
         @buffer.setter

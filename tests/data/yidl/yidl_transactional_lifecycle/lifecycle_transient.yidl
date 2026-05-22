@@ -28,14 +28,52 @@ concept LifecycleTransient extends default_factories.LifecycleDefaultFactories {
 
     collection IndexedTransientFields: IndexedTransientField identity FieldId many
 
+    property RetainedSlotName: str = ""
+    property RetainOrder: int = 0
+    property WorkingFactoryArgId: str
+    property WorkingFactoryArgOwner: str
+    property WorkingFactoryConsumerFieldId: str
+    property WorkingFactoryConsumerFieldOrder: int = 0
+    property WorkingFactoryArgKind: str = ""
+
+    record RetainedInitVar {
+        FieldId
+        FieldOwner
+        FieldName
+        FieldOrder
+        RetainedSlotName
+        RetainOrder
+    }
+
+    record TransientWorkingFactoryArg {
+        WorkingFactoryArgId
+        WorkingFactoryArgOwner
+        WorkingFactoryConsumerFieldId
+        WorkingFactoryConsumerFieldOrder
+        ParamName
+        ParamOrder
+        ProviderName
+        WorkingFactoryArgKind
+        RetainedSlotName
+    }
+
+    collection RetainedInitVars: RetainedInitVar identity FieldId many
+    collection TransientWorkingFactoryArgs:
+        TransientWorkingFactoryArg identity WorkingFactoryArgId many
+
     resource BuildTransientFactsBody = code $[
         from yidl.runtime.transaction_yidl import DEFAULT_TRANSACTION
 
+        fields = list(ctx.records(FieldsCollection))
+        by_owner_name = {
+            (field.field_owner, field.field_name): field
+            for field in fields
+        }
         tx_groups = {
             (tx_group.tx_owner, tx_group.tx_group_key): tx_group.tx_index
             for tx_group in ctx.records(TxGroupsCollection)
         }
-        for field in ctx.records(FieldsCollection):
+        for field in fields:
             if field.field_kind != "transient":
                 continue
             tx_group = field.tx_group_key
@@ -60,15 +98,95 @@ concept LifecycleTransient extends default_factories.LifecycleDefaultFactories {
                 ),
                 policy=RejectDuplicate,
             )
+            if (
+                field.has_working_default_factory
+                and not field.working_default_factory_param_names
+            ):
+                ctx.write(
+                    TransientWorkingFactoryArgsCollection,
+                    TransientWorkingFactoryArg(
+                        working_factory_arg_id=f"{field.field_id}.__empty__",
+                        working_factory_arg_owner=field.field_owner,
+                        working_factory_consumer_field_id=field.field_id,
+                        working_factory_consumer_field_order=field.field_order,
+                        param_name="",
+                        param_order=-1,
+                        provider_name="",
+                        working_factory_arg_kind="empty",
+                        retained_slot_name="",
+                    ),
+                    policy=RejectDuplicate,
+                )
+            for param_order, param_name in enumerate(
+                field.working_default_factory_param_names
+            ):
+                arg_kind = ""
+                provider_name = param_name
+                retained_slot_name = ""
+                if param_name in {"self", "current", "working"}:
+                    arg_kind = param_name
+                else:
+                    provider = by_owner_name.get((field.field_owner, param_name))
+                    if provider is None:
+                        raise AssemblyDiagnosticError(
+                            f"{field.field_name}: working_default_factory "
+                            f"references unknown name {param_name!r}"
+                        )
+                    if provider.field_kind != "initvar":
+                        raise AssemblyDiagnosticError(
+                            f"{field.field_name}: working_default_factory "
+                            f"cannot retain non-initvar provider {param_name!r}"
+                        )
+                    if (
+                        not provider.init
+                        and not provider.has_default
+                        and not provider.has_default_factory
+                    ):
+                        raise AssemblyDiagnosticError(
+                            f"{field.field_name}: working_default_factory "
+                            f"cannot retain initvar {param_name!r} without "
+                            "a default or default_factory"
+                        )
+                    arg_kind = "retained_initvar"
+                    retained_slot_name = f"_y_{param_name}_initvar"
+                    ctx.write(
+                        RetainedInitVarsCollection,
+                        RetainedInitVar(
+                            field_id=provider.field_id,
+                            field_owner=provider.field_owner,
+                            field_name=provider.field_name,
+                            field_order=provider.field_order,
+                            retained_slot_name=retained_slot_name,
+                            retain_order=200000 + provider.field_order,
+                        ),
+                        policy=ReplaceExisting,
+                    )
+                ctx.write(
+                    TransientWorkingFactoryArgsCollection,
+                    TransientWorkingFactoryArg(
+                        working_factory_arg_id=f"{field.field_id}.{param_name}",
+                        working_factory_arg_owner=field.field_owner,
+                        working_factory_consumer_field_id=field.field_id,
+                        working_factory_consumer_field_order=field.field_order,
+                        param_name=param_name,
+                        param_order=param_order,
+                        provider_name=provider_name,
+                        working_factory_arg_kind=arg_kind,
+                        retained_slot_name=retained_slot_name,
+                    ),
+                    policy=RejectDuplicate,
+                )
     ]$ {
         keep ctx, FieldsCollection, TxGroupsCollection
         keep IndexedTransientFieldsCollection, IndexedTransientField
-        keep RejectDuplicate
+        keep RetainedInitVarsCollection, RetainedInitVar
+        keep TransientWorkingFactoryArgsCollection, TransientWorkingFactoryArg
+        keep RejectDuplicate, ReplaceExisting, AssemblyDiagnosticError
     }
 
     operation BuildTransientFacts
         inputs(Fields, TxGroups)
-        outputs(IndexedTransientFields)
+        outputs(IndexedTransientFields, RetainedInitVars, TransientWorkingFactoryArgs)
         using BuildTransientFactsBody
 
     resource TransientCurrentProperty = template $[
@@ -111,7 +229,9 @@ concept LifecycleTransient extends default_factories.LifecycleDefaultFactories {
                 return state.astichi_ref(external=current_slot)
             state._y_ensure_working_transaction(astichi_bind_external(tx_index))
             state.astichi_ref(external=working_slot)._ = (
-                working_default_factory_name__astichi_arg__()
+                working_default_factory_name__astichi_arg__(
+                    **astichi_hole(working_default_factory_args)
+                )
             )
             return state.astichi_ref(external=working_slot)
 
@@ -129,6 +249,53 @@ concept LifecycleTransient extends default_factories.LifecycleDefaultFactories {
     ]$ {
         keep VOID
     }
+
+    resource RetainedInitVarAssignment = template $[
+        astichi_pass(state, outer_bind=True).astichi_ref(external=retained_slot)._ = astichi_pass(
+            init_value_name__astichi_arg__,
+            outer_bind=True,
+        )
+    ]$
+
+    resource TransientWorkingFactorySelfArg = template $[
+        astichi_funcargs(
+            param_name__astichi_arg__=astichi_pass(
+                state,
+                outer_bind=True,
+            )._y_get_default_facade()
+        )
+    ]$
+
+    resource TransientWorkingFactoryCurrentArg = template $[
+        astichi_funcargs(
+            param_name__astichi_arg__=astichi_pass(
+                state,
+                outer_bind=True,
+            )._y_get_current_facade()
+        )
+    ]$
+
+    resource TransientWorkingFactoryWorkingArg = template $[
+        astichi_funcargs(
+            param_name__astichi_arg__=astichi_pass(
+                state,
+                outer_bind=True,
+            )._y_get_working_facade()
+        )
+    ]$
+
+    resource TransientWorkingFactoryRetainedInitVarArg = template $[
+        astichi_funcargs(
+            param_name__astichi_arg__=astichi_pass(
+                state,
+                outer_bind=True,
+            ).astichi_ref(external=retained_slot)
+        )
+    ]$
+
+    resource TransientWorkingFactoryEmptyArg = template $[
+        astichi_funcargs()
+    ]$
 
     contribution TransientCurrentStateSlot = StateSlotEntry {
         as TransientCurrentStateSlot
@@ -152,6 +319,18 @@ concept LifecycleTransient extends default_factories.LifecycleDefaultFactories {
         }
 
         external slot_name = WorkingSlotName
+    }
+
+    contribution RetainedInitVarStateSlot = StateSlotEntry {
+        as RetainedInitVarStateSlot
+        index FieldOrder
+        order FieldOrder
+
+        target state_slots {
+            build /ClassDef
+        }
+
+        external slot_name = RetainedSlotName
     }
 
     contribution TransientWorkingDefaultFactoryBuilderParam = BuilderParam {
@@ -244,6 +423,19 @@ concept LifecycleTransient extends default_factories.LifecycleDefaultFactories {
         external working_slot = WorkingSlotName
     }
 
+    contribution RetainedInitVarStateAssignment = RetainedInitVarAssignment {
+        as RetainedInitVarStateAssignment
+        index FieldOrder
+        order RetainOrder
+
+        target state_init_body {
+            build /ClassDef
+        }
+
+        ident init_value_name = FieldName
+        external retained_slot = RetainedSlotName
+    }
+
     contribution TransientCurrentPropertyContribution = TransientCurrentProperty {
         as TransientCurrentProperty
         index FieldOrder
@@ -327,6 +519,124 @@ concept LifecycleTransient extends default_factories.LifecycleDefaultFactories {
         external tx_index = TxIndex
     }
 
+    contribution TransientDefaultWorkingFactorySelfArg = TransientWorkingFactorySelfArg {
+        as TransientDefaultWorkingFactoryArg
+        index (WorkingFactoryConsumerFieldOrder, ParamOrder)
+        order ParamOrder
+
+        target working_default_factory_args {
+            build /ClassDef/TransientDefaultFacadeProperty[WorkingFactoryConsumerFieldOrder]
+        }
+
+        ident param_name = ParamName
+    }
+
+    contribution TransientDefaultWorkingFactoryCurrentArg = TransientWorkingFactoryCurrentArg {
+        as TransientDefaultWorkingFactoryArg
+        index (WorkingFactoryConsumerFieldOrder, ParamOrder)
+        order ParamOrder
+
+        target working_default_factory_args {
+            build /ClassDef/TransientDefaultFacadeProperty[WorkingFactoryConsumerFieldOrder]
+        }
+
+        ident param_name = ParamName
+    }
+
+    contribution TransientDefaultWorkingFactoryWorkingArg = TransientWorkingFactoryWorkingArg {
+        as TransientDefaultWorkingFactoryArg
+        index (WorkingFactoryConsumerFieldOrder, ParamOrder)
+        order ParamOrder
+
+        target working_default_factory_args {
+            build /ClassDef/TransientDefaultFacadeProperty[WorkingFactoryConsumerFieldOrder]
+        }
+
+        ident param_name = ParamName
+    }
+
+    contribution TransientDefaultWorkingFactoryRetainedInitVarArg = TransientWorkingFactoryRetainedInitVarArg {
+        as TransientDefaultWorkingFactoryArg
+        index (WorkingFactoryConsumerFieldOrder, ParamOrder)
+        order ParamOrder
+
+        target working_default_factory_args {
+            build /ClassDef/TransientDefaultFacadeProperty[WorkingFactoryConsumerFieldOrder]
+        }
+
+        ident param_name = ParamName
+        external retained_slot = RetainedSlotName
+    }
+
+    contribution TransientDefaultWorkingFactoryEmptyArg = TransientWorkingFactoryEmptyArg {
+        as TransientDefaultWorkingFactoryArg
+        index (WorkingFactoryConsumerFieldOrder, ParamOrder)
+        order ParamOrder
+
+        target working_default_factory_args {
+            build /ClassDef/TransientDefaultFacadeProperty[WorkingFactoryConsumerFieldOrder]
+        }
+    }
+
+    contribution TransientWorkingWorkingFactorySelfArg = TransientWorkingFactorySelfArg {
+        as TransientWorkingWorkingFactoryArg
+        index (WorkingFactoryConsumerFieldOrder, ParamOrder)
+        order ParamOrder
+
+        target working_default_factory_args {
+            build /ClassDef/TransientWorkingFacadeProperty[WorkingFactoryConsumerFieldOrder]
+        }
+
+        ident param_name = ParamName
+    }
+
+    contribution TransientWorkingWorkingFactoryCurrentArg = TransientWorkingFactoryCurrentArg {
+        as TransientWorkingWorkingFactoryArg
+        index (WorkingFactoryConsumerFieldOrder, ParamOrder)
+        order ParamOrder
+
+        target working_default_factory_args {
+            build /ClassDef/TransientWorkingFacadeProperty[WorkingFactoryConsumerFieldOrder]
+        }
+
+        ident param_name = ParamName
+    }
+
+    contribution TransientWorkingWorkingFactoryWorkingArg = TransientWorkingFactoryWorkingArg {
+        as TransientWorkingWorkingFactoryArg
+        index (WorkingFactoryConsumerFieldOrder, ParamOrder)
+        order ParamOrder
+
+        target working_default_factory_args {
+            build /ClassDef/TransientWorkingFacadeProperty[WorkingFactoryConsumerFieldOrder]
+        }
+
+        ident param_name = ParamName
+    }
+
+    contribution TransientWorkingWorkingFactoryRetainedInitVarArg = TransientWorkingFactoryRetainedInitVarArg {
+        as TransientWorkingWorkingFactoryArg
+        index (WorkingFactoryConsumerFieldOrder, ParamOrder)
+        order ParamOrder
+
+        target working_default_factory_args {
+            build /ClassDef/TransientWorkingFacadeProperty[WorkingFactoryConsumerFieldOrder]
+        }
+
+        ident param_name = ParamName
+        external retained_slot = RetainedSlotName
+    }
+
+    contribution TransientWorkingWorkingFactoryEmptyArg = TransientWorkingFactoryEmptyArg {
+        as TransientWorkingWorkingFactoryArg
+        index (WorkingFactoryConsumerFieldOrder, ParamOrder)
+        order ParamOrder
+
+        target working_default_factory_args {
+            build /ClassDef/TransientWorkingFacadeProperty[WorkingFactoryConsumerFieldOrder]
+        }
+    }
+
     contribution TransientApplyPreparedCommit = TransientClearWorkingBranch {
         as TransientApplyPreparedCommit
         index FieldOrder
@@ -357,6 +667,10 @@ concept LifecycleTransient extends default_factories.LifecycleDefaultFactories {
 
     matcher TransientWorkingStateSlotContributions(field: TransientFields) -> contribution {
         default -> TransientWorkingStateSlot
+    }
+
+    matcher RetainedInitVarStateSlotContributions(initvar: RetainedInitVars) -> contribution {
+        default -> RetainedInitVarStateSlot
     }
 
     matcher TransientWorkingDefaultBuilderParamContributions(field: Fields) -> contribution {
@@ -392,6 +706,10 @@ concept LifecycleTransient extends default_factories.LifecycleDefaultFactories {
         default -> TransientWorkingInitAssignment
     }
 
+    matcher RetainedInitVarStateAssignmentContributions(initvar: RetainedInitVars) -> contribution {
+        default -> RetainedInitVarStateAssignment
+    }
+
     matcher TransientCurrentPropertyContributions(field: TransientFields) -> contribution {
         default -> TransientCurrentPropertyContribution
     }
@@ -414,6 +732,32 @@ concept LifecycleTransient extends default_factories.LifecycleDefaultFactories {
 
     matcher TransientRollbackContributions(field: IndexedTransientFields) -> contribution {
         default -> TransientRollback
+    }
+
+    matcher TransientDefaultWorkingFactoryArgContributions(arg: TransientWorkingFactoryArgs) -> contribution {
+        rule empty when WorkingFactoryArgKind == "empty"
+                   -> TransientDefaultWorkingFactoryEmptyArg
+        rule self_arg when WorkingFactoryArgKind == "self"
+                      -> TransientDefaultWorkingFactorySelfArg
+        rule current_arg when WorkingFactoryArgKind == "current"
+                         -> TransientDefaultWorkingFactoryCurrentArg
+        rule working_arg when WorkingFactoryArgKind == "working"
+                         -> TransientDefaultWorkingFactoryWorkingArg
+        rule retained_initvar when WorkingFactoryArgKind == "retained_initvar"
+                              -> TransientDefaultWorkingFactoryRetainedInitVarArg
+    }
+
+    matcher TransientWorkingWorkingFactoryArgContributions(arg: TransientWorkingFactoryArgs) -> contribution {
+        rule empty when WorkingFactoryArgKind == "empty"
+                   -> TransientWorkingWorkingFactoryEmptyArg
+        rule self_arg when WorkingFactoryArgKind == "self"
+                      -> TransientWorkingWorkingFactorySelfArg
+        rule current_arg when WorkingFactoryArgKind == "current"
+                         -> TransientWorkingWorkingFactoryCurrentArg
+        rule working_arg when WorkingFactoryArgKind == "working"
+                         -> TransientWorkingWorkingFactoryWorkingArg
+        rule retained_initvar when WorkingFactoryArgKind == "retained_initvar"
+                              -> TransientWorkingWorkingFactoryRetainedInitVarArg
     }
 
     matcher DefaultFactoryEvalContributions(step: DefaultFactoryEvaluationSteps) -> contribution {

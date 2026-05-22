@@ -181,9 +181,16 @@ def test_lifecycle_decorator_initializes_transient_current_defaults() -> None:
 
 def test_lifecycle_decorator_transient_working_overlay_materializes_in_transaction() -> None:
     class Scratch:
+        seed: int = initvar(init=False, default=4)
+        label: str = transient(default="ready")
         buffer: list[int] | None = transient(
             default=None,
-            working_default_factory=list,
+            working_default_factory=lambda self, current, working, seed: [
+                seed,
+                self.label,
+                current.label,
+                working.label,
+            ],
         )
         audit_buffer: list[int] | None = transient(
             "audit",
@@ -194,6 +201,8 @@ def test_lifecycle_decorator_transient_working_overlay_materializes_in_transacti
     generated = lifecycle(Scratch)
     item = generated()
 
+    assert item._y_state._y_seed_initvar == 4
+    assert item.label == "ready"
     assert item.buffer is None
     assert item.current.buffer is None
     with pytest.raises(RuntimeError, match="writes require"):
@@ -201,10 +210,10 @@ def test_lifecycle_decorator_transient_working_overlay_materializes_in_transacti
 
     with item.begin(DEFAULT_TRANSACTION):
         assert item.current.buffer is None
-        assert item.buffer == []
+        assert item.buffer == [4, "ready", "ready", "ready"]
         item.buffer.append(1)
-        assert item.buffer == [1]
-        assert item.working.buffer == [1]
+        assert item.buffer == [4, "ready", "ready", "ready", 1]
+        assert item.working.buffer == [4, "ready", "ready", "ready", 1]
         assert item.current.buffer is None
 
     assert item.buffer is None

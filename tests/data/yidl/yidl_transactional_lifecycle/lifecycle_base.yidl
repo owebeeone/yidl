@@ -114,6 +114,11 @@ concept LifecycleBase extends transient.LifecycleTransient {
             where FieldOwner == ClassId
             using TransientWorkingStateSlotContributions
 
+        apply retained_initvar_state_slots
+            from initvar: RetainedInitVars
+            where FieldOwner == ClassId
+            using RetainedInitVarStateSlotContributions
+
         apply managed_staged_state_slots
             from field: ManagedFields
             where FieldOwner == ClassId
@@ -354,6 +359,11 @@ concept LifecycleBase extends transient.LifecycleTransient {
             where FieldOwner == ClassId
             using TransientWorkingInitAssignmentContributions
 
+        apply retained_initvar_state_assignments
+            from initvar: RetainedInitVars
+            where FieldOwner == ClassId
+            using RetainedInitVarStateAssignmentContributions
+
         apply managed_staged_init_assignments
             from field: ManagedFields
             where FieldOwner == ClassId
@@ -403,6 +413,16 @@ concept LifecycleBase extends transient.LifecycleTransient {
             from field: IndexedTransientFields
             where FieldOwner == ClassId
             using TransientWorkingFacadePropertyContributions
+
+        apply transient_default_working_factory_args
+            from arg: TransientWorkingFactoryArgs
+            where WorkingFactoryArgOwner == ClassId
+            using TransientDefaultWorkingFactoryArgContributions
+
+        apply transient_working_working_factory_args
+            from arg: TransientWorkingFactoryArgs
+            where WorkingFactoryArgOwner == ClassId
+            using TransientWorkingWorkingFactoryArgContributions
 
         apply apply_prepared_commit_helpers
             from tx_group: TxGroups

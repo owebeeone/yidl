@@ -409,6 +409,36 @@ _DiagnosticFieldIdProperty = RuntimeProperty(
 _DiagnosticMessageProperty = RuntimeProperty(
     "DiagnosticMessage", str, default=REQUIRED, storage_name="diagnostic_message"
 )
+_RetainedSlotNameProperty = RuntimeProperty(
+    "RetainedSlotName", str, default="", storage_name="retained_slot_name"
+)
+_RetainOrderProperty = RuntimeProperty(
+    "RetainOrder", int, default=0, storage_name="retain_order"
+)
+_WorkingFactoryArgIdProperty = RuntimeProperty(
+    "WorkingFactoryArgId", str, default=REQUIRED, storage_name="working_factory_arg_id"
+)
+_WorkingFactoryArgOwnerProperty = RuntimeProperty(
+    "WorkingFactoryArgOwner",
+    str,
+    default=REQUIRED,
+    storage_name="working_factory_arg_owner",
+)
+_WorkingFactoryConsumerFieldIdProperty = RuntimeProperty(
+    "WorkingFactoryConsumerFieldId",
+    str,
+    default=REQUIRED,
+    storage_name="working_factory_consumer_field_id",
+)
+_WorkingFactoryConsumerFieldOrderProperty = RuntimeProperty(
+    "WorkingFactoryConsumerFieldOrder",
+    int,
+    default=0,
+    storage_name="working_factory_consumer_field_order",
+)
+_WorkingFactoryArgKindProperty = RuntimeProperty(
+    "WorkingFactoryArgKind", str, default="", storage_name="working_factory_arg_kind"
+)
 _LifecycleClassSpec = RuntimeRecord(
     "LifecycleClass",
     (
@@ -730,6 +760,31 @@ _IndexedTransientFieldSpec = RuntimeRecord(
         _WorkingSlotNameProperty,
         _HasWorkingDefaultFactoryProperty,
         _WorkingDefaultFactoryParamNameProperty,
+    ),
+)
+_RetainedInitVarSpec = RuntimeRecord(
+    "RetainedInitVar",
+    (
+        _FieldIdProperty,
+        _FieldOwnerProperty,
+        _FieldNameProperty,
+        _FieldOrderProperty,
+        _RetainedSlotNameProperty,
+        _RetainOrderProperty,
+    ),
+)
+_TransientWorkingFactoryArgSpec = RuntimeRecord(
+    "TransientWorkingFactoryArg",
+    (
+        _WorkingFactoryArgIdProperty,
+        _WorkingFactoryArgOwnerProperty,
+        _WorkingFactoryConsumerFieldIdProperty,
+        _WorkingFactoryConsumerFieldOrderProperty,
+        _ParamNameProperty,
+        _ParamOrderProperty,
+        _ProviderNameProperty,
+        _WorkingFactoryArgKindProperty,
+        _RetainedSlotNameProperty,
     ),
 )
 _TransientFieldSpec = RuntimeRecord(
@@ -3484,6 +3539,211 @@ class IndexedTransientField:
 _IndexedTransientFieldSpec.bind_record_class(IndexedTransientField)
 
 
+class RetainedInitVar:
+    __slots__ = (
+        "field_id",
+        "field_owner",
+        "field_name",
+        "field_order",
+        "retained_slot_name",
+        "retain_order",
+    )
+    __dds_record_spec__ = _RetainedInitVarSpec
+    field_id: str
+    field_owner: str
+    field_name: str
+    field_order: int
+    retained_slot_name: str
+    retain_order: int
+
+    def __init__(
+        self,
+        *,
+        field_id: str,
+        field_owner: str,
+        field_name: str,
+        field_order: int,
+        retained_slot_name: str = "",
+        retain_order: int = 0,
+    ):
+        if not isinstance(field_id, str):
+            raise TypeError("FieldId must be str, got " + type(field_id).__name__)
+        object.__setattr__(self, "field_id", field_id)
+        if not isinstance(field_owner, str):
+            raise TypeError("FieldOwner must be str, got " + type(field_owner).__name__)
+        object.__setattr__(self, "field_owner", field_owner)
+        if not isinstance(field_name, str):
+            raise TypeError("FieldName must be str, got " + type(field_name).__name__)
+        object.__setattr__(self, "field_name", field_name)
+        if not isinstance(field_order, int):
+            raise TypeError("FieldOrder must be int, got " + type(field_order).__name__)
+        object.__setattr__(self, "field_order", field_order)
+        if not isinstance(retained_slot_name, str):
+            raise TypeError(
+                "RetainedSlotName must be str, got " + type(retained_slot_name).__name__
+            )
+        object.__setattr__(self, "retained_slot_name", retained_slot_name)
+        if not isinstance(retain_order, int):
+            raise TypeError(
+                "RetainOrder must be int, got " + type(retain_order).__name__
+            )
+        object.__setattr__(self, "retain_order", retain_order)
+
+    def __setattr__(self, name, value):
+        if name in (
+            "field_id",
+            "field_owner",
+            "field_name",
+            "field_order",
+            "retained_slot_name",
+            "retain_order",
+        ):
+            raise AttributeError("RetainedInitVar records are immutable")
+        object.__setattr__(self, name, value)
+
+    def __repr__(self):
+        pieces = []
+        pieces.append("field_id=" + repr(self.field_id))
+        pieces.append("field_owner=" + repr(self.field_owner))
+        pieces.append("field_name=" + repr(self.field_name))
+        pieces.append("field_order=" + repr(self.field_order))
+        pieces.append("retained_slot_name=" + repr(self.retained_slot_name))
+        pieces.append("retain_order=" + repr(self.retain_order))
+        return "RetainedInitVar" + "(" + ", ".join(pieces) + ")"
+
+
+_RetainedInitVarSpec.bind_record_class(RetainedInitVar)
+
+
+class TransientWorkingFactoryArg:
+    __slots__ = (
+        "working_factory_arg_id",
+        "working_factory_arg_owner",
+        "working_factory_consumer_field_id",
+        "working_factory_consumer_field_order",
+        "param_name",
+        "param_order",
+        "provider_name",
+        "working_factory_arg_kind",
+        "retained_slot_name",
+    )
+    __dds_record_spec__ = _TransientWorkingFactoryArgSpec
+    working_factory_arg_id: str
+    working_factory_arg_owner: str
+    working_factory_consumer_field_id: str
+    working_factory_consumer_field_order: int
+    param_name: str
+    param_order: int
+    provider_name: str
+    working_factory_arg_kind: str
+    retained_slot_name: str
+
+    def __init__(
+        self,
+        *,
+        working_factory_arg_id: str,
+        working_factory_arg_owner: str,
+        working_factory_consumer_field_id: str,
+        working_factory_consumer_field_order: int = 0,
+        param_name: str,
+        param_order: int = 0,
+        provider_name: str,
+        working_factory_arg_kind: str = "",
+        retained_slot_name: str = "",
+    ):
+        if not isinstance(working_factory_arg_id, str):
+            raise TypeError(
+                "WorkingFactoryArgId must be str, got "
+                + type(working_factory_arg_id).__name__
+            )
+        object.__setattr__(self, "working_factory_arg_id", working_factory_arg_id)
+        if not isinstance(working_factory_arg_owner, str):
+            raise TypeError(
+                "WorkingFactoryArgOwner must be str, got "
+                + type(working_factory_arg_owner).__name__
+            )
+        object.__setattr__(self, "working_factory_arg_owner", working_factory_arg_owner)
+        if not isinstance(working_factory_consumer_field_id, str):
+            raise TypeError(
+                "WorkingFactoryConsumerFieldId must be str, got "
+                + type(working_factory_consumer_field_id).__name__
+            )
+        object.__setattr__(
+            self, "working_factory_consumer_field_id", working_factory_consumer_field_id
+        )
+        if not isinstance(working_factory_consumer_field_order, int):
+            raise TypeError(
+                "WorkingFactoryConsumerFieldOrder must be int, got "
+                + type(working_factory_consumer_field_order).__name__
+            )
+        object.__setattr__(
+            self,
+            "working_factory_consumer_field_order",
+            working_factory_consumer_field_order,
+        )
+        if not isinstance(param_name, str):
+            raise TypeError("ParamName must be str, got " + type(param_name).__name__)
+        object.__setattr__(self, "param_name", param_name)
+        if not isinstance(param_order, int):
+            raise TypeError("ParamOrder must be int, got " + type(param_order).__name__)
+        object.__setattr__(self, "param_order", param_order)
+        if not isinstance(provider_name, str):
+            raise TypeError(
+                "ProviderName must be str, got " + type(provider_name).__name__
+            )
+        object.__setattr__(self, "provider_name", provider_name)
+        if not isinstance(working_factory_arg_kind, str):
+            raise TypeError(
+                "WorkingFactoryArgKind must be str, got "
+                + type(working_factory_arg_kind).__name__
+            )
+        object.__setattr__(self, "working_factory_arg_kind", working_factory_arg_kind)
+        if not isinstance(retained_slot_name, str):
+            raise TypeError(
+                "RetainedSlotName must be str, got " + type(retained_slot_name).__name__
+            )
+        object.__setattr__(self, "retained_slot_name", retained_slot_name)
+
+    def __setattr__(self, name, value):
+        if name in (
+            "working_factory_arg_id",
+            "working_factory_arg_owner",
+            "working_factory_consumer_field_id",
+            "working_factory_consumer_field_order",
+            "param_name",
+            "param_order",
+            "provider_name",
+            "working_factory_arg_kind",
+            "retained_slot_name",
+        ):
+            raise AttributeError("TransientWorkingFactoryArg records are immutable")
+        object.__setattr__(self, name, value)
+
+    def __repr__(self):
+        pieces = []
+        pieces.append("working_factory_arg_id=" + repr(self.working_factory_arg_id))
+        pieces.append(
+            "working_factory_arg_owner=" + repr(self.working_factory_arg_owner)
+        )
+        pieces.append(
+            "working_factory_consumer_field_id="
+            + repr(self.working_factory_consumer_field_id)
+        )
+        pieces.append(
+            "working_factory_consumer_field_order="
+            + repr(self.working_factory_consumer_field_order)
+        )
+        pieces.append("param_name=" + repr(self.param_name))
+        pieces.append("param_order=" + repr(self.param_order))
+        pieces.append("provider_name=" + repr(self.provider_name))
+        pieces.append("working_factory_arg_kind=" + repr(self.working_factory_arg_kind))
+        pieces.append("retained_slot_name=" + repr(self.retained_slot_name))
+        return "TransientWorkingFactoryArg" + "(" + ", ".join(pieces) + ")"
+
+
+_TransientWorkingFactoryArgSpec.bind_record_class(TransientWorkingFactoryArg)
+
+
 class TransientField:
     __slots__ = (
         "field_id",
@@ -3869,6 +4129,18 @@ IndexedTransientFieldsCollection = RuntimeCollection(
     allows_multiple=True,
     identity=_FieldIdProperty,
 )
+RetainedInitVarsCollection = RuntimeCollection(
+    "RetainedInitVars",
+    _RetainedInitVarSpec,
+    allows_multiple=True,
+    identity=_FieldIdProperty,
+)
+TransientWorkingFactoryArgsCollection = RuntimeCollection(
+    "TransientWorkingFactoryArgs",
+    _TransientWorkingFactoryArgSpec,
+    allows_multiple=True,
+    identity=_WorkingFactoryArgIdProperty,
+)
 PlainFieldsCollection = RuntimeComputedCollection(
     "PlainFields", source=FieldsCollection, when=(_FieldKindProperty.eq("field"),)
 )
@@ -3928,6 +4200,8 @@ _RUNTIME_SPEC = RuntimeContainerSpec(
         DefaultFactoryEvaluationStepsCollection,
         DefaultFactoryDiagnosticsCollection,
         IndexedTransientFieldsCollection,
+        RetainedInitVarsCollection,
+        TransientWorkingFactoryArgsCollection,
     ),
     computed_collections=(
         PlainFieldsCollection,
@@ -4191,11 +4465,13 @@ def run_build_transient_facts(builder):
     ctx = DDSOperationContext(builder, "BuildTransientFacts", ordered_inputs={})
     from yidl.runtime.transaction_yidl import DEFAULT_TRANSACTION
 
+    fields = list(ctx.records(FieldsCollection))
+    by_owner_name = {(field.field_owner, field.field_name): field for field in fields}
     tx_groups = {
         (tx_group.tx_owner, tx_group.tx_group_key): tx_group.tx_index
         for tx_group in ctx.records(TxGroupsCollection)
     }
-    for field in ctx.records(FieldsCollection):
+    for field in fields:
         if field.field_kind != "transient":
             continue
         tx_group = field.tx_group_key
@@ -4218,6 +4494,79 @@ def run_build_transient_facts(builder):
             ),
             policy=RejectDuplicate,
         )
+        if field.has_working_default_factory and (
+            not field.working_default_factory_param_names
+        ):
+            ctx.write(
+                TransientWorkingFactoryArgsCollection,
+                TransientWorkingFactoryArg(
+                    working_factory_arg_id=f"{field.field_id}.__empty__",
+                    working_factory_arg_owner=field.field_owner,
+                    working_factory_consumer_field_id=field.field_id,
+                    working_factory_consumer_field_order=field.field_order,
+                    param_name="",
+                    param_order=-1,
+                    provider_name="",
+                    working_factory_arg_kind="empty",
+                    retained_slot_name="",
+                ),
+                policy=RejectDuplicate,
+            )
+        for param_order, param_name in enumerate(
+            field.working_default_factory_param_names
+        ):
+            arg_kind = ""
+            provider_name = param_name
+            retained_slot_name = ""
+            if param_name in {"self", "current", "working"}:
+                arg_kind = param_name
+            else:
+                provider = by_owner_name.get((field.field_owner, param_name))
+                if provider is None:
+                    raise AssemblyDiagnosticError(
+                        f"{field.field_name}: working_default_factory references unknown name {param_name!r}"
+                    )
+                if provider.field_kind != "initvar":
+                    raise AssemblyDiagnosticError(
+                        f"{field.field_name}: working_default_factory cannot retain non-initvar provider {param_name!r}"
+                    )
+                if (
+                    not provider.init
+                    and (not provider.has_default)
+                    and (not provider.has_default_factory)
+                ):
+                    raise AssemblyDiagnosticError(
+                        f"{field.field_name}: working_default_factory cannot retain initvar {param_name!r} without a default or default_factory"
+                    )
+                arg_kind = "retained_initvar"
+                retained_slot_name = f"_y_{param_name}_initvar"
+                ctx.write(
+                    RetainedInitVarsCollection,
+                    RetainedInitVar(
+                        field_id=provider.field_id,
+                        field_owner=provider.field_owner,
+                        field_name=provider.field_name,
+                        field_order=provider.field_order,
+                        retained_slot_name=retained_slot_name,
+                        retain_order=200000 + provider.field_order,
+                    ),
+                    policy=ReplaceExisting,
+                )
+            ctx.write(
+                TransientWorkingFactoryArgsCollection,
+                TransientWorkingFactoryArg(
+                    working_factory_arg_id=f"{field.field_id}.{param_name}",
+                    working_factory_arg_owner=field.field_owner,
+                    working_factory_consumer_field_id=field.field_id,
+                    working_factory_consumer_field_order=field.field_order,
+                    param_name=param_name,
+                    param_order=param_order,
+                    provider_name=provider_name,
+                    working_factory_arg_kind=arg_kind,
+                    retained_slot_name=retained_slot_name,
+                ),
+                policy=RejectDuplicate,
+            )
 
 
 def run_operations(builder):
@@ -4578,6 +4927,29 @@ ASSEMBLY_PROPERTIES = {
     ),
     "DiagnosticMessage": _YidlSimpleNamespace(
         name="DiagnosticMessage", storage_name="diagnostic_message"
+    ),
+    "RetainedSlotName": _YidlSimpleNamespace(
+        name="RetainedSlotName", storage_name="retained_slot_name"
+    ),
+    "RetainOrder": _YidlSimpleNamespace(
+        name="RetainOrder", storage_name="retain_order"
+    ),
+    "WorkingFactoryArgId": _YidlSimpleNamespace(
+        name="WorkingFactoryArgId", storage_name="working_factory_arg_id"
+    ),
+    "WorkingFactoryArgOwner": _YidlSimpleNamespace(
+        name="WorkingFactoryArgOwner", storage_name="working_factory_arg_owner"
+    ),
+    "WorkingFactoryConsumerFieldId": _YidlSimpleNamespace(
+        name="WorkingFactoryConsumerFieldId",
+        storage_name="working_factory_consumer_field_id",
+    ),
+    "WorkingFactoryConsumerFieldOrder": _YidlSimpleNamespace(
+        name="WorkingFactoryConsumerFieldOrder",
+        storage_name="working_factory_consumer_field_order",
+    ),
+    "WorkingFactoryArgKind": _YidlSimpleNamespace(
+        name="WorkingFactoryArgKind", storage_name="working_factory_arg_kind"
     ),
 }
 ASSEMBLY_RESOURCES = {
@@ -5962,11 +6334,16 @@ astichi_funcargs(
         """\
 from yidl.runtime.transaction_yidl import DEFAULT_TRANSACTION
 
+fields = list(ctx.records(FieldsCollection))
+by_owner_name = {
+    (field.field_owner, field.field_name): field
+    for field in fields
+}
 tx_groups = {
     (tx_group.tx_owner, tx_group.tx_group_key): tx_group.tx_index
     for tx_group in ctx.records(TxGroupsCollection)
 }
-for field in ctx.records(FieldsCollection):
+for field in fields:
     if field.field_kind != "transient":
         continue
     tx_group = field.tx_group_key
@@ -5990,16 +6367,100 @@ for field in ctx.records(FieldsCollection):
             ),
         ),
         policy=RejectDuplicate,
-    )""",
+    )
+    if (
+        field.has_working_default_factory
+        and not field.working_default_factory_param_names
+    ):
+        ctx.write(
+            TransientWorkingFactoryArgsCollection,
+            TransientWorkingFactoryArg(
+                working_factory_arg_id=f"{field.field_id}.__empty__",
+                working_factory_arg_owner=field.field_owner,
+                working_factory_consumer_field_id=field.field_id,
+                working_factory_consumer_field_order=field.field_order,
+                param_name="",
+                param_order=-1,
+                provider_name="",
+                working_factory_arg_kind="empty",
+                retained_slot_name="",
+            ),
+            policy=RejectDuplicate,
+        )
+    for param_order, param_name in enumerate(
+        field.working_default_factory_param_names
+    ):
+        arg_kind = ""
+        provider_name = param_name
+        retained_slot_name = ""
+        if param_name in {"self", "current", "working"}:
+            arg_kind = param_name
+        else:
+            provider = by_owner_name.get((field.field_owner, param_name))
+            if provider is None:
+                raise AssemblyDiagnosticError(
+                    f"{field.field_name}: working_default_factory "
+                    f"references unknown name {param_name!r}"
+                )
+            if provider.field_kind != "initvar":
+                raise AssemblyDiagnosticError(
+                    f"{field.field_name}: working_default_factory "
+                    f"cannot retain non-initvar provider {param_name!r}"
+                )
+            if (
+                not provider.init
+                and not provider.has_default
+                and not provider.has_default_factory
+            ):
+                raise AssemblyDiagnosticError(
+                    f"{field.field_name}: working_default_factory "
+                    f"cannot retain initvar {param_name!r} without "
+                    "a default or default_factory"
+                )
+            arg_kind = "retained_initvar"
+            retained_slot_name = f"_y_{param_name}_initvar"
+            ctx.write(
+                RetainedInitVarsCollection,
+                RetainedInitVar(
+                    field_id=provider.field_id,
+                    field_owner=provider.field_owner,
+                    field_name=provider.field_name,
+                    field_order=provider.field_order,
+                    retained_slot_name=retained_slot_name,
+                    retain_order=200000 + provider.field_order,
+                ),
+                policy=ReplaceExisting,
+            )
+        ctx.write(
+            TransientWorkingFactoryArgsCollection,
+            TransientWorkingFactoryArg(
+                working_factory_arg_id=f"{field.field_id}.{param_name}",
+                working_factory_arg_owner=field.field_owner,
+                working_factory_consumer_field_id=field.field_id,
+                working_factory_consumer_field_order=field.field_order,
+                param_name=param_name,
+                param_order=param_order,
+                provider_name=provider_name,
+                working_factory_arg_kind=arg_kind,
+                retained_slot_name=retained_slot_name,
+            ),
+            policy=RejectDuplicate,
+        )""",
         file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_transient.yidl",
-        line_number=32,
+        line_number=65,
         keep_names=(
             "ctx",
             "FieldsCollection",
             "TxGroupsCollection",
             "IndexedTransientFieldsCollection",
             "IndexedTransientField",
+            "RetainedInitVarsCollection",
+            "RetainedInitVar",
+            "TransientWorkingFactoryArgsCollection",
+            "TransientWorkingFactoryArg",
             "RejectDuplicate",
+            "ReplaceExisting",
+            "AssemblyDiagnosticError",
         ),
     ),
     "TransientCurrentProperty": astichi_template(
@@ -6009,14 +6470,14 @@ for field in ctx.records(FieldsCollection):
 def property_getter_name__astichi_arg__(self):
     return self._y_state.astichi_ref(external=current_slot)""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_transient.yidl",
-            line_number=75,
+            line_number=193,
         )
     ),
     "TransientWorkingStateAssignment": astichi_template(
         from_astichi_code(
             "astichi_pass(state, outer_bind=True).astichi_ref(external=working_slot)._ = VOID",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_transient.yidl",
-            line_number=81,
+            line_number=199,
             keep_names=("VOID",),
         )
     ),
@@ -6036,7 +6497,7 @@ def property_setter_name__astichi_arg__(self, value):
     state._y_ensure_working_transaction(astichi_bind_external(tx_index))
     state.astichi_ref(external=working_slot)._ = value""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_transient.yidl",
-            line_number=87,
+            line_number=205,
             keep_names=("VOID",),
         )
     ),
@@ -6053,7 +6514,9 @@ def property_getter_name__astichi_arg__(self):
         return state.astichi_ref(external=current_slot)
     state._y_ensure_working_transaction(astichi_bind_external(tx_index))
     state.astichi_ref(external=working_slot)._ = (
-        working_default_factory_name__astichi_arg__()
+        working_default_factory_name__astichi_arg__(
+            **astichi_hole(working_default_factory_args)
+        )
     )
     return state.astichi_ref(external=working_slot)
 
@@ -6063,7 +6526,7 @@ def property_setter_name__astichi_arg__(self, value):
     state._y_ensure_working_transaction(astichi_bind_external(tx_index))
     state.astichi_ref(external=working_slot)._ = value""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_transient.yidl",
-            line_number=104,
+            line_number=222,
             keep_names=("VOID",),
         )
     ),
@@ -6071,8 +6534,78 @@ def property_setter_name__astichi_arg__(self, value):
         from_astichi_code(
             "astichi_pass(self, outer_bind=True).astichi_ref(external=working_slot)._ = VOID",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_transient.yidl",
-            line_number=128,
+            line_number=248,
             keep_names=("VOID",),
+        )
+    ),
+    "RetainedInitVarAssignment": astichi_template(
+        from_astichi_code(
+            """\
+astichi_pass(state, outer_bind=True).astichi_ref(external=retained_slot)._ = astichi_pass(
+    init_value_name__astichi_arg__,
+    outer_bind=True,
+)""",
+            file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_transient.yidl",
+            line_number=254,
+        )
+    ),
+    "TransientWorkingFactorySelfArg": astichi_template(
+        from_astichi_code(
+            """\
+astichi_funcargs(
+    param_name__astichi_arg__=astichi_pass(
+        state,
+        outer_bind=True,
+    )._y_get_default_facade()
+)""",
+            file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_transient.yidl",
+            line_number=261,
+        )
+    ),
+    "TransientWorkingFactoryCurrentArg": astichi_template(
+        from_astichi_code(
+            """\
+astichi_funcargs(
+    param_name__astichi_arg__=astichi_pass(
+        state,
+        outer_bind=True,
+    )._y_get_current_facade()
+)""",
+            file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_transient.yidl",
+            line_number=270,
+        )
+    ),
+    "TransientWorkingFactoryWorkingArg": astichi_template(
+        from_astichi_code(
+            """\
+astichi_funcargs(
+    param_name__astichi_arg__=astichi_pass(
+        state,
+        outer_bind=True,
+    )._y_get_working_facade()
+)""",
+            file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_transient.yidl",
+            line_number=279,
+        )
+    ),
+    "TransientWorkingFactoryRetainedInitVarArg": astichi_template(
+        from_astichi_code(
+            """\
+astichi_funcargs(
+    param_name__astichi_arg__=astichi_pass(
+        state,
+        outer_bind=True,
+    ).astichi_ref(external=retained_slot)
+)""",
+            file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_transient.yidl",
+            line_number=288,
+        )
+    ),
+    "TransientWorkingFactoryEmptyArg": astichi_template(
+        from_astichi_code(
+            "astichi_funcargs()",
+            file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_transient.yidl",
+            line_number=297,
         )
     ),
 }
@@ -9165,6 +9698,32 @@ ASSEMBLY_CONTRIBUTIONS = {
             ),
         ),
     ),
+    "RetainedInitVarStateSlot": ContributionSpec(
+        name="RetainedInitVarStateSlot",
+        source_name="StateSlotEntry",
+        source_kind="resource",
+        build_name="RetainedInitVarStateSlot",
+        index=ValueRef("FieldOrder"),
+        order=ValueRef("FieldOrder"),
+        target=TargetSpec(
+            name="state_slots",
+            paths=(
+                TargetPathSpec(
+                    kind="build",
+                    path=PathSpec(
+                        segments=(
+                            PathSegmentSpec(kind="name", name="ClassDef", indexes=()),
+                        )
+                    ),
+                ),
+            ),
+        ),
+        bindings=(
+            BindingSpec(
+                kind="external", name="slot_name", value=ValueRef("RetainedSlotName")
+            ),
+        ),
+    ),
     "TransientWorkingDefaultFactoryBuilderParam": ContributionSpec(
         name="TransientWorkingDefaultFactoryBuilderParam",
         source_name="BuilderParam",
@@ -9362,6 +9921,37 @@ ASSEMBLY_CONTRIBUTIONS = {
         bindings=(
             BindingSpec(
                 kind="external", name="working_slot", value=ValueRef("WorkingSlotName")
+            ),
+        ),
+    ),
+    "RetainedInitVarStateAssignment": ContributionSpec(
+        name="RetainedInitVarStateAssignment",
+        source_name="RetainedInitVarAssignment",
+        source_kind="resource",
+        build_name="RetainedInitVarStateAssignment",
+        index=ValueRef("FieldOrder"),
+        order=ValueRef("RetainOrder"),
+        target=TargetSpec(
+            name="state_init_body",
+            paths=(
+                TargetPathSpec(
+                    kind="build",
+                    path=PathSpec(
+                        segments=(
+                            PathSegmentSpec(kind="name", name="ClassDef", indexes=()),
+                        )
+                    ),
+                ),
+            ),
+        ),
+        bindings=(
+            BindingSpec(
+                kind="ident", name="init_value_name", value=ValueRef("FieldName")
+            ),
+            BindingSpec(
+                kind="external",
+                name="retained_slot",
+                value=ValueRef("RetainedSlotName"),
             ),
         ),
     ),
@@ -9567,6 +10157,322 @@ ASSEMBLY_CONTRIBUTIONS = {
             ),
             BindingSpec(kind="external", name="tx_index", value=ValueRef("TxIndex")),
         ),
+    ),
+    "TransientDefaultWorkingFactorySelfArg": ContributionSpec(
+        name="TransientDefaultWorkingFactorySelfArg",
+        source_name="TransientWorkingFactorySelfArg",
+        source_kind="resource",
+        build_name="TransientDefaultWorkingFactoryArg",
+        index=TupleValueRef(
+            (ValueRef("WorkingFactoryConsumerFieldOrder"), ValueRef("ParamOrder"))
+        ),
+        order=ValueRef("ParamOrder"),
+        target=TargetSpec(
+            name="working_default_factory_args",
+            paths=(
+                TargetPathSpec(
+                    kind="build",
+                    path=PathSpec(
+                        segments=(
+                            PathSegmentSpec(kind="name", name="ClassDef", indexes=()),
+                            PathSegmentSpec(
+                                kind="name",
+                                name="TransientDefaultFacadeProperty",
+                                indexes=(ValueRef("WorkingFactoryConsumerFieldOrder"),),
+                            ),
+                        )
+                    ),
+                ),
+            ),
+        ),
+        bindings=(
+            BindingSpec(kind="ident", name="param_name", value=ValueRef("ParamName")),
+        ),
+    ),
+    "TransientDefaultWorkingFactoryCurrentArg": ContributionSpec(
+        name="TransientDefaultWorkingFactoryCurrentArg",
+        source_name="TransientWorkingFactoryCurrentArg",
+        source_kind="resource",
+        build_name="TransientDefaultWorkingFactoryArg",
+        index=TupleValueRef(
+            (ValueRef("WorkingFactoryConsumerFieldOrder"), ValueRef("ParamOrder"))
+        ),
+        order=ValueRef("ParamOrder"),
+        target=TargetSpec(
+            name="working_default_factory_args",
+            paths=(
+                TargetPathSpec(
+                    kind="build",
+                    path=PathSpec(
+                        segments=(
+                            PathSegmentSpec(kind="name", name="ClassDef", indexes=()),
+                            PathSegmentSpec(
+                                kind="name",
+                                name="TransientDefaultFacadeProperty",
+                                indexes=(ValueRef("WorkingFactoryConsumerFieldOrder"),),
+                            ),
+                        )
+                    ),
+                ),
+            ),
+        ),
+        bindings=(
+            BindingSpec(kind="ident", name="param_name", value=ValueRef("ParamName")),
+        ),
+    ),
+    "TransientDefaultWorkingFactoryWorkingArg": ContributionSpec(
+        name="TransientDefaultWorkingFactoryWorkingArg",
+        source_name="TransientWorkingFactoryWorkingArg",
+        source_kind="resource",
+        build_name="TransientDefaultWorkingFactoryArg",
+        index=TupleValueRef(
+            (ValueRef("WorkingFactoryConsumerFieldOrder"), ValueRef("ParamOrder"))
+        ),
+        order=ValueRef("ParamOrder"),
+        target=TargetSpec(
+            name="working_default_factory_args",
+            paths=(
+                TargetPathSpec(
+                    kind="build",
+                    path=PathSpec(
+                        segments=(
+                            PathSegmentSpec(kind="name", name="ClassDef", indexes=()),
+                            PathSegmentSpec(
+                                kind="name",
+                                name="TransientDefaultFacadeProperty",
+                                indexes=(ValueRef("WorkingFactoryConsumerFieldOrder"),),
+                            ),
+                        )
+                    ),
+                ),
+            ),
+        ),
+        bindings=(
+            BindingSpec(kind="ident", name="param_name", value=ValueRef("ParamName")),
+        ),
+    ),
+    "TransientDefaultWorkingFactoryRetainedInitVarArg": ContributionSpec(
+        name="TransientDefaultWorkingFactoryRetainedInitVarArg",
+        source_name="TransientWorkingFactoryRetainedInitVarArg",
+        source_kind="resource",
+        build_name="TransientDefaultWorkingFactoryArg",
+        index=TupleValueRef(
+            (ValueRef("WorkingFactoryConsumerFieldOrder"), ValueRef("ParamOrder"))
+        ),
+        order=ValueRef("ParamOrder"),
+        target=TargetSpec(
+            name="working_default_factory_args",
+            paths=(
+                TargetPathSpec(
+                    kind="build",
+                    path=PathSpec(
+                        segments=(
+                            PathSegmentSpec(kind="name", name="ClassDef", indexes=()),
+                            PathSegmentSpec(
+                                kind="name",
+                                name="TransientDefaultFacadeProperty",
+                                indexes=(ValueRef("WorkingFactoryConsumerFieldOrder"),),
+                            ),
+                        )
+                    ),
+                ),
+            ),
+        ),
+        bindings=(
+            BindingSpec(kind="ident", name="param_name", value=ValueRef("ParamName")),
+            BindingSpec(
+                kind="external",
+                name="retained_slot",
+                value=ValueRef("RetainedSlotName"),
+            ),
+        ),
+    ),
+    "TransientDefaultWorkingFactoryEmptyArg": ContributionSpec(
+        name="TransientDefaultWorkingFactoryEmptyArg",
+        source_name="TransientWorkingFactoryEmptyArg",
+        source_kind="resource",
+        build_name="TransientDefaultWorkingFactoryArg",
+        index=TupleValueRef(
+            (ValueRef("WorkingFactoryConsumerFieldOrder"), ValueRef("ParamOrder"))
+        ),
+        order=ValueRef("ParamOrder"),
+        target=TargetSpec(
+            name="working_default_factory_args",
+            paths=(
+                TargetPathSpec(
+                    kind="build",
+                    path=PathSpec(
+                        segments=(
+                            PathSegmentSpec(kind="name", name="ClassDef", indexes=()),
+                            PathSegmentSpec(
+                                kind="name",
+                                name="TransientDefaultFacadeProperty",
+                                indexes=(ValueRef("WorkingFactoryConsumerFieldOrder"),),
+                            ),
+                        )
+                    ),
+                ),
+            ),
+        ),
+        bindings=(),
+    ),
+    "TransientWorkingWorkingFactorySelfArg": ContributionSpec(
+        name="TransientWorkingWorkingFactorySelfArg",
+        source_name="TransientWorkingFactorySelfArg",
+        source_kind="resource",
+        build_name="TransientWorkingWorkingFactoryArg",
+        index=TupleValueRef(
+            (ValueRef("WorkingFactoryConsumerFieldOrder"), ValueRef("ParamOrder"))
+        ),
+        order=ValueRef("ParamOrder"),
+        target=TargetSpec(
+            name="working_default_factory_args",
+            paths=(
+                TargetPathSpec(
+                    kind="build",
+                    path=PathSpec(
+                        segments=(
+                            PathSegmentSpec(kind="name", name="ClassDef", indexes=()),
+                            PathSegmentSpec(
+                                kind="name",
+                                name="TransientWorkingFacadeProperty",
+                                indexes=(ValueRef("WorkingFactoryConsumerFieldOrder"),),
+                            ),
+                        )
+                    ),
+                ),
+            ),
+        ),
+        bindings=(
+            BindingSpec(kind="ident", name="param_name", value=ValueRef("ParamName")),
+        ),
+    ),
+    "TransientWorkingWorkingFactoryCurrentArg": ContributionSpec(
+        name="TransientWorkingWorkingFactoryCurrentArg",
+        source_name="TransientWorkingFactoryCurrentArg",
+        source_kind="resource",
+        build_name="TransientWorkingWorkingFactoryArg",
+        index=TupleValueRef(
+            (ValueRef("WorkingFactoryConsumerFieldOrder"), ValueRef("ParamOrder"))
+        ),
+        order=ValueRef("ParamOrder"),
+        target=TargetSpec(
+            name="working_default_factory_args",
+            paths=(
+                TargetPathSpec(
+                    kind="build",
+                    path=PathSpec(
+                        segments=(
+                            PathSegmentSpec(kind="name", name="ClassDef", indexes=()),
+                            PathSegmentSpec(
+                                kind="name",
+                                name="TransientWorkingFacadeProperty",
+                                indexes=(ValueRef("WorkingFactoryConsumerFieldOrder"),),
+                            ),
+                        )
+                    ),
+                ),
+            ),
+        ),
+        bindings=(
+            BindingSpec(kind="ident", name="param_name", value=ValueRef("ParamName")),
+        ),
+    ),
+    "TransientWorkingWorkingFactoryWorkingArg": ContributionSpec(
+        name="TransientWorkingWorkingFactoryWorkingArg",
+        source_name="TransientWorkingFactoryWorkingArg",
+        source_kind="resource",
+        build_name="TransientWorkingWorkingFactoryArg",
+        index=TupleValueRef(
+            (ValueRef("WorkingFactoryConsumerFieldOrder"), ValueRef("ParamOrder"))
+        ),
+        order=ValueRef("ParamOrder"),
+        target=TargetSpec(
+            name="working_default_factory_args",
+            paths=(
+                TargetPathSpec(
+                    kind="build",
+                    path=PathSpec(
+                        segments=(
+                            PathSegmentSpec(kind="name", name="ClassDef", indexes=()),
+                            PathSegmentSpec(
+                                kind="name",
+                                name="TransientWorkingFacadeProperty",
+                                indexes=(ValueRef("WorkingFactoryConsumerFieldOrder"),),
+                            ),
+                        )
+                    ),
+                ),
+            ),
+        ),
+        bindings=(
+            BindingSpec(kind="ident", name="param_name", value=ValueRef("ParamName")),
+        ),
+    ),
+    "TransientWorkingWorkingFactoryRetainedInitVarArg": ContributionSpec(
+        name="TransientWorkingWorkingFactoryRetainedInitVarArg",
+        source_name="TransientWorkingFactoryRetainedInitVarArg",
+        source_kind="resource",
+        build_name="TransientWorkingWorkingFactoryArg",
+        index=TupleValueRef(
+            (ValueRef("WorkingFactoryConsumerFieldOrder"), ValueRef("ParamOrder"))
+        ),
+        order=ValueRef("ParamOrder"),
+        target=TargetSpec(
+            name="working_default_factory_args",
+            paths=(
+                TargetPathSpec(
+                    kind="build",
+                    path=PathSpec(
+                        segments=(
+                            PathSegmentSpec(kind="name", name="ClassDef", indexes=()),
+                            PathSegmentSpec(
+                                kind="name",
+                                name="TransientWorkingFacadeProperty",
+                                indexes=(ValueRef("WorkingFactoryConsumerFieldOrder"),),
+                            ),
+                        )
+                    ),
+                ),
+            ),
+        ),
+        bindings=(
+            BindingSpec(kind="ident", name="param_name", value=ValueRef("ParamName")),
+            BindingSpec(
+                kind="external",
+                name="retained_slot",
+                value=ValueRef("RetainedSlotName"),
+            ),
+        ),
+    ),
+    "TransientWorkingWorkingFactoryEmptyArg": ContributionSpec(
+        name="TransientWorkingWorkingFactoryEmptyArg",
+        source_name="TransientWorkingFactoryEmptyArg",
+        source_kind="resource",
+        build_name="TransientWorkingWorkingFactoryArg",
+        index=TupleValueRef(
+            (ValueRef("WorkingFactoryConsumerFieldOrder"), ValueRef("ParamOrder"))
+        ),
+        order=ValueRef("ParamOrder"),
+        target=TargetSpec(
+            name="working_default_factory_args",
+            paths=(
+                TargetPathSpec(
+                    kind="build",
+                    path=PathSpec(
+                        segments=(
+                            PathSegmentSpec(kind="name", name="ClassDef", indexes=()),
+                            PathSegmentSpec(
+                                kind="name",
+                                name="TransientWorkingFacadeProperty",
+                                indexes=(ValueRef("WorkingFactoryConsumerFieldOrder"),),
+                            ),
+                        )
+                    ),
+                ),
+            ),
+        ),
+        bindings=(),
     ),
     "TransientApplyPreparedCommit": ContributionSpec(
         name="TransientApplyPreparedCommit",
@@ -11066,6 +11972,16 @@ ASSEMBLY_MATCHERS = {
         default_contribution_name="TransientWorkingStateSlot",
         rules=(),
     ),
+    "RetainedInitVarStateSlotContributions": ContributionMatcherSpec(
+        name="RetainedInitVarStateSlotContributions",
+        inputs=(
+            AssemblyInputSpec(
+                name="initvar", collection_name="RetainedInitVars", collection=None
+            ),
+        ),
+        default_contribution_name="RetainedInitVarStateSlot",
+        rules=(),
+    ),
     "TransientWorkingDefaultBuilderParamContributions": ContributionMatcherSpec(
         name="TransientWorkingDefaultBuilderParamContributions",
         inputs=(
@@ -11205,6 +12121,16 @@ ASSEMBLY_MATCHERS = {
         default_contribution_name="TransientWorkingInitAssignment",
         rules=(),
     ),
+    "RetainedInitVarStateAssignmentContributions": ContributionMatcherSpec(
+        name="RetainedInitVarStateAssignmentContributions",
+        inputs=(
+            AssemblyInputSpec(
+                name="initvar", collection_name="RetainedInitVars", collection=None
+            ),
+        ),
+        default_contribution_name="RetainedInitVarStateAssignment",
+        rules=(),
+    ),
     "TransientCurrentPropertyContributions": ContributionMatcherSpec(
         name="TransientCurrentPropertyContributions",
         inputs=(
@@ -11274,6 +12200,122 @@ ASSEMBLY_MATCHERS = {
         ),
         default_contribution_name="TransientRollback",
         rules=(),
+    ),
+    "TransientDefaultWorkingFactoryArgContributions": ContributionMatcherSpec(
+        name="TransientDefaultWorkingFactoryArgContributions",
+        inputs=(
+            AssemblyInputSpec(
+                name="arg",
+                collection_name="TransientWorkingFactoryArgs",
+                collection=None,
+            ),
+        ),
+        default_contribution_name=None,
+        rules=(
+            ContributionRuleSpec(
+                name="empty",
+                condition=EqConditionSpec(
+                    left=ValueRef("WorkingFactoryArgKind"),
+                    right=LiteralValueRef("empty"),
+                ),
+                contribution_name="TransientDefaultWorkingFactoryEmptyArg",
+                weight=1.0,
+            ),
+            ContributionRuleSpec(
+                name="self_arg",
+                condition=EqConditionSpec(
+                    left=ValueRef("WorkingFactoryArgKind"),
+                    right=LiteralValueRef("self"),
+                ),
+                contribution_name="TransientDefaultWorkingFactorySelfArg",
+                weight=1.0,
+            ),
+            ContributionRuleSpec(
+                name="current_arg",
+                condition=EqConditionSpec(
+                    left=ValueRef("WorkingFactoryArgKind"),
+                    right=LiteralValueRef("current"),
+                ),
+                contribution_name="TransientDefaultWorkingFactoryCurrentArg",
+                weight=1.0,
+            ),
+            ContributionRuleSpec(
+                name="working_arg",
+                condition=EqConditionSpec(
+                    left=ValueRef("WorkingFactoryArgKind"),
+                    right=LiteralValueRef("working"),
+                ),
+                contribution_name="TransientDefaultWorkingFactoryWorkingArg",
+                weight=1.0,
+            ),
+            ContributionRuleSpec(
+                name="retained_initvar",
+                condition=EqConditionSpec(
+                    left=ValueRef("WorkingFactoryArgKind"),
+                    right=LiteralValueRef("retained_initvar"),
+                ),
+                contribution_name="TransientDefaultWorkingFactoryRetainedInitVarArg",
+                weight=1.0,
+            ),
+        ),
+    ),
+    "TransientWorkingWorkingFactoryArgContributions": ContributionMatcherSpec(
+        name="TransientWorkingWorkingFactoryArgContributions",
+        inputs=(
+            AssemblyInputSpec(
+                name="arg",
+                collection_name="TransientWorkingFactoryArgs",
+                collection=None,
+            ),
+        ),
+        default_contribution_name=None,
+        rules=(
+            ContributionRuleSpec(
+                name="empty",
+                condition=EqConditionSpec(
+                    left=ValueRef("WorkingFactoryArgKind"),
+                    right=LiteralValueRef("empty"),
+                ),
+                contribution_name="TransientWorkingWorkingFactoryEmptyArg",
+                weight=1.0,
+            ),
+            ContributionRuleSpec(
+                name="self_arg",
+                condition=EqConditionSpec(
+                    left=ValueRef("WorkingFactoryArgKind"),
+                    right=LiteralValueRef("self"),
+                ),
+                contribution_name="TransientWorkingWorkingFactorySelfArg",
+                weight=1.0,
+            ),
+            ContributionRuleSpec(
+                name="current_arg",
+                condition=EqConditionSpec(
+                    left=ValueRef("WorkingFactoryArgKind"),
+                    right=LiteralValueRef("current"),
+                ),
+                contribution_name="TransientWorkingWorkingFactoryCurrentArg",
+                weight=1.0,
+            ),
+            ContributionRuleSpec(
+                name="working_arg",
+                condition=EqConditionSpec(
+                    left=ValueRef("WorkingFactoryArgKind"),
+                    right=LiteralValueRef("working"),
+                ),
+                contribution_name="TransientWorkingWorkingFactoryWorkingArg",
+                weight=1.0,
+            ),
+            ContributionRuleSpec(
+                name="retained_initvar",
+                condition=EqConditionSpec(
+                    left=ValueRef("WorkingFactoryArgKind"),
+                    right=LiteralValueRef("retained_initvar"),
+                ),
+                contribution_name="TransientWorkingWorkingFactoryRetainedInitVarArg",
+                weight=1.0,
+            ),
+        ),
     ),
     "ClassDefinitionContributions": ContributionMatcherSpec(
         name="ClassDefinitionContributions",
@@ -11973,6 +13015,23 @@ ASSEMBLY_EDGES = {
             left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
         ),
         matcher_name="TransientWorkingStateSlotContributions",
+    ),
+    "ClassProduction.retained_initvar_state_slots": AssemblyEdgeSpec(
+        name="ClassProduction.retained_initvar_state_slots",
+        context_inputs=(
+            AssemblyInputSpec(
+                name="lifecycle_class", collection_name="Classes", collection=None
+            ),
+        ),
+        from_inputs=(
+            AssemblyInputSpec(
+                name="initvar", collection_name="RetainedInitVars", collection=None
+            ),
+        ),
+        condition=EqConditionSpec(
+            left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
+        ),
+        matcher_name="RetainedInitVarStateSlotContributions",
     ),
     "ClassProduction.managed_staged_state_slots": AssemblyEdgeSpec(
         name="ClassProduction.managed_staged_state_slots",
@@ -12772,6 +13831,23 @@ ASSEMBLY_EDGES = {
         ),
         matcher_name="TransientWorkingInitAssignmentContributions",
     ),
+    "ClassProduction.retained_initvar_state_assignments": AssemblyEdgeSpec(
+        name="ClassProduction.retained_initvar_state_assignments",
+        context_inputs=(
+            AssemblyInputSpec(
+                name="lifecycle_class", collection_name="Classes", collection=None
+            ),
+        ),
+        from_inputs=(
+            AssemblyInputSpec(
+                name="initvar", collection_name="RetainedInitVars", collection=None
+            ),
+        ),
+        condition=EqConditionSpec(
+            left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
+        ),
+        matcher_name="RetainedInitVarStateAssignmentContributions",
+    ),
     "ClassProduction.managed_staged_init_assignments": AssemblyEdgeSpec(
         name="ClassProduction.managed_staged_init_assignments",
         context_inputs=(
@@ -12951,6 +14027,44 @@ ASSEMBLY_EDGES = {
             left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
         ),
         matcher_name="TransientWorkingFacadePropertyContributions",
+    ),
+    "ClassProduction.transient_default_working_factory_args": AssemblyEdgeSpec(
+        name="ClassProduction.transient_default_working_factory_args",
+        context_inputs=(
+            AssemblyInputSpec(
+                name="lifecycle_class", collection_name="Classes", collection=None
+            ),
+        ),
+        from_inputs=(
+            AssemblyInputSpec(
+                name="arg",
+                collection_name="TransientWorkingFactoryArgs",
+                collection=None,
+            ),
+        ),
+        condition=EqConditionSpec(
+            left=ValueRef("WorkingFactoryArgOwner"), right=ValueRef("ClassId")
+        ),
+        matcher_name="TransientDefaultWorkingFactoryArgContributions",
+    ),
+    "ClassProduction.transient_working_working_factory_args": AssemblyEdgeSpec(
+        name="ClassProduction.transient_working_working_factory_args",
+        context_inputs=(
+            AssemblyInputSpec(
+                name="lifecycle_class", collection_name="Classes", collection=None
+            ),
+        ),
+        from_inputs=(
+            AssemblyInputSpec(
+                name="arg",
+                collection_name="TransientWorkingFactoryArgs",
+                collection=None,
+            ),
+        ),
+        condition=EqConditionSpec(
+            left=ValueRef("WorkingFactoryArgOwner"), right=ValueRef("ClassId")
+        ),
+        matcher_name="TransientWorkingWorkingFactoryArgContributions",
     ),
     "ClassProduction.apply_prepared_commit_helpers": AssemblyEdgeSpec(
         name="ClassProduction.apply_prepared_commit_helpers",
@@ -14359,6 +15473,29 @@ ASSEMBLY_PRODUCTIONS = {
             ),
             InlineApplySpec(
                 edge=AssemblyEdgeSpec(
+                    name="ClassProduction.retained_initvar_state_slots",
+                    context_inputs=(
+                        AssemblyInputSpec(
+                            name="lifecycle_class",
+                            collection_name="Classes",
+                            collection=None,
+                        ),
+                    ),
+                    from_inputs=(
+                        AssemblyInputSpec(
+                            name="initvar",
+                            collection_name="RetainedInitVars",
+                            collection=None,
+                        ),
+                    ),
+                    condition=EqConditionSpec(
+                        left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
+                    ),
+                    matcher_name="RetainedInitVarStateSlotContributions",
+                )
+            ),
+            InlineApplySpec(
+                edge=AssemblyEdgeSpec(
                     name="ClassProduction.managed_staged_state_slots",
                     context_inputs=(
                         AssemblyInputSpec(
@@ -15447,6 +16584,29 @@ ASSEMBLY_PRODUCTIONS = {
             ),
             InlineApplySpec(
                 edge=AssemblyEdgeSpec(
+                    name="ClassProduction.retained_initvar_state_assignments",
+                    context_inputs=(
+                        AssemblyInputSpec(
+                            name="lifecycle_class",
+                            collection_name="Classes",
+                            collection=None,
+                        ),
+                    ),
+                    from_inputs=(
+                        AssemblyInputSpec(
+                            name="initvar",
+                            collection_name="RetainedInitVars",
+                            collection=None,
+                        ),
+                    ),
+                    condition=EqConditionSpec(
+                        left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
+                    ),
+                    matcher_name="RetainedInitVarStateAssignmentContributions",
+                )
+            ),
+            InlineApplySpec(
+                edge=AssemblyEdgeSpec(
                     name="ClassProduction.managed_staged_init_assignments",
                     context_inputs=(
                         AssemblyInputSpec(
@@ -15671,6 +16831,54 @@ ASSEMBLY_PRODUCTIONS = {
                         left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
                     ),
                     matcher_name="TransientWorkingFacadePropertyContributions",
+                )
+            ),
+            InlineApplySpec(
+                edge=AssemblyEdgeSpec(
+                    name="ClassProduction.transient_default_working_factory_args",
+                    context_inputs=(
+                        AssemblyInputSpec(
+                            name="lifecycle_class",
+                            collection_name="Classes",
+                            collection=None,
+                        ),
+                    ),
+                    from_inputs=(
+                        AssemblyInputSpec(
+                            name="arg",
+                            collection_name="TransientWorkingFactoryArgs",
+                            collection=None,
+                        ),
+                    ),
+                    condition=EqConditionSpec(
+                        left=ValueRef("WorkingFactoryArgOwner"),
+                        right=ValueRef("ClassId"),
+                    ),
+                    matcher_name="TransientDefaultWorkingFactoryArgContributions",
+                )
+            ),
+            InlineApplySpec(
+                edge=AssemblyEdgeSpec(
+                    name="ClassProduction.transient_working_working_factory_args",
+                    context_inputs=(
+                        AssemblyInputSpec(
+                            name="lifecycle_class",
+                            collection_name="Classes",
+                            collection=None,
+                        ),
+                    ),
+                    from_inputs=(
+                        AssemblyInputSpec(
+                            name="arg",
+                            collection_name="TransientWorkingFactoryArgs",
+                            collection=None,
+                        ),
+                    ),
+                    condition=EqConditionSpec(
+                        left=ValueRef("WorkingFactoryArgOwner"),
+                        right=ValueRef("ClassId"),
+                    ),
+                    matcher_name="TransientWorkingWorkingFactoryArgContributions",
                 )
             ),
             InlineApplySpec(
