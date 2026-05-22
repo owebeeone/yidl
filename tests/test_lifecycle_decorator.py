@@ -23,6 +23,7 @@ from yidl.runtime.lifecycle import harvest_lifecycle_definition
 from yidl.runtime.lifecycle import initvar
 from yidl.runtime.lifecycle import lifecycle
 from yidl.runtime.lifecycle import managed
+from yidl.runtime.lifecycle import owned
 from yidl.runtime.lifecycle import transient
 from yidl.runtime.lifecycle import validate_commit
 from yidl.runtime.transaction_yidl import DEFAULT_TRANSACTION
@@ -289,6 +290,64 @@ def test_lifecycle_decorator_rejects_invalid_binding_default_factory_result() ->
 
     with pytest.raises(TypeError, match="binding field 'handle' expects"):
         generated()
+
+
+def test_lifecycle_decorator_owned_scalar_commits_and_rolls_back() -> None:
+    class Owner:
+        child: object = owned(default=None)
+
+    generated = lifecycle(Owner)
+    item = generated()
+    child = _TestBinding()
+
+    assert item.child is None
+    with pytest.raises(RuntimeError, match="writes require"):
+        item.child = child
+    with pytest.raises(AttributeError, match="current facade is read-only"):
+        item.current.child = child
+
+    with item.begin(DEFAULT_TRANSACTION):
+        item.child = child
+        assert item.child is child
+        assert item.current.child is None
+        assert child.is_accepted is False
+
+    assert item.child is child
+    assert item.current.child is child
+    assert item.working.child is child
+    assert child.is_accepted is True
+
+    replacement = _TestBinding()
+    with pytest.raises(RuntimeError, match="abort owned"):
+        with item.begin(DEFAULT_TRANSACTION):
+            item.child = replacement
+            assert item.child is replacement
+            assert item.current.child is child
+            raise RuntimeError("abort owned")
+
+    assert item.child is child
+    assert item.current.child is child
+    assert item.working.child is child
+    assert replacement.is_accepted is False
+
+    with item.begin(DEFAULT_TRANSACTION):
+        item.child = None
+        assert item.child is None
+        assert item.current.child is child
+
+    assert item.child is None
+    assert item.current.child is None
+
+
+def test_lifecycle_decorator_owned_scalar_rejects_invalid_values() -> None:
+    class Owner:
+        child: object = owned(default=None)
+
+    item = lifecycle(Owner)()
+
+    with item.begin(DEFAULT_TRANSACTION):
+        with pytest.raises(TypeError, match="binding field 'child' expects"):
+            item.child = object()
 
 
 def test_lifecycle_source_uses_direct_default_factory_calls() -> None:

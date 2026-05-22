@@ -257,6 +257,8 @@ def _field_fact(
         fact["tx_group_key"] = decl.tx_group
         fact["current_slot_name"] = f"_y_{name}_current"
         fact["working_slot_name"] = f"_y_{name}_working"
+        if kind == "owned":
+            fact["staged_slot_name"] = f"_y_{name}_staged"
         if kind == "managed":
             fact["staged_slot_name"] = f"_y_{name}_staged"
             fact["has_freeze"] = decl.has_freeze
@@ -326,6 +328,8 @@ def _remap_inherited_field_fact(
     elif kind in {"managed", "owned"}:
         fact["current_slot_name"] = f"_y_{name}_current"
         fact["working_slot_name"] = f"_y_{name}_working"
+        if kind == "owned":
+            fact["staged_slot_name"] = f"_y_{name}_staged"
         if kind == "managed":
             fact["staged_slot_name"] = f"_y_{name}_staged"
     elif kind == "transient":

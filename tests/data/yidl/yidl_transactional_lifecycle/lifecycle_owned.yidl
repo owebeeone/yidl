@@ -17,6 +17,59 @@ concept LifecycleOwned extends transient.LifecycleTransient {
     computed collection BindingFields: LifecycleFieldSpec from Fields where FieldKind == "binding"
     computed collection OwnedFields: LifecycleFieldSpec from Fields where FieldKind == "owned"
 
+    record IndexedOwnedField {
+        FieldId
+        FieldOwner
+        FieldName
+        FieldOrder
+        TxGroupKey
+        TxIndex
+        CurrentSlotName
+        WorkingSlotName
+        StagedSlotName
+    }
+
+    collection IndexedOwnedFields: IndexedOwnedField identity FieldId many
+
+    resource BuildOwnedFactsBody = code $[
+        from yidl.runtime.transaction_yidl import DEFAULT_TRANSACTION
+
+        tx_groups = {
+            (tx_group.tx_owner, tx_group.tx_group_key): tx_group.tx_index
+            for tx_group in ctx.records(TxGroupsCollection)
+        }
+        for field in ctx.records(FieldsCollection):
+            if field.field_kind != "owned":
+                continue
+            tx_group = field.tx_group_key
+            if tx_group is None:
+                tx_group = DEFAULT_TRANSACTION
+            ctx.write(
+                IndexedOwnedFieldsCollection,
+                IndexedOwnedField(
+                    field_id=field.field_id,
+                    field_owner=field.field_owner,
+                    field_name=field.field_name,
+                    field_order=field.field_order,
+                    tx_group_key=tx_group,
+                    tx_index=tx_groups[(field.field_owner, tx_group)],
+                    current_slot_name=field.current_slot_name,
+                    working_slot_name=field.working_slot_name,
+                    staged_slot_name=field.staged_slot_name,
+                ),
+                policy=RejectDuplicate,
+            )
+    ]$ {
+        keep ctx, FieldsCollection, TxGroupsCollection
+        keep IndexedOwnedFieldsCollection, IndexedOwnedField
+        keep RejectDuplicate
+    }
+
+    operation BuildOwnedFacts
+        inputs(Fields, TxGroups)
+        outputs(IndexedOwnedFields)
+        using BuildOwnedFactsBody
+
     resource BindingSupportHelper = code $[
         def _y_validate_binding_value(field_name, value):
             from yidl.runtime.bindings import BindingBase
@@ -28,6 +81,99 @@ concept LifecycleOwned extends transient.LifecycleTransient {
                 )
             return value
     ]$
+
+    resource OwnedScalarStateAssignment = template $[
+        value = astichi_pass(init_value_name__astichi_arg__, outer_bind=True)
+        astichi_pass(state, outer_bind=True).astichi_ref(external=state_slot)._ = (
+            _y_validate_binding_value(astichi_bind_external(field_name), value)
+        )
+    ]$
+
+    resource OwnedEmptyStateAssignment = template $[
+        astichi_pass(state, outer_bind=True).astichi_ref(external=state_slot)._ = VOID
+    ]$ {
+        keep VOID
+    }
+
+    resource OwnedDefaultProperty = template $[
+        @property
+        def property_getter_name__astichi_arg__(self):
+            state = self._y_state
+            if state.astichi_ref(external=working_slot) is not VOID:
+                return state.astichi_ref(external=working_slot)
+            return state.astichi_ref(external=current_slot)
+
+        @property_setter_target_name__astichi_arg__.setter
+        def property_setter_name__astichi_arg__(self, value):
+            state = self._y_state
+            state._y_ensure_working_transaction(astichi_bind_external(tx_index))
+            state.astichi_ref(external=working_slot)._ = (
+                _y_validate_binding_value(astichi_bind_external(field_name), value)
+            )
+    ]$ {
+        keep VOID
+    }
+
+    resource OwnedCurrentProperty = template $[
+        @property
+        def property_getter_name__astichi_arg__(self):
+            return self._y_state.astichi_ref(external=current_slot)
+
+        @property_setter_target_name__astichi_arg__.setter
+        def property_setter_name__astichi_arg__(self, value):
+            del value
+            raise AttributeError(
+                "current facade is read-only for owned field "
+                + astichi_bind_external(field_name)
+            )
+    ]$
+
+    resource OwnedWorkingProperty = template $[
+        @property
+        def property_getter_name__astichi_arg__(self):
+            state = self._y_state
+            if state.astichi_ref(external=working_slot) is not VOID:
+                return state.astichi_ref(external=working_slot)
+            return state.astichi_ref(external=current_slot)
+
+        @property_setter_target_name__astichi_arg__.setter
+        def property_setter_name__astichi_arg__(self, value):
+            state = self._y_state
+            state._y_ensure_working_transaction(astichi_bind_external(tx_index))
+            state.astichi_ref(external=working_slot)._ = (
+                _y_validate_binding_value(astichi_bind_external(field_name), value)
+            )
+    ]$ {
+        keep VOID
+    }
+
+    resource OwnedPrepareCommitBranch = template $[
+        if astichi_pass(self, outer_bind=True).astichi_ref(external=working_slot) is not VOID:
+            value = astichi_pass(self, outer_bind=True).astichi_ref(external=working_slot)
+            if value is not None:
+                value.accepted()
+            astichi_pass(self, outer_bind=True).astichi_ref(external=staged_slot)._ = value
+    ]$ {
+        keep VOID
+    }
+
+    resource OwnedApplyPreparedCommitBranch = template $[
+        if astichi_pass(self, outer_bind=True).astichi_ref(external=staged_slot) is not VOID:
+            astichi_pass(self, outer_bind=True).astichi_ref(external=current_slot)._ = (
+                astichi_pass(self, outer_bind=True).astichi_ref(external=staged_slot)
+            )
+            astichi_pass(self, outer_bind=True).astichi_ref(external=staged_slot)._ = VOID
+            astichi_pass(self, outer_bind=True).astichi_ref(external=working_slot)._ = VOID
+    ]$ {
+        keep VOID
+    }
+
+    resource OwnedRollbackBranch = template $[
+        astichi_pass(self, outer_bind=True).astichi_ref(external=staged_slot)._ = VOID
+        astichi_pass(self, outer_bind=True).astichi_ref(external=working_slot)._ = VOID
+    ]$ {
+        keep VOID
+    }
 
     resource BindingStateAssignment = template $[
         astichi_pass(state, outer_bind=True).astichi_ref(external=state_slot)._ = (
@@ -97,6 +243,42 @@ concept LifecycleOwned extends transient.LifecycleTransient {
         external slot_name = ValueSlotName
     }
 
+    contribution OwnedCurrentStateSlot = StateSlotEntry {
+        as OwnedCurrentStateSlot
+        index FieldOrder
+        order FieldOrder
+
+        target state_slots {
+            build /ClassDef
+        }
+
+        external slot_name = CurrentSlotName
+    }
+
+    contribution OwnedWorkingStateSlot = StateSlotEntry {
+        as OwnedWorkingStateSlot
+        index FieldOrder
+        order FieldOrder
+
+        target state_slots {
+            build /ClassDef
+        }
+
+        external slot_name = WorkingSlotName
+    }
+
+    contribution OwnedStagedStateSlot = StateSlotEntry {
+        as OwnedStagedStateSlot
+        index FieldOrder
+        order FieldOrder
+
+        target state_slots {
+            build /ClassDef
+        }
+
+        external slot_name = StagedSlotName
+    }
+
     contribution BindingInitParamRequired = InitParamRequired {
         as BindingInitParam
         index FieldOrder
@@ -126,6 +308,46 @@ concept LifecycleOwned extends transient.LifecycleTransient {
 
     contribution BindingInitParamDefaultFactory = InitParamDefaultFactory {
         as BindingInitParam
+        index FieldOrder
+        order FieldOrder
+
+        target init_params {
+            build /ClassDef
+        }
+
+        ident param_name = FieldName
+        external annotation = Annotation
+    }
+
+    contribution OwnedInitParamRequired = InitParamRequired {
+        as OwnedInitParam
+        index FieldOrder
+        order FieldOrder
+
+        target init_params {
+            build /ClassDef
+        }
+
+        ident param_name = FieldName
+        external annotation = Annotation
+    }
+
+    contribution OwnedInitParamDefault = InitParamDefault {
+        as OwnedInitParam
+        index FieldOrder
+        order FieldOrder
+
+        target init_params {
+            build /ClassDef
+        }
+
+        ident param_name = FieldName
+        external annotation = Annotation
+        ident default_value_name = DefaultValueParamName
+    }
+
+    contribution OwnedInitParamDefaultFactory = InitParamDefaultFactory {
+        as OwnedInitParam
         index FieldOrder
         order FieldOrder
 
@@ -181,6 +403,150 @@ concept LifecycleOwned extends transient.LifecycleTransient {
         external state_slot = ValueSlotName
     }
 
+    contribution OwnedCurrentInitAssignment = OwnedScalarStateAssignment {
+        as OwnedCurrentInitAssignment
+        index FieldOrder
+        order FieldOrder
+
+        target state_init_body {
+            build /ClassDef
+        }
+
+        ident init_value_name = FieldName
+        external field_name = FieldName
+        external state_slot = CurrentSlotName
+    }
+
+    contribution OwnedCurrentDefaultAssignment = OwnedScalarStateAssignment {
+        as OwnedCurrentInitAssignment
+        index FieldOrder
+        order FieldOrder
+
+        target state_init_body {
+            build /ClassDef
+        }
+
+        ident init_value_name = DefaultValueParamName
+        external field_name = FieldName
+        external state_slot = CurrentSlotName
+    }
+
+    contribution OwnedWorkingInitAssignment = OwnedEmptyStateAssignment {
+        as OwnedWorkingInitAssignment
+        index FieldOrder
+        order FieldOrder
+
+        target state_init_body {
+            build /ClassDef
+        }
+
+        external state_slot = WorkingSlotName
+    }
+
+    contribution OwnedStagedInitAssignment = OwnedEmptyStateAssignment {
+        as OwnedStagedInitAssignment
+        index FieldOrder
+        order FieldOrder
+
+        target state_init_body {
+            build /ClassDef
+        }
+
+        external state_slot = StagedSlotName
+    }
+
+    contribution OwnedDefaultFacadeProperty = OwnedDefaultProperty {
+        as OwnedDefaultFacadeProperty
+        index FieldOrder
+        order FieldOrder
+
+        target default_facade_properties {
+            build /ClassDef
+        }
+
+        ident property_getter_name = FieldName
+        ident property_setter_target_name = FieldName
+        ident property_setter_name = FieldName
+        external current_slot = CurrentSlotName
+        external working_slot = WorkingSlotName
+        external field_name = FieldName
+        external tx_index = TxIndex
+    }
+
+    contribution OwnedCurrentFacadeProperty = OwnedCurrentProperty {
+        as OwnedCurrentFacadeProperty
+        index FieldOrder
+        order FieldOrder
+
+        target current_facade_properties {
+            build /ClassDef
+        }
+
+        ident property_getter_name = FieldName
+        ident property_setter_target_name = FieldName
+        ident property_setter_name = FieldName
+        external current_slot = CurrentSlotName
+        external field_name = FieldName
+    }
+
+    contribution OwnedWorkingFacadeProperty = OwnedWorkingProperty {
+        as OwnedWorkingFacadeProperty
+        index FieldOrder
+        order FieldOrder
+
+        target working_facade_properties {
+            build /ClassDef
+        }
+
+        ident property_getter_name = FieldName
+        ident property_setter_target_name = FieldName
+        ident property_setter_name = FieldName
+        external current_slot = CurrentSlotName
+        external working_slot = WorkingSlotName
+        external field_name = FieldName
+        external tx_index = TxIndex
+    }
+
+    contribution OwnedPrepareCommit = OwnedPrepareCommitBranch {
+        as OwnedPrepareCommit
+        index FieldOrder
+        order FieldOrder
+
+        target prepare_commit_fields_body {
+            build /ClassDef/PrepareCommitFields[TxIndex]
+        }
+
+        external working_slot = WorkingSlotName
+        external staged_slot = StagedSlotName
+    }
+
+    contribution OwnedApplyPreparedCommit = OwnedApplyPreparedCommitBranch {
+        as OwnedApplyPreparedCommit
+        index FieldOrder
+        order FieldOrder
+
+        target apply_prepared_commit_fields_body {
+            build /ClassDef/ApplyPreparedCommitFields[TxIndex]
+        }
+
+        external current_slot = CurrentSlotName
+        external working_slot = WorkingSlotName
+        external staged_slot = StagedSlotName
+    }
+
+    contribution OwnedRollback = OwnedRollbackBranch {
+        as OwnedRollback
+        index FieldOrder
+        order FieldOrder
+
+        target rollback_fields_body {
+            build /ClassDef/RollbackFields[TxIndex]
+        }
+
+        external working_slot = WorkingSlotName
+        external staged_slot = StagedSlotName
+    }
+
     contribution BindingDefaultFactoryEvalInitContribution = BindingDefaultFactoryEvalInit {
         as DefaultFactoryEval
         index EvalOrder
@@ -217,6 +583,18 @@ concept LifecycleOwned extends transient.LifecycleTransient {
         default -> BindingStateSlot
     }
 
+    matcher OwnedCurrentStateSlotContributions(field: OwnedFields) -> contribution {
+        default -> OwnedCurrentStateSlot
+    }
+
+    matcher OwnedWorkingStateSlotContributions(field: OwnedFields) -> contribution {
+        default -> OwnedWorkingStateSlot
+    }
+
+    matcher OwnedStagedStateSlotContributions(field: OwnedFields) -> contribution {
+        default -> OwnedStagedStateSlot
+    }
+
     matcher BindingInitParamContributions(field: BindingFields) -> contribution {
         rule required when Init == True
                       and HasDefault == False
@@ -229,6 +607,20 @@ concept LifecycleOwned extends transient.LifecycleTransient {
         rule default_factory when Init == True
                              and HasDefaultFactory == True
                              -> BindingInitParamDefaultFactory
+    }
+
+    matcher OwnedInitParamContributions(field: OwnedFields) -> contribution {
+        rule required when Init == True
+                      and HasDefault == False
+                      and HasDefaultFactory == False
+                      -> OwnedInitParamRequired
+        rule default_value when Init == True
+                           and HasDefault == True
+                           and HasDefaultFactory == False
+                           -> OwnedInitParamDefault
+        rule default_factory when Init == True
+                             and HasDefaultFactory == True
+                             -> OwnedInitParamDefaultFactory
     }
 
     matcher BindingInitAssignmentContributions(field: BindingFields) -> contribution {
@@ -245,6 +637,48 @@ concept LifecycleOwned extends transient.LifecycleTransient {
         default -> BindingFieldProperty
     }
 
+    matcher OwnedCurrentInitAssignmentContributions(field: OwnedFields) -> contribution {
+        rule init_field when Init == True
+                        and HasDefaultFactory == False
+                        -> OwnedCurrentInitAssignment
+        rule default_value when Init == False
+                           and HasDefault == True
+                           and HasDefaultFactory == False
+                           -> OwnedCurrentDefaultAssignment
+    }
+
+    matcher OwnedWorkingInitAssignmentContributions(field: OwnedFields) -> contribution {
+        default -> OwnedWorkingInitAssignment
+    }
+
+    matcher OwnedStagedInitAssignmentContributions(field: OwnedFields) -> contribution {
+        default -> OwnedStagedInitAssignment
+    }
+
+    matcher OwnedDefaultFacadePropertyContributions(field: IndexedOwnedFields) -> contribution {
+        default -> OwnedDefaultFacadeProperty
+    }
+
+    matcher OwnedCurrentFacadePropertyContributions(field: IndexedOwnedFields) -> contribution {
+        default -> OwnedCurrentFacadeProperty
+    }
+
+    matcher OwnedWorkingFacadePropertyContributions(field: IndexedOwnedFields) -> contribution {
+        default -> OwnedWorkingFacadeProperty
+    }
+
+    matcher OwnedPrepareCommitContributions(field: IndexedOwnedFields) -> contribution {
+        default -> OwnedPrepareCommit
+    }
+
+    matcher OwnedApplyPreparedCommitContributions(field: IndexedOwnedFields) -> contribution {
+        default -> OwnedApplyPreparedCommit
+    }
+
+    matcher OwnedRollbackContributions(field: IndexedOwnedFields) -> contribution {
+        default -> OwnedRollback
+    }
+
     matcher DefaultFactoryEvalContributions(step: DefaultFactoryEvaluationSteps) -> contribution {
         rule binding_init when EvalFieldKind == "binding"
                           and EvalInit == True
@@ -252,5 +686,11 @@ concept LifecycleOwned extends transient.LifecycleTransient {
         rule binding_no_init when EvalFieldKind == "binding"
                              and EvalInit == False
                              -> BindingDefaultFactoryEvalNoInitContribution
+        rule owned_init when EvalFieldKind == "owned"
+                        and EvalInit == True
+                        -> StoredDefaultFactoryEvalInitContribution
+        rule owned_no_init when EvalFieldKind == "owned"
+                           and EvalInit == False
+                           -> StoredDefaultFactoryEvalNoInitContribution
     }
 }

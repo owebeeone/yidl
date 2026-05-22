@@ -103,6 +103,21 @@ concept LifecycleBase extends owned.LifecycleOwned {
             where FieldOwner == ClassId
             using BindingStateSlotContributions
 
+        apply owned_current_state_slots
+            from field: OwnedFields
+            where FieldOwner == ClassId
+            using OwnedCurrentStateSlotContributions
+
+        apply owned_working_state_slots
+            from field: OwnedFields
+            where FieldOwner == ClassId
+            using OwnedWorkingStateSlotContributions
+
+        apply owned_staged_state_slots
+            from field: OwnedFields
+            where FieldOwner == ClassId
+            using OwnedStagedStateSlotContributions
+
         apply managed_current_state_slots
             from field: ManagedFields
             where FieldOwner == ClassId
@@ -328,6 +343,11 @@ concept LifecycleBase extends owned.LifecycleOwned {
             where FieldOwner == ClassId
             using BindingInitParamContributions
 
+        apply owned_init_params
+            from field: OwnedFields
+            where FieldOwner == ClassId
+            using OwnedInitParamContributions
+
         apply initvar_params
             from field: InitVarFields
             where FieldOwner == ClassId
@@ -358,6 +378,11 @@ concept LifecycleBase extends owned.LifecycleOwned {
             where FieldOwner == ClassId
             using BindingInitAssignmentContributions
 
+        apply owned_current_init_assignments
+            from field: OwnedFields
+            where FieldOwner == ClassId
+            using OwnedCurrentInitAssignmentContributions
+
         apply managed_current_init_assignments
             from field: ManagedFields
             where FieldOwner == ClassId
@@ -378,10 +403,20 @@ concept LifecycleBase extends owned.LifecycleOwned {
             where FieldOwner == ClassId
             using TransientWorkingInitAssignmentContributions
 
+        apply owned_working_init_assignments
+            from field: OwnedFields
+            where FieldOwner == ClassId
+            using OwnedWorkingInitAssignmentContributions
+
         apply retained_initvar_state_assignments
             from initvar: RetainedInitVars
             where FieldOwner == ClassId
             using RetainedInitVarStateAssignmentContributions
+
+        apply owned_staged_init_assignments
+            from field: OwnedFields
+            where FieldOwner == ClassId
+            using OwnedStagedInitAssignmentContributions
 
         apply managed_staged_init_assignments
             from field: ManagedFields
@@ -408,6 +443,11 @@ concept LifecycleBase extends owned.LifecycleOwned {
             where FieldOwner == ClassId
             using BindingPropertyContributions
 
+        apply owned_default_properties
+            from field: IndexedOwnedFields
+            where FieldOwner == ClassId
+            using OwnedDefaultFacadePropertyContributions
+
         apply managed_default_properties
             from field: IndexedTransactionalFields
             where FieldOwner == ClassId
@@ -428,10 +468,20 @@ concept LifecycleBase extends owned.LifecycleOwned {
             where FieldOwner == ClassId
             using TransientCurrentPropertyContributions
 
+        apply owned_current_properties
+            from field: IndexedOwnedFields
+            where FieldOwner == ClassId
+            using OwnedCurrentFacadePropertyContributions
+
         apply managed_working_properties
             from field: IndexedTransactionalFields
             where FieldOwner == ClassId
             using ManagedWorkingFacadePropertyContributions
+
+        apply owned_working_properties
+            from field: IndexedOwnedFields
+            where FieldOwner == ClassId
+            using OwnedWorkingFacadePropertyContributions
 
         apply transient_working_properties
             from field: IndexedTransientFields
@@ -503,6 +553,11 @@ concept LifecycleBase extends owned.LifecycleOwned {
             where FieldOwner == ClassId
             using ManagedApplyPreparedCommitContributions
 
+        apply owned_apply_prepared_commit
+            from field: IndexedOwnedFields
+            where FieldOwner == ClassId
+            using OwnedApplyPreparedCommitContributions
+
         apply transient_apply_prepared_commit
             from field: IndexedTransientFields
             where FieldOwner == ClassId
@@ -513,10 +568,20 @@ concept LifecycleBase extends owned.LifecycleOwned {
             where FieldOwner == ClassId
             using ManagedRollbackContributions
 
+        apply owned_rollback
+            from field: IndexedOwnedFields
+            where FieldOwner == ClassId
+            using OwnedRollbackContributions
+
         apply transient_rollback
             from field: IndexedTransientFields
             where FieldOwner == ClassId
             using TransientRollbackContributions
+
+        apply owned_prepare_commit
+            from field: IndexedOwnedFields
+            where FieldOwner == ClassId
+            using OwnedPrepareCommitContributions
     }
 
     assembly LifecycleModule = ModuleProduction
