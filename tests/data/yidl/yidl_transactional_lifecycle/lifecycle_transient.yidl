@@ -1,0 +1,15 @@
+module tests.lifecycle_transient
+
+import "lifecycle_default_factories.yidl" as default_factories
+
+export concept LifecycleTransient
+
+concept LifecycleTransient extends default_factories.LifecycleDefaultFactories {
+
+    family default_factories.LifecycleFieldSpec {
+        variant TransientField {
+        }
+    }
+
+    computed collection TransientFields: LifecycleFieldSpec from Fields where FieldKind == "transient"
+}

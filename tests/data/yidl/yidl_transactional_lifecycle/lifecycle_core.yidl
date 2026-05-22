@@ -34,6 +34,10 @@ concept LifecycleCore {
     property DefaultFactory: object = None
     property DefaultFactoryParamName: str = ""
     property DefaultFactoryParamNames: object = ()
+    property HasWorkingDefaultFactory: bool = False
+    property WorkingDefaultFactory: object = None
+    property WorkingDefaultFactoryParamName: str = ""
+    property WorkingDefaultFactoryParamNames: object = ()
     property TxGroupKey: object = None
     property ValueSlotName: str = ""
     property CurrentSlotName: str = ""
@@ -74,6 +78,8 @@ concept LifecycleCore {
         common Init, HasDefault, DefaultValue, DefaultValueParamName
         common HasDefaultFactory, DefaultFactory, DefaultFactoryParamName
         common DefaultFactoryParamNames
+        common HasWorkingDefaultFactory, WorkingDefaultFactory
+        common WorkingDefaultFactoryParamName, WorkingDefaultFactoryParamNames
         common TxGroupKey, ValueSlotName, CurrentSlotName, WorkingSlotName
         common StagedSlotName
         common HasFreeze, Freeze, FreezeParamName, HasThaw, Thaw, ThawParamName

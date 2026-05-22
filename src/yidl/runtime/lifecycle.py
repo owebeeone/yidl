@@ -117,6 +117,8 @@ def _field_record_type(generated: ModuleType, kind: str) -> type[object]:
         return _required_record_type(generated, "ClassVarField", kind)
     if kind == "managed":
         return _required_record_type(generated, "ManagedField", kind)
+    if kind == "transient":
+        return _required_record_type(generated, "TransientField", kind)
     raise LifecycleDefinitionError(f"unsupported lifecycle field kind: {kind!r}")
 
 
