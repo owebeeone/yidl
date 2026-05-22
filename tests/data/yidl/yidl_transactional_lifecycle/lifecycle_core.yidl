@@ -1212,29 +1212,28 @@ concept LifecycleCore {
     production CoreModuleProduction -> composable {
         root Root = ModuleRoot
 
-        apply lifecycle_definition_params
-            from lifecycle_class: Classes
-            using BuilderParamContributions
+        phase module_params from lifecycle_class: Classes {
+            apply lifecycle_definition_params using BuilderParamContributions
+            apply annotations_params using AnnotationsBuilderParamContributions
+            apply tx_groups_params using TxGroupsBuilderParamContributions
+        }
 
-        apply annotations_params
-            from lifecycle_class: Classes
-            using AnnotationsBuilderParamContributions
+        phase field_default_params from field: Fields {
+            apply field_default_params using FieldDefaultBuilderParamContributions
+        }
 
-        apply tx_groups_params
-            from lifecycle_class: Classes
-            using TxGroupsBuilderParamContributions
+        phase transient_working_default_params {}
+        phase binding_support_helpers {}
+        phase managed_freeze_params {}
+        phase managed_thaw_params {}
 
-        apply field_default_params
-            from field: Fields
-            using FieldDefaultBuilderParamContributions
+        phase classes from lifecycle_class: Classes {
+            apply classes using CoreClassDefinitionContributions
+        }
 
-        apply classes
-            from lifecycle_class: Classes
-            using CoreClassDefinitionContributions
-
-        apply return_class
-            from lifecycle_class: Classes
-            using ReturnClassContributions
+        phase return_class from lifecycle_class: Classes {
+            apply return_class using ReturnClassContributions
+        }
     }
 
     production CoreClassProduction(lifecycle_class: Classes) -> composable {
@@ -1262,100 +1261,140 @@ concept LifecycleCore {
             external lifecycle_field_names = LifecycleFieldNames
         }
 
-        apply state_slots
-            from field: PlainFields
-            where FieldOwner == ClassId
-            using PlainStateSlotContributions
+        phase state_slots_plain from field: PlainFields where FieldOwner == ClassId {
+            apply state_slots using PlainStateSlotContributions
+        }
+        phase state_slots_binding {}
+        phase state_slots_owned_current {}
+        phase state_slots_owned_working {}
+        phase state_slots_owned_staged {}
+        phase state_slots_managed_current {}
+        phase state_slots_transient_current {}
+        phase state_slots_managed_working {}
+        phase state_slots_transient_working {}
+        phase state_slots_retained_initvar {}
+        phase state_slots_managed_staged {}
 
-        apply transaction_manager_param
-            using TransactionManagerInitParamContributions
+        phase init_transaction_manager {
+            apply transaction_manager_param using TransactionManagerInitParamContributions
+        }
 
-        apply commit_order_key_fallback
-            using CommitOrderKeyFallbackContributions
+        phase tx_fallbacks {
+            apply commit_order_key_fallback using CommitOrderKeyFallbackContributions
+            apply requires_validation_fallback using RequiresValidationFallbackContributions
+            apply validate_commit_fallback using ValidateCommitFallbackContributions
+            apply before_commit_fallback using BeforeCommitFallbackContributions
+            apply prepare_commit_dispatch_fallback using PrepareCommitDispatchFallbackContributions
+            apply commit_dispatch_fallback using CommitDispatchFallbackContributions
+            apply after_commit_fallback using AfterCommitFallbackContributions
+            apply rollback_dispatch_fallback using RollbackDispatchFallbackContributions
+            apply after_rollback_fallback using AfterRollbackFallbackContributions
+        }
 
-        apply requires_validation_fallback
-            using RequiresValidationFallbackContributions
+        phase tx_group_helpers {}
+        phase tx_group_dispatch {}
 
-        apply validate_commit_fallback
-            using ValidateCommitFallbackContributions
+        phase classvars from field: ClassVarFields where FieldOwner == ClassId {
+            apply classvars using ClassVarDefaultContributions
+        }
 
-        apply before_commit_fallback
-            using BeforeCommitFallbackContributions
+        phase transaction_methods {
+            apply commit_order_keys
+                from method: CommitOrderKeyProviders
+                where MethodOwner == ClassId
+                using CommitOrderKeyContributions
 
-        apply prepare_commit_dispatch_fallback
-            using PrepareCommitDispatchFallbackContributions
+            apply validation_flags
+                from method: CommitValidators
+                where MethodOwner == ClassId
+                using RequiresValidationContributions
 
-        apply commit_dispatch_fallback
-            using CommitDispatchFallbackContributions
+            apply validators
+                from method: CommitValidators
+                where MethodOwner == ClassId
+                using ValidateCommitContributions
 
-        apply after_commit_fallback
-            using AfterCommitFallbackContributions
+            apply before_commit_hooks
+                from method: BeforeCommitHooks
+                where MethodOwner == ClassId
+                using BeforeCommitHookContributions
 
-        apply rollback_dispatch_fallback
-            using RollbackDispatchFallbackContributions
+            apply after_commit_hooks
+                from method: AfterCommitHooks
+                where MethodOwner == ClassId
+                using AfterCommitHookContributions
 
-        apply after_rollback_fallback
-            using AfterRollbackFallbackContributions
+            apply after_rollback_hooks
+                from method: AfterRollbackHooks
+                where MethodOwner == ClassId
+                using AfterRollbackHookContributions
+        }
 
-        apply classvars
-            from field: ClassVarFields
-            where FieldOwner == ClassId
-            using ClassVarDefaultContributions
+        phase init_params_plain from field: PlainFields where FieldOwner == ClassId {
+            apply plain_init_params using PlainInitParamContributions
+        }
+        phase init_params_binding {}
+        phase init_params_owned {}
+        phase init_params_initvar from field: InitVarFields where FieldOwner == ClassId {
+            apply initvar_params using InitVarParamContributions
+        }
+        phase init_params_managed {}
+        phase init_params_transient {}
 
-        apply commit_order_keys
-            from method: CommitOrderKeyProviders
-            where MethodOwner == ClassId
-            using CommitOrderKeyContributions
-
-        apply validation_flags
-            from method: CommitValidators
-            where MethodOwner == ClassId
-            using RequiresValidationContributions
-
-        apply validators
-            from method: CommitValidators
-            where MethodOwner == ClassId
-            using ValidateCommitContributions
-
-        apply before_commit_hooks
-            from method: BeforeCommitHooks
-            where MethodOwner == ClassId
-            using BeforeCommitHookContributions
-
-        apply after_commit_hooks
-            from method: AfterCommitHooks
-            where MethodOwner == ClassId
-            using AfterCommitHookContributions
-
-        apply after_rollback_hooks
-            from method: AfterRollbackHooks
-            where MethodOwner == ClassId
-            using AfterRollbackHookContributions
-
-        apply plain_init_params
-            from field: PlainFields
-            where FieldOwner == ClassId
-            using PlainInitParamContributions
-
-        apply initvar_params
+        phase initvar_local_defaults
             from field: InitVarFields
-            where FieldOwner == ClassId
-            using InitVarParamContributions
+            where FieldOwner == ClassId {
+            apply initvar_local_defaults using InitVarLocalDefaultContributions
+        }
 
-        apply initvar_local_defaults
-            from field: InitVarFields
-            where FieldOwner == ClassId
-            using InitVarLocalDefaultContributions
+        phase init_assignments_plain from field: PlainFields where FieldOwner == ClassId {
+            apply plain_init_assignments using PlainInitAssignmentContributions
+        }
+        phase init_assignments_binding {}
+        phase init_assignments_owned_current {}
+        phase init_assignments_managed_current {}
+        phase init_assignments_transient_current {}
+        phase init_assignments_managed_working {}
+        phase init_assignments_transient_working {}
+        phase init_assignments_owned_working {}
+        phase init_assignments_retained_initvar {}
+        phase init_assignments_owned_staged {}
+        phase init_assignments_managed_staged {}
 
-        apply plain_init_assignments
-            from field: PlainFields
-            where FieldOwner == ClassId
-            using PlainInitAssignmentContributions
+        phase default_factory_evals {}
+        phase default_factory_args {}
 
-        apply plain_properties
-            from field: PlainFields
-            where FieldOwner == ClassId
-            using PlainPropertyContributions
+        phase properties_plain from field: PlainFields where FieldOwner == ClassId {
+            apply plain_properties using PlainPropertyContributions
+        }
+        phase properties_binding {}
+        phase properties_owned_default {}
+        phase properties_managed_default {}
+        phase properties_transient_default {}
+        phase properties_managed_current {}
+        phase properties_transient_current {}
+        phase properties_owned_current {}
+        phase properties_managed_working {}
+        phase properties_owned_working {}
+        phase properties_transient_working {}
+
+        phase transient_default_working_factory_args {}
+        phase transient_working_working_factory_args {}
+
+        phase tx_apply_prepared_helpers {}
+        phase tx_prepare_helpers {}
+        phase tx_rollback_helpers {}
+        phase tx_prepare_dispatch {}
+        phase tx_apply_prepared_dispatch {}
+        phase tx_rollback_dispatch {}
+        phase tx_prepare_fields_managed {}
+        phase tx_apply_prepared_fields_managed {}
+        phase tx_apply_prepared_fields_owned {}
+        phase tx_apply_prepared_fields_transient {}
+        phase tx_rollback_fields_managed {}
+        phase tx_rollback_fields_owned {}
+        phase tx_rollback_fields_transient {}
+        phase tx_prepare_fields_owned {}
     }
 
     assembly LifecycleCoreModule = CoreModuleProduction

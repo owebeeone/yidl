@@ -1778,6 +1778,30 @@ def test_yidl_lark_phase_context_missing_value_rejects() -> None:
         compile_yidl_files({"phases.yidl": source}, "phases.yidl")
 
 
+def test_yidl_lark_assembly_can_target_inherited_composable_production() -> None:
+    source = """
+    module phases
+
+    concept Base {
+        resource Root = code `VALUE = []`
+
+        production ModuleProduction -> composable {
+            root Root = Root
+        }
+    }
+
+    concept Feature extends Base {
+        assembly Module = ModuleProduction
+    }
+    """
+
+    concept = compile_yidl_files({"phases.yidl": source}, "phases.yidl").concepts[
+        "Feature"
+    ]
+
+    assert concept.assemblies["Module"].production_name == "ModuleProduction"
+
+
 def test_yidl_lark_production_extension_missing_target_rejects() -> None:
     source = """
     module phases

@@ -1310,4 +1310,110 @@ concept LifecycleManaged extends core.LifecycleCore {
                            -> ManagedInitParamDefault
     }
 
+    extend production CoreModuleProduction {
+        phase managed_freeze_params from field: ManagedFields {
+            apply managed_freeze_params using ManagedFreezeBuilderParamContributions
+        }
+
+        phase managed_thaw_params from field: ManagedFields {
+            apply managed_thaw_params using ManagedThawBuilderParamContributions
+        }
+    }
+
+    extend production CoreClassProduction {
+        phase state_slots_managed_current from field: ManagedFields where FieldOwner == ClassId {
+            apply managed_current_state_slots using ManagedCurrentStateSlotContributions
+        }
+
+        phase state_slots_managed_working from field: ManagedFields where FieldOwner == ClassId {
+            apply managed_working_state_slots using ManagedWorkingStateSlotContributions
+        }
+
+        phase state_slots_managed_staged from field: ManagedFields where FieldOwner == ClassId {
+            apply managed_staged_state_slots using ManagedStagedStateSlotContributions
+        }
+
+        phase tx_group_helpers from tx_group: TxGroups where TxOwner == ClassId {
+            apply commit_order_key_helpers using CommitOrderKeyHelperContributions
+            apply requires_validation_helpers using RequiresValidationHelperContributions
+            apply validate_commit_helpers using ValidateCommitHelperContributions
+            apply before_commit_helpers using BeforeCommitHelperContributions
+            apply after_commit_helpers using AfterCommitHelperContributions
+            apply after_rollback_helpers using AfterRollbackHelperContributions
+        }
+
+        phase tx_group_dispatch from tx_group: TxGroups where TxOwner == ClassId {
+            apply commit_order_key_dispatch using CommitOrderKeyDispatchContributions
+            apply requires_validation_dispatch using RequiresValidationDispatchContributions
+            apply validate_commit_dispatch using ValidateCommitDispatchContributions
+            apply before_commit_dispatch using BeforeCommitDispatchContributions
+            apply after_commit_dispatch using AfterCommitDispatchContributions
+            apply after_rollback_dispatch using AfterRollbackDispatchContributions
+        }
+
+        phase init_params_managed from field: ManagedFields where FieldOwner == ClassId {
+            apply managed_init_params using ManagedInitParamContributions
+        }
+
+        phase init_assignments_managed_current from field: ManagedFields where FieldOwner == ClassId {
+            apply managed_current_init_assignments using ManagedCurrentInitAssignmentContributions
+        }
+
+        phase init_assignments_managed_working from field: ManagedFields where FieldOwner == ClassId {
+            apply managed_working_init_assignments using ManagedWorkingInitAssignmentContributions
+        }
+
+        phase init_assignments_managed_staged from field: ManagedFields where FieldOwner == ClassId {
+            apply managed_staged_init_assignments using ManagedStagedInitAssignmentContributions
+        }
+
+        phase properties_managed_default from field: IndexedTransactionalFields where FieldOwner == ClassId {
+            apply managed_default_properties using ManagedDefaultFacadePropertyContributions
+        }
+
+        phase properties_managed_current from field: IndexedTransactionalFields where FieldOwner == ClassId {
+            apply managed_current_properties using ManagedCurrentFacadePropertyContributions
+        }
+
+        phase properties_managed_working from field: IndexedTransactionalFields where FieldOwner == ClassId {
+            apply managed_working_properties using ManagedWorkingFacadePropertyContributions
+        }
+
+        phase tx_apply_prepared_helpers from tx_group: TxGroups where TxOwner == ClassId {
+            apply apply_prepared_commit_helpers using ApplyPreparedCommitFieldsContributions
+        }
+
+        phase tx_prepare_helpers from tx_group: TxGroups where TxOwner == ClassId {
+            apply prepare_commit_helpers using PrepareCommitFieldsContributions
+        }
+
+        phase tx_rollback_helpers from tx_group: TxGroups where TxOwner == ClassId {
+            apply rollback_helpers using RollbackFieldsContributions
+        }
+
+        phase tx_prepare_dispatch from tx_group: TxGroups where TxOwner == ClassId {
+            apply prepare_commit_dispatch using PrepareCommitDispatchContributions
+        }
+
+        phase tx_apply_prepared_dispatch from tx_group: TxGroups where TxOwner == ClassId {
+            apply apply_prepared_commit_dispatch using ApplyPreparedCommitDispatchContributions
+        }
+
+        phase tx_rollback_dispatch from tx_group: TxGroups where TxOwner == ClassId {
+            apply rollback_dispatch using RollbackDispatchContributions
+        }
+
+        phase tx_prepare_fields_managed from field: IndexedTransactionalFields where FieldOwner == ClassId {
+            apply managed_prepare_commit using ManagedPrepareCommitContributions
+        }
+
+        phase tx_apply_prepared_fields_managed from field: IndexedTransactionalFields where FieldOwner == ClassId {
+            apply managed_apply_prepared_commit using ManagedApplyPreparedCommitContributions
+        }
+
+        phase tx_rollback_fields_managed from field: IndexedTransactionalFields where FieldOwner == ClassId {
+            apply managed_rollback using ManagedRollbackContributions
+        }
+    }
+
 }

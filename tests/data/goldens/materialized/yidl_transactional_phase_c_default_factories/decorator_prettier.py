@@ -12999,28 +12999,6 @@ ASSEMBLY_CONTRIBUTIONS = {
             ),
         ),
     ),
-    "ClassDefinition": ContributionSpec(
-        name="ClassDefinition",
-        source_name="ClassProduction",
-        source_kind="production",
-        build_name="ClassDef",
-        index=ValueRef("ClassOrder"),
-        order=ValueRef("ClassOrder"),
-        target=TargetSpec(
-            name="function_body",
-            paths=(
-                TargetPathSpec(
-                    kind="build",
-                    path=PathSpec(
-                        segments=(
-                            PathSegmentSpec(kind="name", name="Root", indexes=()),
-                        )
-                    ),
-                ),
-            ),
-        ),
-        bindings=(),
-    ),
 }
 ASSEMBLY_MATCHERS = {
     "BuilderParamContributions": ContributionMatcherSpec(
@@ -15206,16 +15184,6 @@ ASSEMBLY_MATCHERS = {
         default_contribution_name="OwnedRollback",
         rules=(),
     ),
-    "ClassDefinitionContributions": ContributionMatcherSpec(
-        name="ClassDefinitionContributions",
-        inputs=(
-            AssemblyInputSpec(
-                name="lifecycle_class", collection_name="Classes", collection=None
-            ),
-        ),
-        default_contribution_name="ClassDefinition",
-        rules=(),
-    ),
 }
 ASSEMBLY_EDGES = {
     "CoreModuleProduction.lifecycle_definition_params": AssemblyEdgeSpec(
@@ -15615,70 +15583,8 @@ ASSEMBLY_EDGES = {
         ),
         matcher_name="PlainPropertyContributions",
     ),
-    "ModuleProduction.lifecycle_definition_params": AssemblyEdgeSpec(
-        name="ModuleProduction.lifecycle_definition_params",
-        context_inputs=(),
-        from_inputs=(
-            AssemblyInputSpec(
-                name="lifecycle_class", collection_name="Classes", collection=None
-            ),
-        ),
-        condition=None,
-        matcher_name="BuilderParamContributions",
-    ),
-    "ModuleProduction.annotations_params": AssemblyEdgeSpec(
-        name="ModuleProduction.annotations_params",
-        context_inputs=(),
-        from_inputs=(
-            AssemblyInputSpec(
-                name="lifecycle_class", collection_name="Classes", collection=None
-            ),
-        ),
-        condition=None,
-        matcher_name="AnnotationsBuilderParamContributions",
-    ),
-    "ModuleProduction.tx_groups_params": AssemblyEdgeSpec(
-        name="ModuleProduction.tx_groups_params",
-        context_inputs=(),
-        from_inputs=(
-            AssemblyInputSpec(
-                name="lifecycle_class", collection_name="Classes", collection=None
-            ),
-        ),
-        condition=None,
-        matcher_name="TxGroupsBuilderParamContributions",
-    ),
-    "ModuleProduction.field_default_params": AssemblyEdgeSpec(
-        name="ModuleProduction.field_default_params",
-        context_inputs=(),
-        from_inputs=(
-            AssemblyInputSpec(name="field", collection_name="Fields", collection=None),
-        ),
-        condition=None,
-        matcher_name="FieldDefaultBuilderParamContributions",
-    ),
-    "ModuleProduction.transient_working_default_params": AssemblyEdgeSpec(
-        name="ModuleProduction.transient_working_default_params",
-        context_inputs=(),
-        from_inputs=(
-            AssemblyInputSpec(name="field", collection_name="Fields", collection=None),
-        ),
-        condition=None,
-        matcher_name="TransientWorkingDefaultBuilderParamContributions",
-    ),
-    "ModuleProduction.binding_support_helpers": AssemblyEdgeSpec(
-        name="ModuleProduction.binding_support_helpers",
-        context_inputs=(),
-        from_inputs=(
-            AssemblyInputSpec(
-                name="lifecycle_class", collection_name="Classes", collection=None
-            ),
-        ),
-        condition=None,
-        matcher_name="BindingSupportHelperContributions",
-    ),
-    "ModuleProduction.managed_freeze_params": AssemblyEdgeSpec(
-        name="ModuleProduction.managed_freeze_params",
+    "CoreModuleProduction.managed_freeze_params": AssemblyEdgeSpec(
+        name="CoreModuleProduction.managed_freeze_params",
         context_inputs=(),
         from_inputs=(
             AssemblyInputSpec(
@@ -15688,8 +15594,8 @@ ASSEMBLY_EDGES = {
         condition=None,
         matcher_name="ManagedFreezeBuilderParamContributions",
     ),
-    "ModuleProduction.managed_thaw_params": AssemblyEdgeSpec(
-        name="ModuleProduction.managed_thaw_params",
+    "CoreModuleProduction.managed_thaw_params": AssemblyEdgeSpec(
+        name="CoreModuleProduction.managed_thaw_params",
         context_inputs=(),
         from_inputs=(
             AssemblyInputSpec(
@@ -15699,115 +15605,8 @@ ASSEMBLY_EDGES = {
         condition=None,
         matcher_name="ManagedThawBuilderParamContributions",
     ),
-    "ModuleProduction.classes": AssemblyEdgeSpec(
-        name="ModuleProduction.classes",
-        context_inputs=(),
-        from_inputs=(
-            AssemblyInputSpec(
-                name="lifecycle_class", collection_name="Classes", collection=None
-            ),
-        ),
-        condition=None,
-        matcher_name="ClassDefinitionContributions",
-    ),
-    "ModuleProduction.return_class": AssemblyEdgeSpec(
-        name="ModuleProduction.return_class",
-        context_inputs=(),
-        from_inputs=(
-            AssemblyInputSpec(
-                name="lifecycle_class", collection_name="Classes", collection=None
-            ),
-        ),
-        condition=None,
-        matcher_name="ReturnClassContributions",
-    ),
-    "ClassProduction.state_slots": AssemblyEdgeSpec(
-        name="ClassProduction.state_slots",
-        context_inputs=(
-            AssemblyInputSpec(
-                name="lifecycle_class", collection_name="Classes", collection=None
-            ),
-        ),
-        from_inputs=(
-            AssemblyInputSpec(
-                name="field", collection_name="PlainFields", collection=None
-            ),
-        ),
-        condition=EqConditionSpec(
-            left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
-        ),
-        matcher_name="PlainStateSlotContributions",
-    ),
-    "ClassProduction.binding_state_slots": AssemblyEdgeSpec(
-        name="ClassProduction.binding_state_slots",
-        context_inputs=(
-            AssemblyInputSpec(
-                name="lifecycle_class", collection_name="Classes", collection=None
-            ),
-        ),
-        from_inputs=(
-            AssemblyInputSpec(
-                name="field", collection_name="BindingFields", collection=None
-            ),
-        ),
-        condition=EqConditionSpec(
-            left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
-        ),
-        matcher_name="BindingStateSlotContributions",
-    ),
-    "ClassProduction.owned_current_state_slots": AssemblyEdgeSpec(
-        name="ClassProduction.owned_current_state_slots",
-        context_inputs=(
-            AssemblyInputSpec(
-                name="lifecycle_class", collection_name="Classes", collection=None
-            ),
-        ),
-        from_inputs=(
-            AssemblyInputSpec(
-                name="field", collection_name="OwnedFields", collection=None
-            ),
-        ),
-        condition=EqConditionSpec(
-            left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
-        ),
-        matcher_name="OwnedCurrentStateSlotContributions",
-    ),
-    "ClassProduction.owned_working_state_slots": AssemblyEdgeSpec(
-        name="ClassProduction.owned_working_state_slots",
-        context_inputs=(
-            AssemblyInputSpec(
-                name="lifecycle_class", collection_name="Classes", collection=None
-            ),
-        ),
-        from_inputs=(
-            AssemblyInputSpec(
-                name="field", collection_name="OwnedFields", collection=None
-            ),
-        ),
-        condition=EqConditionSpec(
-            left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
-        ),
-        matcher_name="OwnedWorkingStateSlotContributions",
-    ),
-    "ClassProduction.owned_staged_state_slots": AssemblyEdgeSpec(
-        name="ClassProduction.owned_staged_state_slots",
-        context_inputs=(
-            AssemblyInputSpec(
-                name="lifecycle_class", collection_name="Classes", collection=None
-            ),
-        ),
-        from_inputs=(
-            AssemblyInputSpec(
-                name="field", collection_name="OwnedFields", collection=None
-            ),
-        ),
-        condition=EqConditionSpec(
-            left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
-        ),
-        matcher_name="OwnedStagedStateSlotContributions",
-    ),
-    "ClassProduction.managed_current_state_slots": AssemblyEdgeSpec(
-        name="ClassProduction.managed_current_state_slots",
+    "CoreClassProduction.managed_current_state_slots": AssemblyEdgeSpec(
+        name="CoreClassProduction.managed_current_state_slots",
         context_inputs=(
             AssemblyInputSpec(
                 name="lifecycle_class", collection_name="Classes", collection=None
@@ -15823,25 +15622,8 @@ ASSEMBLY_EDGES = {
         ),
         matcher_name="ManagedCurrentStateSlotContributions",
     ),
-    "ClassProduction.transient_current_state_slots": AssemblyEdgeSpec(
-        name="ClassProduction.transient_current_state_slots",
-        context_inputs=(
-            AssemblyInputSpec(
-                name="lifecycle_class", collection_name="Classes", collection=None
-            ),
-        ),
-        from_inputs=(
-            AssemblyInputSpec(
-                name="field", collection_name="TransientFields", collection=None
-            ),
-        ),
-        condition=EqConditionSpec(
-            left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
-        ),
-        matcher_name="TransientCurrentStateSlotContributions",
-    ),
-    "ClassProduction.managed_working_state_slots": AssemblyEdgeSpec(
-        name="ClassProduction.managed_working_state_slots",
+    "CoreClassProduction.managed_working_state_slots": AssemblyEdgeSpec(
+        name="CoreClassProduction.managed_working_state_slots",
         context_inputs=(
             AssemblyInputSpec(
                 name="lifecycle_class", collection_name="Classes", collection=None
@@ -15857,42 +15639,8 @@ ASSEMBLY_EDGES = {
         ),
         matcher_name="ManagedWorkingStateSlotContributions",
     ),
-    "ClassProduction.transient_working_state_slots": AssemblyEdgeSpec(
-        name="ClassProduction.transient_working_state_slots",
-        context_inputs=(
-            AssemblyInputSpec(
-                name="lifecycle_class", collection_name="Classes", collection=None
-            ),
-        ),
-        from_inputs=(
-            AssemblyInputSpec(
-                name="field", collection_name="TransientFields", collection=None
-            ),
-        ),
-        condition=EqConditionSpec(
-            left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
-        ),
-        matcher_name="TransientWorkingStateSlotContributions",
-    ),
-    "ClassProduction.retained_initvar_state_slots": AssemblyEdgeSpec(
-        name="ClassProduction.retained_initvar_state_slots",
-        context_inputs=(
-            AssemblyInputSpec(
-                name="lifecycle_class", collection_name="Classes", collection=None
-            ),
-        ),
-        from_inputs=(
-            AssemblyInputSpec(
-                name="initvar", collection_name="RetainedInitVars", collection=None
-            ),
-        ),
-        condition=EqConditionSpec(
-            left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
-        ),
-        matcher_name="RetainedInitVarStateSlotContributions",
-    ),
-    "ClassProduction.managed_staged_state_slots": AssemblyEdgeSpec(
-        name="ClassProduction.managed_staged_state_slots",
+    "CoreClassProduction.managed_staged_state_slots": AssemblyEdgeSpec(
+        name="CoreClassProduction.managed_staged_state_slots",
         context_inputs=(
             AssemblyInputSpec(
                 name="lifecycle_class", collection_name="Classes", collection=None
@@ -15908,118 +15656,8 @@ ASSEMBLY_EDGES = {
         ),
         matcher_name="ManagedStagedStateSlotContributions",
     ),
-    "ClassProduction.transaction_manager_param": AssemblyEdgeSpec(
-        name="ClassProduction.transaction_manager_param",
-        context_inputs=(
-            AssemblyInputSpec(
-                name="lifecycle_class", collection_name="Classes", collection=None
-            ),
-        ),
-        from_inputs=(),
-        condition=None,
-        matcher_name="TransactionManagerInitParamContributions",
-    ),
-    "ClassProduction.commit_order_key_fallback": AssemblyEdgeSpec(
-        name="ClassProduction.commit_order_key_fallback",
-        context_inputs=(
-            AssemblyInputSpec(
-                name="lifecycle_class", collection_name="Classes", collection=None
-            ),
-        ),
-        from_inputs=(),
-        condition=None,
-        matcher_name="CommitOrderKeyFallbackContributions",
-    ),
-    "ClassProduction.requires_validation_fallback": AssemblyEdgeSpec(
-        name="ClassProduction.requires_validation_fallback",
-        context_inputs=(
-            AssemblyInputSpec(
-                name="lifecycle_class", collection_name="Classes", collection=None
-            ),
-        ),
-        from_inputs=(),
-        condition=None,
-        matcher_name="RequiresValidationFallbackContributions",
-    ),
-    "ClassProduction.validate_commit_fallback": AssemblyEdgeSpec(
-        name="ClassProduction.validate_commit_fallback",
-        context_inputs=(
-            AssemblyInputSpec(
-                name="lifecycle_class", collection_name="Classes", collection=None
-            ),
-        ),
-        from_inputs=(),
-        condition=None,
-        matcher_name="ValidateCommitFallbackContributions",
-    ),
-    "ClassProduction.before_commit_fallback": AssemblyEdgeSpec(
-        name="ClassProduction.before_commit_fallback",
-        context_inputs=(
-            AssemblyInputSpec(
-                name="lifecycle_class", collection_name="Classes", collection=None
-            ),
-        ),
-        from_inputs=(),
-        condition=None,
-        matcher_name="BeforeCommitFallbackContributions",
-    ),
-    "ClassProduction.prepare_commit_dispatch_fallback": AssemblyEdgeSpec(
-        name="ClassProduction.prepare_commit_dispatch_fallback",
-        context_inputs=(
-            AssemblyInputSpec(
-                name="lifecycle_class", collection_name="Classes", collection=None
-            ),
-        ),
-        from_inputs=(),
-        condition=None,
-        matcher_name="PrepareCommitDispatchFallbackContributions",
-    ),
-    "ClassProduction.commit_dispatch_fallback": AssemblyEdgeSpec(
-        name="ClassProduction.commit_dispatch_fallback",
-        context_inputs=(
-            AssemblyInputSpec(
-                name="lifecycle_class", collection_name="Classes", collection=None
-            ),
-        ),
-        from_inputs=(),
-        condition=None,
-        matcher_name="CommitDispatchFallbackContributions",
-    ),
-    "ClassProduction.after_commit_fallback": AssemblyEdgeSpec(
-        name="ClassProduction.after_commit_fallback",
-        context_inputs=(
-            AssemblyInputSpec(
-                name="lifecycle_class", collection_name="Classes", collection=None
-            ),
-        ),
-        from_inputs=(),
-        condition=None,
-        matcher_name="AfterCommitFallbackContributions",
-    ),
-    "ClassProduction.rollback_dispatch_fallback": AssemblyEdgeSpec(
-        name="ClassProduction.rollback_dispatch_fallback",
-        context_inputs=(
-            AssemblyInputSpec(
-                name="lifecycle_class", collection_name="Classes", collection=None
-            ),
-        ),
-        from_inputs=(),
-        condition=None,
-        matcher_name="RollbackDispatchFallbackContributions",
-    ),
-    "ClassProduction.after_rollback_fallback": AssemblyEdgeSpec(
-        name="ClassProduction.after_rollback_fallback",
-        context_inputs=(
-            AssemblyInputSpec(
-                name="lifecycle_class", collection_name="Classes", collection=None
-            ),
-        ),
-        from_inputs=(),
-        condition=None,
-        matcher_name="AfterRollbackFallbackContributions",
-    ),
-    "ClassProduction.commit_order_key_helpers": AssemblyEdgeSpec(
-        name="ClassProduction.commit_order_key_helpers",
+    "CoreClassProduction.commit_order_key_helpers": AssemblyEdgeSpec(
+        name="CoreClassProduction.commit_order_key_helpers",
         context_inputs=(
             AssemblyInputSpec(
                 name="lifecycle_class", collection_name="Classes", collection=None
@@ -16033,8 +15671,8 @@ ASSEMBLY_EDGES = {
         condition=EqConditionSpec(left=ValueRef("TxOwner"), right=ValueRef("ClassId")),
         matcher_name="CommitOrderKeyHelperContributions",
     ),
-    "ClassProduction.requires_validation_helpers": AssemblyEdgeSpec(
-        name="ClassProduction.requires_validation_helpers",
+    "CoreClassProduction.requires_validation_helpers": AssemblyEdgeSpec(
+        name="CoreClassProduction.requires_validation_helpers",
         context_inputs=(
             AssemblyInputSpec(
                 name="lifecycle_class", collection_name="Classes", collection=None
@@ -16048,8 +15686,8 @@ ASSEMBLY_EDGES = {
         condition=EqConditionSpec(left=ValueRef("TxOwner"), right=ValueRef("ClassId")),
         matcher_name="RequiresValidationHelperContributions",
     ),
-    "ClassProduction.validate_commit_helpers": AssemblyEdgeSpec(
-        name="ClassProduction.validate_commit_helpers",
+    "CoreClassProduction.validate_commit_helpers": AssemblyEdgeSpec(
+        name="CoreClassProduction.validate_commit_helpers",
         context_inputs=(
             AssemblyInputSpec(
                 name="lifecycle_class", collection_name="Classes", collection=None
@@ -16063,8 +15701,8 @@ ASSEMBLY_EDGES = {
         condition=EqConditionSpec(left=ValueRef("TxOwner"), right=ValueRef("ClassId")),
         matcher_name="ValidateCommitHelperContributions",
     ),
-    "ClassProduction.before_commit_helpers": AssemblyEdgeSpec(
-        name="ClassProduction.before_commit_helpers",
+    "CoreClassProduction.before_commit_helpers": AssemblyEdgeSpec(
+        name="CoreClassProduction.before_commit_helpers",
         context_inputs=(
             AssemblyInputSpec(
                 name="lifecycle_class", collection_name="Classes", collection=None
@@ -16078,8 +15716,8 @@ ASSEMBLY_EDGES = {
         condition=EqConditionSpec(left=ValueRef("TxOwner"), right=ValueRef("ClassId")),
         matcher_name="BeforeCommitHelperContributions",
     ),
-    "ClassProduction.after_commit_helpers": AssemblyEdgeSpec(
-        name="ClassProduction.after_commit_helpers",
+    "CoreClassProduction.after_commit_helpers": AssemblyEdgeSpec(
+        name="CoreClassProduction.after_commit_helpers",
         context_inputs=(
             AssemblyInputSpec(
                 name="lifecycle_class", collection_name="Classes", collection=None
@@ -16093,8 +15731,8 @@ ASSEMBLY_EDGES = {
         condition=EqConditionSpec(left=ValueRef("TxOwner"), right=ValueRef("ClassId")),
         matcher_name="AfterCommitHelperContributions",
     ),
-    "ClassProduction.after_rollback_helpers": AssemblyEdgeSpec(
-        name="ClassProduction.after_rollback_helpers",
+    "CoreClassProduction.after_rollback_helpers": AssemblyEdgeSpec(
+        name="CoreClassProduction.after_rollback_helpers",
         context_inputs=(
             AssemblyInputSpec(
                 name="lifecycle_class", collection_name="Classes", collection=None
@@ -16108,8 +15746,8 @@ ASSEMBLY_EDGES = {
         condition=EqConditionSpec(left=ValueRef("TxOwner"), right=ValueRef("ClassId")),
         matcher_name="AfterRollbackHelperContributions",
     ),
-    "ClassProduction.commit_order_key_dispatch": AssemblyEdgeSpec(
-        name="ClassProduction.commit_order_key_dispatch",
+    "CoreClassProduction.commit_order_key_dispatch": AssemblyEdgeSpec(
+        name="CoreClassProduction.commit_order_key_dispatch",
         context_inputs=(
             AssemblyInputSpec(
                 name="lifecycle_class", collection_name="Classes", collection=None
@@ -16123,8 +15761,8 @@ ASSEMBLY_EDGES = {
         condition=EqConditionSpec(left=ValueRef("TxOwner"), right=ValueRef("ClassId")),
         matcher_name="CommitOrderKeyDispatchContributions",
     ),
-    "ClassProduction.requires_validation_dispatch": AssemblyEdgeSpec(
-        name="ClassProduction.requires_validation_dispatch",
+    "CoreClassProduction.requires_validation_dispatch": AssemblyEdgeSpec(
+        name="CoreClassProduction.requires_validation_dispatch",
         context_inputs=(
             AssemblyInputSpec(
                 name="lifecycle_class", collection_name="Classes", collection=None
@@ -16138,8 +15776,8 @@ ASSEMBLY_EDGES = {
         condition=EqConditionSpec(left=ValueRef("TxOwner"), right=ValueRef("ClassId")),
         matcher_name="RequiresValidationDispatchContributions",
     ),
-    "ClassProduction.validate_commit_dispatch": AssemblyEdgeSpec(
-        name="ClassProduction.validate_commit_dispatch",
+    "CoreClassProduction.validate_commit_dispatch": AssemblyEdgeSpec(
+        name="CoreClassProduction.validate_commit_dispatch",
         context_inputs=(
             AssemblyInputSpec(
                 name="lifecycle_class", collection_name="Classes", collection=None
@@ -16153,8 +15791,8 @@ ASSEMBLY_EDGES = {
         condition=EqConditionSpec(left=ValueRef("TxOwner"), right=ValueRef("ClassId")),
         matcher_name="ValidateCommitDispatchContributions",
     ),
-    "ClassProduction.before_commit_dispatch": AssemblyEdgeSpec(
-        name="ClassProduction.before_commit_dispatch",
+    "CoreClassProduction.before_commit_dispatch": AssemblyEdgeSpec(
+        name="CoreClassProduction.before_commit_dispatch",
         context_inputs=(
             AssemblyInputSpec(
                 name="lifecycle_class", collection_name="Classes", collection=None
@@ -16168,8 +15806,8 @@ ASSEMBLY_EDGES = {
         condition=EqConditionSpec(left=ValueRef("TxOwner"), right=ValueRef("ClassId")),
         matcher_name="BeforeCommitDispatchContributions",
     ),
-    "ClassProduction.after_commit_dispatch": AssemblyEdgeSpec(
-        name="ClassProduction.after_commit_dispatch",
+    "CoreClassProduction.after_commit_dispatch": AssemblyEdgeSpec(
+        name="CoreClassProduction.after_commit_dispatch",
         context_inputs=(
             AssemblyInputSpec(
                 name="lifecycle_class", collection_name="Classes", collection=None
@@ -16183,8 +15821,8 @@ ASSEMBLY_EDGES = {
         condition=EqConditionSpec(left=ValueRef("TxOwner"), right=ValueRef("ClassId")),
         matcher_name="AfterCommitDispatchContributions",
     ),
-    "ClassProduction.after_rollback_dispatch": AssemblyEdgeSpec(
-        name="ClassProduction.after_rollback_dispatch",
+    "CoreClassProduction.after_rollback_dispatch": AssemblyEdgeSpec(
+        name="CoreClassProduction.after_rollback_dispatch",
         context_inputs=(
             AssemblyInputSpec(
                 name="lifecycle_class", collection_name="Classes", collection=None
@@ -16198,197 +15836,8 @@ ASSEMBLY_EDGES = {
         condition=EqConditionSpec(left=ValueRef("TxOwner"), right=ValueRef("ClassId")),
         matcher_name="AfterRollbackDispatchContributions",
     ),
-    "ClassProduction.classvars": AssemblyEdgeSpec(
-        name="ClassProduction.classvars",
-        context_inputs=(
-            AssemblyInputSpec(
-                name="lifecycle_class", collection_name="Classes", collection=None
-            ),
-        ),
-        from_inputs=(
-            AssemblyInputSpec(
-                name="field", collection_name="ClassVarFields", collection=None
-            ),
-        ),
-        condition=EqConditionSpec(
-            left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
-        ),
-        matcher_name="ClassVarDefaultContributions",
-    ),
-    "ClassProduction.commit_order_keys": AssemblyEdgeSpec(
-        name="ClassProduction.commit_order_keys",
-        context_inputs=(
-            AssemblyInputSpec(
-                name="lifecycle_class", collection_name="Classes", collection=None
-            ),
-        ),
-        from_inputs=(
-            AssemblyInputSpec(
-                name="method",
-                collection_name="CommitOrderKeyProviders",
-                collection=None,
-            ),
-        ),
-        condition=EqConditionSpec(
-            left=ValueRef("MethodOwner"), right=ValueRef("ClassId")
-        ),
-        matcher_name="CommitOrderKeyContributions",
-    ),
-    "ClassProduction.validation_flags": AssemblyEdgeSpec(
-        name="ClassProduction.validation_flags",
-        context_inputs=(
-            AssemblyInputSpec(
-                name="lifecycle_class", collection_name="Classes", collection=None
-            ),
-        ),
-        from_inputs=(
-            AssemblyInputSpec(
-                name="method", collection_name="CommitValidators", collection=None
-            ),
-        ),
-        condition=EqConditionSpec(
-            left=ValueRef("MethodOwner"), right=ValueRef("ClassId")
-        ),
-        matcher_name="RequiresValidationContributions",
-    ),
-    "ClassProduction.validators": AssemblyEdgeSpec(
-        name="ClassProduction.validators",
-        context_inputs=(
-            AssemblyInputSpec(
-                name="lifecycle_class", collection_name="Classes", collection=None
-            ),
-        ),
-        from_inputs=(
-            AssemblyInputSpec(
-                name="method", collection_name="CommitValidators", collection=None
-            ),
-        ),
-        condition=EqConditionSpec(
-            left=ValueRef("MethodOwner"), right=ValueRef("ClassId")
-        ),
-        matcher_name="ValidateCommitContributions",
-    ),
-    "ClassProduction.before_commit_hooks": AssemblyEdgeSpec(
-        name="ClassProduction.before_commit_hooks",
-        context_inputs=(
-            AssemblyInputSpec(
-                name="lifecycle_class", collection_name="Classes", collection=None
-            ),
-        ),
-        from_inputs=(
-            AssemblyInputSpec(
-                name="method", collection_name="BeforeCommitHooks", collection=None
-            ),
-        ),
-        condition=EqConditionSpec(
-            left=ValueRef("MethodOwner"), right=ValueRef("ClassId")
-        ),
-        matcher_name="BeforeCommitHookContributions",
-    ),
-    "ClassProduction.after_commit_hooks": AssemblyEdgeSpec(
-        name="ClassProduction.after_commit_hooks",
-        context_inputs=(
-            AssemblyInputSpec(
-                name="lifecycle_class", collection_name="Classes", collection=None
-            ),
-        ),
-        from_inputs=(
-            AssemblyInputSpec(
-                name="method", collection_name="AfterCommitHooks", collection=None
-            ),
-        ),
-        condition=EqConditionSpec(
-            left=ValueRef("MethodOwner"), right=ValueRef("ClassId")
-        ),
-        matcher_name="AfterCommitHookContributions",
-    ),
-    "ClassProduction.after_rollback_hooks": AssemblyEdgeSpec(
-        name="ClassProduction.after_rollback_hooks",
-        context_inputs=(
-            AssemblyInputSpec(
-                name="lifecycle_class", collection_name="Classes", collection=None
-            ),
-        ),
-        from_inputs=(
-            AssemblyInputSpec(
-                name="method", collection_name="AfterRollbackHooks", collection=None
-            ),
-        ),
-        condition=EqConditionSpec(
-            left=ValueRef("MethodOwner"), right=ValueRef("ClassId")
-        ),
-        matcher_name="AfterRollbackHookContributions",
-    ),
-    "ClassProduction.plain_init_params": AssemblyEdgeSpec(
-        name="ClassProduction.plain_init_params",
-        context_inputs=(
-            AssemblyInputSpec(
-                name="lifecycle_class", collection_name="Classes", collection=None
-            ),
-        ),
-        from_inputs=(
-            AssemblyInputSpec(
-                name="field", collection_name="PlainFields", collection=None
-            ),
-        ),
-        condition=EqConditionSpec(
-            left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
-        ),
-        matcher_name="PlainInitParamContributions",
-    ),
-    "ClassProduction.binding_init_params": AssemblyEdgeSpec(
-        name="ClassProduction.binding_init_params",
-        context_inputs=(
-            AssemblyInputSpec(
-                name="lifecycle_class", collection_name="Classes", collection=None
-            ),
-        ),
-        from_inputs=(
-            AssemblyInputSpec(
-                name="field", collection_name="BindingFields", collection=None
-            ),
-        ),
-        condition=EqConditionSpec(
-            left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
-        ),
-        matcher_name="BindingInitParamContributions",
-    ),
-    "ClassProduction.owned_init_params": AssemblyEdgeSpec(
-        name="ClassProduction.owned_init_params",
-        context_inputs=(
-            AssemblyInputSpec(
-                name="lifecycle_class", collection_name="Classes", collection=None
-            ),
-        ),
-        from_inputs=(
-            AssemblyInputSpec(
-                name="field", collection_name="OwnedFields", collection=None
-            ),
-        ),
-        condition=EqConditionSpec(
-            left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
-        ),
-        matcher_name="OwnedInitParamContributions",
-    ),
-    "ClassProduction.initvar_params": AssemblyEdgeSpec(
-        name="ClassProduction.initvar_params",
-        context_inputs=(
-            AssemblyInputSpec(
-                name="lifecycle_class", collection_name="Classes", collection=None
-            ),
-        ),
-        from_inputs=(
-            AssemblyInputSpec(
-                name="field", collection_name="InitVarFields", collection=None
-            ),
-        ),
-        condition=EqConditionSpec(
-            left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
-        ),
-        matcher_name="InitVarParamContributions",
-    ),
-    "ClassProduction.managed_init_params": AssemblyEdgeSpec(
-        name="ClassProduction.managed_init_params",
+    "CoreClassProduction.managed_init_params": AssemblyEdgeSpec(
+        name="CoreClassProduction.managed_init_params",
         context_inputs=(
             AssemblyInputSpec(
                 name="lifecycle_class", collection_name="Classes", collection=None
@@ -16404,93 +15853,8 @@ ASSEMBLY_EDGES = {
         ),
         matcher_name="ManagedInitParamContributions",
     ),
-    "ClassProduction.transient_init_params": AssemblyEdgeSpec(
-        name="ClassProduction.transient_init_params",
-        context_inputs=(
-            AssemblyInputSpec(
-                name="lifecycle_class", collection_name="Classes", collection=None
-            ),
-        ),
-        from_inputs=(
-            AssemblyInputSpec(
-                name="field", collection_name="TransientFields", collection=None
-            ),
-        ),
-        condition=EqConditionSpec(
-            left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
-        ),
-        matcher_name="TransientInitParamContributions",
-    ),
-    "ClassProduction.initvar_local_defaults": AssemblyEdgeSpec(
-        name="ClassProduction.initvar_local_defaults",
-        context_inputs=(
-            AssemblyInputSpec(
-                name="lifecycle_class", collection_name="Classes", collection=None
-            ),
-        ),
-        from_inputs=(
-            AssemblyInputSpec(
-                name="field", collection_name="InitVarFields", collection=None
-            ),
-        ),
-        condition=EqConditionSpec(
-            left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
-        ),
-        matcher_name="InitVarLocalDefaultContributions",
-    ),
-    "ClassProduction.plain_init_assignments": AssemblyEdgeSpec(
-        name="ClassProduction.plain_init_assignments",
-        context_inputs=(
-            AssemblyInputSpec(
-                name="lifecycle_class", collection_name="Classes", collection=None
-            ),
-        ),
-        from_inputs=(
-            AssemblyInputSpec(
-                name="field", collection_name="PlainFields", collection=None
-            ),
-        ),
-        condition=EqConditionSpec(
-            left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
-        ),
-        matcher_name="PlainInitAssignmentContributions",
-    ),
-    "ClassProduction.binding_init_assignments": AssemblyEdgeSpec(
-        name="ClassProduction.binding_init_assignments",
-        context_inputs=(
-            AssemblyInputSpec(
-                name="lifecycle_class", collection_name="Classes", collection=None
-            ),
-        ),
-        from_inputs=(
-            AssemblyInputSpec(
-                name="field", collection_name="BindingFields", collection=None
-            ),
-        ),
-        condition=EqConditionSpec(
-            left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
-        ),
-        matcher_name="BindingInitAssignmentContributions",
-    ),
-    "ClassProduction.owned_current_init_assignments": AssemblyEdgeSpec(
-        name="ClassProduction.owned_current_init_assignments",
-        context_inputs=(
-            AssemblyInputSpec(
-                name="lifecycle_class", collection_name="Classes", collection=None
-            ),
-        ),
-        from_inputs=(
-            AssemblyInputSpec(
-                name="field", collection_name="OwnedFields", collection=None
-            ),
-        ),
-        condition=EqConditionSpec(
-            left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
-        ),
-        matcher_name="OwnedCurrentInitAssignmentContributions",
-    ),
-    "ClassProduction.managed_current_init_assignments": AssemblyEdgeSpec(
-        name="ClassProduction.managed_current_init_assignments",
+    "CoreClassProduction.managed_current_init_assignments": AssemblyEdgeSpec(
+        name="CoreClassProduction.managed_current_init_assignments",
         context_inputs=(
             AssemblyInputSpec(
                 name="lifecycle_class", collection_name="Classes", collection=None
@@ -16506,25 +15870,8 @@ ASSEMBLY_EDGES = {
         ),
         matcher_name="ManagedCurrentInitAssignmentContributions",
     ),
-    "ClassProduction.transient_current_init_assignments": AssemblyEdgeSpec(
-        name="ClassProduction.transient_current_init_assignments",
-        context_inputs=(
-            AssemblyInputSpec(
-                name="lifecycle_class", collection_name="Classes", collection=None
-            ),
-        ),
-        from_inputs=(
-            AssemblyInputSpec(
-                name="field", collection_name="TransientFields", collection=None
-            ),
-        ),
-        condition=EqConditionSpec(
-            left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
-        ),
-        matcher_name="TransientCurrentInitAssignmentContributions",
-    ),
-    "ClassProduction.managed_working_init_assignments": AssemblyEdgeSpec(
-        name="ClassProduction.managed_working_init_assignments",
+    "CoreClassProduction.managed_working_init_assignments": AssemblyEdgeSpec(
+        name="CoreClassProduction.managed_working_init_assignments",
         context_inputs=(
             AssemblyInputSpec(
                 name="lifecycle_class", collection_name="Classes", collection=None
@@ -16540,76 +15887,8 @@ ASSEMBLY_EDGES = {
         ),
         matcher_name="ManagedWorkingInitAssignmentContributions",
     ),
-    "ClassProduction.transient_working_init_assignments": AssemblyEdgeSpec(
-        name="ClassProduction.transient_working_init_assignments",
-        context_inputs=(
-            AssemblyInputSpec(
-                name="lifecycle_class", collection_name="Classes", collection=None
-            ),
-        ),
-        from_inputs=(
-            AssemblyInputSpec(
-                name="field", collection_name="TransientFields", collection=None
-            ),
-        ),
-        condition=EqConditionSpec(
-            left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
-        ),
-        matcher_name="TransientWorkingInitAssignmentContributions",
-    ),
-    "ClassProduction.owned_working_init_assignments": AssemblyEdgeSpec(
-        name="ClassProduction.owned_working_init_assignments",
-        context_inputs=(
-            AssemblyInputSpec(
-                name="lifecycle_class", collection_name="Classes", collection=None
-            ),
-        ),
-        from_inputs=(
-            AssemblyInputSpec(
-                name="field", collection_name="OwnedFields", collection=None
-            ),
-        ),
-        condition=EqConditionSpec(
-            left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
-        ),
-        matcher_name="OwnedWorkingInitAssignmentContributions",
-    ),
-    "ClassProduction.retained_initvar_state_assignments": AssemblyEdgeSpec(
-        name="ClassProduction.retained_initvar_state_assignments",
-        context_inputs=(
-            AssemblyInputSpec(
-                name="lifecycle_class", collection_name="Classes", collection=None
-            ),
-        ),
-        from_inputs=(
-            AssemblyInputSpec(
-                name="initvar", collection_name="RetainedInitVars", collection=None
-            ),
-        ),
-        condition=EqConditionSpec(
-            left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
-        ),
-        matcher_name="RetainedInitVarStateAssignmentContributions",
-    ),
-    "ClassProduction.owned_staged_init_assignments": AssemblyEdgeSpec(
-        name="ClassProduction.owned_staged_init_assignments",
-        context_inputs=(
-            AssemblyInputSpec(
-                name="lifecycle_class", collection_name="Classes", collection=None
-            ),
-        ),
-        from_inputs=(
-            AssemblyInputSpec(
-                name="field", collection_name="OwnedFields", collection=None
-            ),
-        ),
-        condition=EqConditionSpec(
-            left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
-        ),
-        matcher_name="OwnedStagedInitAssignmentContributions",
-    ),
-    "ClassProduction.managed_staged_init_assignments": AssemblyEdgeSpec(
-        name="ClassProduction.managed_staged_init_assignments",
+    "CoreClassProduction.managed_staged_init_assignments": AssemblyEdgeSpec(
+        name="CoreClassProduction.managed_staged_init_assignments",
         context_inputs=(
             AssemblyInputSpec(
                 name="lifecycle_class", collection_name="Classes", collection=None
@@ -16625,97 +15904,8 @@ ASSEMBLY_EDGES = {
         ),
         matcher_name="ManagedStagedInitAssignmentContributions",
     ),
-    "ClassProduction.default_factory_evals": AssemblyEdgeSpec(
-        name="ClassProduction.default_factory_evals",
-        context_inputs=(
-            AssemblyInputSpec(
-                name="lifecycle_class", collection_name="Classes", collection=None
-            ),
-        ),
-        from_inputs=(
-            AssemblyInputSpec(
-                name="step",
-                collection_name="DefaultFactoryEvaluationSteps",
-                collection=None,
-            ),
-        ),
-        condition=EqConditionSpec(
-            left=ValueRef("EvalOwner"), right=ValueRef("ClassId")
-        ),
-        matcher_name="DefaultFactoryEvalContributions",
-    ),
-    "ClassProduction.default_factory_args": AssemblyEdgeSpec(
-        name="ClassProduction.default_factory_args",
-        context_inputs=(
-            AssemblyInputSpec(
-                name="lifecycle_class", collection_name="Classes", collection=None
-            ),
-        ),
-        from_inputs=(
-            AssemblyInputSpec(
-                name="dep",
-                collection_name="DefaultFactoryDependencies",
-                collection=None,
-            ),
-        ),
-        condition=EqConditionSpec(
-            left=ValueRef("DependencyOwner"), right=ValueRef("ClassId")
-        ),
-        matcher_name="DefaultFactoryArgContributions",
-    ),
-    "ClassProduction.plain_properties": AssemblyEdgeSpec(
-        name="ClassProduction.plain_properties",
-        context_inputs=(
-            AssemblyInputSpec(
-                name="lifecycle_class", collection_name="Classes", collection=None
-            ),
-        ),
-        from_inputs=(
-            AssemblyInputSpec(
-                name="field", collection_name="PlainFields", collection=None
-            ),
-        ),
-        condition=EqConditionSpec(
-            left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
-        ),
-        matcher_name="PlainPropertyContributions",
-    ),
-    "ClassProduction.binding_properties": AssemblyEdgeSpec(
-        name="ClassProduction.binding_properties",
-        context_inputs=(
-            AssemblyInputSpec(
-                name="lifecycle_class", collection_name="Classes", collection=None
-            ),
-        ),
-        from_inputs=(
-            AssemblyInputSpec(
-                name="field", collection_name="BindingFields", collection=None
-            ),
-        ),
-        condition=EqConditionSpec(
-            left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
-        ),
-        matcher_name="BindingPropertyContributions",
-    ),
-    "ClassProduction.owned_default_properties": AssemblyEdgeSpec(
-        name="ClassProduction.owned_default_properties",
-        context_inputs=(
-            AssemblyInputSpec(
-                name="lifecycle_class", collection_name="Classes", collection=None
-            ),
-        ),
-        from_inputs=(
-            AssemblyInputSpec(
-                name="field", collection_name="IndexedOwnedFields", collection=None
-            ),
-        ),
-        condition=EqConditionSpec(
-            left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
-        ),
-        matcher_name="OwnedDefaultFacadePropertyContributions",
-    ),
-    "ClassProduction.managed_default_properties": AssemblyEdgeSpec(
-        name="ClassProduction.managed_default_properties",
+    "CoreClassProduction.managed_default_properties": AssemblyEdgeSpec(
+        name="CoreClassProduction.managed_default_properties",
         context_inputs=(
             AssemblyInputSpec(
                 name="lifecycle_class", collection_name="Classes", collection=None
@@ -16733,25 +15923,8 @@ ASSEMBLY_EDGES = {
         ),
         matcher_name="ManagedDefaultFacadePropertyContributions",
     ),
-    "ClassProduction.transient_default_properties": AssemblyEdgeSpec(
-        name="ClassProduction.transient_default_properties",
-        context_inputs=(
-            AssemblyInputSpec(
-                name="lifecycle_class", collection_name="Classes", collection=None
-            ),
-        ),
-        from_inputs=(
-            AssemblyInputSpec(
-                name="field", collection_name="IndexedTransientFields", collection=None
-            ),
-        ),
-        condition=EqConditionSpec(
-            left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
-        ),
-        matcher_name="TransientDefaultFacadePropertyContributions",
-    ),
-    "ClassProduction.managed_current_properties": AssemblyEdgeSpec(
-        name="ClassProduction.managed_current_properties",
+    "CoreClassProduction.managed_current_properties": AssemblyEdgeSpec(
+        name="CoreClassProduction.managed_current_properties",
         context_inputs=(
             AssemblyInputSpec(
                 name="lifecycle_class", collection_name="Classes", collection=None
@@ -16769,42 +15942,8 @@ ASSEMBLY_EDGES = {
         ),
         matcher_name="ManagedCurrentFacadePropertyContributions",
     ),
-    "ClassProduction.transient_current_properties": AssemblyEdgeSpec(
-        name="ClassProduction.transient_current_properties",
-        context_inputs=(
-            AssemblyInputSpec(
-                name="lifecycle_class", collection_name="Classes", collection=None
-            ),
-        ),
-        from_inputs=(
-            AssemblyInputSpec(
-                name="field", collection_name="TransientFields", collection=None
-            ),
-        ),
-        condition=EqConditionSpec(
-            left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
-        ),
-        matcher_name="TransientCurrentPropertyContributions",
-    ),
-    "ClassProduction.owned_current_properties": AssemblyEdgeSpec(
-        name="ClassProduction.owned_current_properties",
-        context_inputs=(
-            AssemblyInputSpec(
-                name="lifecycle_class", collection_name="Classes", collection=None
-            ),
-        ),
-        from_inputs=(
-            AssemblyInputSpec(
-                name="field", collection_name="IndexedOwnedFields", collection=None
-            ),
-        ),
-        condition=EqConditionSpec(
-            left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
-        ),
-        matcher_name="OwnedCurrentFacadePropertyContributions",
-    ),
-    "ClassProduction.managed_working_properties": AssemblyEdgeSpec(
-        name="ClassProduction.managed_working_properties",
+    "CoreClassProduction.managed_working_properties": AssemblyEdgeSpec(
+        name="CoreClassProduction.managed_working_properties",
         context_inputs=(
             AssemblyInputSpec(
                 name="lifecycle_class", collection_name="Classes", collection=None
@@ -16822,80 +15961,8 @@ ASSEMBLY_EDGES = {
         ),
         matcher_name="ManagedWorkingFacadePropertyContributions",
     ),
-    "ClassProduction.owned_working_properties": AssemblyEdgeSpec(
-        name="ClassProduction.owned_working_properties",
-        context_inputs=(
-            AssemblyInputSpec(
-                name="lifecycle_class", collection_name="Classes", collection=None
-            ),
-        ),
-        from_inputs=(
-            AssemblyInputSpec(
-                name="field", collection_name="IndexedOwnedFields", collection=None
-            ),
-        ),
-        condition=EqConditionSpec(
-            left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
-        ),
-        matcher_name="OwnedWorkingFacadePropertyContributions",
-    ),
-    "ClassProduction.transient_working_properties": AssemblyEdgeSpec(
-        name="ClassProduction.transient_working_properties",
-        context_inputs=(
-            AssemblyInputSpec(
-                name="lifecycle_class", collection_name="Classes", collection=None
-            ),
-        ),
-        from_inputs=(
-            AssemblyInputSpec(
-                name="field", collection_name="IndexedTransientFields", collection=None
-            ),
-        ),
-        condition=EqConditionSpec(
-            left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
-        ),
-        matcher_name="TransientWorkingFacadePropertyContributions",
-    ),
-    "ClassProduction.transient_default_working_factory_args": AssemblyEdgeSpec(
-        name="ClassProduction.transient_default_working_factory_args",
-        context_inputs=(
-            AssemblyInputSpec(
-                name="lifecycle_class", collection_name="Classes", collection=None
-            ),
-        ),
-        from_inputs=(
-            AssemblyInputSpec(
-                name="arg",
-                collection_name="TransientWorkingFactoryArgs",
-                collection=None,
-            ),
-        ),
-        condition=EqConditionSpec(
-            left=ValueRef("WorkingFactoryArgOwner"), right=ValueRef("ClassId")
-        ),
-        matcher_name="TransientDefaultWorkingFactoryArgContributions",
-    ),
-    "ClassProduction.transient_working_working_factory_args": AssemblyEdgeSpec(
-        name="ClassProduction.transient_working_working_factory_args",
-        context_inputs=(
-            AssemblyInputSpec(
-                name="lifecycle_class", collection_name="Classes", collection=None
-            ),
-        ),
-        from_inputs=(
-            AssemblyInputSpec(
-                name="arg",
-                collection_name="TransientWorkingFactoryArgs",
-                collection=None,
-            ),
-        ),
-        condition=EqConditionSpec(
-            left=ValueRef("WorkingFactoryArgOwner"), right=ValueRef("ClassId")
-        ),
-        matcher_name="TransientWorkingWorkingFactoryArgContributions",
-    ),
-    "ClassProduction.apply_prepared_commit_helpers": AssemblyEdgeSpec(
-        name="ClassProduction.apply_prepared_commit_helpers",
+    "CoreClassProduction.apply_prepared_commit_helpers": AssemblyEdgeSpec(
+        name="CoreClassProduction.apply_prepared_commit_helpers",
         context_inputs=(
             AssemblyInputSpec(
                 name="lifecycle_class", collection_name="Classes", collection=None
@@ -16909,8 +15976,8 @@ ASSEMBLY_EDGES = {
         condition=EqConditionSpec(left=ValueRef("TxOwner"), right=ValueRef("ClassId")),
         matcher_name="ApplyPreparedCommitFieldsContributions",
     ),
-    "ClassProduction.prepare_commit_helpers": AssemblyEdgeSpec(
-        name="ClassProduction.prepare_commit_helpers",
+    "CoreClassProduction.prepare_commit_helpers": AssemblyEdgeSpec(
+        name="CoreClassProduction.prepare_commit_helpers",
         context_inputs=(
             AssemblyInputSpec(
                 name="lifecycle_class", collection_name="Classes", collection=None
@@ -16924,8 +15991,8 @@ ASSEMBLY_EDGES = {
         condition=EqConditionSpec(left=ValueRef("TxOwner"), right=ValueRef("ClassId")),
         matcher_name="PrepareCommitFieldsContributions",
     ),
-    "ClassProduction.rollback_helpers": AssemblyEdgeSpec(
-        name="ClassProduction.rollback_helpers",
+    "CoreClassProduction.rollback_helpers": AssemblyEdgeSpec(
+        name="CoreClassProduction.rollback_helpers",
         context_inputs=(
             AssemblyInputSpec(
                 name="lifecycle_class", collection_name="Classes", collection=None
@@ -16939,8 +16006,8 @@ ASSEMBLY_EDGES = {
         condition=EqConditionSpec(left=ValueRef("TxOwner"), right=ValueRef("ClassId")),
         matcher_name="RollbackFieldsContributions",
     ),
-    "ClassProduction.prepare_commit_dispatch": AssemblyEdgeSpec(
-        name="ClassProduction.prepare_commit_dispatch",
+    "CoreClassProduction.prepare_commit_dispatch": AssemblyEdgeSpec(
+        name="CoreClassProduction.prepare_commit_dispatch",
         context_inputs=(
             AssemblyInputSpec(
                 name="lifecycle_class", collection_name="Classes", collection=None
@@ -16954,8 +16021,8 @@ ASSEMBLY_EDGES = {
         condition=EqConditionSpec(left=ValueRef("TxOwner"), right=ValueRef("ClassId")),
         matcher_name="PrepareCommitDispatchContributions",
     ),
-    "ClassProduction.apply_prepared_commit_dispatch": AssemblyEdgeSpec(
-        name="ClassProduction.apply_prepared_commit_dispatch",
+    "CoreClassProduction.apply_prepared_commit_dispatch": AssemblyEdgeSpec(
+        name="CoreClassProduction.apply_prepared_commit_dispatch",
         context_inputs=(
             AssemblyInputSpec(
                 name="lifecycle_class", collection_name="Classes", collection=None
@@ -16969,8 +16036,8 @@ ASSEMBLY_EDGES = {
         condition=EqConditionSpec(left=ValueRef("TxOwner"), right=ValueRef("ClassId")),
         matcher_name="ApplyPreparedCommitDispatchContributions",
     ),
-    "ClassProduction.rollback_dispatch": AssemblyEdgeSpec(
-        name="ClassProduction.rollback_dispatch",
+    "CoreClassProduction.rollback_dispatch": AssemblyEdgeSpec(
+        name="CoreClassProduction.rollback_dispatch",
         context_inputs=(
             AssemblyInputSpec(
                 name="lifecycle_class", collection_name="Classes", collection=None
@@ -16984,8 +16051,8 @@ ASSEMBLY_EDGES = {
         condition=EqConditionSpec(left=ValueRef("TxOwner"), right=ValueRef("ClassId")),
         matcher_name="RollbackDispatchContributions",
     ),
-    "ClassProduction.managed_prepare_commit": AssemblyEdgeSpec(
-        name="ClassProduction.managed_prepare_commit",
+    "CoreClassProduction.managed_prepare_commit": AssemblyEdgeSpec(
+        name="CoreClassProduction.managed_prepare_commit",
         context_inputs=(
             AssemblyInputSpec(
                 name="lifecycle_class", collection_name="Classes", collection=None
@@ -17003,8 +16070,8 @@ ASSEMBLY_EDGES = {
         ),
         matcher_name="ManagedPrepareCommitContributions",
     ),
-    "ClassProduction.managed_apply_prepared_commit": AssemblyEdgeSpec(
-        name="ClassProduction.managed_apply_prepared_commit",
+    "CoreClassProduction.managed_apply_prepared_commit": AssemblyEdgeSpec(
+        name="CoreClassProduction.managed_apply_prepared_commit",
         context_inputs=(
             AssemblyInputSpec(
                 name="lifecycle_class", collection_name="Classes", collection=None
@@ -17022,42 +16089,8 @@ ASSEMBLY_EDGES = {
         ),
         matcher_name="ManagedApplyPreparedCommitContributions",
     ),
-    "ClassProduction.owned_apply_prepared_commit": AssemblyEdgeSpec(
-        name="ClassProduction.owned_apply_prepared_commit",
-        context_inputs=(
-            AssemblyInputSpec(
-                name="lifecycle_class", collection_name="Classes", collection=None
-            ),
-        ),
-        from_inputs=(
-            AssemblyInputSpec(
-                name="field", collection_name="IndexedOwnedFields", collection=None
-            ),
-        ),
-        condition=EqConditionSpec(
-            left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
-        ),
-        matcher_name="OwnedApplyPreparedCommitContributions",
-    ),
-    "ClassProduction.transient_apply_prepared_commit": AssemblyEdgeSpec(
-        name="ClassProduction.transient_apply_prepared_commit",
-        context_inputs=(
-            AssemblyInputSpec(
-                name="lifecycle_class", collection_name="Classes", collection=None
-            ),
-        ),
-        from_inputs=(
-            AssemblyInputSpec(
-                name="field", collection_name="IndexedTransientFields", collection=None
-            ),
-        ),
-        condition=EqConditionSpec(
-            left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
-        ),
-        matcher_name="TransientApplyPreparedCommitContributions",
-    ),
-    "ClassProduction.managed_rollback": AssemblyEdgeSpec(
-        name="ClassProduction.managed_rollback",
+    "CoreClassProduction.managed_rollback": AssemblyEdgeSpec(
+        name="CoreClassProduction.managed_rollback",
         context_inputs=(
             AssemblyInputSpec(
                 name="lifecycle_class", collection_name="Classes", collection=None
@@ -17075,8 +16108,8 @@ ASSEMBLY_EDGES = {
         ),
         matcher_name="ManagedRollbackContributions",
     ),
-    "ClassProduction.owned_rollback": AssemblyEdgeSpec(
-        name="ClassProduction.owned_rollback",
+    "CoreClassProduction.default_factory_evals": AssemblyEdgeSpec(
+        name="CoreClassProduction.default_factory_evals",
         context_inputs=(
             AssemblyInputSpec(
                 name="lifecycle_class", collection_name="Classes", collection=None
@@ -17084,16 +16117,271 @@ ASSEMBLY_EDGES = {
         ),
         from_inputs=(
             AssemblyInputSpec(
-                name="field", collection_name="IndexedOwnedFields", collection=None
+                name="step",
+                collection_name="DefaultFactoryEvaluationSteps",
+                collection=None,
+            ),
+        ),
+        condition=EqConditionSpec(
+            left=ValueRef("EvalOwner"), right=ValueRef("ClassId")
+        ),
+        matcher_name="DefaultFactoryEvalContributions",
+    ),
+    "CoreClassProduction.default_factory_args": AssemblyEdgeSpec(
+        name="CoreClassProduction.default_factory_args",
+        context_inputs=(
+            AssemblyInputSpec(
+                name="lifecycle_class", collection_name="Classes", collection=None
+            ),
+        ),
+        from_inputs=(
+            AssemblyInputSpec(
+                name="dep",
+                collection_name="DefaultFactoryDependencies",
+                collection=None,
+            ),
+        ),
+        condition=EqConditionSpec(
+            left=ValueRef("DependencyOwner"), right=ValueRef("ClassId")
+        ),
+        matcher_name="DefaultFactoryArgContributions",
+    ),
+    "CoreModuleProduction.transient_working_default_params": AssemblyEdgeSpec(
+        name="CoreModuleProduction.transient_working_default_params",
+        context_inputs=(),
+        from_inputs=(
+            AssemblyInputSpec(name="field", collection_name="Fields", collection=None),
+        ),
+        condition=None,
+        matcher_name="TransientWorkingDefaultBuilderParamContributions",
+    ),
+    "CoreClassProduction.transient_current_state_slots": AssemblyEdgeSpec(
+        name="CoreClassProduction.transient_current_state_slots",
+        context_inputs=(
+            AssemblyInputSpec(
+                name="lifecycle_class", collection_name="Classes", collection=None
+            ),
+        ),
+        from_inputs=(
+            AssemblyInputSpec(
+                name="field", collection_name="TransientFields", collection=None
             ),
         ),
         condition=EqConditionSpec(
             left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
         ),
-        matcher_name="OwnedRollbackContributions",
+        matcher_name="TransientCurrentStateSlotContributions",
     ),
-    "ClassProduction.transient_rollback": AssemblyEdgeSpec(
-        name="ClassProduction.transient_rollback",
+    "CoreClassProduction.transient_working_state_slots": AssemblyEdgeSpec(
+        name="CoreClassProduction.transient_working_state_slots",
+        context_inputs=(
+            AssemblyInputSpec(
+                name="lifecycle_class", collection_name="Classes", collection=None
+            ),
+        ),
+        from_inputs=(
+            AssemblyInputSpec(
+                name="field", collection_name="TransientFields", collection=None
+            ),
+        ),
+        condition=EqConditionSpec(
+            left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
+        ),
+        matcher_name="TransientWorkingStateSlotContributions",
+    ),
+    "CoreClassProduction.retained_initvar_state_slots": AssemblyEdgeSpec(
+        name="CoreClassProduction.retained_initvar_state_slots",
+        context_inputs=(
+            AssemblyInputSpec(
+                name="lifecycle_class", collection_name="Classes", collection=None
+            ),
+        ),
+        from_inputs=(
+            AssemblyInputSpec(
+                name="initvar", collection_name="RetainedInitVars", collection=None
+            ),
+        ),
+        condition=EqConditionSpec(
+            left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
+        ),
+        matcher_name="RetainedInitVarStateSlotContributions",
+    ),
+    "CoreClassProduction.transient_init_params": AssemblyEdgeSpec(
+        name="CoreClassProduction.transient_init_params",
+        context_inputs=(
+            AssemblyInputSpec(
+                name="lifecycle_class", collection_name="Classes", collection=None
+            ),
+        ),
+        from_inputs=(
+            AssemblyInputSpec(
+                name="field", collection_name="TransientFields", collection=None
+            ),
+        ),
+        condition=EqConditionSpec(
+            left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
+        ),
+        matcher_name="TransientInitParamContributions",
+    ),
+    "CoreClassProduction.transient_current_init_assignments": AssemblyEdgeSpec(
+        name="CoreClassProduction.transient_current_init_assignments",
+        context_inputs=(
+            AssemblyInputSpec(
+                name="lifecycle_class", collection_name="Classes", collection=None
+            ),
+        ),
+        from_inputs=(
+            AssemblyInputSpec(
+                name="field", collection_name="TransientFields", collection=None
+            ),
+        ),
+        condition=EqConditionSpec(
+            left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
+        ),
+        matcher_name="TransientCurrentInitAssignmentContributions",
+    ),
+    "CoreClassProduction.transient_working_init_assignments": AssemblyEdgeSpec(
+        name="CoreClassProduction.transient_working_init_assignments",
+        context_inputs=(
+            AssemblyInputSpec(
+                name="lifecycle_class", collection_name="Classes", collection=None
+            ),
+        ),
+        from_inputs=(
+            AssemblyInputSpec(
+                name="field", collection_name="TransientFields", collection=None
+            ),
+        ),
+        condition=EqConditionSpec(
+            left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
+        ),
+        matcher_name="TransientWorkingInitAssignmentContributions",
+    ),
+    "CoreClassProduction.retained_initvar_state_assignments": AssemblyEdgeSpec(
+        name="CoreClassProduction.retained_initvar_state_assignments",
+        context_inputs=(
+            AssemblyInputSpec(
+                name="lifecycle_class", collection_name="Classes", collection=None
+            ),
+        ),
+        from_inputs=(
+            AssemblyInputSpec(
+                name="initvar", collection_name="RetainedInitVars", collection=None
+            ),
+        ),
+        condition=EqConditionSpec(
+            left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
+        ),
+        matcher_name="RetainedInitVarStateAssignmentContributions",
+    ),
+    "CoreClassProduction.transient_default_properties": AssemblyEdgeSpec(
+        name="CoreClassProduction.transient_default_properties",
+        context_inputs=(
+            AssemblyInputSpec(
+                name="lifecycle_class", collection_name="Classes", collection=None
+            ),
+        ),
+        from_inputs=(
+            AssemblyInputSpec(
+                name="field", collection_name="IndexedTransientFields", collection=None
+            ),
+        ),
+        condition=EqConditionSpec(
+            left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
+        ),
+        matcher_name="TransientDefaultFacadePropertyContributions",
+    ),
+    "CoreClassProduction.transient_current_properties": AssemblyEdgeSpec(
+        name="CoreClassProduction.transient_current_properties",
+        context_inputs=(
+            AssemblyInputSpec(
+                name="lifecycle_class", collection_name="Classes", collection=None
+            ),
+        ),
+        from_inputs=(
+            AssemblyInputSpec(
+                name="field", collection_name="TransientFields", collection=None
+            ),
+        ),
+        condition=EqConditionSpec(
+            left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
+        ),
+        matcher_name="TransientCurrentPropertyContributions",
+    ),
+    "CoreClassProduction.transient_working_properties": AssemblyEdgeSpec(
+        name="CoreClassProduction.transient_working_properties",
+        context_inputs=(
+            AssemblyInputSpec(
+                name="lifecycle_class", collection_name="Classes", collection=None
+            ),
+        ),
+        from_inputs=(
+            AssemblyInputSpec(
+                name="field", collection_name="IndexedTransientFields", collection=None
+            ),
+        ),
+        condition=EqConditionSpec(
+            left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
+        ),
+        matcher_name="TransientWorkingFacadePropertyContributions",
+    ),
+    "CoreClassProduction.transient_default_working_factory_args": AssemblyEdgeSpec(
+        name="CoreClassProduction.transient_default_working_factory_args",
+        context_inputs=(
+            AssemblyInputSpec(
+                name="lifecycle_class", collection_name="Classes", collection=None
+            ),
+        ),
+        from_inputs=(
+            AssemblyInputSpec(
+                name="arg",
+                collection_name="TransientWorkingFactoryArgs",
+                collection=None,
+            ),
+        ),
+        condition=EqConditionSpec(
+            left=ValueRef("WorkingFactoryArgOwner"), right=ValueRef("ClassId")
+        ),
+        matcher_name="TransientDefaultWorkingFactoryArgContributions",
+    ),
+    "CoreClassProduction.transient_working_working_factory_args": AssemblyEdgeSpec(
+        name="CoreClassProduction.transient_working_working_factory_args",
+        context_inputs=(
+            AssemblyInputSpec(
+                name="lifecycle_class", collection_name="Classes", collection=None
+            ),
+        ),
+        from_inputs=(
+            AssemblyInputSpec(
+                name="arg",
+                collection_name="TransientWorkingFactoryArgs",
+                collection=None,
+            ),
+        ),
+        condition=EqConditionSpec(
+            left=ValueRef("WorkingFactoryArgOwner"), right=ValueRef("ClassId")
+        ),
+        matcher_name="TransientWorkingWorkingFactoryArgContributions",
+    ),
+    "CoreClassProduction.transient_apply_prepared_commit": AssemblyEdgeSpec(
+        name="CoreClassProduction.transient_apply_prepared_commit",
+        context_inputs=(
+            AssemblyInputSpec(
+                name="lifecycle_class", collection_name="Classes", collection=None
+            ),
+        ),
+        from_inputs=(
+            AssemblyInputSpec(
+                name="field", collection_name="IndexedTransientFields", collection=None
+            ),
+        ),
+        condition=EqConditionSpec(
+            left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
+        ),
+        matcher_name="TransientApplyPreparedCommitContributions",
+    ),
+    "CoreClassProduction.transient_rollback": AssemblyEdgeSpec(
+        name="CoreClassProduction.transient_rollback",
         context_inputs=(
             AssemblyInputSpec(
                 name="lifecycle_class", collection_name="Classes", collection=None
@@ -17109,8 +16397,291 @@ ASSEMBLY_EDGES = {
         ),
         matcher_name="TransientRollbackContributions",
     ),
-    "ClassProduction.owned_prepare_commit": AssemblyEdgeSpec(
-        name="ClassProduction.owned_prepare_commit",
+    "CoreModuleProduction.binding_support_helpers": AssemblyEdgeSpec(
+        name="CoreModuleProduction.binding_support_helpers",
+        context_inputs=(),
+        from_inputs=(
+            AssemblyInputSpec(
+                name="lifecycle_class", collection_name="Classes", collection=None
+            ),
+        ),
+        condition=None,
+        matcher_name="BindingSupportHelperContributions",
+    ),
+    "CoreClassProduction.binding_state_slots": AssemblyEdgeSpec(
+        name="CoreClassProduction.binding_state_slots",
+        context_inputs=(
+            AssemblyInputSpec(
+                name="lifecycle_class", collection_name="Classes", collection=None
+            ),
+        ),
+        from_inputs=(
+            AssemblyInputSpec(
+                name="field", collection_name="BindingFields", collection=None
+            ),
+        ),
+        condition=EqConditionSpec(
+            left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
+        ),
+        matcher_name="BindingStateSlotContributions",
+    ),
+    "CoreClassProduction.owned_current_state_slots": AssemblyEdgeSpec(
+        name="CoreClassProduction.owned_current_state_slots",
+        context_inputs=(
+            AssemblyInputSpec(
+                name="lifecycle_class", collection_name="Classes", collection=None
+            ),
+        ),
+        from_inputs=(
+            AssemblyInputSpec(
+                name="field", collection_name="OwnedFields", collection=None
+            ),
+        ),
+        condition=EqConditionSpec(
+            left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
+        ),
+        matcher_name="OwnedCurrentStateSlotContributions",
+    ),
+    "CoreClassProduction.owned_working_state_slots": AssemblyEdgeSpec(
+        name="CoreClassProduction.owned_working_state_slots",
+        context_inputs=(
+            AssemblyInputSpec(
+                name="lifecycle_class", collection_name="Classes", collection=None
+            ),
+        ),
+        from_inputs=(
+            AssemblyInputSpec(
+                name="field", collection_name="OwnedFields", collection=None
+            ),
+        ),
+        condition=EqConditionSpec(
+            left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
+        ),
+        matcher_name="OwnedWorkingStateSlotContributions",
+    ),
+    "CoreClassProduction.owned_staged_state_slots": AssemblyEdgeSpec(
+        name="CoreClassProduction.owned_staged_state_slots",
+        context_inputs=(
+            AssemblyInputSpec(
+                name="lifecycle_class", collection_name="Classes", collection=None
+            ),
+        ),
+        from_inputs=(
+            AssemblyInputSpec(
+                name="field", collection_name="OwnedFields", collection=None
+            ),
+        ),
+        condition=EqConditionSpec(
+            left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
+        ),
+        matcher_name="OwnedStagedStateSlotContributions",
+    ),
+    "CoreClassProduction.binding_init_params": AssemblyEdgeSpec(
+        name="CoreClassProduction.binding_init_params",
+        context_inputs=(
+            AssemblyInputSpec(
+                name="lifecycle_class", collection_name="Classes", collection=None
+            ),
+        ),
+        from_inputs=(
+            AssemblyInputSpec(
+                name="field", collection_name="BindingFields", collection=None
+            ),
+        ),
+        condition=EqConditionSpec(
+            left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
+        ),
+        matcher_name="BindingInitParamContributions",
+    ),
+    "CoreClassProduction.owned_init_params": AssemblyEdgeSpec(
+        name="CoreClassProduction.owned_init_params",
+        context_inputs=(
+            AssemblyInputSpec(
+                name="lifecycle_class", collection_name="Classes", collection=None
+            ),
+        ),
+        from_inputs=(
+            AssemblyInputSpec(
+                name="field", collection_name="OwnedFields", collection=None
+            ),
+        ),
+        condition=EqConditionSpec(
+            left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
+        ),
+        matcher_name="OwnedInitParamContributions",
+    ),
+    "CoreClassProduction.binding_init_assignments": AssemblyEdgeSpec(
+        name="CoreClassProduction.binding_init_assignments",
+        context_inputs=(
+            AssemblyInputSpec(
+                name="lifecycle_class", collection_name="Classes", collection=None
+            ),
+        ),
+        from_inputs=(
+            AssemblyInputSpec(
+                name="field", collection_name="BindingFields", collection=None
+            ),
+        ),
+        condition=EqConditionSpec(
+            left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
+        ),
+        matcher_name="BindingInitAssignmentContributions",
+    ),
+    "CoreClassProduction.owned_current_init_assignments": AssemblyEdgeSpec(
+        name="CoreClassProduction.owned_current_init_assignments",
+        context_inputs=(
+            AssemblyInputSpec(
+                name="lifecycle_class", collection_name="Classes", collection=None
+            ),
+        ),
+        from_inputs=(
+            AssemblyInputSpec(
+                name="field", collection_name="OwnedFields", collection=None
+            ),
+        ),
+        condition=EqConditionSpec(
+            left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
+        ),
+        matcher_name="OwnedCurrentInitAssignmentContributions",
+    ),
+    "CoreClassProduction.owned_working_init_assignments": AssemblyEdgeSpec(
+        name="CoreClassProduction.owned_working_init_assignments",
+        context_inputs=(
+            AssemblyInputSpec(
+                name="lifecycle_class", collection_name="Classes", collection=None
+            ),
+        ),
+        from_inputs=(
+            AssemblyInputSpec(
+                name="field", collection_name="OwnedFields", collection=None
+            ),
+        ),
+        condition=EqConditionSpec(
+            left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
+        ),
+        matcher_name="OwnedWorkingInitAssignmentContributions",
+    ),
+    "CoreClassProduction.owned_staged_init_assignments": AssemblyEdgeSpec(
+        name="CoreClassProduction.owned_staged_init_assignments",
+        context_inputs=(
+            AssemblyInputSpec(
+                name="lifecycle_class", collection_name="Classes", collection=None
+            ),
+        ),
+        from_inputs=(
+            AssemblyInputSpec(
+                name="field", collection_name="OwnedFields", collection=None
+            ),
+        ),
+        condition=EqConditionSpec(
+            left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
+        ),
+        matcher_name="OwnedStagedInitAssignmentContributions",
+    ),
+    "CoreClassProduction.binding_properties": AssemblyEdgeSpec(
+        name="CoreClassProduction.binding_properties",
+        context_inputs=(
+            AssemblyInputSpec(
+                name="lifecycle_class", collection_name="Classes", collection=None
+            ),
+        ),
+        from_inputs=(
+            AssemblyInputSpec(
+                name="field", collection_name="BindingFields", collection=None
+            ),
+        ),
+        condition=EqConditionSpec(
+            left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
+        ),
+        matcher_name="BindingPropertyContributions",
+    ),
+    "CoreClassProduction.owned_default_properties": AssemblyEdgeSpec(
+        name="CoreClassProduction.owned_default_properties",
+        context_inputs=(
+            AssemblyInputSpec(
+                name="lifecycle_class", collection_name="Classes", collection=None
+            ),
+        ),
+        from_inputs=(
+            AssemblyInputSpec(
+                name="field", collection_name="IndexedOwnedFields", collection=None
+            ),
+        ),
+        condition=EqConditionSpec(
+            left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
+        ),
+        matcher_name="OwnedDefaultFacadePropertyContributions",
+    ),
+    "CoreClassProduction.owned_current_properties": AssemblyEdgeSpec(
+        name="CoreClassProduction.owned_current_properties",
+        context_inputs=(
+            AssemblyInputSpec(
+                name="lifecycle_class", collection_name="Classes", collection=None
+            ),
+        ),
+        from_inputs=(
+            AssemblyInputSpec(
+                name="field", collection_name="IndexedOwnedFields", collection=None
+            ),
+        ),
+        condition=EqConditionSpec(
+            left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
+        ),
+        matcher_name="OwnedCurrentFacadePropertyContributions",
+    ),
+    "CoreClassProduction.owned_working_properties": AssemblyEdgeSpec(
+        name="CoreClassProduction.owned_working_properties",
+        context_inputs=(
+            AssemblyInputSpec(
+                name="lifecycle_class", collection_name="Classes", collection=None
+            ),
+        ),
+        from_inputs=(
+            AssemblyInputSpec(
+                name="field", collection_name="IndexedOwnedFields", collection=None
+            ),
+        ),
+        condition=EqConditionSpec(
+            left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
+        ),
+        matcher_name="OwnedWorkingFacadePropertyContributions",
+    ),
+    "CoreClassProduction.owned_apply_prepared_commit": AssemblyEdgeSpec(
+        name="CoreClassProduction.owned_apply_prepared_commit",
+        context_inputs=(
+            AssemblyInputSpec(
+                name="lifecycle_class", collection_name="Classes", collection=None
+            ),
+        ),
+        from_inputs=(
+            AssemblyInputSpec(
+                name="field", collection_name="IndexedOwnedFields", collection=None
+            ),
+        ),
+        condition=EqConditionSpec(
+            left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
+        ),
+        matcher_name="OwnedApplyPreparedCommitContributions",
+    ),
+    "CoreClassProduction.owned_rollback": AssemblyEdgeSpec(
+        name="CoreClassProduction.owned_rollback",
+        context_inputs=(
+            AssemblyInputSpec(
+                name="lifecycle_class", collection_name="Classes", collection=None
+            ),
+        ),
+        from_inputs=(
+            AssemblyInputSpec(
+                name="field", collection_name="IndexedOwnedFields", collection=None
+            ),
+        ),
+        condition=EqConditionSpec(
+            left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
+        ),
+        matcher_name="OwnedRollbackContributions",
+    ),
+    "CoreClassProduction.owned_prepare_commit": AssemblyEdgeSpec(
+        name="CoreClassProduction.owned_prepare_commit",
         context_inputs=(
             AssemblyInputSpec(
                 name="lifecycle_class", collection_name="Classes", collection=None
@@ -17189,6 +16760,64 @@ ASSEMBLY_PRODUCTIONS = {
                     ),
                     condition=None,
                     matcher_name="FieldDefaultBuilderParamContributions",
+                )
+            ),
+            InlineApplySpec(
+                edge=AssemblyEdgeSpec(
+                    name="CoreModuleProduction.transient_working_default_params",
+                    context_inputs=(),
+                    from_inputs=(
+                        AssemblyInputSpec(
+                            name="field", collection_name="Fields", collection=None
+                        ),
+                    ),
+                    condition=None,
+                    matcher_name="TransientWorkingDefaultBuilderParamContributions",
+                )
+            ),
+            InlineApplySpec(
+                edge=AssemblyEdgeSpec(
+                    name="CoreModuleProduction.binding_support_helpers",
+                    context_inputs=(),
+                    from_inputs=(
+                        AssemblyInputSpec(
+                            name="lifecycle_class",
+                            collection_name="Classes",
+                            collection=None,
+                        ),
+                    ),
+                    condition=None,
+                    matcher_name="BindingSupportHelperContributions",
+                )
+            ),
+            InlineApplySpec(
+                edge=AssemblyEdgeSpec(
+                    name="CoreModuleProduction.managed_freeze_params",
+                    context_inputs=(),
+                    from_inputs=(
+                        AssemblyInputSpec(
+                            name="field",
+                            collection_name="ManagedFields",
+                            collection=None,
+                        ),
+                    ),
+                    condition=None,
+                    matcher_name="ManagedFreezeBuilderParamContributions",
+                )
+            ),
+            InlineApplySpec(
+                edge=AssemblyEdgeSpec(
+                    name="CoreModuleProduction.managed_thaw_params",
+                    context_inputs=(),
+                    from_inputs=(
+                        AssemblyInputSpec(
+                            name="field",
+                            collection_name="ManagedFields",
+                            collection=None,
+                        ),
+                    ),
+                    condition=None,
+                    matcher_name="ManagedThawBuilderParamContributions",
                 )
             ),
             InlineApplySpec(
@@ -17365,6 +16994,230 @@ ASSEMBLY_PRODUCTIONS = {
             ),
             InlineApplySpec(
                 edge=AssemblyEdgeSpec(
+                    name="CoreClassProduction.binding_state_slots",
+                    context_inputs=(
+                        AssemblyInputSpec(
+                            name="lifecycle_class",
+                            collection_name="Classes",
+                            collection=None,
+                        ),
+                    ),
+                    from_inputs=(
+                        AssemblyInputSpec(
+                            name="field",
+                            collection_name="BindingFields",
+                            collection=None,
+                        ),
+                    ),
+                    condition=EqConditionSpec(
+                        left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
+                    ),
+                    matcher_name="BindingStateSlotContributions",
+                )
+            ),
+            InlineApplySpec(
+                edge=AssemblyEdgeSpec(
+                    name="CoreClassProduction.owned_current_state_slots",
+                    context_inputs=(
+                        AssemblyInputSpec(
+                            name="lifecycle_class",
+                            collection_name="Classes",
+                            collection=None,
+                        ),
+                    ),
+                    from_inputs=(
+                        AssemblyInputSpec(
+                            name="field", collection_name="OwnedFields", collection=None
+                        ),
+                    ),
+                    condition=EqConditionSpec(
+                        left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
+                    ),
+                    matcher_name="OwnedCurrentStateSlotContributions",
+                )
+            ),
+            InlineApplySpec(
+                edge=AssemblyEdgeSpec(
+                    name="CoreClassProduction.owned_working_state_slots",
+                    context_inputs=(
+                        AssemblyInputSpec(
+                            name="lifecycle_class",
+                            collection_name="Classes",
+                            collection=None,
+                        ),
+                    ),
+                    from_inputs=(
+                        AssemblyInputSpec(
+                            name="field", collection_name="OwnedFields", collection=None
+                        ),
+                    ),
+                    condition=EqConditionSpec(
+                        left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
+                    ),
+                    matcher_name="OwnedWorkingStateSlotContributions",
+                )
+            ),
+            InlineApplySpec(
+                edge=AssemblyEdgeSpec(
+                    name="CoreClassProduction.owned_staged_state_slots",
+                    context_inputs=(
+                        AssemblyInputSpec(
+                            name="lifecycle_class",
+                            collection_name="Classes",
+                            collection=None,
+                        ),
+                    ),
+                    from_inputs=(
+                        AssemblyInputSpec(
+                            name="field", collection_name="OwnedFields", collection=None
+                        ),
+                    ),
+                    condition=EqConditionSpec(
+                        left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
+                    ),
+                    matcher_name="OwnedStagedStateSlotContributions",
+                )
+            ),
+            InlineApplySpec(
+                edge=AssemblyEdgeSpec(
+                    name="CoreClassProduction.managed_current_state_slots",
+                    context_inputs=(
+                        AssemblyInputSpec(
+                            name="lifecycle_class",
+                            collection_name="Classes",
+                            collection=None,
+                        ),
+                    ),
+                    from_inputs=(
+                        AssemblyInputSpec(
+                            name="field",
+                            collection_name="ManagedFields",
+                            collection=None,
+                        ),
+                    ),
+                    condition=EqConditionSpec(
+                        left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
+                    ),
+                    matcher_name="ManagedCurrentStateSlotContributions",
+                )
+            ),
+            InlineApplySpec(
+                edge=AssemblyEdgeSpec(
+                    name="CoreClassProduction.transient_current_state_slots",
+                    context_inputs=(
+                        AssemblyInputSpec(
+                            name="lifecycle_class",
+                            collection_name="Classes",
+                            collection=None,
+                        ),
+                    ),
+                    from_inputs=(
+                        AssemblyInputSpec(
+                            name="field",
+                            collection_name="TransientFields",
+                            collection=None,
+                        ),
+                    ),
+                    condition=EqConditionSpec(
+                        left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
+                    ),
+                    matcher_name="TransientCurrentStateSlotContributions",
+                )
+            ),
+            InlineApplySpec(
+                edge=AssemblyEdgeSpec(
+                    name="CoreClassProduction.managed_working_state_slots",
+                    context_inputs=(
+                        AssemblyInputSpec(
+                            name="lifecycle_class",
+                            collection_name="Classes",
+                            collection=None,
+                        ),
+                    ),
+                    from_inputs=(
+                        AssemblyInputSpec(
+                            name="field",
+                            collection_name="ManagedFields",
+                            collection=None,
+                        ),
+                    ),
+                    condition=EqConditionSpec(
+                        left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
+                    ),
+                    matcher_name="ManagedWorkingStateSlotContributions",
+                )
+            ),
+            InlineApplySpec(
+                edge=AssemblyEdgeSpec(
+                    name="CoreClassProduction.transient_working_state_slots",
+                    context_inputs=(
+                        AssemblyInputSpec(
+                            name="lifecycle_class",
+                            collection_name="Classes",
+                            collection=None,
+                        ),
+                    ),
+                    from_inputs=(
+                        AssemblyInputSpec(
+                            name="field",
+                            collection_name="TransientFields",
+                            collection=None,
+                        ),
+                    ),
+                    condition=EqConditionSpec(
+                        left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
+                    ),
+                    matcher_name="TransientWorkingStateSlotContributions",
+                )
+            ),
+            InlineApplySpec(
+                edge=AssemblyEdgeSpec(
+                    name="CoreClassProduction.retained_initvar_state_slots",
+                    context_inputs=(
+                        AssemblyInputSpec(
+                            name="lifecycle_class",
+                            collection_name="Classes",
+                            collection=None,
+                        ),
+                    ),
+                    from_inputs=(
+                        AssemblyInputSpec(
+                            name="initvar",
+                            collection_name="RetainedInitVars",
+                            collection=None,
+                        ),
+                    ),
+                    condition=EqConditionSpec(
+                        left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
+                    ),
+                    matcher_name="RetainedInitVarStateSlotContributions",
+                )
+            ),
+            InlineApplySpec(
+                edge=AssemblyEdgeSpec(
+                    name="CoreClassProduction.managed_staged_state_slots",
+                    context_inputs=(
+                        AssemblyInputSpec(
+                            name="lifecycle_class",
+                            collection_name="Classes",
+                            collection=None,
+                        ),
+                    ),
+                    from_inputs=(
+                        AssemblyInputSpec(
+                            name="field",
+                            collection_name="ManagedFields",
+                            collection=None,
+                        ),
+                    ),
+                    condition=EqConditionSpec(
+                        left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
+                    ),
+                    matcher_name="ManagedStagedStateSlotContributions",
+                )
+            ),
+            InlineApplySpec(
+                edge=AssemblyEdgeSpec(
                     name="CoreClassProduction.transaction_manager_param",
                     context_inputs=(
                         AssemblyInputSpec(
@@ -17511,6 +17364,258 @@ ASSEMBLY_PRODUCTIONS = {
                     from_inputs=(),
                     condition=None,
                     matcher_name="AfterRollbackFallbackContributions",
+                )
+            ),
+            InlineApplySpec(
+                edge=AssemblyEdgeSpec(
+                    name="CoreClassProduction.commit_order_key_helpers",
+                    context_inputs=(
+                        AssemblyInputSpec(
+                            name="lifecycle_class",
+                            collection_name="Classes",
+                            collection=None,
+                        ),
+                    ),
+                    from_inputs=(
+                        AssemblyInputSpec(
+                            name="tx_group", collection_name="TxGroups", collection=None
+                        ),
+                    ),
+                    condition=EqConditionSpec(
+                        left=ValueRef("TxOwner"), right=ValueRef("ClassId")
+                    ),
+                    matcher_name="CommitOrderKeyHelperContributions",
+                )
+            ),
+            InlineApplySpec(
+                edge=AssemblyEdgeSpec(
+                    name="CoreClassProduction.requires_validation_helpers",
+                    context_inputs=(
+                        AssemblyInputSpec(
+                            name="lifecycle_class",
+                            collection_name="Classes",
+                            collection=None,
+                        ),
+                    ),
+                    from_inputs=(
+                        AssemblyInputSpec(
+                            name="tx_group", collection_name="TxGroups", collection=None
+                        ),
+                    ),
+                    condition=EqConditionSpec(
+                        left=ValueRef("TxOwner"), right=ValueRef("ClassId")
+                    ),
+                    matcher_name="RequiresValidationHelperContributions",
+                )
+            ),
+            InlineApplySpec(
+                edge=AssemblyEdgeSpec(
+                    name="CoreClassProduction.validate_commit_helpers",
+                    context_inputs=(
+                        AssemblyInputSpec(
+                            name="lifecycle_class",
+                            collection_name="Classes",
+                            collection=None,
+                        ),
+                    ),
+                    from_inputs=(
+                        AssemblyInputSpec(
+                            name="tx_group", collection_name="TxGroups", collection=None
+                        ),
+                    ),
+                    condition=EqConditionSpec(
+                        left=ValueRef("TxOwner"), right=ValueRef("ClassId")
+                    ),
+                    matcher_name="ValidateCommitHelperContributions",
+                )
+            ),
+            InlineApplySpec(
+                edge=AssemblyEdgeSpec(
+                    name="CoreClassProduction.before_commit_helpers",
+                    context_inputs=(
+                        AssemblyInputSpec(
+                            name="lifecycle_class",
+                            collection_name="Classes",
+                            collection=None,
+                        ),
+                    ),
+                    from_inputs=(
+                        AssemblyInputSpec(
+                            name="tx_group", collection_name="TxGroups", collection=None
+                        ),
+                    ),
+                    condition=EqConditionSpec(
+                        left=ValueRef("TxOwner"), right=ValueRef("ClassId")
+                    ),
+                    matcher_name="BeforeCommitHelperContributions",
+                )
+            ),
+            InlineApplySpec(
+                edge=AssemblyEdgeSpec(
+                    name="CoreClassProduction.after_commit_helpers",
+                    context_inputs=(
+                        AssemblyInputSpec(
+                            name="lifecycle_class",
+                            collection_name="Classes",
+                            collection=None,
+                        ),
+                    ),
+                    from_inputs=(
+                        AssemblyInputSpec(
+                            name="tx_group", collection_name="TxGroups", collection=None
+                        ),
+                    ),
+                    condition=EqConditionSpec(
+                        left=ValueRef("TxOwner"), right=ValueRef("ClassId")
+                    ),
+                    matcher_name="AfterCommitHelperContributions",
+                )
+            ),
+            InlineApplySpec(
+                edge=AssemblyEdgeSpec(
+                    name="CoreClassProduction.after_rollback_helpers",
+                    context_inputs=(
+                        AssemblyInputSpec(
+                            name="lifecycle_class",
+                            collection_name="Classes",
+                            collection=None,
+                        ),
+                    ),
+                    from_inputs=(
+                        AssemblyInputSpec(
+                            name="tx_group", collection_name="TxGroups", collection=None
+                        ),
+                    ),
+                    condition=EqConditionSpec(
+                        left=ValueRef("TxOwner"), right=ValueRef("ClassId")
+                    ),
+                    matcher_name="AfterRollbackHelperContributions",
+                )
+            ),
+            InlineApplySpec(
+                edge=AssemblyEdgeSpec(
+                    name="CoreClassProduction.commit_order_key_dispatch",
+                    context_inputs=(
+                        AssemblyInputSpec(
+                            name="lifecycle_class",
+                            collection_name="Classes",
+                            collection=None,
+                        ),
+                    ),
+                    from_inputs=(
+                        AssemblyInputSpec(
+                            name="tx_group", collection_name="TxGroups", collection=None
+                        ),
+                    ),
+                    condition=EqConditionSpec(
+                        left=ValueRef("TxOwner"), right=ValueRef("ClassId")
+                    ),
+                    matcher_name="CommitOrderKeyDispatchContributions",
+                )
+            ),
+            InlineApplySpec(
+                edge=AssemblyEdgeSpec(
+                    name="CoreClassProduction.requires_validation_dispatch",
+                    context_inputs=(
+                        AssemblyInputSpec(
+                            name="lifecycle_class",
+                            collection_name="Classes",
+                            collection=None,
+                        ),
+                    ),
+                    from_inputs=(
+                        AssemblyInputSpec(
+                            name="tx_group", collection_name="TxGroups", collection=None
+                        ),
+                    ),
+                    condition=EqConditionSpec(
+                        left=ValueRef("TxOwner"), right=ValueRef("ClassId")
+                    ),
+                    matcher_name="RequiresValidationDispatchContributions",
+                )
+            ),
+            InlineApplySpec(
+                edge=AssemblyEdgeSpec(
+                    name="CoreClassProduction.validate_commit_dispatch",
+                    context_inputs=(
+                        AssemblyInputSpec(
+                            name="lifecycle_class",
+                            collection_name="Classes",
+                            collection=None,
+                        ),
+                    ),
+                    from_inputs=(
+                        AssemblyInputSpec(
+                            name="tx_group", collection_name="TxGroups", collection=None
+                        ),
+                    ),
+                    condition=EqConditionSpec(
+                        left=ValueRef("TxOwner"), right=ValueRef("ClassId")
+                    ),
+                    matcher_name="ValidateCommitDispatchContributions",
+                )
+            ),
+            InlineApplySpec(
+                edge=AssemblyEdgeSpec(
+                    name="CoreClassProduction.before_commit_dispatch",
+                    context_inputs=(
+                        AssemblyInputSpec(
+                            name="lifecycle_class",
+                            collection_name="Classes",
+                            collection=None,
+                        ),
+                    ),
+                    from_inputs=(
+                        AssemblyInputSpec(
+                            name="tx_group", collection_name="TxGroups", collection=None
+                        ),
+                    ),
+                    condition=EqConditionSpec(
+                        left=ValueRef("TxOwner"), right=ValueRef("ClassId")
+                    ),
+                    matcher_name="BeforeCommitDispatchContributions",
+                )
+            ),
+            InlineApplySpec(
+                edge=AssemblyEdgeSpec(
+                    name="CoreClassProduction.after_commit_dispatch",
+                    context_inputs=(
+                        AssemblyInputSpec(
+                            name="lifecycle_class",
+                            collection_name="Classes",
+                            collection=None,
+                        ),
+                    ),
+                    from_inputs=(
+                        AssemblyInputSpec(
+                            name="tx_group", collection_name="TxGroups", collection=None
+                        ),
+                    ),
+                    condition=EqConditionSpec(
+                        left=ValueRef("TxOwner"), right=ValueRef("ClassId")
+                    ),
+                    matcher_name="AfterCommitDispatchContributions",
+                )
+            ),
+            InlineApplySpec(
+                edge=AssemblyEdgeSpec(
+                    name="CoreClassProduction.after_rollback_dispatch",
+                    context_inputs=(
+                        AssemblyInputSpec(
+                            name="lifecycle_class",
+                            collection_name="Classes",
+                            collection=None,
+                        ),
+                    ),
+                    from_inputs=(
+                        AssemblyInputSpec(
+                            name="tx_group", collection_name="TxGroups", collection=None
+                        ),
+                    ),
+                    condition=EqConditionSpec(
+                        left=ValueRef("TxOwner"), right=ValueRef("ClassId")
+                    ),
+                    matcher_name="AfterRollbackDispatchContributions",
                 )
             ),
             InlineApplySpec(
@@ -17697,6 +17802,50 @@ ASSEMBLY_PRODUCTIONS = {
             ),
             InlineApplySpec(
                 edge=AssemblyEdgeSpec(
+                    name="CoreClassProduction.binding_init_params",
+                    context_inputs=(
+                        AssemblyInputSpec(
+                            name="lifecycle_class",
+                            collection_name="Classes",
+                            collection=None,
+                        ),
+                    ),
+                    from_inputs=(
+                        AssemblyInputSpec(
+                            name="field",
+                            collection_name="BindingFields",
+                            collection=None,
+                        ),
+                    ),
+                    condition=EqConditionSpec(
+                        left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
+                    ),
+                    matcher_name="BindingInitParamContributions",
+                )
+            ),
+            InlineApplySpec(
+                edge=AssemblyEdgeSpec(
+                    name="CoreClassProduction.owned_init_params",
+                    context_inputs=(
+                        AssemblyInputSpec(
+                            name="lifecycle_class",
+                            collection_name="Classes",
+                            collection=None,
+                        ),
+                    ),
+                    from_inputs=(
+                        AssemblyInputSpec(
+                            name="field", collection_name="OwnedFields", collection=None
+                        ),
+                    ),
+                    condition=EqConditionSpec(
+                        left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
+                    ),
+                    matcher_name="OwnedInitParamContributions",
+                )
+            ),
+            InlineApplySpec(
+                edge=AssemblyEdgeSpec(
                     name="CoreClassProduction.initvar_params",
                     context_inputs=(
                         AssemblyInputSpec(
@@ -17716,6 +17865,52 @@ ASSEMBLY_PRODUCTIONS = {
                         left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
                     ),
                     matcher_name="InitVarParamContributions",
+                )
+            ),
+            InlineApplySpec(
+                edge=AssemblyEdgeSpec(
+                    name="CoreClassProduction.managed_init_params",
+                    context_inputs=(
+                        AssemblyInputSpec(
+                            name="lifecycle_class",
+                            collection_name="Classes",
+                            collection=None,
+                        ),
+                    ),
+                    from_inputs=(
+                        AssemblyInputSpec(
+                            name="field",
+                            collection_name="ManagedFields",
+                            collection=None,
+                        ),
+                    ),
+                    condition=EqConditionSpec(
+                        left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
+                    ),
+                    matcher_name="ManagedInitParamContributions",
+                )
+            ),
+            InlineApplySpec(
+                edge=AssemblyEdgeSpec(
+                    name="CoreClassProduction.transient_init_params",
+                    context_inputs=(
+                        AssemblyInputSpec(
+                            name="lifecycle_class",
+                            collection_name="Classes",
+                            collection=None,
+                        ),
+                    ),
+                    from_inputs=(
+                        AssemblyInputSpec(
+                            name="field",
+                            collection_name="TransientFields",
+                            collection=None,
+                        ),
+                    ),
+                    condition=EqConditionSpec(
+                        left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
+                    ),
+                    matcher_name="TransientInitParamContributions",
                 )
             ),
             InlineApplySpec(
@@ -17764,1288 +17959,7 @@ ASSEMBLY_PRODUCTIONS = {
             ),
             InlineApplySpec(
                 edge=AssemblyEdgeSpec(
-                    name="CoreClassProduction.plain_properties",
-                    context_inputs=(
-                        AssemblyInputSpec(
-                            name="lifecycle_class",
-                            collection_name="Classes",
-                            collection=None,
-                        ),
-                    ),
-                    from_inputs=(
-                        AssemblyInputSpec(
-                            name="field", collection_name="PlainFields", collection=None
-                        ),
-                    ),
-                    condition=EqConditionSpec(
-                        left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
-                    ),
-                    matcher_name="PlainPropertyContributions",
-                )
-            ),
-        ),
-    ),
-    "ModuleProduction": ComposableProductionSpec(
-        name="ModuleProduction",
-        inputs=(),
-        root=RootSpec(build_name="Root", resource_name="ModuleRoot", bindings=()),
-        applies=(
-            InlineApplySpec(
-                edge=AssemblyEdgeSpec(
-                    name="ModuleProduction.lifecycle_definition_params",
-                    context_inputs=(),
-                    from_inputs=(
-                        AssemblyInputSpec(
-                            name="lifecycle_class",
-                            collection_name="Classes",
-                            collection=None,
-                        ),
-                    ),
-                    condition=None,
-                    matcher_name="BuilderParamContributions",
-                )
-            ),
-            InlineApplySpec(
-                edge=AssemblyEdgeSpec(
-                    name="ModuleProduction.annotations_params",
-                    context_inputs=(),
-                    from_inputs=(
-                        AssemblyInputSpec(
-                            name="lifecycle_class",
-                            collection_name="Classes",
-                            collection=None,
-                        ),
-                    ),
-                    condition=None,
-                    matcher_name="AnnotationsBuilderParamContributions",
-                )
-            ),
-            InlineApplySpec(
-                edge=AssemblyEdgeSpec(
-                    name="ModuleProduction.tx_groups_params",
-                    context_inputs=(),
-                    from_inputs=(
-                        AssemblyInputSpec(
-                            name="lifecycle_class",
-                            collection_name="Classes",
-                            collection=None,
-                        ),
-                    ),
-                    condition=None,
-                    matcher_name="TxGroupsBuilderParamContributions",
-                )
-            ),
-            InlineApplySpec(
-                edge=AssemblyEdgeSpec(
-                    name="ModuleProduction.field_default_params",
-                    context_inputs=(),
-                    from_inputs=(
-                        AssemblyInputSpec(
-                            name="field", collection_name="Fields", collection=None
-                        ),
-                    ),
-                    condition=None,
-                    matcher_name="FieldDefaultBuilderParamContributions",
-                )
-            ),
-            InlineApplySpec(
-                edge=AssemblyEdgeSpec(
-                    name="ModuleProduction.transient_working_default_params",
-                    context_inputs=(),
-                    from_inputs=(
-                        AssemblyInputSpec(
-                            name="field", collection_name="Fields", collection=None
-                        ),
-                    ),
-                    condition=None,
-                    matcher_name="TransientWorkingDefaultBuilderParamContributions",
-                )
-            ),
-            InlineApplySpec(
-                edge=AssemblyEdgeSpec(
-                    name="ModuleProduction.binding_support_helpers",
-                    context_inputs=(),
-                    from_inputs=(
-                        AssemblyInputSpec(
-                            name="lifecycle_class",
-                            collection_name="Classes",
-                            collection=None,
-                        ),
-                    ),
-                    condition=None,
-                    matcher_name="BindingSupportHelperContributions",
-                )
-            ),
-            InlineApplySpec(
-                edge=AssemblyEdgeSpec(
-                    name="ModuleProduction.managed_freeze_params",
-                    context_inputs=(),
-                    from_inputs=(
-                        AssemblyInputSpec(
-                            name="field",
-                            collection_name="ManagedFields",
-                            collection=None,
-                        ),
-                    ),
-                    condition=None,
-                    matcher_name="ManagedFreezeBuilderParamContributions",
-                )
-            ),
-            InlineApplySpec(
-                edge=AssemblyEdgeSpec(
-                    name="ModuleProduction.managed_thaw_params",
-                    context_inputs=(),
-                    from_inputs=(
-                        AssemblyInputSpec(
-                            name="field",
-                            collection_name="ManagedFields",
-                            collection=None,
-                        ),
-                    ),
-                    condition=None,
-                    matcher_name="ManagedThawBuilderParamContributions",
-                )
-            ),
-            InlineApplySpec(
-                edge=AssemblyEdgeSpec(
-                    name="ModuleProduction.classes",
-                    context_inputs=(),
-                    from_inputs=(
-                        AssemblyInputSpec(
-                            name="lifecycle_class",
-                            collection_name="Classes",
-                            collection=None,
-                        ),
-                    ),
-                    condition=None,
-                    matcher_name="ClassDefinitionContributions",
-                )
-            ),
-            InlineApplySpec(
-                edge=AssemblyEdgeSpec(
-                    name="ModuleProduction.return_class",
-                    context_inputs=(),
-                    from_inputs=(
-                        AssemblyInputSpec(
-                            name="lifecycle_class",
-                            collection_name="Classes",
-                            collection=None,
-                        ),
-                    ),
-                    condition=None,
-                    matcher_name="ReturnClassContributions",
-                )
-            ),
-        ),
-    ),
-    "ClassProduction": ComposableProductionSpec(
-        name="ClassProduction",
-        inputs=(
-            AssemblyInputSpec(
-                name="lifecycle_class", collection_name="Classes", collection=None
-            ),
-        ),
-        root=RootSpec(
-            build_name="ClassDef",
-            resource_name="ClassBundle",
-            bindings=(
-                BindingSpec(
-                    kind="ident",
-                    name="state_class_decl_name",
-                    value=ValueRef("StateClassName"),
-                ),
-                BindingSpec(
-                    kind="ident",
-                    name="state_class_ref",
-                    value=ValueRef("StateClassName"),
-                ),
-                BindingSpec(
-                    kind="ident",
-                    name="default_facade_class_decl_name",
-                    value=ValueRef("ClassName"),
-                ),
-                BindingSpec(
-                    kind="ident",
-                    name="default_facade_class_ref",
-                    value=ValueRef("ClassName"),
-                ),
-                BindingSpec(
-                    kind="ident",
-                    name="facade_base_decl_name",
-                    value=ValueRef("FacadeBaseClassName"),
-                ),
-                BindingSpec(
-                    kind="ident",
-                    name="facade_base_default_base_name",
-                    value=ValueRef("FacadeBaseClassName"),
-                ),
-                BindingSpec(
-                    kind="ident",
-                    name="facade_base_current_base_name",
-                    value=ValueRef("FacadeBaseClassName"),
-                ),
-                BindingSpec(
-                    kind="ident",
-                    name="facade_base_working_base_name",
-                    value=ValueRef("FacadeBaseClassName"),
-                ),
-                BindingSpec(
-                    kind="ident",
-                    name="current_facade_class_decl_name",
-                    value=ValueRef("CurrentFacadeClassName"),
-                ),
-                BindingSpec(
-                    kind="ident",
-                    name="current_facade_class_ref",
-                    value=ValueRef("CurrentFacadeClassName"),
-                ),
-                BindingSpec(
-                    kind="ident",
-                    name="working_facade_class_decl_name",
-                    value=ValueRef("WorkingFacadeClassName"),
-                ),
-                BindingSpec(
-                    kind="ident",
-                    name="working_facade_class_ref",
-                    value=ValueRef("WorkingFacadeClassName"),
-                ),
-                BindingSpec(
-                    kind="ident",
-                    name="tx_groups_for_index_name",
-                    value=ValueRef("TxGroupsParamName"),
-                ),
-                BindingSpec(
-                    kind="ident",
-                    name="tx_groups_for_map_name",
-                    value=ValueRef("TxGroupsParamName"),
-                ),
-                BindingSpec(
-                    kind="ident",
-                    name="tx_groups_for_class_index_name",
-                    value=ValueRef("TxGroupsParamName"),
-                ),
-                BindingSpec(
-                    kind="ident",
-                    name="tx_groups_for_class_map_name",
-                    value=ValueRef("TxGroupsParamName"),
-                ),
-                BindingSpec(
-                    kind="ident",
-                    name="tx_groups_for_manager_name",
-                    value=ValueRef("TxGroupsParamName"),
-                ),
-                BindingSpec(
-                    kind="ident",
-                    name="tx_groups_for_slots_name",
-                    value=ValueRef("TxGroupsParamName"),
-                ),
-                BindingSpec(
-                    kind="ident",
-                    name="lifecycle_definition_name",
-                    value=ValueRef("LifecycleDefinitionParamName"),
-                ),
-                BindingSpec(
-                    kind="ident",
-                    name="annotations_name",
-                    value=ValueRef("AnnotationsParamName"),
-                ),
-                BindingSpec(
-                    kind="external",
-                    name="lifecycle_field_names",
-                    value=ValueRef("LifecycleFieldNames"),
-                ),
-            ),
-        ),
-        applies=(
-            InlineApplySpec(
-                edge=AssemblyEdgeSpec(
-                    name="ClassProduction.state_slots",
-                    context_inputs=(
-                        AssemblyInputSpec(
-                            name="lifecycle_class",
-                            collection_name="Classes",
-                            collection=None,
-                        ),
-                    ),
-                    from_inputs=(
-                        AssemblyInputSpec(
-                            name="field", collection_name="PlainFields", collection=None
-                        ),
-                    ),
-                    condition=EqConditionSpec(
-                        left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
-                    ),
-                    matcher_name="PlainStateSlotContributions",
-                )
-            ),
-            InlineApplySpec(
-                edge=AssemblyEdgeSpec(
-                    name="ClassProduction.binding_state_slots",
-                    context_inputs=(
-                        AssemblyInputSpec(
-                            name="lifecycle_class",
-                            collection_name="Classes",
-                            collection=None,
-                        ),
-                    ),
-                    from_inputs=(
-                        AssemblyInputSpec(
-                            name="field",
-                            collection_name="BindingFields",
-                            collection=None,
-                        ),
-                    ),
-                    condition=EqConditionSpec(
-                        left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
-                    ),
-                    matcher_name="BindingStateSlotContributions",
-                )
-            ),
-            InlineApplySpec(
-                edge=AssemblyEdgeSpec(
-                    name="ClassProduction.owned_current_state_slots",
-                    context_inputs=(
-                        AssemblyInputSpec(
-                            name="lifecycle_class",
-                            collection_name="Classes",
-                            collection=None,
-                        ),
-                    ),
-                    from_inputs=(
-                        AssemblyInputSpec(
-                            name="field", collection_name="OwnedFields", collection=None
-                        ),
-                    ),
-                    condition=EqConditionSpec(
-                        left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
-                    ),
-                    matcher_name="OwnedCurrentStateSlotContributions",
-                )
-            ),
-            InlineApplySpec(
-                edge=AssemblyEdgeSpec(
-                    name="ClassProduction.owned_working_state_slots",
-                    context_inputs=(
-                        AssemblyInputSpec(
-                            name="lifecycle_class",
-                            collection_name="Classes",
-                            collection=None,
-                        ),
-                    ),
-                    from_inputs=(
-                        AssemblyInputSpec(
-                            name="field", collection_name="OwnedFields", collection=None
-                        ),
-                    ),
-                    condition=EqConditionSpec(
-                        left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
-                    ),
-                    matcher_name="OwnedWorkingStateSlotContributions",
-                )
-            ),
-            InlineApplySpec(
-                edge=AssemblyEdgeSpec(
-                    name="ClassProduction.owned_staged_state_slots",
-                    context_inputs=(
-                        AssemblyInputSpec(
-                            name="lifecycle_class",
-                            collection_name="Classes",
-                            collection=None,
-                        ),
-                    ),
-                    from_inputs=(
-                        AssemblyInputSpec(
-                            name="field", collection_name="OwnedFields", collection=None
-                        ),
-                    ),
-                    condition=EqConditionSpec(
-                        left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
-                    ),
-                    matcher_name="OwnedStagedStateSlotContributions",
-                )
-            ),
-            InlineApplySpec(
-                edge=AssemblyEdgeSpec(
-                    name="ClassProduction.managed_current_state_slots",
-                    context_inputs=(
-                        AssemblyInputSpec(
-                            name="lifecycle_class",
-                            collection_name="Classes",
-                            collection=None,
-                        ),
-                    ),
-                    from_inputs=(
-                        AssemblyInputSpec(
-                            name="field",
-                            collection_name="ManagedFields",
-                            collection=None,
-                        ),
-                    ),
-                    condition=EqConditionSpec(
-                        left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
-                    ),
-                    matcher_name="ManagedCurrentStateSlotContributions",
-                )
-            ),
-            InlineApplySpec(
-                edge=AssemblyEdgeSpec(
-                    name="ClassProduction.transient_current_state_slots",
-                    context_inputs=(
-                        AssemblyInputSpec(
-                            name="lifecycle_class",
-                            collection_name="Classes",
-                            collection=None,
-                        ),
-                    ),
-                    from_inputs=(
-                        AssemblyInputSpec(
-                            name="field",
-                            collection_name="TransientFields",
-                            collection=None,
-                        ),
-                    ),
-                    condition=EqConditionSpec(
-                        left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
-                    ),
-                    matcher_name="TransientCurrentStateSlotContributions",
-                )
-            ),
-            InlineApplySpec(
-                edge=AssemblyEdgeSpec(
-                    name="ClassProduction.managed_working_state_slots",
-                    context_inputs=(
-                        AssemblyInputSpec(
-                            name="lifecycle_class",
-                            collection_name="Classes",
-                            collection=None,
-                        ),
-                    ),
-                    from_inputs=(
-                        AssemblyInputSpec(
-                            name="field",
-                            collection_name="ManagedFields",
-                            collection=None,
-                        ),
-                    ),
-                    condition=EqConditionSpec(
-                        left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
-                    ),
-                    matcher_name="ManagedWorkingStateSlotContributions",
-                )
-            ),
-            InlineApplySpec(
-                edge=AssemblyEdgeSpec(
-                    name="ClassProduction.transient_working_state_slots",
-                    context_inputs=(
-                        AssemblyInputSpec(
-                            name="lifecycle_class",
-                            collection_name="Classes",
-                            collection=None,
-                        ),
-                    ),
-                    from_inputs=(
-                        AssemblyInputSpec(
-                            name="field",
-                            collection_name="TransientFields",
-                            collection=None,
-                        ),
-                    ),
-                    condition=EqConditionSpec(
-                        left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
-                    ),
-                    matcher_name="TransientWorkingStateSlotContributions",
-                )
-            ),
-            InlineApplySpec(
-                edge=AssemblyEdgeSpec(
-                    name="ClassProduction.retained_initvar_state_slots",
-                    context_inputs=(
-                        AssemblyInputSpec(
-                            name="lifecycle_class",
-                            collection_name="Classes",
-                            collection=None,
-                        ),
-                    ),
-                    from_inputs=(
-                        AssemblyInputSpec(
-                            name="initvar",
-                            collection_name="RetainedInitVars",
-                            collection=None,
-                        ),
-                    ),
-                    condition=EqConditionSpec(
-                        left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
-                    ),
-                    matcher_name="RetainedInitVarStateSlotContributions",
-                )
-            ),
-            InlineApplySpec(
-                edge=AssemblyEdgeSpec(
-                    name="ClassProduction.managed_staged_state_slots",
-                    context_inputs=(
-                        AssemblyInputSpec(
-                            name="lifecycle_class",
-                            collection_name="Classes",
-                            collection=None,
-                        ),
-                    ),
-                    from_inputs=(
-                        AssemblyInputSpec(
-                            name="field",
-                            collection_name="ManagedFields",
-                            collection=None,
-                        ),
-                    ),
-                    condition=EqConditionSpec(
-                        left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
-                    ),
-                    matcher_name="ManagedStagedStateSlotContributions",
-                )
-            ),
-            InlineApplySpec(
-                edge=AssemblyEdgeSpec(
-                    name="ClassProduction.transaction_manager_param",
-                    context_inputs=(
-                        AssemblyInputSpec(
-                            name="lifecycle_class",
-                            collection_name="Classes",
-                            collection=None,
-                        ),
-                    ),
-                    from_inputs=(),
-                    condition=None,
-                    matcher_name="TransactionManagerInitParamContributions",
-                )
-            ),
-            InlineApplySpec(
-                edge=AssemblyEdgeSpec(
-                    name="ClassProduction.commit_order_key_fallback",
-                    context_inputs=(
-                        AssemblyInputSpec(
-                            name="lifecycle_class",
-                            collection_name="Classes",
-                            collection=None,
-                        ),
-                    ),
-                    from_inputs=(),
-                    condition=None,
-                    matcher_name="CommitOrderKeyFallbackContributions",
-                )
-            ),
-            InlineApplySpec(
-                edge=AssemblyEdgeSpec(
-                    name="ClassProduction.requires_validation_fallback",
-                    context_inputs=(
-                        AssemblyInputSpec(
-                            name="lifecycle_class",
-                            collection_name="Classes",
-                            collection=None,
-                        ),
-                    ),
-                    from_inputs=(),
-                    condition=None,
-                    matcher_name="RequiresValidationFallbackContributions",
-                )
-            ),
-            InlineApplySpec(
-                edge=AssemblyEdgeSpec(
-                    name="ClassProduction.validate_commit_fallback",
-                    context_inputs=(
-                        AssemblyInputSpec(
-                            name="lifecycle_class",
-                            collection_name="Classes",
-                            collection=None,
-                        ),
-                    ),
-                    from_inputs=(),
-                    condition=None,
-                    matcher_name="ValidateCommitFallbackContributions",
-                )
-            ),
-            InlineApplySpec(
-                edge=AssemblyEdgeSpec(
-                    name="ClassProduction.before_commit_fallback",
-                    context_inputs=(
-                        AssemblyInputSpec(
-                            name="lifecycle_class",
-                            collection_name="Classes",
-                            collection=None,
-                        ),
-                    ),
-                    from_inputs=(),
-                    condition=None,
-                    matcher_name="BeforeCommitFallbackContributions",
-                )
-            ),
-            InlineApplySpec(
-                edge=AssemblyEdgeSpec(
-                    name="ClassProduction.prepare_commit_dispatch_fallback",
-                    context_inputs=(
-                        AssemblyInputSpec(
-                            name="lifecycle_class",
-                            collection_name="Classes",
-                            collection=None,
-                        ),
-                    ),
-                    from_inputs=(),
-                    condition=None,
-                    matcher_name="PrepareCommitDispatchFallbackContributions",
-                )
-            ),
-            InlineApplySpec(
-                edge=AssemblyEdgeSpec(
-                    name="ClassProduction.commit_dispatch_fallback",
-                    context_inputs=(
-                        AssemblyInputSpec(
-                            name="lifecycle_class",
-                            collection_name="Classes",
-                            collection=None,
-                        ),
-                    ),
-                    from_inputs=(),
-                    condition=None,
-                    matcher_name="CommitDispatchFallbackContributions",
-                )
-            ),
-            InlineApplySpec(
-                edge=AssemblyEdgeSpec(
-                    name="ClassProduction.after_commit_fallback",
-                    context_inputs=(
-                        AssemblyInputSpec(
-                            name="lifecycle_class",
-                            collection_name="Classes",
-                            collection=None,
-                        ),
-                    ),
-                    from_inputs=(),
-                    condition=None,
-                    matcher_name="AfterCommitFallbackContributions",
-                )
-            ),
-            InlineApplySpec(
-                edge=AssemblyEdgeSpec(
-                    name="ClassProduction.rollback_dispatch_fallback",
-                    context_inputs=(
-                        AssemblyInputSpec(
-                            name="lifecycle_class",
-                            collection_name="Classes",
-                            collection=None,
-                        ),
-                    ),
-                    from_inputs=(),
-                    condition=None,
-                    matcher_name="RollbackDispatchFallbackContributions",
-                )
-            ),
-            InlineApplySpec(
-                edge=AssemblyEdgeSpec(
-                    name="ClassProduction.after_rollback_fallback",
-                    context_inputs=(
-                        AssemblyInputSpec(
-                            name="lifecycle_class",
-                            collection_name="Classes",
-                            collection=None,
-                        ),
-                    ),
-                    from_inputs=(),
-                    condition=None,
-                    matcher_name="AfterRollbackFallbackContributions",
-                )
-            ),
-            InlineApplySpec(
-                edge=AssemblyEdgeSpec(
-                    name="ClassProduction.commit_order_key_helpers",
-                    context_inputs=(
-                        AssemblyInputSpec(
-                            name="lifecycle_class",
-                            collection_name="Classes",
-                            collection=None,
-                        ),
-                    ),
-                    from_inputs=(
-                        AssemblyInputSpec(
-                            name="tx_group", collection_name="TxGroups", collection=None
-                        ),
-                    ),
-                    condition=EqConditionSpec(
-                        left=ValueRef("TxOwner"), right=ValueRef("ClassId")
-                    ),
-                    matcher_name="CommitOrderKeyHelperContributions",
-                )
-            ),
-            InlineApplySpec(
-                edge=AssemblyEdgeSpec(
-                    name="ClassProduction.requires_validation_helpers",
-                    context_inputs=(
-                        AssemblyInputSpec(
-                            name="lifecycle_class",
-                            collection_name="Classes",
-                            collection=None,
-                        ),
-                    ),
-                    from_inputs=(
-                        AssemblyInputSpec(
-                            name="tx_group", collection_name="TxGroups", collection=None
-                        ),
-                    ),
-                    condition=EqConditionSpec(
-                        left=ValueRef("TxOwner"), right=ValueRef("ClassId")
-                    ),
-                    matcher_name="RequiresValidationHelperContributions",
-                )
-            ),
-            InlineApplySpec(
-                edge=AssemblyEdgeSpec(
-                    name="ClassProduction.validate_commit_helpers",
-                    context_inputs=(
-                        AssemblyInputSpec(
-                            name="lifecycle_class",
-                            collection_name="Classes",
-                            collection=None,
-                        ),
-                    ),
-                    from_inputs=(
-                        AssemblyInputSpec(
-                            name="tx_group", collection_name="TxGroups", collection=None
-                        ),
-                    ),
-                    condition=EqConditionSpec(
-                        left=ValueRef("TxOwner"), right=ValueRef("ClassId")
-                    ),
-                    matcher_name="ValidateCommitHelperContributions",
-                )
-            ),
-            InlineApplySpec(
-                edge=AssemblyEdgeSpec(
-                    name="ClassProduction.before_commit_helpers",
-                    context_inputs=(
-                        AssemblyInputSpec(
-                            name="lifecycle_class",
-                            collection_name="Classes",
-                            collection=None,
-                        ),
-                    ),
-                    from_inputs=(
-                        AssemblyInputSpec(
-                            name="tx_group", collection_name="TxGroups", collection=None
-                        ),
-                    ),
-                    condition=EqConditionSpec(
-                        left=ValueRef("TxOwner"), right=ValueRef("ClassId")
-                    ),
-                    matcher_name="BeforeCommitHelperContributions",
-                )
-            ),
-            InlineApplySpec(
-                edge=AssemblyEdgeSpec(
-                    name="ClassProduction.after_commit_helpers",
-                    context_inputs=(
-                        AssemblyInputSpec(
-                            name="lifecycle_class",
-                            collection_name="Classes",
-                            collection=None,
-                        ),
-                    ),
-                    from_inputs=(
-                        AssemblyInputSpec(
-                            name="tx_group", collection_name="TxGroups", collection=None
-                        ),
-                    ),
-                    condition=EqConditionSpec(
-                        left=ValueRef("TxOwner"), right=ValueRef("ClassId")
-                    ),
-                    matcher_name="AfterCommitHelperContributions",
-                )
-            ),
-            InlineApplySpec(
-                edge=AssemblyEdgeSpec(
-                    name="ClassProduction.after_rollback_helpers",
-                    context_inputs=(
-                        AssemblyInputSpec(
-                            name="lifecycle_class",
-                            collection_name="Classes",
-                            collection=None,
-                        ),
-                    ),
-                    from_inputs=(
-                        AssemblyInputSpec(
-                            name="tx_group", collection_name="TxGroups", collection=None
-                        ),
-                    ),
-                    condition=EqConditionSpec(
-                        left=ValueRef("TxOwner"), right=ValueRef("ClassId")
-                    ),
-                    matcher_name="AfterRollbackHelperContributions",
-                )
-            ),
-            InlineApplySpec(
-                edge=AssemblyEdgeSpec(
-                    name="ClassProduction.commit_order_key_dispatch",
-                    context_inputs=(
-                        AssemblyInputSpec(
-                            name="lifecycle_class",
-                            collection_name="Classes",
-                            collection=None,
-                        ),
-                    ),
-                    from_inputs=(
-                        AssemblyInputSpec(
-                            name="tx_group", collection_name="TxGroups", collection=None
-                        ),
-                    ),
-                    condition=EqConditionSpec(
-                        left=ValueRef("TxOwner"), right=ValueRef("ClassId")
-                    ),
-                    matcher_name="CommitOrderKeyDispatchContributions",
-                )
-            ),
-            InlineApplySpec(
-                edge=AssemblyEdgeSpec(
-                    name="ClassProduction.requires_validation_dispatch",
-                    context_inputs=(
-                        AssemblyInputSpec(
-                            name="lifecycle_class",
-                            collection_name="Classes",
-                            collection=None,
-                        ),
-                    ),
-                    from_inputs=(
-                        AssemblyInputSpec(
-                            name="tx_group", collection_name="TxGroups", collection=None
-                        ),
-                    ),
-                    condition=EqConditionSpec(
-                        left=ValueRef("TxOwner"), right=ValueRef("ClassId")
-                    ),
-                    matcher_name="RequiresValidationDispatchContributions",
-                )
-            ),
-            InlineApplySpec(
-                edge=AssemblyEdgeSpec(
-                    name="ClassProduction.validate_commit_dispatch",
-                    context_inputs=(
-                        AssemblyInputSpec(
-                            name="lifecycle_class",
-                            collection_name="Classes",
-                            collection=None,
-                        ),
-                    ),
-                    from_inputs=(
-                        AssemblyInputSpec(
-                            name="tx_group", collection_name="TxGroups", collection=None
-                        ),
-                    ),
-                    condition=EqConditionSpec(
-                        left=ValueRef("TxOwner"), right=ValueRef("ClassId")
-                    ),
-                    matcher_name="ValidateCommitDispatchContributions",
-                )
-            ),
-            InlineApplySpec(
-                edge=AssemblyEdgeSpec(
-                    name="ClassProduction.before_commit_dispatch",
-                    context_inputs=(
-                        AssemblyInputSpec(
-                            name="lifecycle_class",
-                            collection_name="Classes",
-                            collection=None,
-                        ),
-                    ),
-                    from_inputs=(
-                        AssemblyInputSpec(
-                            name="tx_group", collection_name="TxGroups", collection=None
-                        ),
-                    ),
-                    condition=EqConditionSpec(
-                        left=ValueRef("TxOwner"), right=ValueRef("ClassId")
-                    ),
-                    matcher_name="BeforeCommitDispatchContributions",
-                )
-            ),
-            InlineApplySpec(
-                edge=AssemblyEdgeSpec(
-                    name="ClassProduction.after_commit_dispatch",
-                    context_inputs=(
-                        AssemblyInputSpec(
-                            name="lifecycle_class",
-                            collection_name="Classes",
-                            collection=None,
-                        ),
-                    ),
-                    from_inputs=(
-                        AssemblyInputSpec(
-                            name="tx_group", collection_name="TxGroups", collection=None
-                        ),
-                    ),
-                    condition=EqConditionSpec(
-                        left=ValueRef("TxOwner"), right=ValueRef("ClassId")
-                    ),
-                    matcher_name="AfterCommitDispatchContributions",
-                )
-            ),
-            InlineApplySpec(
-                edge=AssemblyEdgeSpec(
-                    name="ClassProduction.after_rollback_dispatch",
-                    context_inputs=(
-                        AssemblyInputSpec(
-                            name="lifecycle_class",
-                            collection_name="Classes",
-                            collection=None,
-                        ),
-                    ),
-                    from_inputs=(
-                        AssemblyInputSpec(
-                            name="tx_group", collection_name="TxGroups", collection=None
-                        ),
-                    ),
-                    condition=EqConditionSpec(
-                        left=ValueRef("TxOwner"), right=ValueRef("ClassId")
-                    ),
-                    matcher_name="AfterRollbackDispatchContributions",
-                )
-            ),
-            InlineApplySpec(
-                edge=AssemblyEdgeSpec(
-                    name="ClassProduction.classvars",
-                    context_inputs=(
-                        AssemblyInputSpec(
-                            name="lifecycle_class",
-                            collection_name="Classes",
-                            collection=None,
-                        ),
-                    ),
-                    from_inputs=(
-                        AssemblyInputSpec(
-                            name="field",
-                            collection_name="ClassVarFields",
-                            collection=None,
-                        ),
-                    ),
-                    condition=EqConditionSpec(
-                        left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
-                    ),
-                    matcher_name="ClassVarDefaultContributions",
-                )
-            ),
-            InlineApplySpec(
-                edge=AssemblyEdgeSpec(
-                    name="ClassProduction.commit_order_keys",
-                    context_inputs=(
-                        AssemblyInputSpec(
-                            name="lifecycle_class",
-                            collection_name="Classes",
-                            collection=None,
-                        ),
-                    ),
-                    from_inputs=(
-                        AssemblyInputSpec(
-                            name="method",
-                            collection_name="CommitOrderKeyProviders",
-                            collection=None,
-                        ),
-                    ),
-                    condition=EqConditionSpec(
-                        left=ValueRef("MethodOwner"), right=ValueRef("ClassId")
-                    ),
-                    matcher_name="CommitOrderKeyContributions",
-                )
-            ),
-            InlineApplySpec(
-                edge=AssemblyEdgeSpec(
-                    name="ClassProduction.validation_flags",
-                    context_inputs=(
-                        AssemblyInputSpec(
-                            name="lifecycle_class",
-                            collection_name="Classes",
-                            collection=None,
-                        ),
-                    ),
-                    from_inputs=(
-                        AssemblyInputSpec(
-                            name="method",
-                            collection_name="CommitValidators",
-                            collection=None,
-                        ),
-                    ),
-                    condition=EqConditionSpec(
-                        left=ValueRef("MethodOwner"), right=ValueRef("ClassId")
-                    ),
-                    matcher_name="RequiresValidationContributions",
-                )
-            ),
-            InlineApplySpec(
-                edge=AssemblyEdgeSpec(
-                    name="ClassProduction.validators",
-                    context_inputs=(
-                        AssemblyInputSpec(
-                            name="lifecycle_class",
-                            collection_name="Classes",
-                            collection=None,
-                        ),
-                    ),
-                    from_inputs=(
-                        AssemblyInputSpec(
-                            name="method",
-                            collection_name="CommitValidators",
-                            collection=None,
-                        ),
-                    ),
-                    condition=EqConditionSpec(
-                        left=ValueRef("MethodOwner"), right=ValueRef("ClassId")
-                    ),
-                    matcher_name="ValidateCommitContributions",
-                )
-            ),
-            InlineApplySpec(
-                edge=AssemblyEdgeSpec(
-                    name="ClassProduction.before_commit_hooks",
-                    context_inputs=(
-                        AssemblyInputSpec(
-                            name="lifecycle_class",
-                            collection_name="Classes",
-                            collection=None,
-                        ),
-                    ),
-                    from_inputs=(
-                        AssemblyInputSpec(
-                            name="method",
-                            collection_name="BeforeCommitHooks",
-                            collection=None,
-                        ),
-                    ),
-                    condition=EqConditionSpec(
-                        left=ValueRef("MethodOwner"), right=ValueRef("ClassId")
-                    ),
-                    matcher_name="BeforeCommitHookContributions",
-                )
-            ),
-            InlineApplySpec(
-                edge=AssemblyEdgeSpec(
-                    name="ClassProduction.after_commit_hooks",
-                    context_inputs=(
-                        AssemblyInputSpec(
-                            name="lifecycle_class",
-                            collection_name="Classes",
-                            collection=None,
-                        ),
-                    ),
-                    from_inputs=(
-                        AssemblyInputSpec(
-                            name="method",
-                            collection_name="AfterCommitHooks",
-                            collection=None,
-                        ),
-                    ),
-                    condition=EqConditionSpec(
-                        left=ValueRef("MethodOwner"), right=ValueRef("ClassId")
-                    ),
-                    matcher_name="AfterCommitHookContributions",
-                )
-            ),
-            InlineApplySpec(
-                edge=AssemblyEdgeSpec(
-                    name="ClassProduction.after_rollback_hooks",
-                    context_inputs=(
-                        AssemblyInputSpec(
-                            name="lifecycle_class",
-                            collection_name="Classes",
-                            collection=None,
-                        ),
-                    ),
-                    from_inputs=(
-                        AssemblyInputSpec(
-                            name="method",
-                            collection_name="AfterRollbackHooks",
-                            collection=None,
-                        ),
-                    ),
-                    condition=EqConditionSpec(
-                        left=ValueRef("MethodOwner"), right=ValueRef("ClassId")
-                    ),
-                    matcher_name="AfterRollbackHookContributions",
-                )
-            ),
-            InlineApplySpec(
-                edge=AssemblyEdgeSpec(
-                    name="ClassProduction.plain_init_params",
-                    context_inputs=(
-                        AssemblyInputSpec(
-                            name="lifecycle_class",
-                            collection_name="Classes",
-                            collection=None,
-                        ),
-                    ),
-                    from_inputs=(
-                        AssemblyInputSpec(
-                            name="field", collection_name="PlainFields", collection=None
-                        ),
-                    ),
-                    condition=EqConditionSpec(
-                        left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
-                    ),
-                    matcher_name="PlainInitParamContributions",
-                )
-            ),
-            InlineApplySpec(
-                edge=AssemblyEdgeSpec(
-                    name="ClassProduction.binding_init_params",
-                    context_inputs=(
-                        AssemblyInputSpec(
-                            name="lifecycle_class",
-                            collection_name="Classes",
-                            collection=None,
-                        ),
-                    ),
-                    from_inputs=(
-                        AssemblyInputSpec(
-                            name="field",
-                            collection_name="BindingFields",
-                            collection=None,
-                        ),
-                    ),
-                    condition=EqConditionSpec(
-                        left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
-                    ),
-                    matcher_name="BindingInitParamContributions",
-                )
-            ),
-            InlineApplySpec(
-                edge=AssemblyEdgeSpec(
-                    name="ClassProduction.owned_init_params",
-                    context_inputs=(
-                        AssemblyInputSpec(
-                            name="lifecycle_class",
-                            collection_name="Classes",
-                            collection=None,
-                        ),
-                    ),
-                    from_inputs=(
-                        AssemblyInputSpec(
-                            name="field", collection_name="OwnedFields", collection=None
-                        ),
-                    ),
-                    condition=EqConditionSpec(
-                        left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
-                    ),
-                    matcher_name="OwnedInitParamContributions",
-                )
-            ),
-            InlineApplySpec(
-                edge=AssemblyEdgeSpec(
-                    name="ClassProduction.initvar_params",
-                    context_inputs=(
-                        AssemblyInputSpec(
-                            name="lifecycle_class",
-                            collection_name="Classes",
-                            collection=None,
-                        ),
-                    ),
-                    from_inputs=(
-                        AssemblyInputSpec(
-                            name="field",
-                            collection_name="InitVarFields",
-                            collection=None,
-                        ),
-                    ),
-                    condition=EqConditionSpec(
-                        left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
-                    ),
-                    matcher_name="InitVarParamContributions",
-                )
-            ),
-            InlineApplySpec(
-                edge=AssemblyEdgeSpec(
-                    name="ClassProduction.managed_init_params",
-                    context_inputs=(
-                        AssemblyInputSpec(
-                            name="lifecycle_class",
-                            collection_name="Classes",
-                            collection=None,
-                        ),
-                    ),
-                    from_inputs=(
-                        AssemblyInputSpec(
-                            name="field",
-                            collection_name="ManagedFields",
-                            collection=None,
-                        ),
-                    ),
-                    condition=EqConditionSpec(
-                        left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
-                    ),
-                    matcher_name="ManagedInitParamContributions",
-                )
-            ),
-            InlineApplySpec(
-                edge=AssemblyEdgeSpec(
-                    name="ClassProduction.transient_init_params",
-                    context_inputs=(
-                        AssemblyInputSpec(
-                            name="lifecycle_class",
-                            collection_name="Classes",
-                            collection=None,
-                        ),
-                    ),
-                    from_inputs=(
-                        AssemblyInputSpec(
-                            name="field",
-                            collection_name="TransientFields",
-                            collection=None,
-                        ),
-                    ),
-                    condition=EqConditionSpec(
-                        left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
-                    ),
-                    matcher_name="TransientInitParamContributions",
-                )
-            ),
-            InlineApplySpec(
-                edge=AssemblyEdgeSpec(
-                    name="ClassProduction.initvar_local_defaults",
-                    context_inputs=(
-                        AssemblyInputSpec(
-                            name="lifecycle_class",
-                            collection_name="Classes",
-                            collection=None,
-                        ),
-                    ),
-                    from_inputs=(
-                        AssemblyInputSpec(
-                            name="field",
-                            collection_name="InitVarFields",
-                            collection=None,
-                        ),
-                    ),
-                    condition=EqConditionSpec(
-                        left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
-                    ),
-                    matcher_name="InitVarLocalDefaultContributions",
-                )
-            ),
-            InlineApplySpec(
-                edge=AssemblyEdgeSpec(
-                    name="ClassProduction.plain_init_assignments",
-                    context_inputs=(
-                        AssemblyInputSpec(
-                            name="lifecycle_class",
-                            collection_name="Classes",
-                            collection=None,
-                        ),
-                    ),
-                    from_inputs=(
-                        AssemblyInputSpec(
-                            name="field", collection_name="PlainFields", collection=None
-                        ),
-                    ),
-                    condition=EqConditionSpec(
-                        left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
-                    ),
-                    matcher_name="PlainInitAssignmentContributions",
-                )
-            ),
-            InlineApplySpec(
-                edge=AssemblyEdgeSpec(
-                    name="ClassProduction.binding_init_assignments",
+                    name="CoreClassProduction.binding_init_assignments",
                     context_inputs=(
                         AssemblyInputSpec(
                             name="lifecycle_class",
@@ -19068,7 +17982,7 @@ ASSEMBLY_PRODUCTIONS = {
             ),
             InlineApplySpec(
                 edge=AssemblyEdgeSpec(
-                    name="ClassProduction.owned_current_init_assignments",
+                    name="CoreClassProduction.owned_current_init_assignments",
                     context_inputs=(
                         AssemblyInputSpec(
                             name="lifecycle_class",
@@ -19089,7 +18003,7 @@ ASSEMBLY_PRODUCTIONS = {
             ),
             InlineApplySpec(
                 edge=AssemblyEdgeSpec(
-                    name="ClassProduction.managed_current_init_assignments",
+                    name="CoreClassProduction.managed_current_init_assignments",
                     context_inputs=(
                         AssemblyInputSpec(
                             name="lifecycle_class",
@@ -19112,7 +18026,7 @@ ASSEMBLY_PRODUCTIONS = {
             ),
             InlineApplySpec(
                 edge=AssemblyEdgeSpec(
-                    name="ClassProduction.transient_current_init_assignments",
+                    name="CoreClassProduction.transient_current_init_assignments",
                     context_inputs=(
                         AssemblyInputSpec(
                             name="lifecycle_class",
@@ -19135,7 +18049,7 @@ ASSEMBLY_PRODUCTIONS = {
             ),
             InlineApplySpec(
                 edge=AssemblyEdgeSpec(
-                    name="ClassProduction.managed_working_init_assignments",
+                    name="CoreClassProduction.managed_working_init_assignments",
                     context_inputs=(
                         AssemblyInputSpec(
                             name="lifecycle_class",
@@ -19158,7 +18072,7 @@ ASSEMBLY_PRODUCTIONS = {
             ),
             InlineApplySpec(
                 edge=AssemblyEdgeSpec(
-                    name="ClassProduction.transient_working_init_assignments",
+                    name="CoreClassProduction.transient_working_init_assignments",
                     context_inputs=(
                         AssemblyInputSpec(
                             name="lifecycle_class",
@@ -19181,7 +18095,7 @@ ASSEMBLY_PRODUCTIONS = {
             ),
             InlineApplySpec(
                 edge=AssemblyEdgeSpec(
-                    name="ClassProduction.owned_working_init_assignments",
+                    name="CoreClassProduction.owned_working_init_assignments",
                     context_inputs=(
                         AssemblyInputSpec(
                             name="lifecycle_class",
@@ -19202,7 +18116,7 @@ ASSEMBLY_PRODUCTIONS = {
             ),
             InlineApplySpec(
                 edge=AssemblyEdgeSpec(
-                    name="ClassProduction.retained_initvar_state_assignments",
+                    name="CoreClassProduction.retained_initvar_state_assignments",
                     context_inputs=(
                         AssemblyInputSpec(
                             name="lifecycle_class",
@@ -19225,7 +18139,7 @@ ASSEMBLY_PRODUCTIONS = {
             ),
             InlineApplySpec(
                 edge=AssemblyEdgeSpec(
-                    name="ClassProduction.owned_staged_init_assignments",
+                    name="CoreClassProduction.owned_staged_init_assignments",
                     context_inputs=(
                         AssemblyInputSpec(
                             name="lifecycle_class",
@@ -19246,7 +18160,7 @@ ASSEMBLY_PRODUCTIONS = {
             ),
             InlineApplySpec(
                 edge=AssemblyEdgeSpec(
-                    name="ClassProduction.managed_staged_init_assignments",
+                    name="CoreClassProduction.managed_staged_init_assignments",
                     context_inputs=(
                         AssemblyInputSpec(
                             name="lifecycle_class",
@@ -19269,7 +18183,7 @@ ASSEMBLY_PRODUCTIONS = {
             ),
             InlineApplySpec(
                 edge=AssemblyEdgeSpec(
-                    name="ClassProduction.default_factory_evals",
+                    name="CoreClassProduction.default_factory_evals",
                     context_inputs=(
                         AssemblyInputSpec(
                             name="lifecycle_class",
@@ -19292,7 +18206,7 @@ ASSEMBLY_PRODUCTIONS = {
             ),
             InlineApplySpec(
                 edge=AssemblyEdgeSpec(
-                    name="ClassProduction.default_factory_args",
+                    name="CoreClassProduction.default_factory_args",
                     context_inputs=(
                         AssemblyInputSpec(
                             name="lifecycle_class",
@@ -19315,7 +18229,7 @@ ASSEMBLY_PRODUCTIONS = {
             ),
             InlineApplySpec(
                 edge=AssemblyEdgeSpec(
-                    name="ClassProduction.plain_properties",
+                    name="CoreClassProduction.plain_properties",
                     context_inputs=(
                         AssemblyInputSpec(
                             name="lifecycle_class",
@@ -19336,7 +18250,7 @@ ASSEMBLY_PRODUCTIONS = {
             ),
             InlineApplySpec(
                 edge=AssemblyEdgeSpec(
-                    name="ClassProduction.binding_properties",
+                    name="CoreClassProduction.binding_properties",
                     context_inputs=(
                         AssemblyInputSpec(
                             name="lifecycle_class",
@@ -19359,7 +18273,7 @@ ASSEMBLY_PRODUCTIONS = {
             ),
             InlineApplySpec(
                 edge=AssemblyEdgeSpec(
-                    name="ClassProduction.owned_default_properties",
+                    name="CoreClassProduction.owned_default_properties",
                     context_inputs=(
                         AssemblyInputSpec(
                             name="lifecycle_class",
@@ -19382,7 +18296,7 @@ ASSEMBLY_PRODUCTIONS = {
             ),
             InlineApplySpec(
                 edge=AssemblyEdgeSpec(
-                    name="ClassProduction.managed_default_properties",
+                    name="CoreClassProduction.managed_default_properties",
                     context_inputs=(
                         AssemblyInputSpec(
                             name="lifecycle_class",
@@ -19405,7 +18319,7 @@ ASSEMBLY_PRODUCTIONS = {
             ),
             InlineApplySpec(
                 edge=AssemblyEdgeSpec(
-                    name="ClassProduction.transient_default_properties",
+                    name="CoreClassProduction.transient_default_properties",
                     context_inputs=(
                         AssemblyInputSpec(
                             name="lifecycle_class",
@@ -19428,7 +18342,7 @@ ASSEMBLY_PRODUCTIONS = {
             ),
             InlineApplySpec(
                 edge=AssemblyEdgeSpec(
-                    name="ClassProduction.managed_current_properties",
+                    name="CoreClassProduction.managed_current_properties",
                     context_inputs=(
                         AssemblyInputSpec(
                             name="lifecycle_class",
@@ -19451,7 +18365,7 @@ ASSEMBLY_PRODUCTIONS = {
             ),
             InlineApplySpec(
                 edge=AssemblyEdgeSpec(
-                    name="ClassProduction.transient_current_properties",
+                    name="CoreClassProduction.transient_current_properties",
                     context_inputs=(
                         AssemblyInputSpec(
                             name="lifecycle_class",
@@ -19474,7 +18388,7 @@ ASSEMBLY_PRODUCTIONS = {
             ),
             InlineApplySpec(
                 edge=AssemblyEdgeSpec(
-                    name="ClassProduction.owned_current_properties",
+                    name="CoreClassProduction.owned_current_properties",
                     context_inputs=(
                         AssemblyInputSpec(
                             name="lifecycle_class",
@@ -19497,7 +18411,7 @@ ASSEMBLY_PRODUCTIONS = {
             ),
             InlineApplySpec(
                 edge=AssemblyEdgeSpec(
-                    name="ClassProduction.managed_working_properties",
+                    name="CoreClassProduction.managed_working_properties",
                     context_inputs=(
                         AssemblyInputSpec(
                             name="lifecycle_class",
@@ -19520,7 +18434,7 @@ ASSEMBLY_PRODUCTIONS = {
             ),
             InlineApplySpec(
                 edge=AssemblyEdgeSpec(
-                    name="ClassProduction.owned_working_properties",
+                    name="CoreClassProduction.owned_working_properties",
                     context_inputs=(
                         AssemblyInputSpec(
                             name="lifecycle_class",
@@ -19543,7 +18457,7 @@ ASSEMBLY_PRODUCTIONS = {
             ),
             InlineApplySpec(
                 edge=AssemblyEdgeSpec(
-                    name="ClassProduction.transient_working_properties",
+                    name="CoreClassProduction.transient_working_properties",
                     context_inputs=(
                         AssemblyInputSpec(
                             name="lifecycle_class",
@@ -19566,7 +18480,7 @@ ASSEMBLY_PRODUCTIONS = {
             ),
             InlineApplySpec(
                 edge=AssemblyEdgeSpec(
-                    name="ClassProduction.transient_default_working_factory_args",
+                    name="CoreClassProduction.transient_default_working_factory_args",
                     context_inputs=(
                         AssemblyInputSpec(
                             name="lifecycle_class",
@@ -19590,7 +18504,7 @@ ASSEMBLY_PRODUCTIONS = {
             ),
             InlineApplySpec(
                 edge=AssemblyEdgeSpec(
-                    name="ClassProduction.transient_working_working_factory_args",
+                    name="CoreClassProduction.transient_working_working_factory_args",
                     context_inputs=(
                         AssemblyInputSpec(
                             name="lifecycle_class",
@@ -19614,7 +18528,7 @@ ASSEMBLY_PRODUCTIONS = {
             ),
             InlineApplySpec(
                 edge=AssemblyEdgeSpec(
-                    name="ClassProduction.apply_prepared_commit_helpers",
+                    name="CoreClassProduction.apply_prepared_commit_helpers",
                     context_inputs=(
                         AssemblyInputSpec(
                             name="lifecycle_class",
@@ -19635,7 +18549,7 @@ ASSEMBLY_PRODUCTIONS = {
             ),
             InlineApplySpec(
                 edge=AssemblyEdgeSpec(
-                    name="ClassProduction.prepare_commit_helpers",
+                    name="CoreClassProduction.prepare_commit_helpers",
                     context_inputs=(
                         AssemblyInputSpec(
                             name="lifecycle_class",
@@ -19656,7 +18570,7 @@ ASSEMBLY_PRODUCTIONS = {
             ),
             InlineApplySpec(
                 edge=AssemblyEdgeSpec(
-                    name="ClassProduction.rollback_helpers",
+                    name="CoreClassProduction.rollback_helpers",
                     context_inputs=(
                         AssemblyInputSpec(
                             name="lifecycle_class",
@@ -19677,7 +18591,7 @@ ASSEMBLY_PRODUCTIONS = {
             ),
             InlineApplySpec(
                 edge=AssemblyEdgeSpec(
-                    name="ClassProduction.prepare_commit_dispatch",
+                    name="CoreClassProduction.prepare_commit_dispatch",
                     context_inputs=(
                         AssemblyInputSpec(
                             name="lifecycle_class",
@@ -19698,7 +18612,7 @@ ASSEMBLY_PRODUCTIONS = {
             ),
             InlineApplySpec(
                 edge=AssemblyEdgeSpec(
-                    name="ClassProduction.apply_prepared_commit_dispatch",
+                    name="CoreClassProduction.apply_prepared_commit_dispatch",
                     context_inputs=(
                         AssemblyInputSpec(
                             name="lifecycle_class",
@@ -19719,7 +18633,7 @@ ASSEMBLY_PRODUCTIONS = {
             ),
             InlineApplySpec(
                 edge=AssemblyEdgeSpec(
-                    name="ClassProduction.rollback_dispatch",
+                    name="CoreClassProduction.rollback_dispatch",
                     context_inputs=(
                         AssemblyInputSpec(
                             name="lifecycle_class",
@@ -19740,7 +18654,7 @@ ASSEMBLY_PRODUCTIONS = {
             ),
             InlineApplySpec(
                 edge=AssemblyEdgeSpec(
-                    name="ClassProduction.managed_prepare_commit",
+                    name="CoreClassProduction.managed_prepare_commit",
                     context_inputs=(
                         AssemblyInputSpec(
                             name="lifecycle_class",
@@ -19763,7 +18677,7 @@ ASSEMBLY_PRODUCTIONS = {
             ),
             InlineApplySpec(
                 edge=AssemblyEdgeSpec(
-                    name="ClassProduction.managed_apply_prepared_commit",
+                    name="CoreClassProduction.managed_apply_prepared_commit",
                     context_inputs=(
                         AssemblyInputSpec(
                             name="lifecycle_class",
@@ -19786,7 +18700,7 @@ ASSEMBLY_PRODUCTIONS = {
             ),
             InlineApplySpec(
                 edge=AssemblyEdgeSpec(
-                    name="ClassProduction.owned_apply_prepared_commit",
+                    name="CoreClassProduction.owned_apply_prepared_commit",
                     context_inputs=(
                         AssemblyInputSpec(
                             name="lifecycle_class",
@@ -19809,7 +18723,7 @@ ASSEMBLY_PRODUCTIONS = {
             ),
             InlineApplySpec(
                 edge=AssemblyEdgeSpec(
-                    name="ClassProduction.transient_apply_prepared_commit",
+                    name="CoreClassProduction.transient_apply_prepared_commit",
                     context_inputs=(
                         AssemblyInputSpec(
                             name="lifecycle_class",
@@ -19832,7 +18746,7 @@ ASSEMBLY_PRODUCTIONS = {
             ),
             InlineApplySpec(
                 edge=AssemblyEdgeSpec(
-                    name="ClassProduction.managed_rollback",
+                    name="CoreClassProduction.managed_rollback",
                     context_inputs=(
                         AssemblyInputSpec(
                             name="lifecycle_class",
@@ -19855,7 +18769,7 @@ ASSEMBLY_PRODUCTIONS = {
             ),
             InlineApplySpec(
                 edge=AssemblyEdgeSpec(
-                    name="ClassProduction.owned_rollback",
+                    name="CoreClassProduction.owned_rollback",
                     context_inputs=(
                         AssemblyInputSpec(
                             name="lifecycle_class",
@@ -19878,7 +18792,7 @@ ASSEMBLY_PRODUCTIONS = {
             ),
             InlineApplySpec(
                 edge=AssemblyEdgeSpec(
-                    name="ClassProduction.transient_rollback",
+                    name="CoreClassProduction.transient_rollback",
                     context_inputs=(
                         AssemblyInputSpec(
                             name="lifecycle_class",
@@ -19901,7 +18815,7 @@ ASSEMBLY_PRODUCTIONS = {
             ),
             InlineApplySpec(
                 edge=AssemblyEdgeSpec(
-                    name="ClassProduction.owned_prepare_commit",
+                    name="CoreClassProduction.owned_prepare_commit",
                     context_inputs=(
                         AssemblyInputSpec(
                             name="lifecycle_class",
@@ -19930,7 +18844,7 @@ ASSEMBLY_ASSEMBLIES = {
         name="LifecycleCoreModule", production_name="CoreModuleProduction"
     ),
     "LifecycleModule": AssemblySpec(
-        name="LifecycleModule", production_name="ModuleProduction"
+        name="LifecycleModule", production_name="CoreModuleProduction"
     ),
 }
 

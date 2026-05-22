@@ -1615,23 +1615,21 @@ class _ConceptCompiler:
         if name in self._local_assemblies:
             raise YidlSymbolError(f"assembly {name!r} is already defined")
         production_name = _qname(tree.children[1])
-        production = self._local_composable_productions.get(production_name)
-        if production is None:
-            if production_name in self._local_productions:
-                raise YidlSymbolError(
-                    f"assembly {name!r} target {production_name!r} is a data "
-                    "production, not a composable production"
-                )
+        if production_name in self._local_productions:
             raise YidlSymbolError(
-                f"assembly {name!r} references undefined composable production "
-                f"{production_name!r}"
+                f"assembly {name!r} target {production_name!r} is a data "
+                "production, not a composable production"
             )
+        production = self._resolve_composable_production_spec(
+            production_name,
+            context=f"assembly {name!r}",
+        )
         if production.inputs:
             raise YidlSymbolError(
-                f"assembly {name!r} root production {production_name!r} "
+                f"assembly {name!r} root production {production.name!r} "
                 "must not declare inputs"
             )
-        return AssemblySpec(name=name, production_name=production_name)
+        return AssemblySpec(name=name, production_name=production.name)
 
     def _contribution_source(
         self,

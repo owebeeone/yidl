@@ -775,4 +775,72 @@ concept LifecycleTransient extends default_factories.LifecycleDefaultFactories {
                                and EvalInit == False
                                -> StoredDefaultFactoryEvalNoInitContribution
     }
+
+    extend production CoreModuleProduction {
+        phase transient_working_default_params from field: Fields {
+            apply transient_working_default_params using TransientWorkingDefaultBuilderParamContributions
+        }
+    }
+
+    extend production CoreClassProduction {
+        phase state_slots_transient_current from field: TransientFields where FieldOwner == ClassId {
+            apply transient_current_state_slots using TransientCurrentStateSlotContributions
+        }
+
+        phase state_slots_transient_working from field: TransientFields where FieldOwner == ClassId {
+            apply transient_working_state_slots using TransientWorkingStateSlotContributions
+        }
+
+        phase state_slots_retained_initvar from initvar: RetainedInitVars where FieldOwner == ClassId {
+            apply retained_initvar_state_slots using RetainedInitVarStateSlotContributions
+        }
+
+        phase init_params_transient from field: TransientFields where FieldOwner == ClassId {
+            apply transient_init_params using TransientInitParamContributions
+        }
+
+        phase init_assignments_transient_current from field: TransientFields where FieldOwner == ClassId {
+            apply transient_current_init_assignments using TransientCurrentInitAssignmentContributions
+        }
+
+        phase init_assignments_transient_working from field: TransientFields where FieldOwner == ClassId {
+            apply transient_working_init_assignments using TransientWorkingInitAssignmentContributions
+        }
+
+        phase init_assignments_retained_initvar from initvar: RetainedInitVars where FieldOwner == ClassId {
+            apply retained_initvar_state_assignments using RetainedInitVarStateAssignmentContributions
+        }
+
+        phase properties_transient_default from field: IndexedTransientFields where FieldOwner == ClassId {
+            apply transient_default_properties using TransientDefaultFacadePropertyContributions
+        }
+
+        phase properties_transient_current from field: TransientFields where FieldOwner == ClassId {
+            apply transient_current_properties using TransientCurrentPropertyContributions
+        }
+
+        phase properties_transient_working from field: IndexedTransientFields where FieldOwner == ClassId {
+            apply transient_working_properties using TransientWorkingFacadePropertyContributions
+        }
+
+        phase transient_default_working_factory_args
+            from arg: TransientWorkingFactoryArgs
+            where WorkingFactoryArgOwner == ClassId {
+            apply transient_default_working_factory_args using TransientDefaultWorkingFactoryArgContributions
+        }
+
+        phase transient_working_working_factory_args
+            from arg: TransientWorkingFactoryArgs
+            where WorkingFactoryArgOwner == ClassId {
+            apply transient_working_working_factory_args using TransientWorkingWorkingFactoryArgContributions
+        }
+
+        phase tx_apply_prepared_fields_transient from field: IndexedTransientFields where FieldOwner == ClassId {
+            apply transient_apply_prepared_commit using TransientApplyPreparedCommitContributions
+        }
+
+        phase tx_rollback_fields_transient from field: IndexedTransientFields where FieldOwner == ClassId {
+            apply transient_rollback using TransientRollbackContributions
+        }
+    }
 }

@@ -578,4 +578,18 @@ concept LifecycleDefaultFactories extends managed.LifecycleManaged {
                             -> DefaultFactoryLocalArgContribution
     }
 
+    extend production CoreClassProduction {
+        phase default_factory_evals
+            from step: DefaultFactoryEvaluationSteps
+            where EvalOwner == ClassId {
+            apply default_factory_evals using DefaultFactoryEvalContributions
+        }
+
+        phase default_factory_args
+            from dep: DefaultFactoryDependencies
+            where DependencyOwner == ClassId {
+            apply default_factory_args using DefaultFactoryArgContributions
+        }
+    }
+
 }
