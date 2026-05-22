@@ -95,6 +95,11 @@ concept LifecycleBase extends transient.LifecycleTransient {
             where FieldOwner == ClassId
             using ManagedCurrentStateSlotContributions
 
+        apply transient_current_state_slots
+            from field: TransientFields
+            where FieldOwner == ClassId
+            using TransientCurrentStateSlotContributions
+
         apply managed_working_state_slots
             from field: ManagedFields
             where FieldOwner == ClassId
@@ -305,6 +310,11 @@ concept LifecycleBase extends transient.LifecycleTransient {
             where FieldOwner == ClassId
             using ManagedInitParamContributions
 
+        apply transient_init_params
+            from field: TransientFields
+            where FieldOwner == ClassId
+            using TransientInitParamContributions
+
         apply initvar_local_defaults
             from field: InitVarFields
             where FieldOwner == ClassId
@@ -319,6 +329,11 @@ concept LifecycleBase extends transient.LifecycleTransient {
             from field: ManagedFields
             where FieldOwner == ClassId
             using ManagedCurrentInitAssignmentContributions
+
+        apply transient_current_init_assignments
+            from field: TransientFields
+            where FieldOwner == ClassId
+            using TransientCurrentInitAssignmentContributions
 
         apply managed_working_init_assignments
             from field: ManagedFields
@@ -354,6 +369,11 @@ concept LifecycleBase extends transient.LifecycleTransient {
             from field: IndexedTransactionalFields
             where FieldOwner == ClassId
             using ManagedCurrentFacadePropertyContributions
+
+        apply transient_current_properties
+            from field: TransientFields
+            where FieldOwner == ClassId
+            using TransientCurrentPropertyContributions
 
         apply managed_working_properties
             from field: IndexedTransactionalFields

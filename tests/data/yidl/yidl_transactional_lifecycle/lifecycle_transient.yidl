@@ -12,4 +12,142 @@ concept LifecycleTransient extends default_factories.LifecycleDefaultFactories {
     }
 
     computed collection TransientFields: LifecycleFieldSpec from Fields where FieldKind == "transient"
+
+    resource TransientCurrentProperty = template $[
+        @property
+        def property_getter_name__astichi_arg__(self):
+            return self._y_state.astichi_ref(external=current_slot)
+    ]$
+
+    contribution TransientCurrentStateSlot = StateSlotEntry {
+        as TransientCurrentStateSlot
+        index FieldOrder
+        order FieldOrder
+
+        target state_slots {
+            build /ClassDef
+        }
+
+        external slot_name = CurrentSlotName
+    }
+
+    contribution TransientInitParamRequired = InitParamRequired {
+        as TransientInitParam
+        index FieldOrder
+        order FieldOrder
+
+        target init_params {
+            build /ClassDef
+        }
+
+        ident param_name = FieldName
+        external annotation = Annotation
+    }
+
+    contribution TransientInitParamDefault = InitParamDefault {
+        as TransientInitParam
+        index FieldOrder
+        order FieldOrder
+
+        target init_params {
+            build /ClassDef
+        }
+
+        ident param_name = FieldName
+        external annotation = Annotation
+        ident default_value_name = DefaultValueParamName
+    }
+
+    contribution TransientInitParamDefaultFactory = InitParamDefaultFactory {
+        as TransientInitParam
+        index FieldOrder
+        order FieldOrder
+
+        target init_params {
+            build /ClassDef
+        }
+
+        ident param_name = FieldName
+        external annotation = Annotation
+    }
+
+    contribution TransientCurrentInitAssignment = PlainStateAssignment {
+        as TransientCurrentInitAssignment
+        index FieldOrder
+        order FieldOrder
+
+        target state_init_body {
+            build /ClassDef
+        }
+
+        ident init_value_name = FieldName
+        external state_slot = CurrentSlotName
+    }
+
+    contribution TransientCurrentDefaultAssignment = PlainStateAssignment {
+        as TransientCurrentDefaultAssignment
+        index FieldOrder
+        order FieldOrder
+
+        target state_init_body {
+            build /ClassDef
+        }
+
+        ident init_value_name = DefaultValueParamName
+        external state_slot = CurrentSlotName
+    }
+
+    contribution TransientCurrentPropertyContribution = TransientCurrentProperty {
+        as TransientCurrentProperty
+        index FieldOrder
+        order FieldOrder
+
+        target current_facade_properties {
+            build /ClassDef
+        }
+
+        ident property_getter_name = FieldName
+        external current_slot = CurrentSlotName
+    }
+
+    matcher TransientCurrentStateSlotContributions(field: TransientFields) -> contribution {
+        default -> TransientCurrentStateSlot
+    }
+
+    matcher TransientInitParamContributions(field: TransientFields) -> contribution {
+        rule required when Init == True
+                      and HasDefault == False
+                      and HasDefaultFactory == False
+                      -> TransientInitParamRequired
+        rule default_value when Init == True
+                            and HasDefault == True
+                            and HasDefaultFactory == False
+                            -> TransientInitParamDefault
+        rule default_factory when Init == True
+                             and HasDefaultFactory == True
+                             -> TransientInitParamDefaultFactory
+    }
+
+    matcher TransientCurrentInitAssignmentContributions(field: TransientFields) -> contribution {
+        rule init_value when Init == True
+                        and HasDefaultFactory == False
+                        -> TransientCurrentInitAssignment
+        rule default_value when Init == False
+                           and HasDefault == True
+                           and HasDefaultFactory == False
+                           -> TransientCurrentDefaultAssignment
+    }
+
+    matcher TransientCurrentPropertyContributions(field: TransientFields) -> contribution {
+        default -> TransientCurrentPropertyContribution
+    }
+
+    matcher DefaultFactoryEvalContributions(step: DefaultFactoryEvaluationSteps) -> contribution {
+        rule transient_init when EvalFieldKind == "transient"
+                            and EvalInit == True
+                            -> StoredDefaultFactoryEvalInitContribution
+        rule transient_no_init when EvalFieldKind == "transient"
+                               and EvalInit == False
+                               -> StoredDefaultFactoryEvalNoInitContribution
+    }
 }

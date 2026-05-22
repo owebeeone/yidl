@@ -234,6 +234,8 @@ concept LifecycleDefaultFactories extends managed.LifecycleManaged {
                     state_slot = field.value_slot_name
                 elif field.field_kind == "managed":
                     state_slot = field.current_slot_name
+                elif field.field_kind == "transient":
+                    state_slot = field.current_slot_name
                 ctx.write(
                     DefaultFactoryEvaluationStepsCollection,
                     DefaultFactoryEvaluationStep(

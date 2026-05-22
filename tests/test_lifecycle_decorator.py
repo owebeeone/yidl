@@ -21,6 +21,7 @@ from yidl.runtime.lifecycle import harvest_lifecycle_definition
 from yidl.runtime.lifecycle import initvar
 from yidl.runtime.lifecycle import lifecycle
 from yidl.runtime.lifecycle import managed
+from yidl.runtime.lifecycle import transient
 from yidl.runtime.lifecycle import validate_commit
 from yidl.runtime.transaction_yidl import DEFAULT_TRANSACTION
 
@@ -161,6 +162,21 @@ def test_lifecycle_decorator_evaluates_parameterized_default_factories() -> None
     assert explicit.v3 == 30
     assert explicit.v4 == 60
     assert explicit.v5 == 70
+
+
+def test_lifecycle_decorator_initializes_transient_current_defaults() -> None:
+    class Scratch:
+        seed: int = initvar(default=3)
+        label: str = transient(default="ready")
+        items: list[int] = transient(default_factory=lambda seed: [seed])
+
+    generated = lifecycle(Scratch)
+    item = generated()
+
+    assert item.current.label == "ready"
+    assert item.current.items == [3]
+    with pytest.raises(AttributeError):
+        item.current.label = "changed"
 
 
 def test_lifecycle_source_uses_direct_default_factory_calls() -> None:
