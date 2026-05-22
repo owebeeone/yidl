@@ -8,11 +8,12 @@ import pytest
 from yidl.concept_parser import compile_yidl_files
 from yidl.generation.data_def_sys import emit_concept_runtime_source
 from yidl.runtime.lifecycle import _build_lifecycle_container
+from yidl.runtime.lifecycle import const
 from yidl.runtime.lifecycle import LifecycleDefinitionError
 from yidl.runtime.lifecycle import harvest_lifecycle_definition
 from yidl.runtime.lifecycle import managed
+from yidl.runtime.lifecycle import static
 from yidl.runtime.lifecycle import transient
-
 
 _YIDL_DIR = Path("tests/data/yidl/yidl_transactional_lifecycle")
 
@@ -36,7 +37,9 @@ def test_core_layer_rejects_managed_field_with_missing_layer_diagnostic() -> Non
         _build_lifecycle_container(generated, harvested)
 
 
-def test_default_factory_layer_rejects_transient_field_with_missing_layer_diagnostic() -> None:
+def test_default_factory_layer_rejects_transient_field_with_missing_layer_diagnostic() -> (
+    None
+):
     generated = _compiled_namespace(
         paths=(
             _YIDL_DIR / "lifecycle_core.yidl",
@@ -55,6 +58,45 @@ def test_default_factory_layer_rejects_transient_field_with_missing_layer_diagno
     with pytest.raises(
         LifecycleDefinitionError,
         match="transient lifecycle field requires generated record TransientField",
+    ):
+        _build_lifecycle_container(generated, harvested)
+
+
+def test_owned_layer_rejects_const_static_fields_with_missing_layer_diagnostic() -> (
+    None
+):
+    generated = _compiled_namespace(
+        paths=(
+            _YIDL_DIR / "lifecycle_core.yidl",
+            _YIDL_DIR / "lifecycle_managed.yidl",
+            _YIDL_DIR / "lifecycle_default_factories.yidl",
+            _YIDL_DIR / "lifecycle_transient.yidl",
+            _YIDL_DIR / "lifecycle_owned.yidl",
+        ),
+        entry_path=_YIDL_DIR / "lifecycle_owned.yidl",
+        concept_name="LifecycleOwned",
+    )
+
+    class Counter:
+        config: int = const(default=1)
+        token: int = static()
+
+    harvested = harvest_lifecycle_definition(Counter)
+
+    with pytest.raises(
+        LifecycleDefinitionError,
+        match="const lifecycle field requires generated record ConstField",
+    ):
+        _build_lifecycle_container(generated, harvested)
+
+    class StaticOnly:
+        token: int = static()
+
+    harvested = harvest_lifecycle_definition(StaticOnly)
+
+    with pytest.raises(
+        LifecycleDefinitionError,
+        match="static lifecycle field requires generated record StaticField",
     ):
         _build_lifecycle_container(generated, harvested)
 
@@ -116,6 +158,24 @@ def test_lifecycle_layers_have_distinct_surfaces() -> None:
     assert hasattr(transient_layer, "TransientFieldsCollection")
     assert not hasattr(transient_layer, "build_LifecycleModule")
 
+    const_static_layer = _compiled_namespace(
+        paths=(
+            _YIDL_DIR / "lifecycle_core.yidl",
+            _YIDL_DIR / "lifecycle_managed.yidl",
+            _YIDL_DIR / "lifecycle_default_factories.yidl",
+            _YIDL_DIR / "lifecycle_transient.yidl",
+            _YIDL_DIR / "lifecycle_owned.yidl",
+            _YIDL_DIR / "lifecycle_const_static.yidl",
+        ),
+        entry_path=_YIDL_DIR / "lifecycle_const_static.yidl",
+        concept_name="LifecycleConstStatic",
+    )
+    assert hasattr(const_static_layer, "ConstField")
+    assert hasattr(const_static_layer, "StaticField")
+    assert hasattr(const_static_layer, "ConstFieldsCollection")
+    assert hasattr(const_static_layer, "StaticFieldsCollection")
+    assert not hasattr(const_static_layer, "build_LifecycleModule")
+
 
 def test_combined_layer_exposes_managed_field_record() -> None:
     generated = _compiled_namespace(
@@ -127,6 +187,8 @@ def test_combined_layer_exposes_managed_field_record() -> None:
     assert hasattr(generated, "ManagedField")
     assert hasattr(generated, "DefaultFactoryDependency")
     assert hasattr(generated, "TransientField")
+    assert hasattr(generated, "ConstField")
+    assert hasattr(generated, "StaticField")
     assert hasattr(generated, "build_LifecycleModule")
 
 

@@ -110,6 +110,42 @@ def classvar(*, default: object = MISSING) -> LifecycleMarker:
     )
 
 
+def const(
+    *,
+    default: object = MISSING,
+    default_factory: object = MISSING,
+    init: bool = True,
+) -> LifecycleMarker:
+    """Declare an immutable per-instance lifecycle value."""
+
+    return _marker(
+        kind="const",
+        default=default,
+        default_factory=default_factory,
+        working_default_factory=MISSING,
+        init=init,
+        tx_group=MISSING,
+    )
+
+
+def static(
+    *,
+    default: object = MISSING,
+    default_factory: object = MISSING,
+    init: bool = True,
+) -> LifecycleMarker:
+    """Declare a write-once per-instance lifecycle value."""
+
+    return _marker(
+        kind="static",
+        default=default,
+        default_factory=default_factory,
+        working_default_factory=MISSING,
+        init=init,
+        tx_group=MISSING,
+    )
+
+
 def managed(
     tx_group: object = DEFAULT_TRANSACTION,
     *,

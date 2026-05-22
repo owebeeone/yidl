@@ -118,7 +118,8 @@ def harvest_lifecycle_definition(cls: type[object]) -> HarvestedLifecycle:
     class_fact["lifecycle_field_names"] = tuple(
         str(fact["field_name"])
         for fact in field_facts
-        if fact["field_kind"] in {"binding", "field", "managed", "owned", "transient"}
+        if fact["field_kind"]
+        in {"binding", "const", "field", "managed", "owned", "static", "transient"}
     )
     for fact in field_facts:
         if fact["field_kind"] in {"managed", "owned", "transient"}:
@@ -252,7 +253,7 @@ def _field_fact(
         "thaw_param_name": "",
         "has_optional_none": _has_optional_none(decl.annotation),
     }
-    if kind in {"binding", "field"}:
+    if kind in {"binding", "const", "field", "static"}:
         fact["value_slot_name"] = f"_y_{name}_value"
     elif kind in {"managed", "owned"}:
         fact["tx_group_key"] = decl.tx_group
@@ -325,7 +326,7 @@ def _remap_inherited_field_fact(
             "thaw_param_name": f"_{class_name}_{name}_thaw" if has_thaw else "",
         },
     )
-    if kind in {"binding", "field"}:
+    if kind in {"binding", "const", "field", "static"}:
         fact["value_slot_name"] = f"_y_{name}_value"
     elif kind in {"managed", "owned"}:
         fact["current_slot_name"] = f"_y_{name}_current"

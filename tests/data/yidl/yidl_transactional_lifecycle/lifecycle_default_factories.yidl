@@ -13,6 +13,8 @@ concept LifecycleDefaultFactories extends managed.LifecycleManaged {
     property DependencyOwner: str
     property ConsumerFieldId: str
     property ConsumerFieldName: str = ""
+    property ConsumerFieldKind: str = ""
+    property ConsumerFieldOrder: int = 0
     property ProviderName: str
     property ProviderFieldId: str = ""
     property ProviderFieldKind: str = ""
@@ -44,6 +46,8 @@ concept LifecycleDefaultFactories extends managed.LifecycleManaged {
         DependencyOwner
         ConsumerFieldId
         ConsumerFieldName
+        ConsumerFieldKind
+        ConsumerFieldOrder
         ProviderName
         ProviderFieldId
         ProviderFieldKind
@@ -145,6 +149,21 @@ concept LifecycleDefaultFactories extends managed.LifecycleManaged {
                             ),
                         )
                         continue
+                    if (
+                        consumer.field_kind == "static"
+                        and provider.field_kind == "initvar"
+                    ):
+                        add_diagnostic(
+                            consumer,
+                            f"static_initvar.{param_name}",
+                            (
+                                f"{lifecycle_class.class_name}."
+                                f"{consumer.field_name}: static default_factory "
+                                f"cannot reference initvar {param_name!r} "
+                                "until retained initvar support is enabled"
+                            ),
+                        )
+                        continue
                     if not provider_is_available(provider):
                         add_diagnostic(
                             consumer,
@@ -216,6 +235,8 @@ concept LifecycleDefaultFactories extends managed.LifecycleManaged {
                         dependency_owner=lifecycle_class.class_id,
                         consumer_field_id=consumer.field_id,
                         consumer_field_name=consumer.field_name,
+                        consumer_field_kind=consumer.field_kind,
+                        consumer_field_order=consumer.field_order,
                         provider_name=provider.field_name,
                         provider_field_id=provider.field_id,
                         provider_field_kind=provider.field_kind,
@@ -238,6 +259,8 @@ concept LifecycleDefaultFactories extends managed.LifecycleManaged {
                         dependency_owner=lifecycle_class.class_id,
                         consumer_field_id=field.field_id,
                         consumer_field_name=field.field_name,
+                        consumer_field_kind=field.field_kind,
+                        consumer_field_order=field.field_order,
                         provider_name="",
                         provider_field_id="",
                         provider_field_kind="",
@@ -254,9 +277,7 @@ concept LifecycleDefaultFactories extends managed.LifecycleManaged {
             for eval_order, field_id in enumerate(ordered_field_ids):
                 field = by_id[field_id]
                 state_slot = ""
-                if field.field_kind == "field":
-                    state_slot = field.value_slot_name
-                elif field.field_kind == "binding":
+                if field.value_slot_name:
                     state_slot = field.value_slot_name
                 elif field.field_kind == "managed":
                     state_slot = field.current_slot_name

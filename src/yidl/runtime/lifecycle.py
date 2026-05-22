@@ -17,11 +17,13 @@ from yidl.runtime.lifecycle_markers import before_commit
 from yidl.runtime.lifecycle_markers import binding
 from yidl.runtime.lifecycle_markers import classvar
 from yidl.runtime.lifecycle_markers import commit_order_key
+from yidl.runtime.lifecycle_markers import const
 from yidl.runtime.lifecycle_markers import field
 from yidl.runtime.lifecycle_markers import initvar
 from yidl.runtime.lifecycle_markers import managed
 from yidl.runtime.lifecycle_markers import normalize_marker
 from yidl.runtime.lifecycle_markers import owned
+from yidl.runtime.lifecycle_markers import static
 from yidl.runtime.lifecycle_markers import transient
 from yidl.runtime.lifecycle_markers import validate_commit
 from yidl.runtime.lifecycle_harvester import HarvestedLifecycle
@@ -117,6 +119,10 @@ def _field_record_type(generated: ModuleType, kind: str) -> type[object]:
         return _required_record_type(generated, "InitVarField", kind)
     if kind == "classvar":
         return _required_record_type(generated, "ClassVarField", kind)
+    if kind == "const":
+        return _required_record_type(generated, "ConstField", kind)
+    if kind == "static":
+        return _required_record_type(generated, "StaticField", kind)
     if kind == "managed":
         return _required_record_type(generated, "ManagedField", kind)
     if kind == "owned":
@@ -251,6 +257,7 @@ __all__ = [
     "binding",
     "classvar",
     "commit_order_key",
+    "const",
     "field",
     "HarvestedLifecycle",
     "harvest_lifecycle_definition",
@@ -259,6 +266,7 @@ __all__ = [
     "managed",
     "normalize_marker",
     "owned",
+    "static",
     "transient",
     "validate_commit",
 ]

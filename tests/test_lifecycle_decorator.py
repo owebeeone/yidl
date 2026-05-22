@@ -20,11 +20,13 @@ from yidl.runtime.lifecycle import binding
 from yidl.runtime.lifecycle import commit_order_key
 from yidl.runtime.lifecycle import classvar
 from yidl.runtime.lifecycle import field
+from yidl.runtime.lifecycle import const
 from yidl.runtime.lifecycle import harvest_lifecycle_definition
 from yidl.runtime.lifecycle import initvar
 from yidl.runtime.lifecycle import lifecycle
 from yidl.runtime.lifecycle import managed
 from yidl.runtime.lifecycle import owned
+from yidl.runtime.lifecycle import static
 from yidl.runtime.lifecycle import transient
 from yidl.runtime.lifecycle import validate_commit
 from yidl.runtime.transaction_yidl import DEFAULT_TRANSACTION
@@ -187,7 +189,9 @@ def test_lifecycle_decorator_initializes_transient_current_defaults() -> None:
         item.current.label = "changed"
 
 
-def test_lifecycle_decorator_transient_working_overlay_materializes_in_transaction() -> None:
+def test_lifecycle_decorator_transient_working_overlay_materializes_in_transaction() -> (
+    None
+):
     class Scratch:
         seed: int = initvar(init=False, default=4)
         label: str = transient(default="ready")
@@ -254,6 +258,84 @@ def test_lifecycle_decorator_transient_working_overlay_materializes_in_transacti
 
     assert item.audit_buffer is None
     assert item.current.audit_buffer is None
+
+
+def test_lifecycle_decorator_const_fields_are_read_only_everywhere() -> None:
+    class Config:
+        seed: int = initvar(default=3)
+        slot_id: int = const(default=7)
+        derived_id: int = const(default_factory=lambda seed, slot_id: seed + slot_id)
+
+    item = lifecycle(Config)()
+
+    assert item.slot_id == 7
+    assert item.current.slot_id == 7
+    assert item.working.slot_id == 7
+    assert item.derived_id == 10
+    assert item.current.derived_id == 10
+    assert item.working.derived_id == 10
+
+    with pytest.raises(AttributeError, match="const field 'slot_id' is read-only"):
+        item.slot_id = 8
+    with pytest.raises(AttributeError, match="const field 'slot_id' is read-only"):
+        item.current.slot_id = 8
+    with pytest.raises(AttributeError, match="const field 'slot_id' is read-only"):
+        item.working.slot_id = 8
+
+
+def test_lifecycle_decorator_static_fields_are_lazy_and_write_once() -> None:
+    factory_calls: list[None] = []
+
+    def make_items() -> list[int]:
+        factory_calls.append(None)
+        return [1, 2]
+
+    class Config:
+        declared: tuple[str, ...] = static()
+        n: int = static(default=42)
+        items: list[int] = static(default_factory=make_items)
+
+    generated = lifecycle(Config)
+    item = generated()
+
+    with pytest.raises(
+        AttributeError, match="static field 'declared' is not initialized"
+    ):
+        _ = item.declared
+
+    item.declared = ("a", "b")
+    assert item.declared == ("a", "b")
+    assert item.current.declared == ("a", "b")
+    assert item.working.declared == ("a", "b")
+    with pytest.raises(
+        AttributeError, match="static field 'declared' is already initialized"
+    ):
+        item.declared = ("x",)
+
+    override = generated(n=7)
+    assert override.n == 7
+    with pytest.raises(AttributeError, match="static field 'n' is already initialized"):
+        override.n = 8
+
+    assign_first = generated()
+    assign_first.n = 9
+    assert assign_first.n == 9
+    with pytest.raises(AttributeError, match="static field 'n' is already initialized"):
+        assign_first.n = 10
+
+    read_default = generated()
+    assert read_default.n == 42
+    with pytest.raises(AttributeError, match="static field 'n' is already initialized"):
+        read_default.n = 43
+
+    assert factory_calls == []
+    assert item.items == [1, 2]
+    assert factory_calls == [None]
+    assert item.items is item.items
+    with pytest.raises(
+        AttributeError, match="static field 'items' is already initialized"
+    ):
+        item.items = []
 
 
 def test_lifecycle_decorator_binding_fields_are_stored_and_validated() -> None:

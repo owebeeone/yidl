@@ -1,0 +1,523 @@
+module tests.lifecycle_const_static
+
+import "lifecycle_owned.yidl" as owned
+
+export concept LifecycleConstStatic
+
+concept LifecycleConstStatic extends owned.LifecycleOwned {
+
+    family owned.LifecycleFieldSpec {
+        variant ConstField {
+        }
+
+        variant StaticField {
+        }
+    }
+
+    computed collection ConstFields: LifecycleFieldSpec from Fields where FieldKind == "const"
+    computed collection StaticFields: LifecycleFieldSpec from Fields where FieldKind == "static"
+
+    resource ConstReadOnlyProperty = template $[
+        @property
+        def property_getter_name__astichi_arg__(self):
+            return self._y_state.astichi_ref(external=state_slot)
+
+        @property_setter_target_name__astichi_arg__.setter
+        def property_setter_name__astichi_arg__(self, value):
+            del value
+            raise AttributeError(
+                f"const field {astichi_bind_external(field_name)!r} is read-only"
+            )
+    ]$
+
+    resource StaticInitAssignment = template $[
+        if astichi_pass(init_value_name__astichi_arg__, outer_bind=True) is _HAS_DEFAULT_FACTORY:
+            astichi_pass(state, outer_bind=True).astichi_ref(external=state_slot)._ = VOID
+        else:
+            astichi_pass(state, outer_bind=True).astichi_ref(external=state_slot)._ = astichi_pass(
+                init_value_name__astichi_arg__,
+                outer_bind=True,
+            )
+    ]$ {
+        keep _HAS_DEFAULT_FACTORY, VOID
+    }
+
+    resource StaticVoidAssignment = template $[
+        astichi_pass(state, outer_bind=True).astichi_ref(external=state_slot)._ = VOID
+    ]$ {
+        keep VOID
+    }
+
+    resource StaticUnsetProperty = template $[
+        @property
+        def property_getter_name__astichi_arg__(self):
+            value = self._y_state.astichi_ref(external=state_slot)
+            if value is VOID:
+                raise AttributeError(
+                    f"static field {astichi_bind_external(field_name)!r} is not initialized"
+                )
+            return value
+
+        @property_setter_target_name__astichi_arg__.setter
+        def property_setter_name__astichi_arg__(self, value):
+            state = self._y_state
+            if state.astichi_ref(external=state_slot) is VOID:
+                state.astichi_ref(external=state_slot)._ = value
+                return
+            raise AttributeError(
+                f"static field {astichi_bind_external(field_name)!r} is already initialized"
+            )
+    ]$ {
+        keep VOID
+    }
+
+    resource StaticDefaultProperty = template $[
+        @property
+        def property_getter_name__astichi_arg__(self):
+            state = self._y_state
+            value = state.astichi_ref(external=state_slot)
+            if value is VOID:
+                value = astichi_pass(default_value_name__astichi_arg__, outer_bind=True)
+                state.astichi_ref(external=state_slot)._ = value
+            return value
+
+        @property_setter_target_name__astichi_arg__.setter
+        def property_setter_name__astichi_arg__(self, value):
+            state = self._y_state
+            if state.astichi_ref(external=state_slot) is VOID:
+                state.astichi_ref(external=state_slot)._ = value
+                return
+            raise AttributeError(
+                f"static field {astichi_bind_external(field_name)!r} is already initialized"
+            )
+    ]$ {
+        keep VOID
+    }
+
+    resource StaticDefaultFactoryProperty = template $[
+        @property
+        def property_getter_name__astichi_arg__(self):
+            state = self._y_state
+            value = state.astichi_ref(external=state_slot)
+            if value is VOID:
+                value = default_factory_name__astichi_arg__(
+                    **astichi_hole(static_default_factory_args)
+                )
+                state.astichi_ref(external=state_slot)._ = value
+            return value
+
+        @property_setter_target_name__astichi_arg__.setter
+        def property_setter_name__astichi_arg__(self, value):
+            state = self._y_state
+            if state.astichi_ref(external=state_slot) is VOID:
+                state.astichi_ref(external=state_slot)._ = value
+                return
+            raise AttributeError(
+                f"static field {astichi_bind_external(field_name)!r} is already initialized"
+            )
+    ]$ {
+        keep VOID
+    }
+
+    resource StaticDefaultFactoryEvalPlaceholder = template $[
+        if False:
+            default_factory_name__astichi_arg__(
+                **astichi_hole(default_factory_args)
+            )
+    ]$
+
+    resource StaticDefaultFactoryStoredArg = template $[
+        astichi_funcargs(
+            param_name__astichi_arg__=astichi_pass(
+                self,
+                outer_bind=True,
+            ).astichi_ref(external=provider_name)
+        )
+    ]$
+
+    resource StaticDefaultFactoryEmptyArg = template $[
+        astichi_funcargs()
+    ]$
+
+    contribution ConstStateSlot = StateSlotEntry {
+        as ConstStateSlot
+        index FieldOrder
+        order FieldOrder
+
+        target state_slots {
+            build /ClassDef
+        }
+
+        external slot_name = ValueSlotName
+    }
+
+    contribution StaticStateSlot = StateSlotEntry {
+        as StaticStateSlot
+        index FieldOrder
+        order FieldOrder
+
+        target state_slots {
+            build /ClassDef
+        }
+
+        external slot_name = ValueSlotName
+    }
+
+    contribution ConstInitParamRequired = InitParamRequired {
+        as ConstInitParam
+        index FieldOrder
+        order FieldOrder
+
+        target init_params {
+            build /ClassDef
+        }
+
+        ident param_name = FieldName
+        external annotation = Annotation
+    }
+
+    contribution ConstInitParamDefault = InitParamDefault {
+        as ConstInitParam
+        index FieldOrder
+        order FieldOrder
+
+        target init_params {
+            build /ClassDef
+        }
+
+        ident param_name = FieldName
+        external annotation = Annotation
+        ident default_value_name = DefaultValueParamName
+    }
+
+    contribution ConstInitParamDefaultFactory = InitParamDefaultFactory {
+        as ConstInitParam
+        index FieldOrder
+        order FieldOrder
+
+        target init_params {
+            build /ClassDef
+        }
+
+        ident param_name = FieldName
+        external annotation = Annotation
+    }
+
+    contribution StaticInitParamOptional = InitParamDefaultFactory {
+        as StaticInitParam
+        index FieldOrder
+        order FieldOrder
+
+        target init_params {
+            build /ClassDef
+        }
+
+        ident param_name = FieldName
+        external annotation = Annotation
+    }
+
+    contribution ConstInitAssignment = PlainStateAssignment {
+        as ConstInitAssignment
+        index FieldOrder
+        order FieldOrder
+
+        target state_init_body {
+            build /ClassDef
+        }
+
+        ident init_value_name = FieldName
+        external state_slot = ValueSlotName
+    }
+
+    contribution ConstDefaultAssignment = PlainStateAssignment {
+        as ConstDefaultAssignment
+        index FieldOrder
+        order FieldOrder
+
+        target state_init_body {
+            build /ClassDef
+        }
+
+        ident init_value_name = DefaultValueParamName
+        external state_slot = ValueSlotName
+    }
+
+    contribution StaticInitValueAssignment = StaticInitAssignment {
+        as StaticInitValueAssignment
+        index FieldOrder
+        order FieldOrder
+
+        target state_init_body {
+            build /ClassDef
+        }
+
+        ident init_value_name = FieldName
+        external state_slot = ValueSlotName
+    }
+
+    contribution StaticDefaultVoidAssignment = StaticVoidAssignment {
+        as StaticDefaultVoidAssignment
+        index FieldOrder
+        order FieldOrder
+
+        target state_init_body {
+            build /ClassDef
+        }
+
+        external state_slot = ValueSlotName
+    }
+
+    contribution ConstFieldProperty = ConstReadOnlyProperty {
+        as ConstFieldProperty
+        index FieldOrder
+        order FieldOrder
+
+        target facade_properties {
+            build /ClassDef
+        }
+
+        ident property_getter_name = FieldName
+        ident property_setter_target_name = FieldName
+        ident property_setter_name = FieldName
+        external state_slot = ValueSlotName
+        external field_name = FieldName
+    }
+
+    contribution StaticUnsetFieldProperty = StaticUnsetProperty {
+        as StaticFieldProperty
+        index FieldOrder
+        order FieldOrder
+
+        target facade_properties {
+            build /ClassDef
+        }
+
+        ident property_getter_name = FieldName
+        ident property_setter_target_name = FieldName
+        ident property_setter_name = FieldName
+        external state_slot = ValueSlotName
+        external field_name = FieldName
+    }
+
+    contribution StaticDefaultFieldProperty = StaticDefaultProperty {
+        as StaticFieldProperty
+        index FieldOrder
+        order FieldOrder
+
+        target facade_properties {
+            build /ClassDef
+        }
+
+        ident property_getter_name = FieldName
+        ident property_setter_target_name = FieldName
+        ident property_setter_name = FieldName
+        ident default_value_name = DefaultValueParamName
+        external state_slot = ValueSlotName
+        external field_name = FieldName
+    }
+
+    contribution StaticDefaultFactoryFieldProperty = StaticDefaultFactoryProperty {
+        as StaticFieldProperty
+        index FieldOrder
+        order FieldOrder
+
+        target facade_properties {
+            build /ClassDef
+        }
+
+        ident property_getter_name = FieldName
+        ident property_setter_target_name = FieldName
+        ident property_setter_name = FieldName
+        ident default_factory_name = DefaultFactoryParamName
+        external state_slot = ValueSlotName
+        external field_name = FieldName
+    }
+
+    contribution StaticDefaultFactoryEvalPlaceholderContribution = StaticDefaultFactoryEvalPlaceholder {
+        as DefaultFactoryEval
+        index EvalOrder
+        order EvalStatementOrder
+
+        target state_init_body {
+            build /ClassDef
+        }
+
+        ident default_factory_name = EvalDefaultFactoryParamName
+    }
+
+    contribution StaticDefaultFactoryStoredArgContribution = StaticDefaultFactoryStoredArg {
+        as StaticDefaultFactoryArg
+        index (ConsumerFieldOrder, ParamOrder)
+        order ParamOrder
+
+        target static_default_factory_args {
+            build /ClassDef/StaticFieldProperty[ConsumerFieldOrder]
+        }
+
+        ident param_name = ParamName
+        external provider_name = ProviderName
+    }
+
+    contribution StaticDefaultFactoryEmptyArgContribution = StaticDefaultFactoryEmptyArg {
+        as StaticDefaultFactoryArg
+        index (ConsumerFieldOrder, ParamOrder)
+        order ParamOrder
+
+        target static_default_factory_args {
+            build /ClassDef/StaticFieldProperty[ConsumerFieldOrder]
+        }
+    }
+
+    matcher ConstStateSlotContributions(field: ConstFields) -> contribution {
+        default -> ConstStateSlot
+    }
+
+    matcher StaticStateSlotContributions(field: StaticFields) -> contribution {
+        default -> StaticStateSlot
+    }
+
+    matcher ConstInitParamContributions(field: ConstFields) -> contribution {
+        rule required when Init == True
+                      and HasDefault == False
+                      and HasDefaultFactory == False
+                      -> ConstInitParamRequired
+        rule default_value when Init == True
+                           and HasDefault == True
+                           and HasDefaultFactory == False
+                           -> ConstInitParamDefault
+        rule default_factory when Init == True
+                             and HasDefaultFactory == True
+                             -> ConstInitParamDefaultFactory
+    }
+
+    matcher StaticInitParamContributions(field: StaticFields) -> contribution {
+        rule init_field when Init == True -> StaticInitParamOptional
+    }
+
+    matcher ConstInitAssignmentContributions(field: ConstFields) -> contribution {
+        rule init_field when Init == True
+                        and HasDefaultFactory == False
+                        -> ConstInitAssignment
+        rule default_value when Init == False
+                           and HasDefault == True
+                           and HasDefaultFactory == False
+                           -> ConstDefaultAssignment
+    }
+
+    matcher StaticInitAssignmentContributions(field: StaticFields) -> contribution {
+        rule init_field when Init == True -> StaticInitValueAssignment
+        rule no_init when Init == False -> StaticDefaultVoidAssignment
+    }
+
+    matcher ConstPropertyContributions(field: ConstFields) -> contribution {
+        default -> ConstFieldProperty
+    }
+
+    matcher StaticPropertyContributions(field: StaticFields) -> contribution {
+        rule unset when HasDefault == False
+                  and HasDefaultFactory == False
+                  -> StaticUnsetFieldProperty
+        rule default_value when HasDefault == True
+                           and HasDefaultFactory == False
+                           -> StaticDefaultFieldProperty
+        rule default_factory when HasDefaultFactory == True
+                             -> StaticDefaultFactoryFieldProperty
+    }
+
+    matcher DefaultFactoryEvalContributions(step: DefaultFactoryEvaluationSteps) -> contribution {
+        rule const_init when EvalFieldKind == "const"
+                        and EvalInit == True
+                        -> StoredDefaultFactoryEvalInitContribution
+        rule const_no_init when EvalFieldKind == "const"
+                           and EvalInit == False
+                           -> StoredDefaultFactoryEvalNoInitContribution
+        rule static_lazy when EvalFieldKind == "static"
+                         -> StaticDefaultFactoryEvalPlaceholderContribution
+    }
+
+    matcher StaticDefaultFactoryArgContributions(dep: DefaultFactoryDependencies) -> contribution {
+        rule static_empty when ConsumerFieldKind == "static"
+                          and ParamName == ""
+                          -> StaticDefaultFactoryEmptyArgContribution
+        rule static_field when ConsumerFieldKind == "static"
+                          and ProviderFieldKind == "field"
+                          -> StaticDefaultFactoryStoredArgContribution
+        rule static_const when ConsumerFieldKind == "static"
+                          and ProviderFieldKind == "const"
+                          -> StaticDefaultFactoryStoredArgContribution
+        rule static_static when ConsumerFieldKind == "static"
+                           and ProviderFieldKind == "static"
+                           -> StaticDefaultFactoryStoredArgContribution
+        rule static_classvar when ConsumerFieldKind == "static"
+                            and ProviderFieldKind == "classvar"
+                            -> StaticDefaultFactoryStoredArgContribution
+        rule static_managed when ConsumerFieldKind == "static"
+                            and ProviderFieldKind == "managed"
+                            -> StaticDefaultFactoryStoredArgContribution
+        rule static_binding when ConsumerFieldKind == "static"
+                            and ProviderFieldKind == "binding"
+                            -> StaticDefaultFactoryStoredArgContribution
+        rule static_owned when ConsumerFieldKind == "static"
+                          and ProviderFieldKind == "owned"
+                          -> StaticDefaultFactoryStoredArgContribution
+        rule static_transient when ConsumerFieldKind == "static"
+                              and ProviderFieldKind == "transient"
+                              -> StaticDefaultFactoryStoredArgContribution
+    }
+
+    extend production CoreClassProduction {
+        phase state_slots_const after state_slots_plain order 5
+            from field: ConstFields
+            where FieldOwner == ClassId {
+            apply const_state_slots using ConstStateSlotContributions
+        }
+
+        phase state_slots_static after state_slots_plain order 6
+            from field: StaticFields
+            where FieldOwner == ClassId {
+            apply static_state_slots using StaticStateSlotContributions
+        }
+
+        phase init_params_const after init_params_plain order 5
+            from field: ConstFields
+            where FieldOwner == ClassId {
+            apply const_init_params using ConstInitParamContributions
+        }
+
+        phase init_params_static after init_params_plain order 6
+            from field: StaticFields
+            where FieldOwner == ClassId {
+            apply static_init_params using StaticInitParamContributions
+        }
+
+        phase init_assignments_const after init_assignments_plain order 5
+            from field: ConstFields
+            where FieldOwner == ClassId {
+            apply const_init_assignments using ConstInitAssignmentContributions
+        }
+
+        phase init_assignments_static after init_assignments_plain order 6
+            from field: StaticFields
+            where FieldOwner == ClassId {
+            apply static_init_assignments using StaticInitAssignmentContributions
+        }
+
+        phase properties_const after properties_plain order 5
+            from field: ConstFields
+            where FieldOwner == ClassId {
+            apply const_properties using ConstPropertyContributions
+        }
+
+        phase properties_static after properties_plain order 6
+            from field: StaticFields
+            where FieldOwner == ClassId {
+            apply static_properties using StaticPropertyContributions
+        }
+
+        phase static_default_factory_args after properties_static
+            from dep: DefaultFactoryDependencies
+            where DependencyOwner == ClassId {
+            apply static_default_factory_args using StaticDefaultFactoryArgContributions
+        }
+    }
+}

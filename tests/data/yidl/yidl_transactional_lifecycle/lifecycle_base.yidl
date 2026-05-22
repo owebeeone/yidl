@@ -1,10 +1,10 @@
 module tests.lifecycle_base
 
-import "lifecycle_owned.yidl" as owned
+import "lifecycle_const_static.yidl" as const_static
 
 export concept LifecycleBase
 
-concept LifecycleBase extends owned.LifecycleOwned {
+concept LifecycleBase extends const_static.LifecycleConstStatic {
 
     # -------------------------------------------------------------------------
     # Final lifecycle assembly.
