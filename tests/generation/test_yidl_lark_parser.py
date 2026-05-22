@@ -1681,6 +1681,103 @@ def test_yidl_lark_production_extension_duplicate_apply_edge_rejects() -> None:
         compile_yidl_files({"phases.yidl": source}, "phases.yidl")
 
 
+def test_yidl_lark_phase_context_defaults_apply_to_inline_edge() -> None:
+    source = _phase_context_source(
+        phase_context="from item: Items where Include == True",
+    )
+
+    concept = compile_yidl_files({"phases.yidl": source}, "phases.yidl").concepts[
+        "PhaseExample"
+    ]
+    edge = concept.assembly_edges["ModuleProduction.add"]
+
+    assert [
+        (input_spec.name, input_spec.collection_name)
+        for input_spec in edge.from_inputs
+    ] == [
+        ("item", "Items"),
+    ]
+    assert _condition_right_value(edge.condition) is True
+
+
+def test_yidl_lark_phase_context_apply_from_overrides_phase_from() -> None:
+    source = _phase_context_source(
+        phase_context="from item: Items where Include == True",
+        apply_context="from item: OtherItems",
+    )
+
+    concept = compile_yidl_files({"phases.yidl": source}, "phases.yidl").concepts[
+        "PhaseExample"
+    ]
+    edge = concept.assembly_edges["ModuleProduction.add"]
+
+    assert [
+        (input_spec.name, input_spec.collection_name)
+        for input_spec in edge.from_inputs
+    ] == [
+        ("item", "OtherItems"),
+    ]
+    assert _condition_right_value(edge.condition) is True
+
+
+def test_yidl_lark_phase_context_apply_where_replaces_phase_where() -> None:
+    source = _phase_context_source(
+        phase_context="from item: Items where Include == True",
+        apply_context="where Include == False",
+    )
+
+    concept = compile_yidl_files({"phases.yidl": source}, "phases.yidl").concepts[
+        "PhaseExample"
+    ]
+    edge = concept.assembly_edges["ModuleProduction.add"]
+
+    assert [
+        (input_spec.name, input_spec.collection_name)
+        for input_spec in edge.from_inputs
+    ] == [
+        ("item", "Items"),
+    ]
+    assert _condition_right_value(edge.condition) is False
+
+
+def test_yidl_lark_phase_extension_context_filters_runtime_apply() -> None:
+    source = _phase_context_source(
+        phase_context="from item: Items where Include == True",
+        use_extension=True,
+    )
+
+    concept = compile_yidl_files({"phases.yidl": source}, "phases.yidl").concepts[
+        "Feature"
+    ]
+    generated = emit_concept_runtime_source(
+        concept.plan.build_data_definition(),
+        resources=concept.resources,
+        assembly_plan=concept,
+    )
+    namespace: dict[str, object] = {}
+    exec(generated, namespace)
+
+    builder = namespace["new_builder"]()
+    item = namespace["Item"]
+    items = namespace["ItemsCollection"]
+    builder.add(items, item(name="keep", include=True))
+    builder.add(items, item(name="drop", include=False))
+
+    emitted = namespace["build_Module"](builder.freeze()).emit_commented()
+
+    assert ".append('keep')" in emitted
+    assert ".append('drop')" not in emitted
+
+
+def test_yidl_lark_phase_context_missing_value_rejects() -> None:
+    source = _phase_context_source(
+        phase_context="where Missing == True",
+    )
+
+    with pytest.raises(YidlSymbolError, match="Missing"):
+        compile_yidl_files({"phases.yidl": source}, "phases.yidl")
+
+
 def test_yidl_lark_production_extension_missing_target_rejects() -> None:
     source = """
     module phases
@@ -1755,6 +1852,85 @@ def _apply_name(apply: object) -> str:
     if edge is not None:
         return str(edge.name)
     return str(apply.edge_name)
+
+
+def _condition_right_value(condition: object) -> object:
+    return condition.right.value
+
+
+def _phase_context_source(
+    *,
+    phase_context: str,
+    apply_context: str = "",
+    use_extension: bool = False,
+) -> str:
+    phase_prefix = f" {phase_context.strip()}" if phase_context.strip() else ""
+    apply_prefix = f" {apply_context.strip()}" if apply_context.strip() else ""
+    production_body = (
+        """
+            phase body {
+            }
+        """
+        if use_extension
+        else f"""
+            phase body{phase_prefix} {{
+                apply add{apply_prefix} using AddContributions
+            }}
+        """
+    )
+    extension_body = (
+        f"""
+
+    concept Feature extends PhaseExample {{
+        extend production ModuleProduction {{
+            phase body{phase_prefix} {{
+                apply add{apply_prefix} using AddContributions
+            }}
+        }}
+    }}
+        """
+        if use_extension
+        else ""
+    )
+    return f"""
+    module phases
+
+    concept PhaseExample {{
+        property Name: str storage name
+        property Include: bool storage include
+
+        record Item {{
+            Name
+            Include
+        }}
+
+        collection Items: Item identity Name many
+        collection OtherItems: Item identity Name many
+
+        resource Root = code $[
+            VALUE = []
+            astichi_hole(body)
+        ]$
+        resource Add = template `VALUE.append(astichi_bind_external(name))`
+
+        contribution Add = Add {{
+            target body {{ build /Root }}
+            external name = Name
+        }}
+
+        matcher AddContributions(item: Items) -> contribution {{
+            default -> Add
+        }}
+
+        production ModuleProduction -> composable {{
+            root Root = Root
+            {production_body}
+        }}
+
+        assembly Module = ModuleProduction
+    }}
+    {extension_body}
+    """
 
 
 def test_yidl_lark_diamond_inheritance_dedupes_inherited_maps() -> None:

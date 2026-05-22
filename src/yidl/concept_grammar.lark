@@ -172,9 +172,11 @@ composable_production_inputs: "(" matcher_input_list? ")"
 composable_production_member: root_decl
                             | apply_decl
                             | phase_decl
-phase_decl: "phase" CNAME "{" apply_decl* "}"
+phase_decl: "phase" CNAME phase_context? "{" apply_decl* "}"
 composable_production_extension_decl: "extend" "production" qname "{" phase_extension_decl* "}"
-phase_extension_decl: "phase" CNAME "{" apply_decl* "}"
+phase_extension_decl: "phase" CNAME phase_context? "{" apply_decl* "}"
+phase_context: assemble_from where_clause?
+             | where_clause
 root_decl: "root" CNAME "=" resource_ref_expr root_options?
 root_options: "{" bind_decl* "}"
 apply_decl: "apply" CNAME apply_tail?

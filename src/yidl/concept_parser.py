@@ -146,16 +146,24 @@ class _ResourceOptions:
 
 
 @dataclass(frozen=True, slots=True)
+class _PhaseContextSpec:
+    from_inputs: tuple[AssemblyInputSpec, ...] = ()
+    condition: AssemblyConditionSpec | None = None
+
+
+@dataclass(frozen=True, slots=True)
 class _ProductionPhaseSpec:
     name: str
     applies: tuple[ApplySpec, ...]
     extensible: bool
+    context: _PhaseContextSpec
 
 
 @dataclass(frozen=True, slots=True)
 class _ProductionPhaseExtensionSpec:
     phase_name: str
     applies: tuple[ApplySpec, ...]
+    context: _PhaseContextSpec
 
 
 @dataclass(frozen=True, slots=True)
@@ -1459,6 +1467,7 @@ class _ConceptCompiler:
                     name=f"{_IMPLICIT_PHASE_PREFIX}{implicit_phase_count}",
                     applies=tuple(pending_applies),
                     extensible=False,
+                    context=_PhaseContextSpec(),
                 )
             )
             implicit_phase_count += 1
@@ -1484,9 +1493,16 @@ class _ConceptCompiler:
                         f"production {name!r} repeats phase {phase_name!r}"
                     )
                 phase_names.add(phase_name)
+                phase_context = self._phase_context(member)
                 phase_applies: list[ApplySpec] = []
                 for apply_tree in _children(member, "apply_decl"):
-                    apply_spec = self._apply_spec(name, inputs, apply_tree)
+                    apply_spec = self._apply_spec(
+                        name,
+                        inputs,
+                        apply_tree,
+                        default_from_inputs=phase_context.from_inputs,
+                        default_condition=phase_context.condition,
+                    )
                     self._register_inline_apply_edge(apply_spec)
                     applies.append(apply_spec)
                     phase_applies.append(apply_spec)
@@ -1495,6 +1511,7 @@ class _ConceptCompiler:
                         name=phase_name,
                         applies=tuple(phase_applies),
                         extensible=True,
+                        context=phase_context,
                     )
                 )
                 continue
@@ -1542,14 +1559,22 @@ class _ConceptCompiler:
                 raise YidlSymbolError(
                     f"production {target.name!r} has no phase {phase_name!r}"
                 )
+            phase_context = self._phase_context(phase)
             applies = tuple(
-                self._apply_spec(target.name, target.inputs, apply_tree)
+                self._apply_spec(
+                    target.name,
+                    target.inputs,
+                    apply_tree,
+                    default_from_inputs=phase_context.from_inputs,
+                    default_condition=phase_context.condition,
+                )
                 for apply_tree in _children(phase, "apply_decl")
             )
             phase_extensions.append(
                 _ProductionPhaseExtensionSpec(
                     phase_name=phase_name,
                     applies=applies,
+                    context=phase_context,
                 )
             )
         return _ProductionExtensionSpec(
@@ -1704,18 +1729,44 @@ class _ConceptCompiler:
         production_name: str,
         context_inputs: tuple[AssemblyInputSpec, ...],
         tree: Tree,
+        *,
+        default_from_inputs: tuple[AssemblyInputSpec, ...] = (),
+        default_condition: AssemblyConditionSpec | None = None,
     ) -> ApplySpec:
         apply_name = _token_text(tree.children[0])
         tail = _first_child(tree, "apply_tail")
         if tail is None:
+            if default_from_inputs or default_condition is not None:
+                raise YidlSymbolError(
+                    f"apply {apply_name!r} cannot inherit phase context without "
+                    "an inline using clause"
+                )
             return EdgeApplySpec(edge_name=apply_name)
         edge = self._edge_spec(
             f"{production_name}.{apply_name}",
             context_inputs=context_inputs,
             tail_children=tail.children,
             context=f"apply {apply_name!r}",
+            default_from_inputs=default_from_inputs,
+            default_condition=default_condition,
         )
         return InlineApplySpec(edge=edge)
+
+    def _phase_context(self, tree: Tree) -> _PhaseContextSpec:
+        context = _first_child(tree, "phase_context")
+        if context is None:
+            return _PhaseContextSpec()
+        from_inputs: tuple[AssemblyInputSpec, ...] = ()
+        condition: AssemblyConditionSpec | None = None
+        from_tree = _first_child(context, "assemble_from")
+        if from_tree is not None:
+            from_inputs = self._assembly_inputs(
+                _first_child(from_tree, "matcher_input_list")
+            )
+        where_tree = _first_child(context, "where_clause")
+        if where_tree is not None:
+            condition = self._assembly_condition(where_tree.children[0])
+        return _PhaseContextSpec(from_inputs=from_inputs, condition=condition)
 
     def _edge_spec(
         self,
@@ -1724,9 +1775,11 @@ class _ConceptCompiler:
         context_inputs: tuple[AssemblyInputSpec, ...],
         tail_children: list[object],
         context: str,
+        default_from_inputs: tuple[AssemblyInputSpec, ...] = (),
+        default_condition: AssemblyConditionSpec | None = None,
     ) -> AssemblyEdgeSpec:
-        from_inputs: tuple[AssemblyInputSpec, ...] = ()
-        condition: AssemblyConditionSpec | None = None
+        from_inputs = default_from_inputs
+        condition = default_condition
         matcher_name: str | None = None
         for child in tail_children:
             if isinstance(child, Tree) and child.data == "assemble_from":
