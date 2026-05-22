@@ -227,10 +227,34 @@ concept LifecycleDefaultFactories extends managed.LifecycleManaged {
                     policy=RejectDuplicate,
                 )
 
+            for field in factory_fields:
+                if field.default_factory_param_names:
+                    continue
+                ctx.write(
+                    DefaultFactoryDependenciesCollection,
+                    DefaultFactoryDependency(
+                        dependency_owner=lifecycle_class.class_id,
+                        consumer_field_id=field.field_id,
+                        consumer_field_name=field.field_name,
+                        provider_name="",
+                        provider_field_id="",
+                        provider_field_kind="",
+                        provider_init=True,
+                        provider_has_default=False,
+                        provider_has_default_factory=False,
+                        param_name="",
+                        param_order=-1,
+                        consumer_eval_order=eval_order_by_id[field.field_id],
+                    ),
+                    policy=RejectDuplicate,
+                )
+
             for eval_order, field_id in enumerate(ordered_field_ids):
                 field = by_id[field_id]
                 state_slot = ""
                 if field.field_kind == "field":
+                    state_slot = field.value_slot_name
+                elif field.field_kind == "binding":
                     state_slot = field.value_slot_name
                 elif field.field_kind == "managed":
                     state_slot = field.current_slot_name
@@ -352,6 +376,10 @@ concept LifecycleDefaultFactories extends managed.LifecycleManaged {
                 outer_bind=True,
             )
         )
+    ]$
+
+    resource DefaultFactoryEmptyArg = template $[
+        astichi_funcargs()
     ]$
 
     contribution FieldDefaultFactoryBuilderParam = BuilderParam {
@@ -485,6 +513,16 @@ concept LifecycleDefaultFactories extends managed.LifecycleManaged {
         ident provider_name = ProviderName
     }
 
+    contribution DefaultFactoryEmptyArgContribution = DefaultFactoryEmptyArg {
+        as DefaultFactoryArg
+        index (ConsumerEvalOrder, ParamOrder)
+        order ParamOrder
+
+        target default_factory_args {
+            build /ClassDef/DefaultFactoryEval[ConsumerEvalOrder]
+        }
+    }
+
     matcher FieldDefaultBuilderParamContributions(field: Fields) -> contribution {
         rule has_default_factory when HasDefaultFactory == True -> FieldDefaultFactoryBuilderParam
     }
@@ -530,6 +568,7 @@ concept LifecycleDefaultFactories extends managed.LifecycleManaged {
 
     matcher DefaultFactoryArgContributions(dep: DefaultFactoryDependencies) -> contribution {
         default -> DefaultFactoryStoredArgContribution
+        rule empty_provider when ParamName == "" -> DefaultFactoryEmptyArgContribution
         rule local_provider when ProviderFieldKind == "initvar"
                             -> DefaultFactoryLocalArgContribution
     }

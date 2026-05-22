@@ -1,0 +1,256 @@
+module tests.lifecycle_owned
+
+import "lifecycle_transient.yidl" as transient
+
+export concept LifecycleOwned
+
+concept LifecycleOwned extends transient.LifecycleTransient {
+
+    family transient.LifecycleFieldSpec {
+        variant BindingField {
+        }
+
+        variant OwnedField {
+        }
+    }
+
+    computed collection BindingFields: LifecycleFieldSpec from Fields where FieldKind == "binding"
+    computed collection OwnedFields: LifecycleFieldSpec from Fields where FieldKind == "owned"
+
+    resource BindingSupportHelper = code $[
+        def _y_validate_binding_value(field_name, value):
+            from yidl.runtime.bindings import BindingBase
+
+            if value is not None and not isinstance(value, BindingBase):
+                raise TypeError(
+                    "binding field " + repr(field_name)
+                    + " expects BindingBase or None"
+                )
+            return value
+    ]$
+
+    resource BindingStateAssignment = template $[
+        astichi_pass(state, outer_bind=True).astichi_ref(external=state_slot)._ = (
+            _y_validate_binding_value(
+                astichi_bind_external(field_name),
+                astichi_pass(init_value_name__astichi_arg__, outer_bind=True),
+            )
+        )
+    ]$
+
+    resource BindingProperty = template $[
+        @property
+        def property_getter_name__astichi_arg__(self):
+            return self._y_state.astichi_ref(external=state_slot)
+
+        @property_setter_target_name__astichi_arg__.setter
+        def property_setter_name__astichi_arg__(self, value):
+            self._y_state.astichi_ref(external=state_slot)._ = (
+                _y_validate_binding_value(astichi_bind_external(field_name), value)
+            )
+    ]$
+
+    resource BindingDefaultFactoryEvalInit = template $[
+        if astichi_pass(field_name__astichi_arg__, outer_bind=True) is _HAS_DEFAULT_FACTORY:
+            astichi_pass(field_name__astichi_arg__, outer_bind=True)._ = (
+                default_factory_name__astichi_arg__(
+                    **astichi_hole(default_factory_args)
+                )
+            )
+        astichi_pass(self, outer_bind=True).astichi_ref(external=property_name)._ = astichi_pass(
+            field_name__astichi_arg__,
+            outer_bind=True,
+        )
+    ]$ {
+        keep _HAS_DEFAULT_FACTORY
+    }
+
+    resource BindingDefaultFactoryEvalNoInit = template $[
+        field_name__astichi_arg__ = default_factory_name__astichi_arg__(
+            **astichi_hole(default_factory_args)
+        )
+        astichi_pass(self, outer_bind=True).astichi_ref(external=property_name)._ = astichi_pass(
+            field_name__astichi_arg__,
+            outer_bind=True,
+        )
+    ]$
+
+    contribution BindingSupportHelperContribution = BindingSupportHelper {
+        as BindingSupportHelper
+        index ClassOrder
+        order -1000
+
+        target function_body {
+            build /Root
+        }
+    }
+
+    contribution BindingStateSlot = StateSlotEntry {
+        as BindingStateSlot
+        index FieldOrder
+        order FieldOrder
+
+        target state_slots {
+            build /ClassDef
+        }
+
+        external slot_name = ValueSlotName
+    }
+
+    contribution BindingInitParamRequired = InitParamRequired {
+        as BindingInitParam
+        index FieldOrder
+        order FieldOrder
+
+        target init_params {
+            build /ClassDef
+        }
+
+        ident param_name = FieldName
+        external annotation = Annotation
+    }
+
+    contribution BindingInitParamDefault = InitParamDefault {
+        as BindingInitParam
+        index FieldOrder
+        order FieldOrder
+
+        target init_params {
+            build /ClassDef
+        }
+
+        ident param_name = FieldName
+        external annotation = Annotation
+        ident default_value_name = DefaultValueParamName
+    }
+
+    contribution BindingInitParamDefaultFactory = InitParamDefaultFactory {
+        as BindingInitParam
+        index FieldOrder
+        order FieldOrder
+
+        target init_params {
+            build /ClassDef
+        }
+
+        ident param_name = FieldName
+        external annotation = Annotation
+    }
+
+    contribution BindingInitAssignment = BindingStateAssignment {
+        as BindingInitAssignment
+        index FieldOrder
+        order FieldOrder
+
+        target state_init_body {
+            build /ClassDef
+        }
+
+        ident init_value_name = FieldName
+        external field_name = FieldName
+        external state_slot = ValueSlotName
+    }
+
+    contribution BindingDefaultAssignment = BindingStateAssignment {
+        as BindingInitAssignment
+        index FieldOrder
+        order FieldOrder
+
+        target state_init_body {
+            build /ClassDef
+        }
+
+        ident init_value_name = DefaultValueParamName
+        external field_name = FieldName
+        external state_slot = ValueSlotName
+    }
+
+    contribution BindingFieldProperty = BindingProperty {
+        as BindingFieldProperty
+        index FieldOrder
+        order FieldOrder
+
+        target facade_properties {
+            build /ClassDef
+        }
+
+        ident property_getter_name = FieldName
+        ident property_setter_target_name = FieldName
+        ident property_setter_name = FieldName
+        external field_name = FieldName
+        external state_slot = ValueSlotName
+    }
+
+    contribution BindingDefaultFactoryEvalInitContribution = BindingDefaultFactoryEvalInit {
+        as DefaultFactoryEval
+        index EvalOrder
+        order EvalStatementOrder
+
+        target state_init_body {
+            build /ClassDef
+        }
+
+        ident field_name = EvalFieldName
+        ident default_factory_name = EvalDefaultFactoryParamName
+        external property_name = EvalFieldName
+    }
+
+    contribution BindingDefaultFactoryEvalNoInitContribution = BindingDefaultFactoryEvalNoInit {
+        as DefaultFactoryEval
+        index EvalOrder
+        order EvalStatementOrder
+
+        target state_init_body {
+            build /ClassDef
+        }
+
+        ident field_name = EvalFieldName
+        ident default_factory_name = EvalDefaultFactoryParamName
+        external property_name = EvalFieldName
+    }
+
+    matcher BindingSupportHelperContributions(lifecycle_class: Classes) -> contribution {
+        default -> BindingSupportHelperContribution
+    }
+
+    matcher BindingStateSlotContributions(field: BindingFields) -> contribution {
+        default -> BindingStateSlot
+    }
+
+    matcher BindingInitParamContributions(field: BindingFields) -> contribution {
+        rule required when Init == True
+                      and HasDefault == False
+                      and HasDefaultFactory == False
+                      -> BindingInitParamRequired
+        rule default_value when Init == True
+                           and HasDefault == True
+                           and HasDefaultFactory == False
+                           -> BindingInitParamDefault
+        rule default_factory when Init == True
+                             and HasDefaultFactory == True
+                             -> BindingInitParamDefaultFactory
+    }
+
+    matcher BindingInitAssignmentContributions(field: BindingFields) -> contribution {
+        rule init_field when Init == True
+                        and HasDefaultFactory == False
+                        -> BindingInitAssignment
+        rule default_value when Init == False
+                           and HasDefault == True
+                           and HasDefaultFactory == False
+                           -> BindingDefaultAssignment
+    }
+
+    matcher BindingPropertyContributions(field: BindingFields) -> contribution {
+        default -> BindingFieldProperty
+    }
+
+    matcher DefaultFactoryEvalContributions(step: DefaultFactoryEvaluationSteps) -> contribution {
+        rule binding_init when EvalFieldKind == "binding"
+                          and EvalInit == True
+                          -> BindingDefaultFactoryEvalInitContribution
+        rule binding_no_init when EvalFieldKind == "binding"
+                             and EvalInit == False
+                             -> BindingDefaultFactoryEvalNoInitContribution
+    }
+}

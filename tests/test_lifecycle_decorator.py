@@ -9,11 +9,13 @@ import weakref
 
 import pytest
 
+from yidl.runtime.bindings import BindingBase
 from yidl.runtime.lifecycle import _generate_lifecycle_source
 from yidl.runtime.lifecycle import LifecycleDefinitionError
 from yidl.runtime.lifecycle import after_commit
 from yidl.runtime.lifecycle import after_rollback
 from yidl.runtime.lifecycle import before_commit
+from yidl.runtime.lifecycle import binding
 from yidl.runtime.lifecycle import commit_order_key
 from yidl.runtime.lifecycle import classvar
 from yidl.runtime.lifecycle import field
@@ -32,6 +34,10 @@ _PERF_BATCH_SIZE = 100
 _LIFECYCLE_PERF_FIXTURE = (
     Path(__file__).parent / "data" / "perf" / "lifecycle_constructor_perf_generated.py"
 )
+
+
+class _TestBinding(BindingBase):
+    pass
 
 
 def test_lifecycle_decorator_builds_phase_a_generated_class() -> None:
@@ -246,6 +252,43 @@ def test_lifecycle_decorator_transient_working_overlay_materializes_in_transacti
 
     assert item.audit_buffer is None
     assert item.current.audit_buffer is None
+
+
+def test_lifecycle_decorator_binding_fields_are_stored_and_validated() -> None:
+    initial = _TestBinding()
+
+    class Holder:
+        handle: object = binding(default=initial)
+        derived: object = binding(default_factory=lambda handle: _TestBinding())
+
+    generated = lifecycle(Holder)
+    item = generated()
+
+    assert item.handle is initial
+    assert isinstance(item.derived, _TestBinding)
+
+    replacement = _TestBinding()
+    item.handle = replacement
+    assert item.handle is replacement
+    assert item.current.handle is replacement
+    assert item.working.handle is replacement
+
+    with pytest.raises(TypeError, match="binding field 'handle' expects"):
+        item.handle = object()
+    assert item.handle is replacement
+
+    with pytest.raises(TypeError, match="binding field 'handle' expects"):
+        generated(handle=object())
+
+
+def test_lifecycle_decorator_rejects_invalid_binding_default_factory_result() -> None:
+    class Holder:
+        handle: object = binding(default_factory=object)
+
+    generated = lifecycle(Holder)
+
+    with pytest.raises(TypeError, match="binding field 'handle' expects"):
+        generated()
 
 
 def test_lifecycle_source_uses_direct_default_factory_calls() -> None:

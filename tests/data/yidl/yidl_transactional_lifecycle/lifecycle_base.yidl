@@ -1,10 +1,10 @@
 module tests.lifecycle_base
 
-import "lifecycle_transient.yidl" as transient
+import "lifecycle_owned.yidl" as owned
 
 export concept LifecycleBase
 
-concept LifecycleBase extends transient.LifecycleTransient {
+concept LifecycleBase extends owned.LifecycleOwned {
 
     # -------------------------------------------------------------------------
     # Final lifecycle assembly.
@@ -46,6 +46,10 @@ concept LifecycleBase extends transient.LifecycleTransient {
         apply transient_working_default_params
             from field: Fields
             using TransientWorkingDefaultBuilderParamContributions
+
+        apply binding_support_helpers
+            from lifecycle_class: Classes
+            using BindingSupportHelperContributions
 
         apply managed_freeze_params
             from field: ManagedFields
@@ -93,6 +97,11 @@ concept LifecycleBase extends transient.LifecycleTransient {
             from field: PlainFields
             where FieldOwner == ClassId
             using PlainStateSlotContributions
+
+        apply binding_state_slots
+            from field: BindingFields
+            where FieldOwner == ClassId
+            using BindingStateSlotContributions
 
         apply managed_current_state_slots
             from field: ManagedFields
@@ -314,6 +323,11 @@ concept LifecycleBase extends transient.LifecycleTransient {
             where FieldOwner == ClassId
             using PlainInitParamContributions
 
+        apply binding_init_params
+            from field: BindingFields
+            where FieldOwner == ClassId
+            using BindingInitParamContributions
+
         apply initvar_params
             from field: InitVarFields
             where FieldOwner == ClassId
@@ -338,6 +352,11 @@ concept LifecycleBase extends transient.LifecycleTransient {
             from field: PlainFields
             where FieldOwner == ClassId
             using PlainInitAssignmentContributions
+
+        apply binding_init_assignments
+            from field: BindingFields
+            where FieldOwner == ClassId
+            using BindingInitAssignmentContributions
 
         apply managed_current_init_assignments
             from field: ManagedFields
@@ -383,6 +402,11 @@ concept LifecycleBase extends transient.LifecycleTransient {
             from field: PlainFields
             where FieldOwner == ClassId
             using PlainPropertyContributions
+
+        apply binding_properties
+            from field: BindingFields
+            where FieldOwner == ClassId
+            using BindingPropertyContributions
 
         apply managed_default_properties
             from field: IndexedTransactionalFields
