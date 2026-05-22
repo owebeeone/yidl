@@ -101,6 +101,35 @@ extend production ClassProduction {
 }
 ```
 
+Anchored phase extension:
+
+```yidl
+production ClassProduction(lifecycle_class: Classes) -> composable {
+    root ClassDef = ClassBundle { ... }
+
+    phase state_slots { ... }
+    phase locals { ... }
+    phase init_assignments { ... }
+    phase facade_properties { ... }
+}
+
+extend production ClassProduction {
+    phase retained_initvar_slots after state_slots order 20 {
+        apply retained_initvar_state_slots
+            from initvar: RetainedInitVars
+            where FieldOwner == ClassId
+            using RetainedInitVarStateSlotContributions
+    }
+
+    phase default_factory_evals after locals order 20 {
+        apply default_factory_evals
+            from step: DefaultFactoryEvaluationSteps
+            where EvalOwner == ClassId
+            using DefaultFactoryEvalContributions
+    }
+}
+```
+
 ### Lowering
 
 - A `phase` lowers to an ordered list of normal `apply` declarations.
@@ -108,10 +137,16 @@ extend production ClassProduction {
   not a replacement production.
 - Concept merge gathers production extensions from the concept closure and
   flattens them into the target production before assembly validation.
-- Phase order is owned by the base production.
-- Inside a phase, base applies run first, then extensions in deterministic
-  concept-closure order and source order.
-- V0 should reject extension of a missing production or a missing phase.
+- V0 phase order is owned by the base production.
+- The next phase-ordering slice adds `after` and `order`.
+- A phase with `after ANCHOR` may create a new phase if `ANCHOR` exists.
+- Omitted `order` means `0`.
+- Same numeric `order` falls through to declaration order: deterministic concept
+  closure order, then source order.
+- Inside one phase, body fragments merge in deterministic concept-closure order
+  and source order.
+- V0 should reject extension of a missing production or a missing phase unless
+  the phase declaration supplies a valid `after` anchor.
 - V0 should keep apply names globally unique in the merged assembly edge map.
 
 ### Why It Matters
@@ -130,6 +165,12 @@ without editing the base production.
 
 This is mainly an architecture and locality fix. It will reduce base-file
 coupling more than total line count.
+
+Anchored phase ordering should remove most empty placeholder phases from
+`lifecycle_core.yidl` after the first production-extension refactor. The
+additional reduction is modest in raw LOC, but important for mergeability:
+features can introduce `after locals order 20` style phases without making core
+name every future lowering site.
 
 ## Proposal 2: Phase Context Defaults
 

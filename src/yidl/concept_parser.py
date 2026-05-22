@@ -157,6 +157,8 @@ class _ProductionPhaseSpec:
     applies: tuple[ApplySpec, ...]
     extensible: bool
     context: _PhaseContextSpec
+    anchor_name: str | None = None
+    order: int = 0
 
 
 @dataclass(frozen=True, slots=True)
@@ -164,6 +166,8 @@ class _ProductionPhaseExtensionSpec:
     phase_name: str
     applies: tuple[ApplySpec, ...]
     context: _PhaseContextSpec
+    anchor_name: str | None = None
+    order: int | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -557,12 +561,22 @@ class _ConceptCompiler:
             getter=lambda concept: concept.assembly_edge_definitions,
             concept_name=name,
         )
-        composable_productions, assembly_edges = _flatten_production_extensions(
+        (
+            composable_productions,
+            assembly_edges,
+            flattened_production_phase_specs,
+        ) = _flatten_production_extensions(
             production_definitions=production_definitions,
             production_phase_specs=production_phase_specs,
             production_extensions=production_extensions,
             assembly_edge_definitions=assembly_edge_definitions,
         )
+        production_phases = {
+            production_name: frozenset(
+                phase.name for phase in phases if phase.extensible
+            )
+            for production_name, phases in flattened_production_phase_specs.items()
+        }
         assemblies = _merge_named_maps(
             kind="assembly",
             extensions=self._extensions,
@@ -1493,6 +1507,7 @@ class _ConceptCompiler:
                         f"production {name!r} repeats phase {phase_name!r}"
                     )
                 phase_names.add(phase_name)
+                anchor_name, order = self._phase_position(member)
                 phase_context = self._phase_context(member)
                 phase_applies: list[ApplySpec] = []
                 for apply_tree in _children(member, "apply_decl"):
@@ -1512,6 +1527,8 @@ class _ConceptCompiler:
                         applies=tuple(phase_applies),
                         extensible=True,
                         context=phase_context,
+                        anchor_name=anchor_name,
+                        order=order if order is not None else 0,
                     )
                 )
                 continue
@@ -1544,7 +1561,6 @@ class _ConceptCompiler:
             target_name,
             context=f"production extension {target_name!r}",
         )
-        phase_names = self._phase_names_for_production(target.name)
         phase_extensions: list[_ProductionPhaseExtensionSpec] = []
         seen_phases: set[str] = set()
         for phase in _children(tree, "phase_extension_decl"):
@@ -1555,10 +1571,7 @@ class _ConceptCompiler:
                     f"{phase_name!r}"
                 )
             seen_phases.add(phase_name)
-            if phase_name not in phase_names:
-                raise YidlSymbolError(
-                    f"production {target.name!r} has no phase {phase_name!r}"
-                )
+            anchor_name, order = self._phase_position(phase)
             phase_context = self._phase_context(phase)
             applies = tuple(
                 self._apply_spec(
@@ -1575,6 +1588,8 @@ class _ConceptCompiler:
                     phase_name=phase_name,
                     applies=applies,
                     context=phase_context,
+                    anchor_name=anchor_name,
+                    order=order,
                 )
             )
         return _ProductionExtensionSpec(
@@ -1765,6 +1780,23 @@ class _ConceptCompiler:
         if where_tree is not None:
             condition = self._assembly_condition(where_tree.children[0])
         return _PhaseContextSpec(from_inputs=from_inputs, condition=condition)
+
+    def _phase_position(self, tree: Tree) -> tuple[str | None, int | None]:
+        position = _first_child(tree, "phase_position")
+        if position is None:
+            return None, None
+        anchor_name: str | None = None
+        order: int | None = None
+        for child in position.children:
+            if not isinstance(child, Tree):
+                continue
+            if child.data == "phase_anchor":
+                anchor_name = _token_text(child.children[0])
+                continue
+            if child.data == "phase_order":
+                order = int(_token_text(child.children[0]))
+                continue
+        return anchor_name, order
 
     def _edge_spec(
         self,
@@ -2045,16 +2077,6 @@ class _ConceptCompiler:
             f"{context} references undefined composable production "
             f"{alias}.{production_name}"
         )
-
-    def _phase_names_for_production(self, production_name: str) -> frozenset[str]:
-        phases = self._local_composable_production_phases.get(production_name)
-        if phases is not None:
-            return phases
-        for extension in self._extensions:
-            phases = extension.production_phases.get(production_name)
-            if phases is not None:
-                return phases
-        return frozenset()
 
     def _validate_assembly_value_contexts(
         self,
@@ -3019,27 +3041,18 @@ def _merge_production_phase_maps(
     concept_name: str,
 ) -> dict[str, frozenset[str]]:
     merged: dict[str, frozenset[str]] = {}
-    owners: dict[str, str] = {}
     for extension in extensions:
         for name, phases in extension.production_phases.items():
             existing = merged.get(name)
             if existing is None:
                 merged[name] = phases
-                owners[name] = extension.name
                 continue
             if existing == phases:
                 continue
-            raise YidlSymbolError(
-                f"composable production phases {name!r} are inherited from both "
-                f"{owners[name]!r} and {extension.name!r}"
-            )
+            merged[name] = existing | phases
     for name, phases in local.items():
-        if name in merged and merged[name] != phases:
-            raise YidlSymbolError(
-                f"composable production phases {name!r} are already inherited "
-                f"by concept {concept_name!r}"
-            )
-        merged[name] = phases
+        existing = merged.get(name)
+        merged[name] = phases if existing is None else existing | phases
     return merged
 
 
@@ -3098,8 +3111,22 @@ def _flatten_production_extensions(
     production_phase_specs: Mapping[str, tuple[_ProductionPhaseSpec, ...]],
     production_extensions: tuple[_ProductionExtensionSpec, ...],
     assembly_edge_definitions: Mapping[str, AssemblyEdgeSpec],
-) -> tuple[dict[str, ComposableProductionSpec], dict[str, AssemblyEdgeSpec]]:
-    extension_applies: dict[str, dict[str, list[ApplySpec]]] = {}
+) -> tuple[
+    dict[str, ComposableProductionSpec],
+    dict[str, AssemblyEdgeSpec],
+    dict[str, tuple[_ProductionPhaseSpec, ...]],
+]:
+    phase_specs_by_production: dict[str, list[_ProductionPhaseSpec]] = {
+        name: list(phases) for name, phases in production_phase_specs.items()
+    }
+    phase_applies_by_production: dict[str, dict[str, list[ApplySpec]]] = {
+        name: {phase.name: list(phase.applies) for phase in phases}
+        for name, phases in production_phase_specs.items()
+    }
+    phase_indexes: dict[str, dict[str, _ProductionPhaseSpec]] = {
+        name: {phase.name: phase for phase in phases}
+        for name, phases in production_phase_specs.items()
+    }
     assembly_edges = dict(assembly_edge_definitions)
 
     for production_extension in production_extensions:
@@ -3109,19 +3136,67 @@ def _flatten_production_extensions(
                 f"production extension targets undefined composable production "
                 f"{production_extension.target_name!r}"
             )
-        phase_names = {
-            phase.name
-            for phase in production_phase_specs.get(production.name, ())
-            if phase.extensible
-        }
-        production_applies = extension_applies.setdefault(production.name, {})
+        production_phase_specs_for_name = phase_specs_by_production.setdefault(
+            production.name,
+            list(production_phase_specs.get(production.name, ())),
+        )
+        production_phase_index = phase_indexes.setdefault(
+            production.name,
+            {phase.name: phase for phase in production_phase_specs_for_name},
+        )
+        production_phase_applies = phase_applies_by_production.setdefault(
+            production.name,
+            {
+                phase.name: list(phase.applies)
+                for phase in production_phase_specs_for_name
+            },
+        )
         for phase_extension in production_extension.phases:
-            if phase_extension.phase_name not in phase_names:
+            phase = production_phase_index.get(phase_extension.phase_name)
+            if phase is None:
+                if phase_extension.anchor_name is None:
+                    raise YidlSymbolError(
+                        f"production {production.name!r} has no phase "
+                        f"{phase_extension.phase_name!r}"
+                    )
+                phase = _ProductionPhaseSpec(
+                    name=phase_extension.phase_name,
+                    applies=(),
+                    extensible=True,
+                    context=phase_extension.context,
+                    anchor_name=phase_extension.anchor_name,
+                    order=(
+                        phase_extension.order
+                        if phase_extension.order is not None
+                        else 0
+                    ),
+                )
+                production_phase_specs_for_name.append(phase)
+                production_phase_index[phase.name] = phase
+                production_phase_applies[phase.name] = []
+            elif not phase.extensible:
                 raise YidlSymbolError(
                     f"production {production.name!r} has no phase "
                     f"{phase_extension.phase_name!r}"
                 )
-            phase_applies = production_applies.setdefault(
+            else:
+                if (
+                    phase_extension.anchor_name is not None
+                    and phase_extension.anchor_name != phase.anchor_name
+                ):
+                    raise YidlSymbolError(
+                        f"production {production.name!r} phase "
+                        f"{phase.name!r} has conflicting after anchor"
+                    )
+                if (
+                    phase_extension.order is not None
+                    and phase_extension.order != phase.order
+                ):
+                    raise YidlSymbolError(
+                        f"production {production.name!r} phase "
+                        f"{phase.name!r} has conflicting order"
+                    )
+            phase_applies = production_phase_applies.setdefault(
                 phase_extension.phase_name,
                 [],
             )
@@ -3135,25 +3210,107 @@ def _flatten_production_extensions(
                     assembly_edges[apply.edge.name] = apply.edge
                 phase_applies.append(apply)
 
+    flattened_phase_specs: dict[str, tuple[_ProductionPhaseSpec, ...]] = {}
     flattened: dict[str, ComposableProductionSpec] = {}
     for name, production in production_definitions.items():
-        phase_specs = production_phase_specs.get(name)
+        phase_specs = phase_specs_by_production.get(name)
         if phase_specs is None:
             flattened[name] = production
             continue
+        ordered_phase_specs = _order_production_phases(
+            production_name=name,
+            phases=tuple(phase_specs),
+        )
         applies: list[ApplySpec] = []
-        production_applies = extension_applies.get(name, {})
-        for phase in phase_specs:
-            applies.extend(phase.applies)
-            if phase.extensible:
-                applies.extend(production_applies.get(phase.name, ()))
+        production_phase_applies = phase_applies_by_production.get(name, {})
+        for phase in ordered_phase_specs:
+            phase_applies = production_phase_applies.get(phase.name)
+            if phase_applies is None:
+                phase_applies = list(phase.applies)
+            applies.extend(phase_applies)
+        flattened_phase_specs[name] = tuple(
+            _ProductionPhaseSpec(
+                name=phase.name,
+                applies=tuple(production_phase_applies.get(phase.name, ())),
+                extensible=phase.extensible,
+                context=phase.context,
+                anchor_name=phase.anchor_name,
+                order=phase.order,
+            )
+            for phase in ordered_phase_specs
+        )
         flattened[name] = ComposableProductionSpec(
             name=production.name,
             inputs=production.inputs,
             root=production.root,
             applies=tuple(applies),
         )
-    return flattened, assembly_edges
+    return flattened, assembly_edges, flattened_phase_specs
+
+
+def _order_production_phases(
+    *,
+    production_name: str,
+    phases: tuple[_ProductionPhaseSpec, ...],
+) -> tuple[_ProductionPhaseSpec, ...]:
+    phase_by_name: dict[str, _ProductionPhaseSpec] = {}
+    declaration_order: dict[str, int] = {}
+    for index, phase in enumerate(phases):
+        existing = phase_by_name.get(phase.name)
+        if existing is not None:
+            raise YidlSymbolError(
+                f"production {production_name!r} repeats phase {phase.name!r}"
+            )
+        phase_by_name[phase.name] = phase
+        declaration_order[phase.name] = index
+
+    children: dict[str, list[_ProductionPhaseSpec]] = {}
+    roots: list[_ProductionPhaseSpec] = []
+    for phase in phases:
+        if phase.anchor_name is None:
+            roots.append(phase)
+            continue
+        if phase.anchor_name == phase.name:
+            raise YidlSymbolError(
+                f"production {production_name!r} phase {phase.name!r} "
+                "cannot anchor after itself"
+            )
+        if phase.anchor_name not in phase_by_name:
+            raise YidlSymbolError(
+                f"production {production_name!r} phase {phase.name!r} "
+                f"anchors after missing phase {phase.anchor_name!r}"
+            )
+        children.setdefault(phase.anchor_name, []).append(phase)
+
+    def sort_key(phase: _ProductionPhaseSpec) -> tuple[int, int]:
+        return phase.order, declaration_order[phase.name]
+
+    ordered: list[_ProductionPhaseSpec] = []
+    visiting: set[str] = set()
+    visited: set[str] = set()
+
+    def emit(phase: _ProductionPhaseSpec) -> None:
+        if phase.name in visited:
+            return
+        if phase.name in visiting:
+            raise YidlSymbolError(
+                f"production {production_name!r} phase anchor graph has a cycle"
+            )
+        visiting.add(phase.name)
+        ordered.append(phase)
+        for child in sorted(children.get(phase.name, ()), key=sort_key):
+            emit(child)
+        visiting.remove(phase.name)
+        visited.add(phase.name)
+
+    for phase in sorted(roots, key=sort_key):
+        emit(phase)
+
+    for phase in sorted(phases, key=sort_key):
+        if phase.name not in visited:
+            emit(phase)
+
+    return tuple(ordered)
 
 
 def _merge_contribution_matchers(

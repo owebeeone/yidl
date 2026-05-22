@@ -172,9 +172,13 @@ composable_production_inputs: "(" matcher_input_list? ")"
 composable_production_member: root_decl
                             | apply_decl
                             | phase_decl
-phase_decl: "phase" CNAME phase_context? "{" apply_decl* "}"
+phase_decl: "phase" CNAME phase_position? phase_context? "{" apply_decl* "}"
+phase_position: phase_anchor phase_order?
+              | phase_order
+phase_anchor: "after" CNAME
+phase_order: "order" SIGNED_INT
 composable_production_extension_decl: "extend" "production" qname "{" phase_extension_decl* "}"
-phase_extension_decl: "phase" CNAME phase_context? "{" apply_decl* "}"
+phase_extension_decl: "phase" CNAME phase_position? phase_context? "{" apply_decl* "}"
 phase_context: assemble_from where_clause?
              | where_clause
 root_decl: "root" CNAME "=" resource_ref_expr root_options?
@@ -245,6 +249,7 @@ DOLLAR_SQUARE_INLINE.20: /\$\[[^\r\n]*?\]\$/
 %import common.CNAME
 %import common.ESCAPED_STRING -> STRING
 %import common.INT
+%import common.SIGNED_INT
 %import common.SIGNED_NUMBER -> NUMBER
 %import common.WS
 %ignore WS

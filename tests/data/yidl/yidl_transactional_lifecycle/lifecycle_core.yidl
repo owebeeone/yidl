@@ -1222,11 +1222,6 @@ concept LifecycleCore {
             apply field_default_params using FieldDefaultBuilderParamContributions
         }
 
-        phase transient_working_default_params {}
-        phase binding_support_helpers {}
-        phase managed_freeze_params {}
-        phase managed_thaw_params {}
-
         phase classes from lifecycle_class: Classes {
             apply classes using CoreClassDefinitionContributions
         }
@@ -1264,16 +1259,6 @@ concept LifecycleCore {
         phase state_slots_plain from field: PlainFields where FieldOwner == ClassId {
             apply state_slots using PlainStateSlotContributions
         }
-        phase state_slots_binding {}
-        phase state_slots_owned_current {}
-        phase state_slots_owned_working {}
-        phase state_slots_owned_staged {}
-        phase state_slots_managed_current {}
-        phase state_slots_transient_current {}
-        phase state_slots_managed_working {}
-        phase state_slots_transient_working {}
-        phase state_slots_retained_initvar {}
-        phase state_slots_managed_staged {}
 
         phase init_transaction_manager {
             apply transaction_manager_param using TransactionManagerInitParamContributions
@@ -1290,9 +1275,6 @@ concept LifecycleCore {
             apply rollback_dispatch_fallback using RollbackDispatchFallbackContributions
             apply after_rollback_fallback using AfterRollbackFallbackContributions
         }
-
-        phase tx_group_helpers {}
-        phase tx_group_dispatch {}
 
         phase classvars from field: ClassVarFields where FieldOwner == ClassId {
             apply classvars using ClassVarDefaultContributions
@@ -1333,13 +1315,9 @@ concept LifecycleCore {
         phase init_params_plain from field: PlainFields where FieldOwner == ClassId {
             apply plain_init_params using PlainInitParamContributions
         }
-        phase init_params_binding {}
-        phase init_params_owned {}
         phase init_params_initvar from field: InitVarFields where FieldOwner == ClassId {
             apply initvar_params using InitVarParamContributions
         }
-        phase init_params_managed {}
-        phase init_params_transient {}
 
         phase initvar_local_defaults
             from field: InitVarFields
@@ -1350,51 +1328,10 @@ concept LifecycleCore {
         phase init_assignments_plain from field: PlainFields where FieldOwner == ClassId {
             apply plain_init_assignments using PlainInitAssignmentContributions
         }
-        phase init_assignments_binding {}
-        phase init_assignments_owned_current {}
-        phase init_assignments_managed_current {}
-        phase init_assignments_transient_current {}
-        phase init_assignments_managed_working {}
-        phase init_assignments_transient_working {}
-        phase init_assignments_owned_working {}
-        phase init_assignments_retained_initvar {}
-        phase init_assignments_owned_staged {}
-        phase init_assignments_managed_staged {}
-
-        phase default_factory_evals {}
-        phase default_factory_args {}
 
         phase properties_plain from field: PlainFields where FieldOwner == ClassId {
             apply plain_properties using PlainPropertyContributions
         }
-        phase properties_binding {}
-        phase properties_owned_default {}
-        phase properties_managed_default {}
-        phase properties_transient_default {}
-        phase properties_managed_current {}
-        phase properties_transient_current {}
-        phase properties_owned_current {}
-        phase properties_managed_working {}
-        phase properties_owned_working {}
-        phase properties_transient_working {}
-
-        phase transient_default_working_factory_args {}
-        phase transient_working_working_factory_args {}
-
-        phase tx_apply_prepared_helpers {}
-        phase tx_prepare_helpers {}
-        phase tx_rollback_helpers {}
-        phase tx_prepare_dispatch {}
-        phase tx_apply_prepared_dispatch {}
-        phase tx_rollback_dispatch {}
-        phase tx_prepare_fields_managed {}
-        phase tx_apply_prepared_fields_managed {}
-        phase tx_apply_prepared_fields_owned {}
-        phase tx_apply_prepared_fields_transient {}
-        phase tx_rollback_fields_managed {}
-        phase tx_rollback_fields_owned {}
-        phase tx_rollback_fields_transient {}
-        phase tx_prepare_fields_owned {}
     }
 
     assembly LifecycleCoreModule = CoreModuleProduction

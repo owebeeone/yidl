@@ -116,6 +116,71 @@ production ClassProduction(lifecycle_class: Classes) -> composable {
 A `phase` is an ordered group of `apply` edges inside a composable production.
 The phase name is a stable extension point.
 
+### Anchored phase ordering
+
+The first production-phase slice required the base production to predeclare
+every phase name. That proves the merge model, but it still makes the base
+production anticipate future features. The next phase-ordering feature should
+let a feature introduce a new phase relative to an existing phase:
+
+```yidl
+production ClassProduction(lifecycle_class: Classes) -> composable {
+    root ClassDef = ClassBundle { ... }
+
+    phase state_slots { ... }
+    phase locals { ... }
+    phase init_assignments { ... }
+    phase properties { ... }
+}
+
+extend production ClassProduction {
+    phase retained_initvar_slots after state_slots order 20 {
+        apply retained_initvar_state_slots
+            from initvar: RetainedInitVars
+            where FieldOwner == ClassId
+            using RetainedInitVarStateSlotContributions
+    }
+
+    phase default_factory_evals after locals order 20 {
+        apply default_factory_evals
+            from step: DefaultFactoryEvaluationSteps
+            where EvalOwner == ClassId
+            using DefaultFactoryEvalContributions
+    }
+}
+```
+
+`after` defines an anchor phase. `order` sorts phases within the same anchor
+bucket. If `order` is omitted, it defaults to `0`.
+
+Same numeric order falls through to declaration order; it is not a conflict and
+not an unordered bucket. Declaration order means deterministic concept closure
+order, then source order within a concept/file.
+
+Example:
+
+```yidl
+phase locals { ... }
+
+phase b after locals order -10 { ... }
+phase a after locals { ... }
+phase d after locals order 0 { ... }
+phase c after locals order 20 { ... }
+```
+
+Flattened phase order:
+
+```text
+locals
+b   # after locals, order -10
+a   # after locals, order 0, declared before d
+d   # after locals, order 0
+c   # after locals, order 20
+```
+
+This matches the Astichi-style ordering rule: explicit order is the primary
+key, and declaration order is the deterministic fallback within the same order.
+
 ### Production extensions
 
 ```yidl
@@ -212,9 +277,14 @@ composable_production_member: root_decl
                             | phase_decl
 
 phase_decl:
-    "phase" CNAME phase_context? "{"
+    "phase" CNAME phase_position? phase_context? "{"
         apply_decl*
     "}"
+
+phase_position: phase_anchor phase_order?
+              | phase_order
+phase_anchor: "after" CNAME
+phase_order: "order" SIGNED_INT
 
 phase_context: assemble_from? where_clause?
 
@@ -224,7 +294,7 @@ composable_production_extension_decl:
     "}"
 
 phase_extension_decl:
-    "phase" CNAME phase_context? "{"
+    "phase" CNAME phase_position? phase_context? "{"
         apply_decl*
     "}"
 ```
@@ -261,6 +331,8 @@ Add explicit phases:
 ```python
 ProductionPhaseSpec:
     name: str
+    anchor_name: str | None
+    order: int
     context_from_inputs: tuple[AssemblyInputSpec, ...]
     context_condition: AssemblyConditionSpec | None
     applies: tuple[ApplySpec, ...]
@@ -297,6 +369,8 @@ ProductionExtensionSpec:
 
 ProductionPhaseExtensionSpec:
     phase_name: str
+    anchor_name: str | None
+    order: int | None
     context_from_inputs: tuple[AssemblyInputSpec, ...]
     context_condition: AssemblyConditionSpec | None
     applies: tuple[ApplySpec, ...]
@@ -331,26 +405,58 @@ same final apply edge name.
 
 ### Phase ordering
 
-The base production owns phase order. Extensions cannot create new phases in V0.
+Implemented V0 keeps phase order owned by the base production: extensions can
+only target already-declared phases. The next ordering slice relaxes that rule
+by allowing an extension to introduce a phase with `after`.
 
-Within a phase:
+Every phase has:
 
-1. base applies run first
-2. inherited extension applies run in deterministic concept-closure order
-3. local extension applies run in source order
+- a name
+- an optional anchor phase name
+- an integer order; omitted means `0`
+- a declaration ordinal from deterministic concept closure order and source
+  order
 
-This gives stable source output and predictable golden diffs.
+Flattening uses a recursive bucket model:
+
+1. collect root phases, meaning phases with no anchor
+2. sort root phases by `(order, declaration_order)`; because omitted `order`
+   is `0`, ordinary root phases naturally use declaration order
+3. for each emitted phase:
+   - emit this phase's applies
+   - emit phases anchored `after` this phase, sorted by
+     `(order, declaration_order)`
+
+If two phases in the same bucket have the same numeric order, declaration order
+is the tie-break. This is intentional, not an ambiguity.
+
+Phase body fragments for the same phase name are merged in declaration order.
+Applies inside each fragment keep source order. Re-declaring an existing phase
+extends that phase; if the redeclaration restates `after` or `order`, the
+values must match the original phase metadata.
 
 ### Missing phase
 
-Extending a missing phase is a compile-time error:
+In implemented V0, extending a missing phase is a compile-time error:
 
 ```text
 production ClassProduction has no phase 'tx_close_fields'
 ```
 
-V0 should not silently create phases from extension declarations. Explicit phase
-declaration in the base is what keeps the skeleton understandable.
+With anchored ordering, a missing phase remains an error when no `after` anchor
+is supplied. A phase extension with an anchor may create a new phase, but the
+anchor itself must resolve:
+
+```yidl
+extend production ClassProduction {
+    phase tx_close_fields after tx_rollback_fields order 20 {
+        ...
+    }
+}
+```
+
+If `tx_close_fields` does not exist, it is created. If `tx_rollback_fields` does
+not exist, compilation rejects.
 
 ### Apply names
 
@@ -390,7 +496,10 @@ Required diagnostics:
 
 - extension target production is missing
 - extension target is not a composable production
-- extension phase is missing
+- extension phase is missing and the extension did not provide an `after` anchor
+- phase anchor is missing
+- phase anchor graph has a cycle
+- repeated phase metadata conflicts with the original `after` or `order`
 - duplicate phase name in one production
 - duplicate apply name after flattening
 - phase-level `where` without phase-level or apply-level inputs able to satisfy
@@ -431,7 +540,12 @@ This keeps production extension a compile-time language feature.
 
 ### Base after phases
 
-`lifecycle_base.yidl` should declare phases, not feature apply edges:
+`lifecycle_base.yidl` now points the final assembly at the inherited
+`CoreModuleProduction`. The first lifecycle refactor uses explicit placeholder
+phases in `lifecycle_core.yidl`, which proves production extension but still
+requires core to name many future extension points.
+
+Anchored phase ordering should shrink that skeleton to broad ordered bands:
 
 ```yidl
 production ClassProduction(lifecycle_class: Classes) -> composable {
@@ -470,9 +584,9 @@ production ClassProduction(lifecycle_class: Classes) -> composable {
             using PlainPropertyContributions
     }
 
-    phase tx_prepare_fields {}
-    phase tx_apply_prepared_fields {}
-    phase tx_rollback_fields {}
+    phase tx_helpers {}
+    phase tx_dispatch {}
+    phase tx_fields {}
 }
 ```
 
@@ -480,17 +594,21 @@ production ClassProduction(lifecycle_class: Classes) -> composable {
 
 ```yidl
 extend production ClassProduction {
-    phase state_slots from field: ManagedFields where FieldOwner == ClassId {
+    phase managed_state_slots after state_slots order 20
+        from field: ManagedFields
+        where FieldOwner == ClassId {
         apply managed_current_state_slots using ManagedCurrentStateSlotContributions
         apply managed_working_state_slots using ManagedWorkingStateSlotContributions
         apply managed_staged_state_slots using ManagedStagedStateSlotContributions
     }
 
-    phase init_params from field: ManagedFields where FieldOwner == ClassId {
+    phase managed_init_params after init_params order 20
+        from field: ManagedFields
+        where FieldOwner == ClassId {
         apply managed_init_params using ManagedInitParamContributions
     }
 
-    phase tx_prepare_fields
+    phase managed_tx_prepare_fields after tx_fields order 20
         from field: IndexedTransactionalFields
         where FieldOwner == ClassId {
         apply managed_prepare_commit using ManagedPrepareCommitContributions
@@ -502,13 +620,15 @@ extend production ClassProduction {
 
 ```yidl
 extend production ClassProduction {
-    phase state_slots from field: OwnedFields where FieldOwner == ClassId {
+    phase owned_state_slots after state_slots order 30
+        from field: OwnedFields
+        where FieldOwner == ClassId {
         apply owned_current_state_slots using OwnedCurrentStateSlotContributions
         apply owned_working_state_slots using OwnedWorkingStateSlotContributions
         apply owned_staged_state_slots using OwnedStagedStateSlotContributions
     }
 
-    phase facade_properties
+    phase owned_facade_properties after facade_properties order 30
         from field: IndexedOwnedFields
         where FieldOwner == ClassId {
         apply owned_default_properties using OwnedDefaultFacadePropertyContributions
@@ -516,7 +636,7 @@ extend production ClassProduction {
         apply owned_working_properties using OwnedWorkingFacadePropertyContributions
     }
 
-    phase tx_prepare_fields
+    phase owned_tx_prepare_fields after tx_fields order 30
         from field: IndexedOwnedFields
         where FieldOwner == ClassId {
         apply owned_prepare_commit using OwnedPrepareCommitContributions
@@ -695,7 +815,37 @@ Verification:
 - lifecycle H owned/binding goldens still pass
 - generated source remains equivalent
 
-### Y7: Inline Contribution Blocks
+### Y7: Anchored Phase Ordering
+
+Add `after` and `order` to phase declarations.
+
+Deliverables:
+
+- `phase NAME order N { ... }`
+- `phase NAME after ANCHOR order N { ... }`
+- omitted `order` defaults to `0`
+- same order falls through to declaration order
+- anchored phase declarations can create new phases
+- extension of an existing phase remains legal
+
+Focused tests:
+
+- root phases with omitted `order` emit in declaration order
+- root phases with explicit `order` sort by `(order, declaration_order)`
+- `after locals order 20` emits after `locals`
+- same-order anchored phases emit in declaration order
+- missing anchor rejects
+- anchor cycle rejects
+- redeclaring an existing phase with conflicting order rejects
+
+Lifecycle use:
+
+- replace the current explicit empty placeholder phases with broad core phase
+  bands plus feature-created anchored phases
+- preserve generated lifecycle goldens except for decorator metadata describing
+  phase names/order
+
+### Y8: Inline Contribution Blocks
 
 Add matcher-rule inline contribution syntax:
 
@@ -725,7 +875,7 @@ Validation:
 - generated names are deterministic and stable for goldens
 - duplicate explicit names reject if the syntax allows optional names
 
-### Y8: Bind Groups
+### Y9: Bind Groups
 
 Add reusable bind groups:
 
@@ -759,7 +909,7 @@ Lowering:
 - local binds after `use binds` may override or duplicate only if the duplicate
   is exactly equal; otherwise reject
 
-### Y9: `at` Ordering Sugar
+### Y10: `at` Ordering Sugar
 
 Add:
 
@@ -790,6 +940,15 @@ Do not implement scalar/map shape families yet. The idea is too close to a
 lifecycle-specific discriminator macro. Re-evaluate after inline contribution
 blocks and bind groups.
 
+### `before` phase anchors
+
+Do not implement `before ANCHOR` in the first anchored phase slice. It is
+definable, but it creates a second ordering intuition: `before foo order 20`
+means farther from or closer to `foo` depending on how the reader thinks about
+the bucket. Prefer `after` anchors and, when something must run before a broad
+phase, anchor it after the previous broad phase. Revisit only when a real
+example cannot be expressed cleanly with `after`.
+
 ### Declarative computed fact joins
 
 Do not implement a relational mini-language yet. Python operation snippets are
@@ -819,9 +978,11 @@ Suggested checkpoints:
 - `better-merge/Y4-phase-context`
 - `better-merge/Y5-lifecycle-refactor`
 - `better-merge/Y6-binding-split`
+- `better-merge/Y7-anchored-phase-order`
 
-Y7-Y9 should be a second roll-build because they are ergonomic sugar rather than
-the core merge-model fix.
+Y8-Y10 should be a second roll-build because they are ergonomic sugar rather
+than the core merge-model fix. Y7 is a merge-model improvement: it removes the
+need for base productions to predeclare every future feature phase.
 
 ## Acceptance Criteria
 

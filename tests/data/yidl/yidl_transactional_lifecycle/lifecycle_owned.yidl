@@ -1159,77 +1159,112 @@ concept LifecycleOwned extends transient.LifecycleTransient {
     }
 
     extend production CoreModuleProduction {
-        phase binding_support_helpers from lifecycle_class: Classes {
+        phase binding_support_helpers after field_default_params order 20
+            from lifecycle_class: Classes {
             apply binding_support_helpers using BindingSupportHelperContributions
         }
     }
 
     extend production CoreClassProduction {
-        phase state_slots_binding from field: BindingFields where FieldOwner == ClassId {
+        phase state_slots_binding after state_slots_plain order 10
+            from field: BindingFields
+            where FieldOwner == ClassId {
             apply binding_state_slots using BindingStateSlotContributions
         }
 
-        phase state_slots_owned_current from field: OwnedFields where FieldOwner == ClassId {
+        phase state_slots_owned_current after state_slots_plain order 20
+            from field: OwnedFields
+            where FieldOwner == ClassId {
             apply owned_current_state_slots using OwnedCurrentStateSlotContributions
         }
 
-        phase state_slots_owned_working from field: OwnedFields where FieldOwner == ClassId {
+        phase state_slots_owned_working after state_slots_plain order 30
+            from field: OwnedFields
+            where FieldOwner == ClassId {
             apply owned_working_state_slots using OwnedWorkingStateSlotContributions
         }
 
-        phase state_slots_owned_staged from field: OwnedFields where FieldOwner == ClassId {
+        phase state_slots_owned_staged after state_slots_plain order 40
+            from field: OwnedFields
+            where FieldOwner == ClassId {
             apply owned_staged_state_slots using OwnedStagedStateSlotContributions
         }
 
-        phase init_params_binding from field: BindingFields where FieldOwner == ClassId {
+        phase init_params_binding after init_params_plain order 10
+            from field: BindingFields
+            where FieldOwner == ClassId {
             apply binding_init_params using BindingInitParamContributions
         }
 
-        phase init_params_owned from field: OwnedFields where FieldOwner == ClassId {
+        phase init_params_owned after init_params_plain order 20
+            from field: OwnedFields
+            where FieldOwner == ClassId {
             apply owned_init_params using OwnedInitParamContributions
         }
 
-        phase init_assignments_binding from field: BindingFields where FieldOwner == ClassId {
+        phase init_assignments_binding after init_assignments_plain order 10
+            from field: BindingFields
+            where FieldOwner == ClassId {
             apply binding_init_assignments using BindingInitAssignmentContributions
         }
 
-        phase init_assignments_owned_current from field: OwnedFields where FieldOwner == ClassId {
+        phase init_assignments_owned_current after init_assignments_plain order 20
+            from field: OwnedFields
+            where FieldOwner == ClassId {
             apply owned_current_init_assignments using OwnedCurrentInitAssignmentContributions
         }
 
-        phase init_assignments_owned_working from field: OwnedFields where FieldOwner == ClassId {
+        phase init_assignments_owned_working after init_assignments_plain order 70
+            from field: OwnedFields
+            where FieldOwner == ClassId {
             apply owned_working_init_assignments using OwnedWorkingInitAssignmentContributions
         }
 
-        phase init_assignments_owned_staged from field: OwnedFields where FieldOwner == ClassId {
+        phase init_assignments_owned_staged after init_assignments_plain order 90
+            from field: OwnedFields
+            where FieldOwner == ClassId {
             apply owned_staged_init_assignments using OwnedStagedInitAssignmentContributions
         }
 
-        phase properties_binding from field: BindingFields where FieldOwner == ClassId {
+        phase properties_binding after properties_plain order 10
+            from field: BindingFields
+            where FieldOwner == ClassId {
             apply binding_properties using BindingPropertyContributions
         }
 
-        phase properties_owned_default from field: IndexedOwnedFields where FieldOwner == ClassId {
+        phase properties_owned_default after properties_plain order 20
+            from field: IndexedOwnedFields
+            where FieldOwner == ClassId {
             apply owned_default_properties using OwnedDefaultFacadePropertyContributions
         }
 
-        phase properties_owned_current from field: IndexedOwnedFields where FieldOwner == ClassId {
+        phase properties_owned_current after properties_plain order 70
+            from field: IndexedOwnedFields
+            where FieldOwner == ClassId {
             apply owned_current_properties using OwnedCurrentFacadePropertyContributions
         }
 
-        phase properties_owned_working from field: IndexedOwnedFields where FieldOwner == ClassId {
+        phase properties_owned_working after properties_plain order 90
+            from field: IndexedOwnedFields
+            where FieldOwner == ClassId {
             apply owned_working_properties using OwnedWorkingFacadePropertyContributions
         }
 
-        phase tx_apply_prepared_fields_owned from field: IndexedOwnedFields where FieldOwner == ClassId {
+        phase tx_apply_prepared_fields_owned after properties_plain order 280
+            from field: IndexedOwnedFields
+            where FieldOwner == ClassId {
             apply owned_apply_prepared_commit using OwnedApplyPreparedCommitContributions
         }
 
-        phase tx_rollback_fields_owned from field: IndexedOwnedFields where FieldOwner == ClassId {
+        phase tx_rollback_fields_owned after properties_plain order 310
+            from field: IndexedOwnedFields
+            where FieldOwner == ClassId {
             apply owned_rollback using OwnedRollbackContributions
         }
 
-        phase tx_prepare_fields_owned from field: IndexedOwnedFields where FieldOwner == ClassId {
+        phase tx_prepare_fields_owned after properties_plain order 330
+            from field: IndexedOwnedFields
+            where FieldOwner == ClassId {
             apply owned_prepare_commit using OwnedPrepareCommitContributions
         }
     }

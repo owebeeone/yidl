@@ -1637,6 +1637,244 @@ def test_yidl_lark_production_extension_diamond_merges_distinct_extensions() -> 
     assert emitted.index(".append('left')") < emitted.index(".append('right')")
 
 
+def test_yidl_lark_phase_after_order_creates_ordered_phases() -> None:
+    source = """
+    module phases
+
+    concept Base {
+        resource Root = code $[
+            VALUE = []
+            astichi_hole(body)
+        ]$
+        resource AddBase = code `VALUE.append("base")`
+        resource AddB = code `VALUE.append("b")`
+        resource AddA = code `VALUE.append("a")`
+        resource AddD = code `VALUE.append("d")`
+        resource AddC = code `VALUE.append("c")`
+        resource AddTail = code `VALUE.append("tail")`
+
+        contribution AddBase = AddBase { target body { build /Root } }
+        contribution AddB = AddB { target body { build /Root } }
+        contribution AddA = AddA { target body { build /Root } }
+        contribution AddD = AddD { target body { build /Root } }
+        contribution AddC = AddC { target body { build /Root } }
+        contribution AddTail = AddTail { target body { build /Root } }
+
+        matcher BaseContributions() -> contribution { default -> AddBase }
+        matcher BContributions() -> contribution { default -> AddB }
+        matcher AContributions() -> contribution { default -> AddA }
+        matcher DContributions() -> contribution { default -> AddD }
+        matcher CContributions() -> contribution { default -> AddC }
+        matcher TailContributions() -> contribution { default -> AddTail }
+
+        production ModuleProduction -> composable {
+            root Root = Root
+            phase locals {
+                apply base using BaseContributions
+            }
+            phase tail {
+                apply tail using TailContributions
+            }
+        }
+    }
+
+    concept Feature extends Base {
+        extend production ModuleProduction {
+            phase b after locals order -10 {
+                apply b using BContributions
+            }
+            phase a after locals {
+                apply a using AContributions
+            }
+            phase d after locals order 0 {
+                apply d using DContributions
+            }
+            phase c after locals order 20 {
+                apply c using CContributions
+            }
+        }
+    }
+    """
+
+    concept = compile_yidl_files({"phases.yidl": source}, "phases.yidl").concepts[
+        "Feature"
+    ]
+    production = concept.composable_productions["ModuleProduction"]
+
+    assert [_apply_name(apply) for apply in production.applies] == [
+        "ModuleProduction.base",
+        "ModuleProduction.b",
+        "ModuleProduction.a",
+        "ModuleProduction.d",
+        "ModuleProduction.c",
+        "ModuleProduction.tail",
+    ]
+    assert concept.production_phases["ModuleProduction"] == frozenset(
+        {"locals", "b", "a", "d", "c", "tail"}
+    )
+
+
+def test_yidl_lark_phase_after_created_phase_can_be_extended_later() -> None:
+    source = """
+    module phases
+
+    concept Base {
+        resource Root = code $[
+            VALUE = []
+            astichi_hole(body)
+        ]$
+        resource AddBase = code `VALUE.append("base")`
+        resource AddFeature = code `VALUE.append("feature")`
+        resource AddLater = code `VALUE.append("later")`
+
+        contribution AddBase = AddBase { target body { build /Root } }
+        contribution AddFeature = AddFeature { target body { build /Root } }
+        contribution AddLater = AddLater { target body { build /Root } }
+
+        matcher BaseContributions() -> contribution { default -> AddBase }
+        matcher FeatureContributions() -> contribution { default -> AddFeature }
+        matcher LaterContributions() -> contribution { default -> AddLater }
+
+        production ModuleProduction -> composable {
+            root Root = Root
+            phase body {
+                apply base using BaseContributions
+            }
+        }
+    }
+
+    concept Feature extends Base {
+        extend production ModuleProduction {
+            phase feature_body after body {
+                apply feature using FeatureContributions
+            }
+        }
+    }
+
+    concept Later extends Feature {
+        extend production ModuleProduction {
+            phase feature_body {
+                apply later using LaterContributions
+            }
+        }
+    }
+    """
+
+    concept = compile_yidl_files({"phases.yidl": source}, "phases.yidl").concepts[
+        "Later"
+    ]
+    production = concept.composable_productions["ModuleProduction"]
+
+    assert [_apply_name(apply) for apply in production.applies] == [
+        "ModuleProduction.base",
+        "ModuleProduction.feature",
+        "ModuleProduction.later",
+    ]
+
+
+def test_yidl_lark_phase_after_diamond_merges_created_phases() -> None:
+    source = """
+    module phases
+
+    concept Base {
+        resource Root = code $[
+            VALUE = []
+            astichi_hole(body)
+        ]$
+        resource AddBase = code `VALUE.append("base")`
+        resource AddLeft = code `VALUE.append("left")`
+        resource AddRight = code `VALUE.append("right")`
+
+        contribution AddBase = AddBase { target body { build /Root } }
+        contribution AddLeft = AddLeft { target body { build /Root } }
+        contribution AddRight = AddRight { target body { build /Root } }
+
+        matcher BaseContributions() -> contribution { default -> AddBase }
+        matcher LeftContributions() -> contribution { default -> AddLeft }
+        matcher RightContributions() -> contribution { default -> AddRight }
+
+        production ModuleProduction -> composable {
+            root Root = Root
+            phase body {
+                apply base using BaseContributions
+            }
+        }
+    }
+
+    concept Left extends Base {
+        extend production ModuleProduction {
+            phase left_body after body {
+                apply left using LeftContributions
+            }
+        }
+    }
+
+    concept Right extends Base {
+        extend production ModuleProduction {
+            phase right_body after body {
+                apply right using RightContributions
+            }
+        }
+    }
+
+    concept Combined extends Left, Right {}
+    """
+
+    concept = compile_yidl_files({"phases.yidl": source}, "phases.yidl").concepts[
+        "Combined"
+    ]
+    production = concept.composable_productions["ModuleProduction"]
+
+    assert [_apply_name(apply) for apply in production.applies] == [
+        "ModuleProduction.base",
+        "ModuleProduction.left",
+        "ModuleProduction.right",
+    ]
+    assert concept.production_phases["ModuleProduction"] == frozenset(
+        {"body", "left_body", "right_body"}
+    )
+
+
+def test_yidl_lark_root_phase_order_defaults_to_declaration_order() -> None:
+    source = """
+    module phases
+
+    concept PhaseExample {
+        resource Root = code $[
+            VALUE = []
+            astichi_hole(body)
+        ]$
+        resource Add = code `VALUE.append("x")`
+        contribution Add = Add { target body { build /Root } }
+        matcher AddContributions() -> contribution { default -> Add }
+
+        production ModuleProduction -> composable {
+            root Root = Root
+            phase last order 20 {
+                apply last using AddContributions
+            }
+            phase first order -10 {
+                apply first using AddContributions
+            }
+            phase middle {
+                apply middle using AddContributions
+            }
+        }
+    }
+    """
+
+    concept = compile_yidl_files({"phases.yidl": source}, "phases.yidl").concepts[
+        "PhaseExample"
+    ]
+    production = concept.composable_productions["ModuleProduction"]
+
+    assert [_apply_name(apply) for apply in production.applies] == [
+        "ModuleProduction.first",
+        "ModuleProduction.middle",
+        "ModuleProduction.last",
+    ]
+
+
 def test_yidl_lark_production_extension_duplicate_apply_edge_rejects() -> None:
     source = """
     module phases
@@ -1841,6 +2079,86 @@ def test_yidl_lark_production_extension_missing_phase_rejects() -> None:
     """
 
     with pytest.raises(YidlSymbolError, match="has no phase"):
+        compile_yidl_files({"phases.yidl": source}, "phases.yidl")
+
+
+def test_yidl_lark_phase_after_missing_anchor_rejects() -> None:
+    source = """
+    module phases
+
+    concept Base {
+        resource Root = code `VALUE = []`
+
+        production ModuleProduction -> composable {
+            root Root = Root
+            phase body {
+            }
+        }
+    }
+
+    concept Broken extends Base {
+        extend production ModuleProduction {
+            phase orphan after missing_anchor {
+            }
+        }
+    }
+    """
+
+    with pytest.raises(YidlSymbolError, match="anchors after missing phase"):
+        compile_yidl_files({"phases.yidl": source}, "phases.yidl")
+
+
+def test_yidl_lark_phase_after_cycle_rejects() -> None:
+    source = """
+    module phases
+
+    concept Base {
+        resource Root = code `VALUE = []`
+
+        production ModuleProduction -> composable {
+            root Root = Root
+            phase body {
+            }
+        }
+    }
+
+    concept Broken extends Base {
+        extend production ModuleProduction {
+            phase a after b {
+            }
+            phase b after a {
+            }
+        }
+    }
+    """
+
+    with pytest.raises(YidlSymbolError, match="anchor graph has a cycle"):
+        compile_yidl_files({"phases.yidl": source}, "phases.yidl")
+
+
+def test_yidl_lark_phase_extension_conflicting_order_rejects() -> None:
+    source = """
+    module phases
+
+    concept Base {
+        resource Root = code `VALUE = []`
+
+        production ModuleProduction -> composable {
+            root Root = Root
+            phase body {
+            }
+        }
+    }
+
+    concept Broken extends Base {
+        extend production ModuleProduction {
+            phase body order 1 {
+            }
+        }
+    }
+    """
+
+    with pytest.raises(YidlSymbolError, match="conflicting order"):
         compile_yidl_files({"phases.yidl": source}, "phases.yidl")
 
 
