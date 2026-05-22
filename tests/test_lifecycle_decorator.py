@@ -179,6 +179,30 @@ def test_lifecycle_decorator_initializes_transient_current_defaults() -> None:
         item.current.label = "changed"
 
 
+def test_lifecycle_decorator_transient_working_overlay_materializes_in_transaction() -> None:
+    class Scratch:
+        buffer: list[int] | None = transient(
+            default=None,
+            working_default_factory=list,
+        )
+
+    generated = lifecycle(Scratch)
+    item = generated()
+
+    assert item.buffer is None
+    assert item.current.buffer is None
+    with pytest.raises(RuntimeError, match="writes require"):
+        item.buffer = [9]
+
+    with item.begin(DEFAULT_TRANSACTION):
+        assert item.current.buffer is None
+        assert item.buffer == []
+        item.buffer.append(1)
+        assert item.buffer == [1]
+        assert item.working.buffer == [1]
+        assert item.current.buffer is None
+
+
 def test_lifecycle_source_uses_direct_default_factory_calls() -> None:
     class Example:
         SCALE: int = classvar(default=10)

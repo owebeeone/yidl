@@ -110,7 +110,7 @@ concept LifecycleManaged extends core.LifecycleCore {
             for field in fields:
                 if field.field_owner != lifecycle_class.class_id:
                     continue
-                if field.field_kind != "managed":
+                if field.field_kind not in {"managed", "transient"}:
                     continue
 
                 tx_group = field.tx_group_key
@@ -168,6 +168,8 @@ concept LifecycleManaged extends core.LifecycleCore {
                     ),
                     policy=RejectDuplicate,
                 )
+                if field.field_kind != "managed":
+                    continue
                 ctx.write(
                     IndexedTransactionalFieldsCollection,
                     IndexedTransactionalField(

@@ -13,11 +13,116 @@ concept LifecycleTransient extends default_factories.LifecycleDefaultFactories {
 
     computed collection TransientFields: LifecycleFieldSpec from Fields where FieldKind == "transient"
 
+    record IndexedTransientField {
+        FieldId
+        FieldOwner
+        FieldName
+        FieldOrder
+        TxGroupKey
+        TxIndex
+        CurrentSlotName
+        WorkingSlotName
+        HasWorkingDefaultFactory
+        WorkingDefaultFactoryParamName
+    }
+
+    collection IndexedTransientFields: IndexedTransientField identity FieldId many
+
+    resource BuildTransientFactsBody = code $[
+        from yidl.runtime.transaction_yidl import DEFAULT_TRANSACTION
+
+        tx_groups = {
+            (tx_group.tx_owner, tx_group.tx_group_key): tx_group.tx_index
+            for tx_group in ctx.records(TxGroupsCollection)
+        }
+        for field in ctx.records(FieldsCollection):
+            if field.field_kind != "transient":
+                continue
+            tx_group = field.tx_group_key
+            if tx_group is None:
+                tx_group = DEFAULT_TRANSACTION
+            tx_index = tx_groups[(field.field_owner, tx_group)]
+            ctx.write(
+                IndexedTransientFieldsCollection,
+                IndexedTransientField(
+                    field_id=field.field_id,
+                    field_owner=field.field_owner,
+                    field_name=field.field_name,
+                    field_order=field.field_order,
+                    tx_group_key=tx_group,
+                    tx_index=tx_index,
+                    current_slot_name=field.current_slot_name,
+                    working_slot_name=field.working_slot_name,
+                    has_working_default_factory=field.has_working_default_factory,
+                    working_default_factory_param_name=(
+                        field.working_default_factory_param_name
+                    ),
+                ),
+                policy=RejectDuplicate,
+            )
+    ]$ {
+        keep ctx, FieldsCollection, TxGroupsCollection
+        keep IndexedTransientFieldsCollection, IndexedTransientField
+        keep RejectDuplicate
+    }
+
+    operation BuildTransientFacts
+        inputs(Fields, TxGroups)
+        outputs(IndexedTransientFields)
+        using BuildTransientFactsBody
+
     resource TransientCurrentProperty = template $[
         @property
         def property_getter_name__astichi_arg__(self):
             return self._y_state.astichi_ref(external=current_slot)
     ]$
+
+    resource TransientWorkingStateAssignment = template $[
+        astichi_pass(state, outer_bind=True).astichi_ref(external=working_slot)._ = VOID
+    ]$ {
+        keep VOID
+    }
+
+    resource TransientFacadeProperty = template $[
+        @property
+        def property_getter_name__astichi_arg__(self):
+            state = self._y_state
+            if state.astichi_ref(external=working_slot) is not VOID:
+                return state.astichi_ref(external=working_slot)
+            return state.astichi_ref(external=current_slot)
+
+        @property_setter_target_name__astichi_arg__.setter
+        def property_setter_name__astichi_arg__(self, value):
+            state = self._y_state
+            state._y_ensure_working_transaction(astichi_bind_external(tx_index))
+            state.astichi_ref(external=working_slot)._ = value
+    ]$ {
+        keep VOID
+    }
+
+    resource TransientWorkingDefaultFactoryProperty = template $[
+        @property
+        def property_getter_name__astichi_arg__(self):
+            state = self._y_state
+            if state.astichi_ref(external=working_slot) is not VOID:
+                return state.astichi_ref(external=working_slot)
+            tx_key = state.__yidl_tx_index_to_key__[astichi_bind_external(tx_index)]
+            if state._y_transaction_manager.active_transaction_for(tx_key) is None:
+                return state.astichi_ref(external=current_slot)
+            state._y_ensure_working_transaction(astichi_bind_external(tx_index))
+            state.astichi_ref(external=working_slot)._ = (
+                working_default_factory_name__astichi_arg__()
+            )
+            return state.astichi_ref(external=working_slot)
+
+        @property_setter_target_name__astichi_arg__.setter
+        def property_setter_name__astichi_arg__(self, value):
+            state = self._y_state
+            state._y_ensure_working_transaction(astichi_bind_external(tx_index))
+            state.astichi_ref(external=working_slot)._ = value
+    ]$ {
+        keep VOID
+    }
 
     contribution TransientCurrentStateSlot = StateSlotEntry {
         as TransientCurrentStateSlot
@@ -29,6 +134,30 @@ concept LifecycleTransient extends default_factories.LifecycleDefaultFactories {
         }
 
         external slot_name = CurrentSlotName
+    }
+
+    contribution TransientWorkingStateSlot = StateSlotEntry {
+        as TransientWorkingStateSlot
+        index FieldOrder
+        order FieldOrder
+
+        target state_slots {
+            build /ClassDef
+        }
+
+        external slot_name = WorkingSlotName
+    }
+
+    contribution TransientWorkingDefaultFactoryBuilderParam = BuilderParam {
+        as TransientWorkingDefaultFactoryBuilderParam
+        index FieldOrder
+        order FieldOrder
+
+        target builder_params {
+            build /Root
+        }
+
+        ident value_name = WorkingDefaultFactoryParamName
     }
 
     contribution TransientInitParamRequired = InitParamRequired {
@@ -97,6 +226,18 @@ concept LifecycleTransient extends default_factories.LifecycleDefaultFactories {
         external state_slot = CurrentSlotName
     }
 
+    contribution TransientWorkingInitAssignment = TransientWorkingStateAssignment {
+        as TransientWorkingInitAssignment
+        index FieldOrder
+        order FieldOrder
+
+        target state_init_body {
+            build /ClassDef
+        }
+
+        external working_slot = WorkingSlotName
+    }
+
     contribution TransientCurrentPropertyContribution = TransientCurrentProperty {
         as TransientCurrentProperty
         index FieldOrder
@@ -110,8 +251,87 @@ concept LifecycleTransient extends default_factories.LifecycleDefaultFactories {
         external current_slot = CurrentSlotName
     }
 
+    contribution TransientDefaultFacadeProperty = TransientFacadeProperty {
+        as TransientDefaultFacadeProperty
+        index FieldOrder
+        order FieldOrder
+
+        target default_facade_properties {
+            build /ClassDef
+        }
+
+        ident property_getter_name = FieldName
+        ident property_setter_target_name = FieldName
+        ident property_setter_name = FieldName
+        external current_slot = CurrentSlotName
+        external working_slot = WorkingSlotName
+        external tx_index = TxIndex
+    }
+
+    contribution TransientDefaultWorkingDefaultFactoryProperty = TransientWorkingDefaultFactoryProperty {
+        as TransientDefaultFacadeProperty
+        index FieldOrder
+        order FieldOrder
+
+        target default_facade_properties {
+            build /ClassDef
+        }
+
+        ident property_getter_name = FieldName
+        ident property_setter_target_name = FieldName
+        ident property_setter_name = FieldName
+        ident working_default_factory_name = WorkingDefaultFactoryParamName
+        external current_slot = CurrentSlotName
+        external working_slot = WorkingSlotName
+        external tx_index = TxIndex
+    }
+
+    contribution TransientWorkingFacadeProperty = TransientFacadeProperty {
+        as TransientWorkingFacadeProperty
+        index FieldOrder
+        order FieldOrder
+
+        target working_facade_properties {
+            build /ClassDef
+        }
+
+        ident property_getter_name = FieldName
+        ident property_setter_target_name = FieldName
+        ident property_setter_name = FieldName
+        external current_slot = CurrentSlotName
+        external working_slot = WorkingSlotName
+        external tx_index = TxIndex
+    }
+
+    contribution TransientWorkingWorkingDefaultFactoryProperty = TransientWorkingDefaultFactoryProperty {
+        as TransientWorkingFacadeProperty
+        index FieldOrder
+        order FieldOrder
+
+        target working_facade_properties {
+            build /ClassDef
+        }
+
+        ident property_getter_name = FieldName
+        ident property_setter_target_name = FieldName
+        ident property_setter_name = FieldName
+        ident working_default_factory_name = WorkingDefaultFactoryParamName
+        external current_slot = CurrentSlotName
+        external working_slot = WorkingSlotName
+        external tx_index = TxIndex
+    }
+
     matcher TransientCurrentStateSlotContributions(field: TransientFields) -> contribution {
         default -> TransientCurrentStateSlot
+    }
+
+    matcher TransientWorkingStateSlotContributions(field: TransientFields) -> contribution {
+        default -> TransientWorkingStateSlot
+    }
+
+    matcher TransientWorkingDefaultBuilderParamContributions(field: Fields) -> contribution {
+        rule has_working_default_factory when HasWorkingDefaultFactory == True
+                                         -> TransientWorkingDefaultFactoryBuilderParam
     }
 
     matcher TransientInitParamContributions(field: TransientFields) -> contribution {
@@ -138,8 +358,24 @@ concept LifecycleTransient extends default_factories.LifecycleDefaultFactories {
                            -> TransientCurrentDefaultAssignment
     }
 
+    matcher TransientWorkingInitAssignmentContributions(field: TransientFields) -> contribution {
+        default -> TransientWorkingInitAssignment
+    }
+
     matcher TransientCurrentPropertyContributions(field: TransientFields) -> contribution {
         default -> TransientCurrentPropertyContribution
+    }
+
+    matcher TransientDefaultFacadePropertyContributions(field: IndexedTransientFields) -> contribution {
+        default -> TransientDefaultFacadeProperty
+        rule working_default_factory when HasWorkingDefaultFactory == True
+                                     -> TransientDefaultWorkingDefaultFactoryProperty
+    }
+
+    matcher TransientWorkingFacadePropertyContributions(field: IndexedTransientFields) -> contribution {
+        default -> TransientWorkingFacadeProperty
+        rule working_default_factory when HasWorkingDefaultFactory == True
+                                     -> TransientWorkingWorkingDefaultFactoryProperty
     }
 
     matcher DefaultFactoryEvalContributions(step: DefaultFactoryEvaluationSteps) -> contribution {

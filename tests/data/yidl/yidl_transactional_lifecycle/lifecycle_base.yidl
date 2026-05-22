@@ -43,6 +43,10 @@ concept LifecycleBase extends transient.LifecycleTransient {
             from field: Fields
             using FieldDefaultBuilderParamContributions
 
+        apply transient_working_default_params
+            from field: Fields
+            using TransientWorkingDefaultBuilderParamContributions
+
         apply managed_freeze_params
             from field: ManagedFields
             using ManagedFreezeBuilderParamContributions
@@ -104,6 +108,11 @@ concept LifecycleBase extends transient.LifecycleTransient {
             from field: ManagedFields
             where FieldOwner == ClassId
             using ManagedWorkingStateSlotContributions
+
+        apply transient_working_state_slots
+            from field: TransientFields
+            where FieldOwner == ClassId
+            using TransientWorkingStateSlotContributions
 
         apply managed_staged_state_slots
             from field: ManagedFields
@@ -340,6 +349,11 @@ concept LifecycleBase extends transient.LifecycleTransient {
             where FieldOwner == ClassId
             using ManagedWorkingInitAssignmentContributions
 
+        apply transient_working_init_assignments
+            from field: TransientFields
+            where FieldOwner == ClassId
+            using TransientWorkingInitAssignmentContributions
+
         apply managed_staged_init_assignments
             from field: ManagedFields
             where FieldOwner == ClassId
@@ -365,6 +379,11 @@ concept LifecycleBase extends transient.LifecycleTransient {
             where FieldOwner == ClassId
             using ManagedDefaultFacadePropertyContributions
 
+        apply transient_default_properties
+            from field: IndexedTransientFields
+            where FieldOwner == ClassId
+            using TransientDefaultFacadePropertyContributions
+
         apply managed_current_properties
             from field: IndexedTransactionalFields
             where FieldOwner == ClassId
@@ -379,6 +398,11 @@ concept LifecycleBase extends transient.LifecycleTransient {
             from field: IndexedTransactionalFields
             where FieldOwner == ClassId
             using ManagedWorkingFacadePropertyContributions
+
+        apply transient_working_properties
+            from field: IndexedTransientFields
+            where FieldOwner == ClassId
+            using TransientWorkingFacadePropertyContributions
 
         apply apply_prepared_commit_helpers
             from tx_group: TxGroups
