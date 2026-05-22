@@ -97,6 +97,8 @@ class YidlCompiledConcept:
     contribution_matchers: Mapping[str, ContributionMatcherSpec]
     operation_matchers: Mapping[str, OperationMatcherSpec]
     composable_productions: Mapping[str, ComposableProductionSpec]
+    production_phases: Mapping[str, frozenset[str]]
+    production_extensions: tuple[_ProductionExtensionSpec, ...]
     assembly_edges: Mapping[str, AssemblyEdgeSpec]
     assemblies: Mapping[str, AssemblySpec]
 
@@ -138,6 +140,20 @@ class _SnippetSource:
 class _ResourceOptions:
     keep_names: tuple[str, ...] = ()
     edge_options: tuple[Tree, ...] = ()
+
+
+@dataclass(frozen=True, slots=True)
+class _ProductionPhaseExtensionSpec:
+    phase_name: str
+    applies: tuple[ApplySpec, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class _ProductionExtensionSpec:
+    target_name: str
+    phases: tuple[_ProductionPhaseExtensionSpec, ...]
+    declaring_concept_name: str
+    source_order: int
 
 
 _POLICIES: Mapping[str, object] = {
@@ -329,6 +345,8 @@ class _ConceptCompiler:
         self._local_contribution_matchers: dict[str, ContributionMatcherSpec] = {}
         self._local_operation_matchers: dict[str, OperationMatcherSpec] = {}
         self._local_composable_productions: dict[str, ComposableProductionSpec] = {}
+        self._local_composable_production_phases: dict[str, frozenset[str]] = {}
+        self._local_production_extensions: list[_ProductionExtensionSpec] = []
         self._local_assembly_edges: dict[str, AssemblyEdgeSpec] = {}
         self._local_assemblies: dict[str, AssemblySpec] = {}
         self._declared_contributions: set[str] = set()
@@ -383,6 +401,15 @@ class _ConceptCompiler:
             if member.data == "composable_production_decl":
                 production = self._compile_composable_production(member)
                 self._local_composable_productions[production.name] = production
+        for source_order, member in enumerate(members):
+            if member.data == "composable_production_extension_decl":
+                self._local_production_extensions.append(
+                    self._compile_production_extension(
+                        member,
+                        declaring_concept_name=name,
+                        source_order=source_order,
+                    )
+                )
         for member in members:
             if member.data == "contribution_decl":
                 contribution = self._compile_contribution(member)
@@ -489,6 +516,15 @@ class _ConceptCompiler:
             getter=lambda concept: concept.composable_productions,
             concept_name=name,
         )
+        production_phases = _merge_production_phase_maps(
+            extensions=self._extensions,
+            local=self._local_composable_production_phases,
+            concept_name=name,
+        )
+        production_extensions = _merge_production_extensions(
+            extensions=self._extensions,
+            local=tuple(self._local_production_extensions),
+        )
         assembly_edges = _merge_named_maps(
             kind="assembly edge",
             extensions=self._extensions,
@@ -518,6 +554,8 @@ class _ConceptCompiler:
             contribution_matchers=contribution_matchers,
             operation_matchers=operation_matchers,
             composable_productions=composable_productions,
+            production_phases=production_phases,
+            production_extensions=production_extensions,
             assembly_edges=assembly_edges,
             assemblies=assemblies,
         )
@@ -551,6 +589,7 @@ class _ConceptCompiler:
             "matcher_decl",
             "production_decl",
             "composable_production_decl",
+            "composable_production_extension_decl",
             "contribution_decl",
             "assemble_decl",
             "assembly_decl",
@@ -1402,11 +1441,56 @@ class _ConceptCompiler:
         if root is None:
             raise YidlSymbolError(f"production {name!r} must declare a root")
 
+        self._local_composable_production_phases[name] = frozenset(phase_names)
         return ComposableProductionSpec(
             name=name,
             inputs=inputs,
             root=root,
             applies=tuple(applies),
+        )
+
+    def _compile_production_extension(
+        self,
+        tree: Tree,
+        *,
+        declaring_concept_name: str,
+        source_order: int,
+    ) -> _ProductionExtensionSpec:
+        target_name = _qname(tree.children[0])
+        target = self._resolve_composable_production_spec(
+            target_name,
+            context=f"production extension {target_name!r}",
+        )
+        phase_names = self._phase_names_for_production(target.name)
+        phase_extensions: list[_ProductionPhaseExtensionSpec] = []
+        seen_phases: set[str] = set()
+        for phase in _children(tree, "phase_extension_decl"):
+            phase_name = _token_text(phase.children[0])
+            if phase_name in seen_phases:
+                raise YidlSymbolError(
+                    f"production extension {target_name!r} repeats phase "
+                    f"{phase_name!r}"
+                )
+            seen_phases.add(phase_name)
+            if phase_name not in phase_names:
+                raise YidlSymbolError(
+                    f"production {target.name!r} has no phase {phase_name!r}"
+                )
+            applies = tuple(
+                self._apply_spec(target.name, target.inputs, apply_tree)
+                for apply_tree in _children(phase, "apply_decl")
+            )
+            phase_extensions.append(
+                _ProductionPhaseExtensionSpec(
+                    phase_name=phase_name,
+                    applies=applies,
+                )
+            )
+        return _ProductionExtensionSpec(
+            target_name=target.name,
+            phases=tuple(phase_extensions),
+            declaring_concept_name=declaring_concept_name,
+            source_order=source_order,
         )
 
     def _register_inline_apply_edge(self, apply_spec: ApplySpec) -> None:
@@ -1776,6 +1860,84 @@ class _ConceptCompiler:
                 for concept in module.concepts.values()
             )
         return False
+
+    def _resolve_composable_production_spec(
+        self,
+        name: str,
+        *,
+        context: str,
+    ) -> ComposableProductionSpec:
+        parts = name.split(".")
+        if len(parts) == 1:
+            production = self._local_composable_productions.get(parts[0])
+            if production is not None:
+                return production
+            inherited: list[ComposableProductionSpec] = []
+            for extension in self._extensions:
+                production = extension.composable_productions.get(parts[0])
+                if production is not None and not any(
+                    production is existing for existing in inherited
+                ):
+                    inherited.append(production)
+            if len(inherited) == 1:
+                return inherited[0]
+            if len(inherited) > 1:
+                raise YidlSymbolError(
+                    f"{context} references ambiguous composable production "
+                    f"{parts[0]!r}"
+                )
+            imported = self._imported_symbol(parts[0])
+            if imported is not None and isinstance(
+                imported.target,
+                ComposableProductionSpec,
+            ):
+                return imported.target
+        elif len(parts) == 2:
+            return self._resolve_module_composable_production(
+                alias=parts[0],
+                production_name=parts[1],
+                context=context,
+            )
+        raise YidlSymbolError(
+            f"{context} references undefined composable production {name!r}"
+        )
+
+    def _resolve_module_composable_production(
+        self,
+        *,
+        alias: str,
+        production_name: str,
+        context: str,
+    ) -> ComposableProductionSpec:
+        module = self._import_module(alias)
+        matches: list[ComposableProductionSpec] = []
+        for concept in module.concepts.values():
+            production = concept.composable_productions.get(production_name)
+            if production is not None and not any(
+                production is existing for existing in matches
+            ):
+                matches.append(production)
+        if len(matches) == 1:
+            return matches[0]
+        if len(matches) > 1:
+            raise YidlSymbolError(
+                f"{context} references ambiguous imported composable production "
+                f"{alias}.{production_name}"
+            )
+        raise YidlSymbolError(
+            f"{context} references undefined composable production "
+            f"{alias}.{production_name}"
+        )
+
+    def _phase_names_for_production(self, production_name: str) -> frozenset[str]:
+        phases = self._local_composable_production_phases.get(production_name)
+        if phases is not None:
+            return phases
+        for extension in self._extensions:
+            phases = extension.production_phases.get(production_name)
+            if phases is not None:
+                return phases
+        return frozenset()
 
     def _validate_assembly_value_contexts(self, plan: CapsuleConceptPlan) -> None:
         for matcher in self._local_contribution_matchers.values():
@@ -2703,6 +2865,55 @@ def _merge_named_maps(
             )
         merged[name] = value
     return merged
+
+
+def _merge_production_phase_maps(
+    *,
+    extensions: tuple[YidlCompiledConcept, ...],
+    local: Mapping[str, frozenset[str]],
+    concept_name: str,
+) -> dict[str, frozenset[str]]:
+    merged: dict[str, frozenset[str]] = {}
+    owners: dict[str, str] = {}
+    for extension in extensions:
+        for name, phases in extension.production_phases.items():
+            existing = merged.get(name)
+            if existing is None:
+                merged[name] = phases
+                owners[name] = extension.name
+                continue
+            if existing == phases:
+                continue
+            raise YidlSymbolError(
+                f"composable production phases {name!r} are inherited from both "
+                f"{owners[name]!r} and {extension.name!r}"
+            )
+    for name, phases in local.items():
+        if name in merged and merged[name] != phases:
+            raise YidlSymbolError(
+                f"composable production phases {name!r} are already inherited "
+                f"by concept {concept_name!r}"
+            )
+        merged[name] = phases
+    return merged
+
+
+def _merge_production_extensions(
+    *,
+    extensions: tuple[YidlCompiledConcept, ...],
+    local: tuple[_ProductionExtensionSpec, ...],
+) -> tuple[_ProductionExtensionSpec, ...]:
+    merged: list[_ProductionExtensionSpec] = []
+    seen: set[int] = set()
+    for extension in extensions:
+        for production_extension in extension.production_extensions:
+            identity = id(production_extension)
+            if identity in seen:
+                continue
+            seen.add(identity)
+            merged.append(production_extension)
+    merged.extend(local)
+    return tuple(merged)
 
 
 def _merge_contribution_matchers(

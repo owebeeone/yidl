@@ -1420,6 +1420,124 @@ def test_yidl_lark_composable_production_phase_rejects_root_member() -> None:
         compile_yidl_files({"phases.yidl": source}, "phases.yidl")
 
 
+def test_yidl_lark_production_extension_stores_inherited_phase_apply() -> None:
+    source = """
+    module phases
+
+    concept Base {
+        resource Root = code $[
+            VALUE = []
+            astichi_hole(body)
+        ]$
+        resource Add = code `VALUE.append("base")`
+
+        contribution Add = Add {
+            target body { build /Root }
+        }
+
+        matcher AddContributions() -> contribution {
+            default -> Add
+        }
+
+        production ModuleProduction -> composable {
+            root Root = Root
+            phase body {
+            }
+        }
+    }
+
+    concept Feature extends Base {
+        extend production ModuleProduction {
+            phase body {
+                apply inherited using AddContributions
+            }
+        }
+    }
+    """
+
+    concept = compile_yidl_files({"phases.yidl": source}, "phases.yidl").concepts[
+        "Feature"
+    ]
+    extension = concept.production_extensions[0]
+
+    assert extension.target_name == "ModuleProduction"
+    assert extension.declaring_concept_name == "Feature"
+    assert len(extension.phases) == 1
+    assert extension.phases[0].phase_name == "body"
+    assert [_apply_name(apply) for apply in extension.phases[0].applies] == [
+        "ModuleProduction.inherited",
+    ]
+
+
+def test_yidl_lark_production_extension_missing_target_rejects() -> None:
+    source = """
+    module phases
+
+    concept Broken {
+        extend production MissingProduction {
+            phase body {
+            }
+        }
+    }
+    """
+
+    with pytest.raises(YidlSymbolError, match="undefined composable production"):
+        compile_yidl_files({"phases.yidl": source}, "phases.yidl")
+
+
+def test_yidl_lark_production_extension_missing_phase_rejects() -> None:
+    source = """
+    module phases
+
+    concept Base {
+        resource Root = code `VALUE = []`
+
+        production ModuleProduction -> composable {
+            root Root = Root
+            phase body {
+            }
+        }
+    }
+
+    concept Broken extends Base {
+        extend production ModuleProduction {
+            phase missing {
+            }
+        }
+    }
+    """
+
+    with pytest.raises(YidlSymbolError, match="has no phase"):
+        compile_yidl_files({"phases.yidl": source}, "phases.yidl")
+
+
+def test_yidl_lark_production_extension_rejects_root_member() -> None:
+    source = """
+    module phases
+
+    concept Base {
+        resource Root = code `VALUE = []`
+
+        production ModuleProduction -> composable {
+            root Root = Root
+            phase body {
+            }
+        }
+    }
+
+    concept Broken extends Base {
+        extend production ModuleProduction {
+            phase body {
+                root Other = Root
+            }
+        }
+    }
+    """
+
+    with pytest.raises(YidlSyntaxError):
+        compile_yidl_files({"phases.yidl": source}, "phases.yidl")
+
+
 def _apply_name(apply: object) -> str:
     edge = getattr(apply, "edge", None)
     if edge is not None:
