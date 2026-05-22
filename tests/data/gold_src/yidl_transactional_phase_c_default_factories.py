@@ -23,6 +23,7 @@ YIDL_PATHS = (
     YIDL_FIXTURE_DIR / "lifecycle_managed.yidl",
     YIDL_FIXTURE_DIR / "lifecycle_default_factories.yidl",
     YIDL_FIXTURE_DIR / "lifecycle_transient.yidl",
+    YIDL_FIXTURE_DIR / "lifecycle_owned.yidl",
     YIDL_FIXTURE_DIR / "lifecycle_base.yidl",
 )
 ENTRY_PATH = YIDL_FIXTURE_DIR / "lifecycle_base.yidl"

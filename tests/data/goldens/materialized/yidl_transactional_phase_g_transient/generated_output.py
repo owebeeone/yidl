@@ -1,4 +1,6 @@
 from __future__ import annotations
+from collections.abc import Mapping
+from yidl.runtime.bindings import BindingBase, BindingDict
 import weakref
 from yidl.runtime.lifecycle import _HAS_DEFAULT_FACTORY
 from yidl.runtime.transaction_yidl import DEFAULT_TRANSACTION
@@ -6,6 +8,22 @@ from yidl.runtime.transaction_yidl import TransactionManager
 VOID = object()
 
 def build_lifecycle_class(decorated_cls, *, _Scratch_lifecycle_definition, _Scratch_annotations, _Scratch_tx_groups, _Scratch_seed_default, _Scratch_label_default, _Scratch_marker_default, _Scratch_items_default_factory, _Scratch_buffer_default, _Scratch_buffer_working_default_factory, _Scratch_audit_buffer_default, _Scratch_audit_buffer_working_default_factory):
+
+    def _y_validate_binding_value(field_name, value):
+        if value is not None and (not isinstance(value, BindingBase)):
+            raise TypeError('binding field ' + repr(field_name) + ' expects BindingBase or None')
+        return value
+
+    def _y_validate_binding_map_value(field_name, value):
+        if value is None:
+            return None
+        if not isinstance(value, Mapping):
+            raise TypeError('binding map field ' + repr(field_name) + ' expects a mapping or None')
+        result = value if isinstance(value, BindingDict) else BindingDict(value)
+        for key, item in result.items():
+            if not isinstance(item, BindingBase):
+                raise TypeError('binding map field ' + repr(field_name) + ' expects BindingBase values; key ' + repr(key) + ' has ' + type(item).__name__)
+        return result
 
     class Scratch_State:
         __slots__ = ('_y_transaction_manager', '_y_default_ref', '_y_current_ref', '_y_working_ref', '_y_seed_initvar', '_y_label_current', '_y_label_working', '_y_marker_current', '_y_marker_working', '_y_items_current', '_y_items_working', '_y_buffer_current', '_y_buffer_working', '_y_audit_buffer_current', '_y_audit_buffer_working', '_y_working_tx_ids')

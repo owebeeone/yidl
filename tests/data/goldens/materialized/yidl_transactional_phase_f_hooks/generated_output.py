@@ -1,4 +1,6 @@
 from __future__ import annotations
+from collections.abc import Mapping
+from yidl.runtime.bindings import BindingBase, BindingDict
 import weakref
 from yidl.runtime.lifecycle import _HAS_DEFAULT_FACTORY
 from yidl.runtime.transaction_yidl import DEFAULT_TRANSACTION
@@ -6,6 +8,22 @@ from yidl.runtime.transaction_yidl import TransactionManager
 VOID = object()
 
 def build_lifecycle_class(decorated_cls, *, _Counter_lifecycle_definition, _Counter_annotations, _Counter_tx_groups, _Counter_rank_default, _Counter_count_default, _Counter_items_default, _Counter_items_freeze, _Counter_items_thaw, _Counter_optional_items_default, _Counter_optional_items_freeze, _Counter_optional_items_thaw, _Counter_audit_count_default):
+
+    def _y_validate_binding_value(field_name, value):
+        if value is not None and (not isinstance(value, BindingBase)):
+            raise TypeError('binding field ' + repr(field_name) + ' expects BindingBase or None')
+        return value
+
+    def _y_validate_binding_map_value(field_name, value):
+        if value is None:
+            return None
+        if not isinstance(value, Mapping):
+            raise TypeError('binding map field ' + repr(field_name) + ' expects a mapping or None')
+        result = value if isinstance(value, BindingDict) else BindingDict(value)
+        for key, item in result.items():
+            if not isinstance(item, BindingBase):
+                raise TypeError('binding map field ' + repr(field_name) + ' expects BindingBase values; key ' + repr(key) + ' has ' + type(item).__name__)
+        return result
 
     class Counter_State:
         __slots__ = ('_y_transaction_manager', '_y_default_ref', '_y_current_ref', '_y_working_ref', '_y_rank_value', '_y_count_current', '_y_count_working', '_y_count_staged', '_y_items_current', '_y_items_working', '_y_items_staged', '_y_optional_items_current', '_y_optional_items_working', '_y_optional_items_staged', '_y_audit_count_current', '_y_audit_count_working', '_y_audit_count_staged', '_y_working_tx_ids')

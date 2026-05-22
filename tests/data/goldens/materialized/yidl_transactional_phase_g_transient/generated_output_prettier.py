@@ -1,4 +1,6 @@
 from __future__ import annotations
+from collections.abc import Mapping
+from yidl.runtime.bindings import BindingBase, BindingDict
 import weakref
 from yidl.runtime.lifecycle import _HAS_DEFAULT_FACTORY
 from yidl.runtime.transaction_yidl import DEFAULT_TRANSACTION
@@ -22,6 +24,33 @@ def build_lifecycle_class(
     _Scratch_audit_buffer_default,
     _Scratch_audit_buffer_working_default_factory,
 ):
+
+    def _y_validate_binding_value(field_name, value):
+        if value is not None and (not isinstance(value, BindingBase)):
+            raise TypeError(
+                "binding field " + repr(field_name) + " expects BindingBase or None"
+            )
+        return value
+
+    def _y_validate_binding_map_value(field_name, value):
+        if value is None:
+            return None
+        if not isinstance(value, Mapping):
+            raise TypeError(
+                "binding map field " + repr(field_name) + " expects a mapping or None"
+            )
+        result = value if isinstance(value, BindingDict) else BindingDict(value)
+        for key, item in result.items():
+            if not isinstance(item, BindingBase):
+                raise TypeError(
+                    "binding map field "
+                    + repr(field_name)
+                    + " expects BindingBase values; key "
+                    + repr(key)
+                    + " has "
+                    + type(item).__name__
+                )
+        return result
 
     class Scratch_State:
         __slots__ = (

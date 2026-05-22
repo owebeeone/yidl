@@ -1,4 +1,6 @@
 from __future__ import annotations
+from collections.abc import Mapping
+from yidl.runtime.bindings import BindingBase, BindingDict
 import weakref
 from yidl.runtime.lifecycle import _HAS_DEFAULT_FACTORY
 from yidl.runtime.transaction_yidl import DEFAULT_TRANSACTION
@@ -6,6 +8,22 @@ from yidl.runtime.transaction_yidl import TransactionManager
 VOID = object()
 
 def build_lifecycle_class(decorated_cls, *, _Derived_lifecycle_definition, _Derived_annotations, _Derived_tx_groups, _Derived_v1_default, _Derived_v2_default_factory):
+
+    def _y_validate_binding_value(field_name, value):
+        if value is not None and (not isinstance(value, BindingBase)):
+            raise TypeError('binding field ' + repr(field_name) + ' expects BindingBase or None')
+        return value
+
+    def _y_validate_binding_map_value(field_name, value):
+        if value is None:
+            return None
+        if not isinstance(value, Mapping):
+            raise TypeError('binding map field ' + repr(field_name) + ' expects a mapping or None')
+        result = value if isinstance(value, BindingDict) else BindingDict(value)
+        for key, item in result.items():
+            if not isinstance(item, BindingBase):
+                raise TypeError('binding map field ' + repr(field_name) + ' expects BindingBase values; key ' + repr(key) + ' has ' + type(item).__name__)
+        return result
 
     class Derived_State:
         __slots__ = ('_y_transaction_manager', '_y_default_ref', '_y_current_ref', '_y_working_ref', '_y_v1_current', '_y_v1_working', '_y_v1_staged', '_y_v2_current', '_y_v2_working', '_y_v2_staged', '_y_working_tx_ids')

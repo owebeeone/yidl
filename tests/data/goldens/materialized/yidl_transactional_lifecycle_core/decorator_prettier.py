@@ -75,6 +75,9 @@ _FieldOrderProperty = RuntimeProperty(
 _FieldKindProperty = RuntimeProperty(
     "FieldKind", str, default="field", storage_name="field_kind"
 )
+_BindingShapeProperty = RuntimeProperty(
+    "BindingShape", str, default="scalar", storage_name="binding_shape"
+)
 _AnnotationProperty = RuntimeProperty(
     "Annotation", object, default=object, storage_name="annotation"
 )
@@ -353,6 +356,7 @@ _PlainFieldSpec = RuntimeRecord(
         _FieldNameProperty,
         _FieldOrderProperty,
         _FieldKindProperty,
+        _BindingShapeProperty,
         _AnnotationProperty,
         _InitProperty,
         _HasDefaultProperty,
@@ -388,6 +392,7 @@ _InitVarFieldSpec = RuntimeRecord(
         _FieldNameProperty,
         _FieldOrderProperty,
         _FieldKindProperty,
+        _BindingShapeProperty,
         _AnnotationProperty,
         _InitProperty,
         _HasDefaultProperty,
@@ -423,6 +428,7 @@ _ClassVarFieldSpec = RuntimeRecord(
         _FieldNameProperty,
         _FieldOrderProperty,
         _FieldKindProperty,
+        _BindingShapeProperty,
         _AnnotationProperty,
         _InitProperty,
         _HasDefaultProperty,
@@ -1090,6 +1096,7 @@ class PlainField:
         "field_name",
         "field_order",
         "field_kind",
+        "binding_shape",
         "annotation",
         "init",
         "has_default",
@@ -1122,6 +1129,7 @@ class PlainField:
     field_name: str
     field_order: int
     field_kind: str
+    binding_shape: str
     annotation: object
     init: bool
     has_default: bool
@@ -1156,6 +1164,7 @@ class PlainField:
         field_name: str,
         field_order: int,
         field_kind: str = "field",
+        binding_shape: str = "scalar",
         annotation: object = object,
         init: bool = True,
         has_default: bool = False,
@@ -1197,6 +1206,11 @@ class PlainField:
         if not isinstance(field_kind, str):
             raise TypeError("FieldKind must be str, got " + type(field_kind).__name__)
         object.__setattr__(self, "field_kind", field_kind)
+        if not isinstance(binding_shape, str):
+            raise TypeError(
+                "BindingShape must be str, got " + type(binding_shape).__name__
+            )
+        object.__setattr__(self, "binding_shape", binding_shape)
         object.__setattr__(self, "annotation", annotation)
         if not isinstance(init, bool):
             raise TypeError("Init must be bool, got " + type(init).__name__)
@@ -1307,6 +1321,7 @@ class PlainField:
             "field_name",
             "field_order",
             "field_kind",
+            "binding_shape",
             "annotation",
             "init",
             "has_default",
@@ -1343,6 +1358,7 @@ class PlainField:
         pieces.append("field_name=" + repr(self.field_name))
         pieces.append("field_order=" + repr(self.field_order))
         pieces.append("field_kind=" + repr(self.field_kind))
+        pieces.append("binding_shape=" + repr(self.binding_shape))
         pieces.append("annotation=" + repr(self.annotation))
         pieces.append("init=" + repr(self.init))
         pieces.append("has_default=" + repr(self.has_default))
@@ -1393,6 +1409,7 @@ class InitVarField:
         "field_name",
         "field_order",
         "field_kind",
+        "binding_shape",
         "annotation",
         "init",
         "has_default",
@@ -1425,6 +1442,7 @@ class InitVarField:
     field_name: str
     field_order: int
     field_kind: str
+    binding_shape: str
     annotation: object
     init: bool
     has_default: bool
@@ -1459,6 +1477,7 @@ class InitVarField:
         field_name: str,
         field_order: int,
         field_kind: str = "field",
+        binding_shape: str = "scalar",
         annotation: object = object,
         init: bool = True,
         has_default: bool = False,
@@ -1500,6 +1519,11 @@ class InitVarField:
         if not isinstance(field_kind, str):
             raise TypeError("FieldKind must be str, got " + type(field_kind).__name__)
         object.__setattr__(self, "field_kind", field_kind)
+        if not isinstance(binding_shape, str):
+            raise TypeError(
+                "BindingShape must be str, got " + type(binding_shape).__name__
+            )
+        object.__setattr__(self, "binding_shape", binding_shape)
         object.__setattr__(self, "annotation", annotation)
         if not isinstance(init, bool):
             raise TypeError("Init must be bool, got " + type(init).__name__)
@@ -1610,6 +1634,7 @@ class InitVarField:
             "field_name",
             "field_order",
             "field_kind",
+            "binding_shape",
             "annotation",
             "init",
             "has_default",
@@ -1646,6 +1671,7 @@ class InitVarField:
         pieces.append("field_name=" + repr(self.field_name))
         pieces.append("field_order=" + repr(self.field_order))
         pieces.append("field_kind=" + repr(self.field_kind))
+        pieces.append("binding_shape=" + repr(self.binding_shape))
         pieces.append("annotation=" + repr(self.annotation))
         pieces.append("init=" + repr(self.init))
         pieces.append("has_default=" + repr(self.has_default))
@@ -1696,6 +1722,7 @@ class ClassVarField:
         "field_name",
         "field_order",
         "field_kind",
+        "binding_shape",
         "annotation",
         "init",
         "has_default",
@@ -1728,6 +1755,7 @@ class ClassVarField:
     field_name: str
     field_order: int
     field_kind: str
+    binding_shape: str
     annotation: object
     init: bool
     has_default: bool
@@ -1762,6 +1790,7 @@ class ClassVarField:
         field_name: str,
         field_order: int,
         field_kind: str = "field",
+        binding_shape: str = "scalar",
         annotation: object = object,
         init: bool = True,
         has_default: bool = False,
@@ -1803,6 +1832,11 @@ class ClassVarField:
         if not isinstance(field_kind, str):
             raise TypeError("FieldKind must be str, got " + type(field_kind).__name__)
         object.__setattr__(self, "field_kind", field_kind)
+        if not isinstance(binding_shape, str):
+            raise TypeError(
+                "BindingShape must be str, got " + type(binding_shape).__name__
+            )
+        object.__setattr__(self, "binding_shape", binding_shape)
         object.__setattr__(self, "annotation", annotation)
         if not isinstance(init, bool):
             raise TypeError("Init must be bool, got " + type(init).__name__)
@@ -1913,6 +1947,7 @@ class ClassVarField:
             "field_name",
             "field_order",
             "field_kind",
+            "binding_shape",
             "annotation",
             "init",
             "has_default",
@@ -1949,6 +1984,7 @@ class ClassVarField:
         pieces.append("field_name=" + repr(self.field_name))
         pieces.append("field_order=" + repr(self.field_order))
         pieces.append("field_kind=" + repr(self.field_kind))
+        pieces.append("binding_shape=" + repr(self.binding_shape))
         pieces.append("annotation=" + repr(self.annotation))
         pieces.append("init=" + repr(self.init))
         pieces.append("has_default=" + repr(self.has_default))
@@ -2200,6 +2236,9 @@ ASSEMBLY_PROPERTIES = {
     "FieldName": _YidlSimpleNamespace(name="FieldName", storage_name="field_name"),
     "FieldOrder": _YidlSimpleNamespace(name="FieldOrder", storage_name="field_order"),
     "FieldKind": _YidlSimpleNamespace(name="FieldKind", storage_name="field_kind"),
+    "BindingShape": _YidlSimpleNamespace(
+        name="BindingShape", storage_name="binding_shape"
+    ),
     "Annotation": _YidlSimpleNamespace(name="Annotation", storage_name="annotation"),
     "Init": _YidlSimpleNamespace(name="Init", storage_name="init"),
     "HasDefault": _YidlSimpleNamespace(name="HasDefault", storage_name="has_default"),
@@ -2357,7 +2396,7 @@ def build_lifecycle_class(decorated_cls, builder_params__astichi_param_hole__):
     astichi_hole(function_body)
     astichi_hole(return_statement)""",
         file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-        line_number=211,
+        line_number=213,
     ),
     "BuilderParam": astichi_template(
         from_astichi_code(
@@ -2365,7 +2404,7 @@ def build_lifecycle_class(decorated_cls, builder_params__astichi_param_hole__):
 def astichi_params(*, value_name__astichi_arg__):
     pass""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=229,
+            line_number=231,
         )
     ),
     "TransactionManagerParam": astichi_template(
@@ -2374,14 +2413,14 @@ def astichi_params(*, value_name__astichi_arg__):
 def astichi_params(*, transaction_manager=None):
     pass""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=234,
+            line_number=236,
         )
     ),
     "StateSlotEntry": astichi_template(
         from_astichi_code(
             "astichi_bind_external(slot_name)",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=239,
+            line_number=241,
         )
     ),
     "InitParamRequired": astichi_template(
@@ -2390,7 +2429,7 @@ def astichi_params(*, transaction_manager=None):
 def astichi_params(param_name__astichi_arg__: astichi_bind_external(annotation)):
     pass""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=243,
+            line_number=245,
         )
     ),
     "InitParamDefault": astichi_template(
@@ -2402,7 +2441,7 @@ def astichi_params(
 ):
     pass""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=248,
+            line_number=250,
         )
     ),
     "PlainStateAssignment": astichi_template(
@@ -2413,7 +2452,7 @@ astichi_pass(state, outer_bind=True).astichi_ref(external=state_slot)._ = astich
     outer_bind=True,
 )""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=256,
+            line_number=258,
         )
     ),
     "InitVarLocalDefaultAssignment": astichi_template(
@@ -2424,7 +2463,7 @@ init_value_name__astichi_arg__ = astichi_pass(
     outer_bind=True,
 )""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=263,
+            line_number=265,
         )
     ),
     "PlainProperty": astichi_template(
@@ -2438,7 +2477,7 @@ def property_getter_name__astichi_arg__(self):
 def property_setter_name__astichi_arg__(self, value):
     self._y_state.astichi_ref(external=state_slot)._ = value""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=270,
+            line_number=272,
         )
     ),
     "ClassVarDefaultAssignment": astichi_template(
@@ -2449,7 +2488,7 @@ classvar_name__astichi_arg__ = astichi_pass(
     outer_bind=True,
 )""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=280,
+            line_number=282,
         )
     ),
     "CommitOrderKeyBranch": astichi_template(
@@ -2462,7 +2501,7 @@ match astichi_pass(tx_index, outer_bind=True):
             outer_bind=True,
         )._y_get_default_facade().astichi_ref(external=method_name)()""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=287,
+            line_number=289,
         )
     ),
     "RequiresValidationBranch": astichi_template(
@@ -2472,7 +2511,7 @@ match astichi_pass(tx_index, outer_bind=True):
     case _ if astichi_pass(tx_index, outer_bind=True) == astichi_bind_external(tx_index_value):
         return True""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=296,
+            line_number=298,
         )
     ),
     "ValidateCommitBranch": astichi_template(
@@ -2487,7 +2526,7 @@ match astichi_pass(tx_index, outer_bind=True):
         if result is False:
             return False""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=302,
+            line_number=304,
         )
     ),
     "TransactionHookCall": astichi_template(
@@ -2500,7 +2539,7 @@ match astichi_pass(tx_index, outer_bind=True):
             outer_bind=True,
         )._y_get_default_facade().astichi_ref(external=method_name)()""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=313,
+            line_number=315,
         )
     ),
     "ClassBundle": astichi_template(
@@ -2792,7 +2831,7 @@ class working_facade_class_decl_name__astichi_arg__(
     __slots__ = ()
     astichi_hole(working_facade_properties)""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=322,
+            line_number=324,
             keep_names=(
                 "DEFAULT_TRANSACTION",
                 "TransactionManager",
@@ -2819,14 +2858,14 @@ return_class_module_ref__astichi_arg__.__module__ = astichi_pass(
 ).__module__
 return return_class_result_ref__astichi_arg__""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=613,
+            line_number=615,
         )
     ),
     "PassStatement": astichi_template(
         from_astichi_code(
             "pass",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=629,
+            line_number=631,
         )
     ),
 }

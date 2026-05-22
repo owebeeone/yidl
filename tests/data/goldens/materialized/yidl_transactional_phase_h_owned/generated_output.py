@@ -7,7 +7,7 @@ from yidl.runtime.transaction_yidl import DEFAULT_TRANSACTION
 from yidl.runtime.transaction_yidl import TransactionManager
 VOID = object()
 
-def build_lifecycle_class(decorated_cls, *, _Example_lifecycle_definition, _Example_annotations, _Example_tx_groups, _Example_SCALE_default, _Example_seed_default, _Example_temp_default_factory, _Example_v2_default_factory, _Example_v3_default_factory, _Example_v4_default_factory, _Example_v5_default_factory):
+def build_lifecycle_class(decorated_cls, *, _Owner_lifecycle_definition, _Owner_annotations, _Owner_tx_groups, _Owner_child_default, _Owner_children_default_factory, _Owner_handle_default, _Owner_handles_default_factory):
 
     def _y_validate_binding_value(field_name, value):
         if value is not None and (not isinstance(value, BindingBase)):
@@ -25,16 +25,16 @@ def build_lifecycle_class(decorated_cls, *, _Example_lifecycle_definition, _Exam
                 raise TypeError('binding map field ' + repr(field_name) + ' expects BindingBase values; key ' + repr(key) + ' has ' + type(item).__name__)
         return result
 
-    class Example_State:
-        __slots__ = ('_y_transaction_manager', '_y_default_ref', '_y_current_ref', '_y_working_ref', '_y_v1_value', '_y_v2_current', '_y_v2_working', '_y_v2_staged', '_y_v3_current', '_y_v3_working', '_y_v3_staged', '_y_v4_current', '_y_v4_working', '_y_v4_staged', '_y_v5_current', '_y_v5_working', '_y_v5_staged', '_y_working_tx_ids')
-        __yidl_tx_index_to_key__ = _Example_tx_groups
-        __yidl_tx_key_to_index__ = {key: index for index, key in enumerate(_Example_tx_groups)}
+    class Owner_State:
+        __slots__ = ('_y_transaction_manager', '_y_default_ref', '_y_current_ref', '_y_working_ref', '_y_child_current', '_y_child_working', '_y_child_staged', '_y_children_current', '_y_children_working', '_y_children_staged', '_y_handle_value', '_y_handles_value', '_y_working_tx_ids')
+        __yidl_tx_index_to_key__ = _Owner_tx_groups
+        __yidl_tx_key_to_index__ = {key: index for index, key in enumerate(_Owner_tx_groups)}
 
         def _y_get_default_facade(self):
             ref = self._y_default_ref
             facade = None if ref is None else ref()
             if facade is None:
-                facade = object.__new__(Example)
+                facade = object.__new__(Owner)
                 object.__setattr__(facade, '_y_state', self)
                 current_ref = self._y_current_ref
                 working_ref = self._y_working_ref
@@ -47,7 +47,7 @@ def build_lifecycle_class(decorated_cls, *, _Example_lifecycle_definition, _Exam
             ref = self._y_current_ref
             facade = None if ref is None else ref()
             if facade is None:
-                facade = object.__new__(Example_Current)
+                facade = object.__new__(Owner_Current)
                 object.__setattr__(facade, '_y_state', self)
                 self._y_current_ref = weakref.ref(facade)
                 default_ref = self._y_default_ref
@@ -60,7 +60,7 @@ def build_lifecycle_class(decorated_cls, *, _Example_lifecycle_definition, _Exam
             ref = self._y_working_ref
             facade = None if ref is None else ref()
             if facade is None:
-                facade = object.__new__(Example_Working)
+                facade = object.__new__(Owner_Working)
                 object.__setattr__(facade, '_y_state', self)
                 self._y_working_ref = weakref.ref(facade)
                 default_ref = self._y_default_ref
@@ -172,49 +172,40 @@ def build_lifecycle_class(decorated_cls, *, _Example_lifecycle_definition, _Exam
             pass
 
         def _apply_prepared_commit_tx_0_fields(self):
-            if self._y_v2_staged is not VOID:
-                self._y_v2_current = self._y_v2_staged
-                self._y_v2_staged = VOID
-                self._y_v2_working = VOID
-            if self._y_v3_staged is not VOID:
-                self._y_v3_current = self._y_v3_staged
-                self._y_v3_staged = VOID
-                self._y_v3_working = VOID
-            if self._y_v4_staged is not VOID:
-                self._y_v4_current = self._y_v4_staged
-                self._y_v4_staged = VOID
-                self._y_v4_working = VOID
-            if self._y_v5_staged is not VOID:
-                self._y_v5_current = self._y_v5_staged
-                self._y_v5_staged = VOID
-                self._y_v5_working = VOID
+            if self._y_child_staged is not VOID:
+                self._y_child_current = self._y_child_staged
+                self._y_child_staged = VOID
+                self._y_child_working = VOID
+            if self._y_children_staged is not VOID:
+                self._y_children_current = self._y_children_staged
+                self._y_children_staged = VOID
+                self._y_children_working = VOID
 
         def _prepare_commit_tx_0_fields(self):
-            if self._y_v2_working is not VOID:
-                self._y_v2_staged = self._y_v2_working
-            if self._y_v3_working is not VOID:
-                self._y_v3_staged = self._y_v3_working
-            if self._y_v4_working is not VOID:
-                self._y_v4_staged = self._y_v4_working
-            if self._y_v5_working is not VOID:
-                self._y_v5_staged = self._y_v5_working
+            if self._y_child_working is not VOID:
+                value = self._y_child_working
+                if value is not None:
+                    value.accepted()
+                self._y_child_staged = value
+            if self._y_children_working is not VOID:
+                value__astichi_scoped_1 = self._y_children_working
+                if value__astichi_scoped_1 is not None:
+                    for item in value__astichi_scoped_1.values():
+                        item.accepted()
+                self._y_children_staged = value__astichi_scoped_1
 
         def _after_rollback_tx_0(self):
             pass
 
         def _rollback_tx_0_fields(self):
-            self._y_v2_staged = VOID
-            self._y_v2_working = VOID
-            self._y_v3_staged = VOID
-            self._y_v3_working = VOID
-            self._y_v4_staged = VOID
-            self._y_v4_working = VOID
-            self._y_v5_staged = VOID
-            self._y_v5_working = VOID
+            self._y_child_staged = VOID
+            self._y_child_working = VOID
+            self._y_children_staged = VOID
+            self._y_children_working = VOID
 
-    class Example_FacadeBase(decorated_cls):
+    class Owner_FacadeBase(decorated_cls):
         __slots__ = ('_y_state',) if hasattr(decorated_cls, '__weakref__') else ('_y_state', '__weakref__')
-        _y_lifecycle_field_names = frozenset(('v1', 'v2', 'v3', 'v4', 'v5'))
+        _y_lifecycle_field_names = frozenset(('child', 'children', 'handle', 'handles'))
 
         def __setattr__(self, name, value):
             if name in self._y_lifecycle_field_names:
@@ -260,203 +251,145 @@ def build_lifecycle_class(decorated_cls, *, _Example_lifecycle_definition, _Exam
 
         def rollback(self, *tx_keys):
             return self._y_state._y_transaction_manager.rollback(*tx_keys)
-        SCALE = _Example_SCALE_default
 
         @property
-        def v1(self):
-            return self._y_state._y_v1_value
+        def handle(self):
+            return self._y_state._y_handle_value
 
-        @v1.setter
-        def v1(self, value):
-            self._y_state._y_v1_value = value
+        @handle.setter
+        def handle(self, value):
+            self._y_state._y_handle_value = _y_validate_binding_value('handle', value)
 
-    class Example(Example_FacadeBase):
+        @property
+        def handles(self):
+            return self._y_state._y_handles_value
+
+        @handles.setter
+        def handles(self, value):
+            self._y_state._y_handles_value = _y_validate_binding_map_value('handles', value)
+
+    class Owner(Owner_FacadeBase):
         __slots__ = ('_y_current_facade', '_y_working_facade')
-        __annotations__ = _Example_annotations
+        __annotations__ = _Owner_annotations
         __yidl_lifecycle_generated__ = True
         __yidl_lifecycle_user_class__ = decorated_cls
-        __yidl_lifecycle_definition__ = _Example_lifecycle_definition
-        __yidl_tx_index_to_key__ = _Example_tx_groups
-        __yidl_tx_key_to_index__ = {key: index for index, key in enumerate(_Example_tx_groups)}
+        __yidl_lifecycle_definition__ = _Owner_lifecycle_definition
+        __yidl_tx_index_to_key__ = _Owner_tx_groups
+        __yidl_tx_key_to_index__ = {key: index for index, key in enumerate(_Owner_tx_groups)}
 
         @property
-        def v2(self):
+        def child(self):
             state = self._y_state
-            if state._y_v2_working is not VOID:
-                return state._y_v2_working
-            return state._y_v2_current
+            if state._y_child_working is not VOID:
+                return state._y_child_working
+            return state._y_child_current
 
-        @v2.setter
-        def v2(self, value):
+        @child.setter
+        def child(self, value):
             state = self._y_state
             state._y_ensure_working_transaction(0)
-            state._y_v2_working = value
+            state._y_child_working = _y_validate_binding_value('child', value)
 
         @property
-        def v3(self):
+        def children(self):
             state = self._y_state
-            if state._y_v3_working is not VOID:
-                return state._y_v3_working
-            return state._y_v3_current
+            if state._y_children_working is not VOID:
+                return state._y_children_working
+            return state._y_children_current
 
-        @v3.setter
-        def v3(self, value):
-            state = self._y_state
-            state._y_ensure_working_transaction(0)
-            state._y_v3_working = value
-
-        @property
-        def v4(self):
-            state = self._y_state
-            if state._y_v4_working is not VOID:
-                return state._y_v4_working
-            return state._y_v4_current
-
-        @v4.setter
-        def v4(self, value):
+        @children.setter
+        def children(self, value):
             state = self._y_state
             state._y_ensure_working_transaction(0)
-            state._y_v4_working = value
+            state._y_children_working = _y_validate_binding_map_value('children', value)
 
-        @property
-        def v5(self):
-            state = self._y_state
-            if state._y_v5_working is not VOID:
-                return state._y_v5_working
-            return state._y_v5_current
-
-        @v5.setter
-        def v5(self, value):
-            state = self._y_state
-            state._y_ensure_working_transaction(0)
-            state._y_v5_working = value
-
-        def __init__(self, v1: 'int', v2: 'int'=_HAS_DEFAULT_FACTORY, v3: 'int'=_HAS_DEFAULT_FACTORY, *, transaction_manager=None):
-            state = object.__new__(Example_State)
+        def __init__(self, child: 'BindingBase | None'=_Owner_child_default, children: 'dict[str, BindingBase]'=_HAS_DEFAULT_FACTORY, handle: 'BindingBase | None'=_Owner_handle_default, handles: 'dict[str, BindingBase]'=_HAS_DEFAULT_FACTORY, *, transaction_manager=None):
+            state = object.__new__(Owner_State)
             object.__setattr__(self, '_y_state', state)
             object.__setattr__(self, '_y_current_facade', None)
             object.__setattr__(self, '_y_working_facade', None)
-            state._y_transaction_manager = transaction_manager or TransactionManager(tx_groups=tuple((group for group in _Example_tx_groups if group != DEFAULT_TRANSACTION)))
+            state._y_transaction_manager = transaction_manager or TransactionManager(tx_groups=tuple((group for group in _Owner_tx_groups if group != DEFAULT_TRANSACTION)))
             state._y_default_ref = weakref.ref(self)
             state._y_current_ref = None
             state._y_working_ref = None
-            state._y_v1_value = v1
-            seed = _Example_seed_default
-            state._y_v2_working = VOID
-            state._y_v2_staged = VOID
-            state._y_v3_working = VOID
-            state._y_v3_staged = VOID
-            state._y_v4_working = VOID
-            state._y_v4_staged = VOID
-            state._y_v5_working = VOID
-            state._y_v5_staged = VOID
-            temp = _Example_temp_default_factory(seed=seed, v1=self.v1)
-            if v2 is _HAS_DEFAULT_FACTORY:
-                v2 = _Example_v2_default_factory(v1=self.v1)
-            state._y_v2_current = v2
-            if v3 is _HAS_DEFAULT_FACTORY:
-                v3 = _Example_v3_default_factory(v2=self.v2, v1=self.v1)
-            state._y_v3_current = v3
-            v4 = _Example_v4_default_factory(v3=self.v3)
-            state._y_v4_current = v4
-            v5 = _Example_v5_default_factory(SCALE=self.SCALE, v4=self.v4)
-            state._y_v5_current = v5
-            state._y_working_tx_ids = [None for _group in _Example_tx_groups]
+            value = child
+            if value is not None and (not isinstance(value, BindingBase)):
+                raise TypeError('binding field ' + repr('child') + ' expects BindingBase or None')
+            state._y_child_current = value
+            state._y_child_working = VOID
+            state._y_child_staged = VOID
+            state._y_children_working = VOID
+            state._y_children_staged = VOID
+            value__astichi_scoped_2 = handle
+            if value__astichi_scoped_2 is not None and (not isinstance(value__astichi_scoped_2, BindingBase)):
+                raise TypeError('binding field ' + repr('handle') + ' expects BindingBase or None')
+            state._y_handle_value = value__astichi_scoped_2
+            if children is _HAS_DEFAULT_FACTORY:
+                children = _Owner_children_default_factory()
+            value__astichi_scoped_3 = children
+            if value__astichi_scoped_3 is not None and (not isinstance(value__astichi_scoped_3, Mapping)):
+                raise TypeError('binding map field ' + repr('children') + ' expects a mapping or None')
+            if value__astichi_scoped_3 is not None:
+                value__astichi_scoped_3 = value__astichi_scoped_3 if isinstance(value__astichi_scoped_3, BindingDict) else BindingDict(value__astichi_scoped_3)
+                for key, item in value__astichi_scoped_3.items():
+                    if not isinstance(item, BindingBase):
+                        raise TypeError('binding map field ' + repr('children') + ' expects BindingBase values; key ' + repr(key) + ' has ' + type(item).__name__)
+            state._y_children_current = value__astichi_scoped_3
+            if handles is _HAS_DEFAULT_FACTORY:
+                handles = _Owner_handles_default_factory()
+            self.handles = handles
+            state._y_working_tx_ids = [None for _group in _Owner_tx_groups]
 
-    class Example_Current(Example_FacadeBase):
+    class Owner_Current(Owner_FacadeBase):
         __slots__ = ()
 
         @property
-        def v2(self):
-            return self._y_state._y_v2_current
+        def child(self):
+            return self._y_state._y_child_current
 
-        @v2.setter
-        def v2(self, value):
+        @child.setter
+        def child(self, value):
             del value
-            raise AttributeError('current facade is read-only for transactional field ' + 'v2')
+            raise AttributeError('current facade is read-only for owned field ' + 'child')
 
         @property
-        def v3(self):
-            return self._y_state._y_v3_current
+        def children(self):
+            return self._y_state._y_children_current
 
-        @v3.setter
-        def v3(self, value):
+        @children.setter
+        def children(self, value):
             del value
-            raise AttributeError('current facade is read-only for transactional field ' + 'v3')
+            raise AttributeError('current facade is read-only for owned field ' + 'children')
 
-        @property
-        def v4(self):
-            return self._y_state._y_v4_current
-
-        @v4.setter
-        def v4(self, value):
-            del value
-            raise AttributeError('current facade is read-only for transactional field ' + 'v4')
-
-        @property
-        def v5(self):
-            return self._y_state._y_v5_current
-
-        @v5.setter
-        def v5(self, value):
-            del value
-            raise AttributeError('current facade is read-only for transactional field ' + 'v5')
-
-    class Example_Working(Example_FacadeBase):
+    class Owner_Working(Owner_FacadeBase):
         __slots__ = ()
 
         @property
-        def v2(self):
+        def child(self):
             state = self._y_state
-            if state._y_v2_working is not VOID:
-                return state._y_v2_working
-            return state._y_v2_current
+            if state._y_child_working is not VOID:
+                return state._y_child_working
+            return state._y_child_current
 
-        @v2.setter
-        def v2(self, value):
+        @child.setter
+        def child(self, value):
             state = self._y_state
             state._y_ensure_working_transaction(0)
-            state._y_v2_working = value
+            state._y_child_working = _y_validate_binding_value('child', value)
 
         @property
-        def v3(self):
+        def children(self):
             state = self._y_state
-            if state._y_v3_working is not VOID:
-                return state._y_v3_working
-            return state._y_v3_current
+            if state._y_children_working is not VOID:
+                return state._y_children_working
+            return state._y_children_current
 
-        @v3.setter
-        def v3(self, value):
+        @children.setter
+        def children(self, value):
             state = self._y_state
             state._y_ensure_working_transaction(0)
-            state._y_v3_working = value
-
-        @property
-        def v4(self):
-            state = self._y_state
-            if state._y_v4_working is not VOID:
-                return state._y_v4_working
-            return state._y_v4_current
-
-        @v4.setter
-        def v4(self, value):
-            state = self._y_state
-            state._y_ensure_working_transaction(0)
-            state._y_v4_working = value
-
-        @property
-        def v5(self):
-            state = self._y_state
-            if state._y_v5_working is not VOID:
-                return state._y_v5_working
-            return state._y_v5_current
-
-        @v5.setter
-        def v5(self, value):
-            state = self._y_state
-            state._y_ensure_working_transaction(0)
-            state._y_v5_working = value
-    Example.__name__ = decorated_cls.__name__
-    Example.__qualname__ = decorated_cls.__qualname__
-    Example.__module__ = decorated_cls.__module__
-    return Example
+            state._y_children_working = _y_validate_binding_map_value('children', value)
+    Owner.__name__ = decorated_cls.__name__
+    Owner.__qualname__ = decorated_cls.__qualname__
+    Owner.__module__ = decorated_cls.__module__
+    return Owner
