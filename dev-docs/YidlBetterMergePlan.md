@@ -233,9 +233,16 @@ Notes:
 
 - `qname` in `extend production qname` allows extending an imported production
   explicitly if needed.
+- Resolution for `extend production qname` follows normal YIDL symbol lookup:
+  local visible production names first, then explicit alias-qualified imports.
+  Ambiguous unqualified imported names reject. Parent-file import aliases do not
+  leak through concept inheritance.
 - V0 should usually extend by local visible name, for example
   `extend production ClassProduction`.
 - Top-level `apply` directly under a production remains legal for migration.
+  If top-level applies and phases are mixed, the compiler preserves source order
+  by lowering contiguous top-level apply runs to compiler-internal phases at
+  their original positions.
 - V0 should reject root declarations inside production extensions.
 
 ## IR Changes
@@ -267,14 +274,17 @@ ComposableProductionSpec:
 ```
 
 For compatibility, parser lowering can wrap legacy top-level applies in an
-implicit phase:
+implicit compiler-internal phase:
 
 ```text
 __body__
 ```
 
-That implicit name should not be author-extensible in V0. It exists only as a
-migration bridge while source files are converted.
+That implicit name cannot be written by authors and cannot be referenced from
+`extend production`. It exists only as a migration bridge while source files are
+converted. If a production mixes explicit phases and top-level applies, each
+contiguous top-level apply run is wrapped in an internal source-order phase so
+the flattened apply order remains exactly the authored order.
 
 Add extension specs:
 
@@ -313,6 +323,11 @@ When compiling a concept:
 4. Collect all production extension specs in closure order and source order.
 5. Apply extensions to the visible target production.
 6. Validate the flattened result.
+
+Extension collection dedupes by concept identity plus extension source identity
+before flattening. This prevents diamond imports from applying the same
+extension twice while still rejecting two distinct extensions that define the
+same final apply edge name.
 
 ### Phase ordering
 
