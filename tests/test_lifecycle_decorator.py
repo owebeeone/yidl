@@ -183,6 +183,7 @@ def test_lifecycle_decorator_transient_working_overlay_materializes_in_transacti
     class Scratch:
         seed: int = initvar(init=False, default=4)
         label: str = transient(default="ready")
+        marker: str = transient(default="base")
         buffer: list[int] | None = transient(
             default=None,
             working_default_factory=lambda self, current, working, seed: [
@@ -203,10 +204,20 @@ def test_lifecycle_decorator_transient_working_overlay_materializes_in_transacti
 
     assert item._y_state._y_seed_initvar == 4
     assert item.label == "ready"
+    assert item.marker == "base"
     assert item.buffer is None
     assert item.current.buffer is None
     with pytest.raises(RuntimeError, match="writes require"):
         item.buffer = [9]
+
+    assert item._y_state._y_working_tx_ids[0] is None
+    with item.begin(DEFAULT_TRANSACTION):
+        assert item._y_state._y_working_tx_ids[0] is None
+        assert item.marker == "base"
+        assert item._y_state._y_marker_working == "base"
+        assert item._y_state._y_working_tx_ids[0] is not None
+        assert item.current.marker == "base"
+    assert item._y_state._y_working_tx_ids[0] is None
 
     with item.begin(DEFAULT_TRANSACTION):
         assert item.current.buffer is None

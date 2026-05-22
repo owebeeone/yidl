@@ -75,9 +75,11 @@ Use the `pyrolyze.lifecycle` transient model:
 3. The working slot is `VOID` when absent.
 4. The current facade always reads the non-working current/default value.
 5. The default and working facades read the working slot if it is present.
-6. If the working slot is absent and a `working_default_factory` exists, the
-   default and working facades materialize that working value only while the
-   corresponding `tx_key` is active.
+6. If the working slot is absent and the corresponding `tx_key` is active, the
+   default and working facades materialize a working value and enlist the
+   object in that transaction. A `working_default_factory`, when present, owns
+   the materialized value. Otherwise the materialized value starts as the
+   current/default value.
 7. If no active transaction exists, reads fall back to the non-working
    current/default value.
 8. Writing through the default or working facade requires an active transaction
@@ -87,9 +89,11 @@ Use the `pyrolyze.lifecycle` transient model:
     current/default storage.
 11. Rollback discards the working slot.
 
-This keeps transient different from `managed`: managed publishes staged working
-values to current on commit, while transient keeps its current/default value and
-discards the working overlay.
+This keeps transient different from `managed`: a managed read remains
+observational and should not enlist the object, while a transient read during an
+active transaction creates transaction-local scratch state. Managed publishes
+staged working values to current on commit; transient keeps its current/default
+value and discards the working overlay.
 
 ## Resolved Behavior Matrix
 
@@ -253,10 +257,11 @@ def _apply_prepared_commit_tx_0_fields(self):
     self._y_temp_buffer_working = VOID
 ```
 
-If `working_default_factory` is absent, the working getter should not
-materialize mutable state implicitly. Reads should return the configured
-non-working current/default value until a setter writes a working value inside
-an active transaction.
+If `working_default_factory` is absent, an active default/working getter still
+materializes the working slot by assigning the current/default value. This gives
+transient a consistent "read starts transaction-local state" contract. Mutable
+current/default values may alias until a future copy/thaw policy is introduced;
+Phase G records that as a follow-up rather than adding implicit copying.
 
 ## Suggested Fixture
 
@@ -273,6 +278,8 @@ The fixture should include:
 - a transient `working_default_factory` that references an `init=False`
   initvar with a default, proving retained initvar storage is generated.
 - one transient with a literal non-working default.
+- one transient without `working_default_factory` whose active read enlists the
+  object and materializes the working slot from the current/default value.
 - one transient with a non-working `default_factory` that references an initvar
   and is resolved during construction.
 - a default transaction field and a non-default `tx_key` field.
@@ -293,6 +300,9 @@ Minimum focused tests:
 - writing transient without an active transaction raises.
 - reading a `working_default_factory` transient during an active transaction
   materializes once and enlists the state.
+- reading a transient without `working_default_factory` during an active
+  transaction materializes once from the current/default value and enlists the
+  state.
 - reading the same transient without an active transaction returns the
   non-working current/default value and does not materialize working state.
 - commit clears transient working state.
@@ -388,6 +398,9 @@ Deliverables:
 
 - state class has a working slot per transient field.
 - default and working facades read the working value when present.
+- default and working facades materialize missing working values on active
+  reads, using `working_default_factory` when present and current/default
+  fallback otherwise.
 - default and working setters require an active transaction and write the
   working slot.
 - `working_default_factory` materializes only while the corresponding `tx_key`

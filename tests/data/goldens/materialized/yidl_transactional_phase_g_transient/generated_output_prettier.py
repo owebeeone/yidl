@@ -15,6 +15,7 @@ def build_lifecycle_class(
     _Scratch_tx_groups,
     _Scratch_seed_default,
     _Scratch_label_default,
+    _Scratch_marker_default,
     _Scratch_items_default_factory,
     _Scratch_buffer_default,
     _Scratch_buffer_working_default_factory,
@@ -31,6 +32,8 @@ def build_lifecycle_class(
             "_y_seed_initvar",
             "_y_label_current",
             "_y_label_working",
+            "_y_marker_current",
+            "_y_marker_working",
             "_y_items_current",
             "_y_items_working",
             "_y_buffer_current",
@@ -230,6 +233,7 @@ def build_lifecycle_class(
 
         def _apply_prepared_commit_tx_0_fields(self):
             self._y_label_working = VOID
+            self._y_marker_working = VOID
             self._y_items_working = VOID
             self._y_buffer_working = VOID
 
@@ -262,6 +266,7 @@ def build_lifecycle_class(
 
         def _rollback_tx_0_fields(self):
             self._y_label_working = VOID
+            self._y_marker_working = VOID
             self._y_items_working = VOID
             self._y_buffer_working = VOID
 
@@ -278,7 +283,7 @@ def build_lifecycle_class(
             else ("_y_state", "__weakref__")
         )
         _y_lifecycle_field_names = frozenset(
-            ("label", "items", "buffer", "audit_buffer")
+            ("label", "marker", "items", "buffer", "audit_buffer")
         )
 
         def __setattr__(self, name, value):
@@ -346,7 +351,12 @@ def build_lifecycle_class(
             state = self._y_state
             if state._y_label_working is not VOID:
                 return state._y_label_working
-            return state._y_label_current
+            tx_key = state.__yidl_tx_index_to_key__[0]
+            if state._y_transaction_manager.active_transaction_for(tx_key) is None:
+                return state._y_label_current
+            state._y_ensure_working_transaction(0)
+            state._y_label_working = state._y_label_current
+            return state._y_label_working
 
         @label.setter
         def label(self, value):
@@ -355,11 +365,34 @@ def build_lifecycle_class(
             state._y_label_working = value
 
         @property
+        def marker(self):
+            state = self._y_state
+            if state._y_marker_working is not VOID:
+                return state._y_marker_working
+            tx_key = state.__yidl_tx_index_to_key__[0]
+            if state._y_transaction_manager.active_transaction_for(tx_key) is None:
+                return state._y_marker_current
+            state._y_ensure_working_transaction(0)
+            state._y_marker_working = state._y_marker_current
+            return state._y_marker_working
+
+        @marker.setter
+        def marker(self, value):
+            state = self._y_state
+            state._y_ensure_working_transaction(0)
+            state._y_marker_working = value
+
+        @property
         def items(self):
             state = self._y_state
             if state._y_items_working is not VOID:
                 return state._y_items_working
-            return state._y_items_current
+            tx_key = state.__yidl_tx_index_to_key__[0]
+            if state._y_transaction_manager.active_transaction_for(tx_key) is None:
+                return state._y_items_current
+            state._y_ensure_working_transaction(0)
+            state._y_items_working = state._y_items_current
+            return state._y_items_working
 
         @items.setter
         def items(self, value):
@@ -414,6 +447,7 @@ def build_lifecycle_class(
             self,
             seed: "int" = _Scratch_seed_default,
             label: "str" = _Scratch_label_default,
+            marker: "str" = _Scratch_marker_default,
             items: "list[int]" = _HAS_DEFAULT_FACTORY,
             buffer: "list[int] | None" = _Scratch_buffer_default,
             audit_buffer: "list[int] | None" = _Scratch_audit_buffer_default,
@@ -438,6 +472,8 @@ def build_lifecycle_class(
             state._y_working_ref = None
             state._y_label_current = label
             state._y_label_working = VOID
+            state._y_marker_current = marker
+            state._y_marker_working = VOID
             state._y_items_working = VOID
             state._y_buffer_current = buffer
             state._y_buffer_working = VOID
@@ -455,6 +491,10 @@ def build_lifecycle_class(
         @property
         def label(self):
             return self._y_state._y_label_current
+
+        @property
+        def marker(self):
+            return self._y_state._y_marker_current
 
         @property
         def items(self):
@@ -476,7 +516,12 @@ def build_lifecycle_class(
             state = self._y_state
             if state._y_label_working is not VOID:
                 return state._y_label_working
-            return state._y_label_current
+            tx_key = state.__yidl_tx_index_to_key__[0]
+            if state._y_transaction_manager.active_transaction_for(tx_key) is None:
+                return state._y_label_current
+            state._y_ensure_working_transaction(0)
+            state._y_label_working = state._y_label_current
+            return state._y_label_working
 
         @label.setter
         def label(self, value):
@@ -485,11 +530,34 @@ def build_lifecycle_class(
             state._y_label_working = value
 
         @property
+        def marker(self):
+            state = self._y_state
+            if state._y_marker_working is not VOID:
+                return state._y_marker_working
+            tx_key = state.__yidl_tx_index_to_key__[0]
+            if state._y_transaction_manager.active_transaction_for(tx_key) is None:
+                return state._y_marker_current
+            state._y_ensure_working_transaction(0)
+            state._y_marker_working = state._y_marker_current
+            return state._y_marker_working
+
+        @marker.setter
+        def marker(self, value):
+            state = self._y_state
+            state._y_ensure_working_transaction(0)
+            state._y_marker_working = value
+
+        @property
         def items(self):
             state = self._y_state
             if state._y_items_working is not VOID:
                 return state._y_items_working
-            return state._y_items_current
+            tx_key = state.__yidl_tx_index_to_key__[0]
+            if state._y_transaction_manager.active_transaction_for(tx_key) is None:
+                return state._y_items_current
+            state._y_ensure_working_transaction(0)
+            state._y_items_working = state._y_items_current
+            return state._y_items_working
 
         @items.setter
         def items(self, value):

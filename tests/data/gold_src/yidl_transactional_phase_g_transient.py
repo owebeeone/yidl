@@ -51,6 +51,7 @@ def _fixture_class() -> type[object]:
     class Scratch:
         seed: int = initvar(default=4)
         label: str = transient(default="ready")
+        marker: str = transient(default="base")
         items: list[int] = transient(default_factory=lambda seed: [seed])
         buffer: list[int] | None = transient(
             default=None,
@@ -93,6 +94,8 @@ def _assert_scratch_class(generated: type[object]) -> None:
     assert item._y_state._y_seed_initvar == 4
     assert item.label == "ready"
     assert item.current.label == "ready"
+    assert item.marker == "base"
+    assert item.current.marker == "base"
     assert item.items == [4]
     assert item.current.items == [4]
     assert item.buffer is None
@@ -105,6 +108,15 @@ def _assert_scratch_class(generated: type[object]) -> None:
         "no setter",
         lambda: setattr(item.current, "buffer", [9]),
     )
+
+    assert item._y_state._y_working_tx_ids[0] is None
+    with item.begin(DEFAULT_TRANSACTION):
+        assert item._y_state._y_working_tx_ids[0] is None
+        assert item.marker == "base"
+        assert item._y_state._y_marker_working == "base"
+        assert item._y_state._y_working_tx_ids[0] is not None
+        assert item.current.marker == "base"
+    assert item._y_state._y_working_tx_ids[0] is None
 
     with item.begin(DEFAULT_TRANSACTION):
         assert item.current.buffer is None
@@ -165,6 +177,7 @@ def _assert_source_shape(sources: Mapping[str, str]) -> None:
         assert "_Scratch_audit_buffer_working_default_factory()" in generated
         assert "state._y_ensure_working_transaction(0)" in generated
         assert "state._y_ensure_working_transaction(1)" in generated
+        assert "state._y_marker_working = state._y_marker_current" in generated
         assert "tx_index = self.__yidl_tx_key_to_index__[tx_key]" in generated
         assert 'if tx_key == "audit":' not in generated
         assert 'if tx_key == "default_transaction":' not in generated

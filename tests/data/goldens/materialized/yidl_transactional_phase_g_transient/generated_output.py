@@ -5,10 +5,10 @@ from yidl.runtime.transaction_yidl import DEFAULT_TRANSACTION
 from yidl.runtime.transaction_yidl import TransactionManager
 VOID = object()
 
-def build_lifecycle_class(decorated_cls, *, _Scratch_lifecycle_definition, _Scratch_annotations, _Scratch_tx_groups, _Scratch_seed_default, _Scratch_label_default, _Scratch_items_default_factory, _Scratch_buffer_default, _Scratch_buffer_working_default_factory, _Scratch_audit_buffer_default, _Scratch_audit_buffer_working_default_factory):
+def build_lifecycle_class(decorated_cls, *, _Scratch_lifecycle_definition, _Scratch_annotations, _Scratch_tx_groups, _Scratch_seed_default, _Scratch_label_default, _Scratch_marker_default, _Scratch_items_default_factory, _Scratch_buffer_default, _Scratch_buffer_working_default_factory, _Scratch_audit_buffer_default, _Scratch_audit_buffer_working_default_factory):
 
     class Scratch_State:
-        __slots__ = ('_y_transaction_manager', '_y_default_ref', '_y_current_ref', '_y_working_ref', '_y_seed_initvar', '_y_label_current', '_y_label_working', '_y_items_current', '_y_items_working', '_y_buffer_current', '_y_buffer_working', '_y_audit_buffer_current', '_y_audit_buffer_working', '_y_working_tx_ids')
+        __slots__ = ('_y_transaction_manager', '_y_default_ref', '_y_current_ref', '_y_working_ref', '_y_seed_initvar', '_y_label_current', '_y_label_working', '_y_marker_current', '_y_marker_working', '_y_items_current', '_y_items_working', '_y_buffer_current', '_y_buffer_working', '_y_audit_buffer_current', '_y_audit_buffer_working', '_y_working_tx_ids')
         __yidl_tx_index_to_key__ = _Scratch_tx_groups
         __yidl_tx_key_to_index__ = {key: index for index, key in enumerate(_Scratch_tx_groups)}
 
@@ -182,6 +182,7 @@ def build_lifecycle_class(decorated_cls, *, _Scratch_lifecycle_definition, _Scra
 
         def _apply_prepared_commit_tx_0_fields(self):
             self._y_label_working = VOID
+            self._y_marker_working = VOID
             self._y_items_working = VOID
             self._y_buffer_working = VOID
 
@@ -214,6 +215,7 @@ def build_lifecycle_class(decorated_cls, *, _Scratch_lifecycle_definition, _Scra
 
         def _rollback_tx_0_fields(self):
             self._y_label_working = VOID
+            self._y_marker_working = VOID
             self._y_items_working = VOID
             self._y_buffer_working = VOID
 
@@ -225,7 +227,7 @@ def build_lifecycle_class(decorated_cls, *, _Scratch_lifecycle_definition, _Scra
 
     class Scratch_FacadeBase(decorated_cls):
         __slots__ = ('_y_state',) if hasattr(decorated_cls, '__weakref__') else ('_y_state', '__weakref__')
-        _y_lifecycle_field_names = frozenset(('label', 'items', 'buffer', 'audit_buffer'))
+        _y_lifecycle_field_names = frozenset(('label', 'marker', 'items', 'buffer', 'audit_buffer'))
 
         def __setattr__(self, name, value):
             if name in self._y_lifecycle_field_names:
@@ -286,7 +288,12 @@ def build_lifecycle_class(decorated_cls, *, _Scratch_lifecycle_definition, _Scra
             state = self._y_state
             if state._y_label_working is not VOID:
                 return state._y_label_working
-            return state._y_label_current
+            tx_key = state.__yidl_tx_index_to_key__[0]
+            if state._y_transaction_manager.active_transaction_for(tx_key) is None:
+                return state._y_label_current
+            state._y_ensure_working_transaction(0)
+            state._y_label_working = state._y_label_current
+            return state._y_label_working
 
         @label.setter
         def label(self, value):
@@ -295,11 +302,34 @@ def build_lifecycle_class(decorated_cls, *, _Scratch_lifecycle_definition, _Scra
             state._y_label_working = value
 
         @property
+        def marker(self):
+            state = self._y_state
+            if state._y_marker_working is not VOID:
+                return state._y_marker_working
+            tx_key = state.__yidl_tx_index_to_key__[0]
+            if state._y_transaction_manager.active_transaction_for(tx_key) is None:
+                return state._y_marker_current
+            state._y_ensure_working_transaction(0)
+            state._y_marker_working = state._y_marker_current
+            return state._y_marker_working
+
+        @marker.setter
+        def marker(self, value):
+            state = self._y_state
+            state._y_ensure_working_transaction(0)
+            state._y_marker_working = value
+
+        @property
         def items(self):
             state = self._y_state
             if state._y_items_working is not VOID:
                 return state._y_items_working
-            return state._y_items_current
+            tx_key = state.__yidl_tx_index_to_key__[0]
+            if state._y_transaction_manager.active_transaction_for(tx_key) is None:
+                return state._y_items_current
+            state._y_ensure_working_transaction(0)
+            state._y_items_working = state._y_items_current
+            return state._y_items_working
 
         @items.setter
         def items(self, value):
@@ -343,7 +373,7 @@ def build_lifecycle_class(decorated_cls, *, _Scratch_lifecycle_definition, _Scra
             state._y_ensure_working_transaction(1)
             state._y_audit_buffer_working = value
 
-        def __init__(self, seed: 'int'=_Scratch_seed_default, label: 'str'=_Scratch_label_default, items: 'list[int]'=_HAS_DEFAULT_FACTORY, buffer: 'list[int] | None'=_Scratch_buffer_default, audit_buffer: 'list[int] | None'=_Scratch_audit_buffer_default, *, transaction_manager=None):
+        def __init__(self, seed: 'int'=_Scratch_seed_default, label: 'str'=_Scratch_label_default, marker: 'str'=_Scratch_marker_default, items: 'list[int]'=_HAS_DEFAULT_FACTORY, buffer: 'list[int] | None'=_Scratch_buffer_default, audit_buffer: 'list[int] | None'=_Scratch_audit_buffer_default, *, transaction_manager=None):
             state = object.__new__(Scratch_State)
             object.__setattr__(self, '_y_state', state)
             object.__setattr__(self, '_y_current_facade', None)
@@ -354,6 +384,8 @@ def build_lifecycle_class(decorated_cls, *, _Scratch_lifecycle_definition, _Scra
             state._y_working_ref = None
             state._y_label_current = label
             state._y_label_working = VOID
+            state._y_marker_current = marker
+            state._y_marker_working = VOID
             state._y_items_working = VOID
             state._y_buffer_current = buffer
             state._y_buffer_working = VOID
@@ -371,6 +403,10 @@ def build_lifecycle_class(decorated_cls, *, _Scratch_lifecycle_definition, _Scra
         @property
         def label(self):
             return self._y_state._y_label_current
+
+        @property
+        def marker(self):
+            return self._y_state._y_marker_current
 
         @property
         def items(self):
@@ -392,7 +428,12 @@ def build_lifecycle_class(decorated_cls, *, _Scratch_lifecycle_definition, _Scra
             state = self._y_state
             if state._y_label_working is not VOID:
                 return state._y_label_working
-            return state._y_label_current
+            tx_key = state.__yidl_tx_index_to_key__[0]
+            if state._y_transaction_manager.active_transaction_for(tx_key) is None:
+                return state._y_label_current
+            state._y_ensure_working_transaction(0)
+            state._y_label_working = state._y_label_current
+            return state._y_label_working
 
         @label.setter
         def label(self, value):
@@ -401,11 +442,34 @@ def build_lifecycle_class(decorated_cls, *, _Scratch_lifecycle_definition, _Scra
             state._y_label_working = value
 
         @property
+        def marker(self):
+            state = self._y_state
+            if state._y_marker_working is not VOID:
+                return state._y_marker_working
+            tx_key = state.__yidl_tx_index_to_key__[0]
+            if state._y_transaction_manager.active_transaction_for(tx_key) is None:
+                return state._y_marker_current
+            state._y_ensure_working_transaction(0)
+            state._y_marker_working = state._y_marker_current
+            return state._y_marker_working
+
+        @marker.setter
+        def marker(self, value):
+            state = self._y_state
+            state._y_ensure_working_transaction(0)
+            state._y_marker_working = value
+
+        @property
         def items(self):
             state = self._y_state
             if state._y_items_working is not VOID:
                 return state._y_items_working
-            return state._y_items_current
+            tx_key = state.__yidl_tx_index_to_key__[0]
+            if state._y_transaction_manager.active_transaction_for(tx_key) is None:
+                return state._y_items_current
+            state._y_ensure_working_transaction(0)
+            state._y_items_working = state._y_items_current
+            return state._y_items_working
 
         @items.setter
         def items(self, value):

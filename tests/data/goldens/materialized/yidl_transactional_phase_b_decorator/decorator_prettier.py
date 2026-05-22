@@ -6489,7 +6489,14 @@ def property_getter_name__astichi_arg__(self):
     state = self._y_state
     if state.astichi_ref(external=working_slot) is not VOID:
         return state.astichi_ref(external=working_slot)
-    return state.astichi_ref(external=current_slot)
+    tx_key = state.__yidl_tx_index_to_key__[astichi_bind_external(tx_index)]
+    if state._y_transaction_manager.active_transaction_for(tx_key) is None:
+        return state.astichi_ref(external=current_slot)
+    state._y_ensure_working_transaction(astichi_bind_external(tx_index))
+    state.astichi_ref(external=working_slot)._ = (
+        state.astichi_ref(external=current_slot)
+    )
+    return state.astichi_ref(external=working_slot)
 
 @property_setter_target_name__astichi_arg__.setter
 def property_setter_name__astichi_arg__(self, value):
@@ -6526,7 +6533,7 @@ def property_setter_name__astichi_arg__(self, value):
     state._y_ensure_working_transaction(astichi_bind_external(tx_index))
     state.astichi_ref(external=working_slot)._ = value""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_transient.yidl",
-            line_number=222,
+            line_number=229,
             keep_names=("VOID",),
         )
     ),
@@ -6534,7 +6541,7 @@ def property_setter_name__astichi_arg__(self, value):
         from_astichi_code(
             "astichi_pass(self, outer_bind=True).astichi_ref(external=working_slot)._ = VOID",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_transient.yidl",
-            line_number=248,
+            line_number=255,
             keep_names=("VOID",),
         )
     ),
@@ -6546,7 +6553,7 @@ astichi_pass(state, outer_bind=True).astichi_ref(external=retained_slot)._ = ast
     outer_bind=True,
 )""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_transient.yidl",
-            line_number=254,
+            line_number=261,
         )
     ),
     "TransientWorkingFactorySelfArg": astichi_template(
@@ -6559,7 +6566,7 @@ astichi_funcargs(
     )._y_get_default_facade()
 )""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_transient.yidl",
-            line_number=261,
+            line_number=268,
         )
     ),
     "TransientWorkingFactoryCurrentArg": astichi_template(
@@ -6572,7 +6579,7 @@ astichi_funcargs(
     )._y_get_current_facade()
 )""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_transient.yidl",
-            line_number=270,
+            line_number=277,
         )
     ),
     "TransientWorkingFactoryWorkingArg": astichi_template(
@@ -6585,7 +6592,7 @@ astichi_funcargs(
     )._y_get_working_facade()
 )""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_transient.yidl",
-            line_number=279,
+            line_number=286,
         )
     ),
     "TransientWorkingFactoryRetainedInitVarArg": astichi_template(
@@ -6598,14 +6605,14 @@ astichi_funcargs(
     ).astichi_ref(external=retained_slot)
 )""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_transient.yidl",
-            line_number=288,
+            line_number=295,
         )
     ),
     "TransientWorkingFactoryEmptyArg": astichi_template(
         from_astichi_code(
             "astichi_funcargs()",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_transient.yidl",
-            line_number=297,
+            line_number=304,
         )
     ),
 }

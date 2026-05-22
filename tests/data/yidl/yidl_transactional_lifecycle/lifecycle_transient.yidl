@@ -207,7 +207,14 @@ concept LifecycleTransient extends default_factories.LifecycleDefaultFactories {
             state = self._y_state
             if state.astichi_ref(external=working_slot) is not VOID:
                 return state.astichi_ref(external=working_slot)
-            return state.astichi_ref(external=current_slot)
+            tx_key = state.__yidl_tx_index_to_key__[astichi_bind_external(tx_index)]
+            if state._y_transaction_manager.active_transaction_for(tx_key) is None:
+                return state.astichi_ref(external=current_slot)
+            state._y_ensure_working_transaction(astichi_bind_external(tx_index))
+            state.astichi_ref(external=working_slot)._ = (
+                state.astichi_ref(external=current_slot)
+            )
+            return state.astichi_ref(external=working_slot)
 
         @property_setter_target_name__astichi_arg__.setter
         def property_setter_name__astichi_arg__(self, value):
