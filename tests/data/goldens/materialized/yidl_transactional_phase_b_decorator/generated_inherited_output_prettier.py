@@ -37,9 +37,9 @@ def build_lifecycle_class(
             "_y_v2_staged",
             "_y_working_tx_ids",
         )
-        __yidl_tx_index_to_group__ = _B_tx_groups
-        __yidl_tx_group_to_index__ = {
-            group: index for index, group in enumerate(_B_tx_groups)
+        __yidl_tx_index_to_key__ = _B_tx_groups
+        __yidl_tx_key_to_index__ = {
+            key: index for index, key in enumerate(_B_tx_groups)
         }
 
         def _y_get_default_facade(self):
@@ -64,46 +64,34 @@ def build_lifecycle_class(
             return facade
 
         def _y_get_current_facade(self):
-            default_ref = self._y_default_ref
-            default = None if default_ref is None else default_ref()
-            if default is not None:
-                facade = default._y_current_facade
-                if facade is None:
-                    facade = object.__new__(B_Current)
-                    object.__setattr__(facade, "_y_state", self)
-                    object.__setattr__(default, "_y_current_facade", facade)
-                    self._y_current_ref = weakref.ref(facade)
-                return facade
             ref = self._y_current_ref
             facade = None if ref is None else ref()
             if facade is None:
                 facade = object.__new__(B_Current)
                 object.__setattr__(facade, "_y_state", self)
                 self._y_current_ref = weakref.ref(facade)
+                default_ref = self._y_default_ref
+                default = None if default_ref is None else default_ref()
+                if default is not None:
+                    object.__setattr__(default, "_y_current_facade", facade)
             return facade
 
         def _y_get_working_facade(self):
-            default_ref = self._y_default_ref
-            default = None if default_ref is None else default_ref()
-            if default is not None:
-                facade = default._y_working_facade
-                if facade is None:
-                    facade = object.__new__(B_Working)
-                    object.__setattr__(facade, "_y_state", self)
-                    object.__setattr__(default, "_y_working_facade", facade)
-                    self._y_working_ref = weakref.ref(facade)
-                return facade
             ref = self._y_working_ref
             facade = None if ref is None else ref()
             if facade is None:
                 facade = object.__new__(B_Working)
                 object.__setattr__(facade, "_y_state", self)
                 self._y_working_ref = weakref.ref(facade)
+                default_ref = self._y_default_ref
+                default = None if default_ref is None else default_ref()
+                if default is not None:
+                    object.__setattr__(default, "_y_working_facade", facade)
             return facade
 
         def _y_require_active_transaction(self, tx_index):
-            tx_group = self.__yidl_tx_index_to_group__[tx_index]
-            transaction = self._y_transaction_manager.active_transaction_for(tx_group)
+            tx_key = self.__yidl_tx_index_to_key__[tx_index]
+            transaction = self._y_transaction_manager.active_transaction_for(tx_key)
             if transaction is None:
                 if self._y_working_tx_ids[tx_index] is not None:
                     raise RuntimeError(
@@ -120,75 +108,80 @@ def build_lifecycle_class(
         def _y_ensure_working_transaction(self, tx_index):
             transaction = self._y_require_active_transaction(tx_index)
             if self._y_working_tx_ids[tx_index] is None:
-                tx_group = self.__yidl_tx_index_to_group__[tx_index]
+                tx_key = self.__yidl_tx_index_to_key__[tx_index]
                 self._y_working_tx_ids[tx_index] = self._y_transaction_manager.enlist(
-                    self, tx_group
+                    self, tx_key
                 )
             return transaction
 
-        def commit_order_key_for(self, tx_group=DEFAULT_TRANSACTION):
-            tx_index = self.__yidl_tx_group_to_index__[tx_group]
-            if tx_index == 0:
-                return self._commit_order_key_tx_0()
+        def commit_order_key_for(self, tx_key=DEFAULT_TRANSACTION):
+            tx_index = self.__yidl_tx_key_to_index__[tx_key]
+            match tx_index:
+                case _ if tx_index == 0:
+                    return self._commit_order_key_tx_0()
             return ()
 
-        def requires_validation_for(self, tx_group=DEFAULT_TRANSACTION):
-            tx_index = self.__yidl_tx_group_to_index__[tx_group]
-            if tx_index == 0:
-                return self._requires_validation_tx_0()
+        def requires_validation_for(self, tx_key=DEFAULT_TRANSACTION):
+            tx_index = self.__yidl_tx_key_to_index__[tx_key]
+            match tx_index:
+                case _ if tx_index == 0:
+                    return self._requires_validation_tx_0()
             return False
 
-        def validate_commit_for(self, tx_group=DEFAULT_TRANSACTION):
-            tx_index = self.__yidl_tx_group_to_index__[tx_group]
-            if tx_index == 0:
-                return self._validate_commit_tx_0()
+        def validate_commit_for(self, tx_key=DEFAULT_TRANSACTION):
+            tx_index = self.__yidl_tx_key_to_index__[tx_key]
+            match tx_index:
+                case _ if tx_index == 0:
+                    return self._validate_commit_tx_0()
             return True
 
-        def _prepare_commit_tx_by_key(
-            self, tx_group=DEFAULT_TRANSACTION, tx_token=None
-        ):
-            tx_index = self.__yidl_tx_group_to_index__[tx_group]
+        def _prepare_commit_tx_by_key(self, tx_key=DEFAULT_TRANSACTION, tx_token=None):
+            tx_index = self.__yidl_tx_key_to_index__[tx_key]
             if self._y_working_tx_ids[tx_index] != tx_token:
                 raise RuntimeError("stale yidl transaction token")
-            if tx_index == 0:
-                self._before_commit_tx_0()
-            if tx_index == 0:
-                self._prepare_commit_tx_0_fields()
+            match tx_index:
+                case _ if tx_index == 0:
+                    self._before_commit_tx_0()
+            match tx_index:
+                case _ if tx_index == 0:
+                    self._prepare_commit_tx_0_fields()
             return self._y_get_default_facade()
 
         def _apply_prepared_commit_tx_by_key(
-            self, tx_group=DEFAULT_TRANSACTION, tx_token=None
+            self, tx_key=DEFAULT_TRANSACTION, tx_token=None
         ):
-            tx_index = self.__yidl_tx_group_to_index__[tx_group]
+            tx_index = self.__yidl_tx_key_to_index__[tx_key]
             if self._y_working_tx_ids[tx_index] != tx_token:
                 raise RuntimeError("stale yidl transaction token")
-            if tx_index == 0:
-                self._apply_prepared_commit_tx_0_fields()
+            match tx_index:
+                case _ if tx_index == 0:
+                    self._apply_prepared_commit_tx_0_fields()
             self._y_working_tx_ids[tx_index] = None
             return self._y_get_default_facade()
 
-        def _after_commit_tx_by_key(self, tx_group=DEFAULT_TRANSACTION, tx_token=None):
+        def _after_commit_tx_by_key(self, tx_key=DEFAULT_TRANSACTION, tx_token=None):
             del tx_token
-            tx_index = self.__yidl_tx_group_to_index__[tx_group]
-            if tx_index == 0:
-                self._after_commit_tx_0()
+            tx_index = self.__yidl_tx_key_to_index__[tx_key]
+            match tx_index:
+                case _ if tx_index == 0:
+                    self._after_commit_tx_0()
             return self._y_get_default_facade()
 
-        def _rollback_tx_by_key(self, tx_group=DEFAULT_TRANSACTION, tx_token=None):
-            tx_index = self.__yidl_tx_group_to_index__[tx_group]
+        def _rollback_tx_by_key(self, tx_key=DEFAULT_TRANSACTION, tx_token=None):
+            tx_index = self.__yidl_tx_key_to_index__[tx_key]
             del tx_token
-            if tx_index == 0:
-                self._rollback_tx_0_fields()
+            match tx_index:
+                case _ if tx_index == 0:
+                    self._rollback_tx_0_fields()
             self._y_working_tx_ids[tx_index] = None
             return self._y_get_default_facade()
 
-        def _after_rollback_tx_by_key(
-            self, tx_group=DEFAULT_TRANSACTION, tx_token=None
-        ):
+        def _after_rollback_tx_by_key(self, tx_key=DEFAULT_TRANSACTION, tx_token=None):
             del tx_token
-            tx_index = self.__yidl_tx_group_to_index__[tx_group]
-            if tx_index == 0:
-                self._after_rollback_tx_0()
+            tx_index = self.__yidl_tx_key_to_index__[tx_key]
+            match tx_index:
+                case _ if tx_index == 0:
+                    self._after_rollback_tx_0()
             return self._y_get_default_facade()
 
         def _commit_order_key_tx_0(self):
@@ -240,7 +233,11 @@ def build_lifecycle_class(
             self._y_v2_working = VOID
 
     class B_FacadeBase(decorated_cls):
-        __slots__ = ("_y_state",)
+        __slots__ = (
+            ("_y_state",)
+            if hasattr(decorated_cls, "__weakref__")
+            else ("_y_state", "__weakref__")
+        )
         _y_lifecycle_field_names = frozenset(("plain", "v1", "v2"))
 
         def __setattr__(self, name, value):
@@ -277,20 +274,20 @@ def build_lifecycle_class(
         def working(self):
             return self._y_state._y_get_working_facade()
 
-        def begin(self, *tx_groups):
-            return self._y_state._y_transaction_manager.begin(*tx_groups)
+        def begin(self, *tx_keys):
+            return self._y_state._y_transaction_manager.begin(*tx_keys)
 
-        def validate(self, *tx_groups):
-            return self._y_state._y_transaction_manager.validate(*tx_groups)
+        def validate(self, *tx_keys):
+            return self._y_state._y_transaction_manager.validate(*tx_keys)
 
-        def commit_only(self, *tx_groups):
-            return self._y_state._y_transaction_manager.commit_only(*tx_groups)
+        def commit_only(self, *tx_keys):
+            return self._y_state._y_transaction_manager.commit_only(*tx_keys)
 
-        def commit(self, *tx_groups):
-            return self._y_state._y_transaction_manager.commit(*tx_groups)
+        def commit(self, *tx_keys):
+            return self._y_state._y_transaction_manager.commit(*tx_keys)
 
-        def rollback(self, *tx_groups):
-            return self._y_state._y_transaction_manager.rollback(*tx_groups)
+        def rollback(self, *tx_keys):
+            return self._y_state._y_transaction_manager.rollback(*tx_keys)
 
         KIND = _B_KIND_default
 
@@ -300,9 +297,9 @@ def build_lifecycle_class(
         __yidl_lifecycle_generated__ = True
         __yidl_lifecycle_user_class__ = decorated_cls
         __yidl_lifecycle_definition__ = _B_lifecycle_definition
-        __yidl_tx_index_to_group__ = _B_tx_groups
-        __yidl_tx_group_to_index__ = {
-            group: index for index, group in enumerate(_B_tx_groups)
+        __yidl_tx_index_to_key__ = _B_tx_groups
+        __yidl_tx_key_to_index__ = {
+            key: index for index, key in enumerate(_B_tx_groups)
         }
 
         @property

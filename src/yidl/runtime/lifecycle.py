@@ -150,7 +150,7 @@ def _raise_lifecycle_step_error(
 
 
 def _strip_redundant_pass_statements(source: str) -> str:
-    """Remove generated ``pass`` placeholders from non-empty blocks."""
+    """Remove generated placeholders and unreachable fallback statements."""
 
     tree = ast.parse(source)
     remover = _RedundantPassLineCollector()
@@ -213,13 +213,20 @@ class _RedundantPassLineCollector(ast.NodeVisitor):
 
     def _visit_body(self, body: Iterable[ast.stmt]) -> None:
         statements = tuple(body)
-        if len(statements) > 1:
-            for statement in statements:
-                if isinstance(statement, ast.Pass):
-                    end_lineno = statement.end_lineno or statement.lineno
-                    self.line_numbers.update(range(statement.lineno, end_lineno + 1))
+        terminal_seen = False
         for statement in statements:
+            if terminal_seen:
+                self._mark_statement(statement)
+                continue
+            if len(statements) > 1 and isinstance(statement, ast.Pass):
+                self._mark_statement(statement)
             self.visit(statement)
+            if isinstance(statement, ast.Return | ast.Raise | ast.Break | ast.Continue):
+                terminal_seen = True
+
+    def _mark_statement(self, statement: ast.stmt) -> None:
+        end_lineno = statement.end_lineno or statement.lineno
+        self.line_numbers.update(range(statement.lineno, end_lineno + 1))
 
 
 __all__ = [

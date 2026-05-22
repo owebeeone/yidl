@@ -2249,11 +2249,12 @@ classvar_name__astichi_arg__ = astichi_pass(
     "CommitOrderKeyBranch": astichi_template(
         from_astichi_code(
             """\
-if astichi_pass(tx_index, outer_bind=True) == astichi_bind_external(tx_index_value):
-    return astichi_pass(
-        self,
-        outer_bind=True,
-    )._y_get_default_facade().astichi_ref(external=method_name)()""",
+match astichi_pass(tx_index, outer_bind=True):
+    case _ if astichi_pass(tx_index, outer_bind=True) == astichi_bind_external(tx_index_value):
+        return astichi_pass(
+            self,
+            outer_bind=True,
+        )._y_get_default_facade().astichi_ref(external=method_name)()""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
             line_number=281,
         )
@@ -2261,36 +2262,39 @@ if astichi_pass(tx_index, outer_bind=True) == astichi_bind_external(tx_index_val
     "RequiresValidationBranch": astichi_template(
         from_astichi_code(
             """\
-if astichi_pass(tx_index, outer_bind=True) == astichi_bind_external(tx_index_value):
-    return True""",
+match astichi_pass(tx_index, outer_bind=True):
+    case _ if astichi_pass(tx_index, outer_bind=True) == astichi_bind_external(tx_index_value):
+        return True""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=289,
+            line_number=290,
         )
     ),
     "ValidateCommitBranch": astichi_template(
         from_astichi_code(
             """\
-if astichi_pass(tx_index, outer_bind=True) == astichi_bind_external(tx_index_value):
-    result = astichi_pass(
-        self,
-        outer_bind=True,
-    )._y_get_default_facade().astichi_ref(external=method_name)()
-    if result is False:
-        return False""",
+match astichi_pass(tx_index, outer_bind=True):
+    case _ if astichi_pass(tx_index, outer_bind=True) == astichi_bind_external(tx_index_value):
+        result = astichi_pass(
+            self,
+            outer_bind=True,
+        )._y_get_default_facade().astichi_ref(external=method_name)()
+        if result is False:
+            return False""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=294,
+            line_number=296,
         )
     ),
     "TransactionHookCall": astichi_template(
         from_astichi_code(
             """\
-if astichi_pass(tx_index, outer_bind=True) == astichi_bind_external(tx_index_value):
-    astichi_pass(
-        self,
-        outer_bind=True,
-    )._y_get_default_facade().astichi_ref(external=method_name)()""",
+match astichi_pass(tx_index, outer_bind=True):
+    case _ if astichi_pass(tx_index, outer_bind=True) == astichi_bind_external(tx_index_value):
+        astichi_pass(
+            self,
+            outer_bind=True,
+        )._y_get_default_facade().astichi_ref(external=method_name)()""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=304,
+            line_number=307,
         )
     ),
     "ClassBundle": astichi_template(
@@ -2305,12 +2309,12 @@ class state_class_decl_name__astichi_arg__:
         *astichi_hole(state_slots),
         "_y_working_tx_ids",
     )
-    __yidl_tx_index_to_group__ = astichi_pass(
+    __yidl_tx_index_to_key__ = astichi_pass(
         tx_groups_for_index_name__astichi_arg__,
         outer_bind=True,
     )
-    __yidl_tx_group_to_index__ = {
-        group: index for index, group in enumerate(
+    __yidl_tx_key_to_index__ = {
+        key: index for index, key in enumerate(
             astichi_pass(tx_groups_for_map_name__astichi_arg__, outer_bind=True)
         )
     }
@@ -2337,46 +2341,34 @@ class state_class_decl_name__astichi_arg__:
         return facade
 
     def _y_get_current_facade(self):
-        default_ref = self._y_default_ref
-        default = None if default_ref is None else default_ref()
-        if default is not None:
-            facade = default._y_current_facade
-            if facade is None:
-                facade = object.__new__(current_facade_class_ref__astichi_arg__)
-                object.__setattr__(facade, "_y_state", self)
-                object.__setattr__(default, "_y_current_facade", facade)
-                self._y_current_ref = weakref.ref(facade)
-            return facade
         ref = self._y_current_ref
         facade = None if ref is None else ref()
         if facade is None:
             facade = object.__new__(current_facade_class_ref__astichi_arg__)
             object.__setattr__(facade, "_y_state", self)
             self._y_current_ref = weakref.ref(facade)
+            default_ref = self._y_default_ref
+            default = None if default_ref is None else default_ref()
+            if default is not None:
+                object.__setattr__(default, "_y_current_facade", facade)
         return facade
 
     def _y_get_working_facade(self):
-        default_ref = self._y_default_ref
-        default = None if default_ref is None else default_ref()
-        if default is not None:
-            facade = default._y_working_facade
-            if facade is None:
-                facade = object.__new__(working_facade_class_ref__astichi_arg__)
-                object.__setattr__(facade, "_y_state", self)
-                object.__setattr__(default, "_y_working_facade", facade)
-                self._y_working_ref = weakref.ref(facade)
-            return facade
         ref = self._y_working_ref
         facade = None if ref is None else ref()
         if facade is None:
             facade = object.__new__(working_facade_class_ref__astichi_arg__)
             object.__setattr__(facade, "_y_state", self)
             self._y_working_ref = weakref.ref(facade)
+            default_ref = self._y_default_ref
+            default = None if default_ref is None else default_ref()
+            if default is not None:
+                object.__setattr__(default, "_y_working_facade", facade)
         return facade
 
     def _y_require_active_transaction(self, tx_index):
-        tx_group = self.__yidl_tx_index_to_group__[tx_index]
-        transaction = self._y_transaction_manager.active_transaction_for(tx_group)
+        tx_key = self.__yidl_tx_index_to_key__[tx_index]
+        transaction = self._y_transaction_manager.active_transaction_for(tx_key)
         if transaction is None:
             if self._y_working_tx_ids[tx_index] is not None:
                 raise RuntimeError(
@@ -2393,37 +2385,37 @@ class state_class_decl_name__astichi_arg__:
     def _y_ensure_working_transaction(self, tx_index):
         transaction = self._y_require_active_transaction(tx_index)
         if self._y_working_tx_ids[tx_index] is None:
-            tx_group = self.__yidl_tx_index_to_group__[tx_index]
+            tx_key = self.__yidl_tx_index_to_key__[tx_index]
             self._y_working_tx_ids[tx_index] = (
-                self._y_transaction_manager.enlist(self, tx_group)
+                self._y_transaction_manager.enlist(self, tx_key)
             )
         return transaction
 
-    def commit_order_key_for(self, tx_group=DEFAULT_TRANSACTION):
-        tx_index = self.__yidl_tx_group_to_index__[tx_group]
+    def commit_order_key_for(self, tx_key=DEFAULT_TRANSACTION):
+        tx_index = self.__yidl_tx_key_to_index__[tx_key]
         astichi_hole(commit_order_key_body)
         return ()
 
-    def requires_validation_for(self, tx_group=DEFAULT_TRANSACTION):
-        tx_index = self.__yidl_tx_group_to_index__[tx_group]
+    def requires_validation_for(self, tx_key=DEFAULT_TRANSACTION):
+        tx_index = self.__yidl_tx_key_to_index__[tx_key]
         astichi_hole(requires_validation_body)
         return False
 
-    def validate_commit_for(self, tx_group=DEFAULT_TRANSACTION):
-        tx_index = self.__yidl_tx_group_to_index__[tx_group]
+    def validate_commit_for(self, tx_key=DEFAULT_TRANSACTION):
+        tx_index = self.__yidl_tx_key_to_index__[tx_key]
         astichi_hole(validate_commit_body)
         return True
 
-    def _prepare_commit_tx_by_key(self, tx_group=DEFAULT_TRANSACTION, tx_token=None):
-        tx_index = self.__yidl_tx_group_to_index__[tx_group]
+    def _prepare_commit_tx_by_key(self, tx_key=DEFAULT_TRANSACTION, tx_token=None):
+        tx_index = self.__yidl_tx_key_to_index__[tx_key]
         if self._y_working_tx_ids[tx_index] != tx_token:
             raise RuntimeError("stale yidl transaction token")
         astichi_hole(before_commit_body)
         astichi_hole(prepare_commit_transaction_dispatch_body)
         return self._y_get_default_facade()
 
-    def _apply_prepared_commit_tx_by_key(self, tx_group=DEFAULT_TRANSACTION, tx_token=None):
-        tx_index = self.__yidl_tx_group_to_index__[tx_group]
+    def _apply_prepared_commit_tx_by_key(self, tx_key=DEFAULT_TRANSACTION, tx_token=None):
+        tx_index = self.__yidl_tx_key_to_index__[tx_key]
         if self._y_working_tx_ids[tx_index] != tx_token:
             raise RuntimeError("stale yidl transaction token")
         astichi_hole(commit_transaction_dispatch_body)
@@ -2431,23 +2423,23 @@ class state_class_decl_name__astichi_arg__:
         self._y_working_tx_ids[tx_index] = None
         return self._y_get_default_facade()
 
-    def _after_commit_tx_by_key(self, tx_group=DEFAULT_TRANSACTION, tx_token=None):
+    def _after_commit_tx_by_key(self, tx_key=DEFAULT_TRANSACTION, tx_token=None):
         del tx_token
-        tx_index = self.__yidl_tx_group_to_index__[tx_group]
+        tx_index = self.__yidl_tx_key_to_index__[tx_key]
         astichi_hole(after_commit_body)
         return self._y_get_default_facade()
 
-    def _rollback_tx_by_key(self, tx_group=DEFAULT_TRANSACTION, tx_token=None):
-        tx_index = self.__yidl_tx_group_to_index__[tx_group]
+    def _rollback_tx_by_key(self, tx_key=DEFAULT_TRANSACTION, tx_token=None):
+        tx_index = self.__yidl_tx_key_to_index__[tx_key]
         del tx_token
         astichi_hole(rollback_transaction_dispatch_body)
         astichi_hole(rollback_transaction_body)
         self._y_working_tx_ids[tx_index] = None
         return self._y_get_default_facade()
 
-    def _after_rollback_tx_by_key(self, tx_group=DEFAULT_TRANSACTION, tx_token=None):
+    def _after_rollback_tx_by_key(self, tx_key=DEFAULT_TRANSACTION, tx_token=None):
         del tx_token
-        tx_index = self.__yidl_tx_group_to_index__[tx_group]
+        tx_index = self.__yidl_tx_key_to_index__[tx_key]
         astichi_hole(after_rollback_body)
         return self._y_get_default_facade()
 
@@ -2458,7 +2450,11 @@ class state_class_decl_name__astichi_arg__:
 class facade_base_decl_name__astichi_arg__(
     astichi_pass(decorated_cls, outer_bind=True)
 ):
-    __slots__ = ("_y_state",)
+    __slots__ = (
+        ("_y_state",)
+        if hasattr(astichi_pass(decorated_cls, outer_bind=True), "__weakref__")
+        else ("_y_state", "__weakref__")
+    )
     _y_lifecycle_field_names = frozenset(
         astichi_bind_external(lifecycle_field_names)
     )
@@ -2499,20 +2495,20 @@ class facade_base_decl_name__astichi_arg__(
     def working(self):
         return self._y_state._y_get_working_facade()
 
-    def begin(self, *tx_groups):
-        return self._y_state._y_transaction_manager.begin(*tx_groups)
+    def begin(self, *tx_keys):
+        return self._y_state._y_transaction_manager.begin(*tx_keys)
 
-    def validate(self, *tx_groups):
-        return self._y_state._y_transaction_manager.validate(*tx_groups)
+    def validate(self, *tx_keys):
+        return self._y_state._y_transaction_manager.validate(*tx_keys)
 
-    def commit_only(self, *tx_groups):
-        return self._y_state._y_transaction_manager.commit_only(*tx_groups)
+    def commit_only(self, *tx_keys):
+        return self._y_state._y_transaction_manager.commit_only(*tx_keys)
 
-    def commit(self, *tx_groups):
-        return self._y_state._y_transaction_manager.commit(*tx_groups)
+    def commit(self, *tx_keys):
+        return self._y_state._y_transaction_manager.commit(*tx_keys)
 
-    def rollback(self, *tx_groups):
-        return self._y_state._y_transaction_manager.rollback(*tx_groups)
+    def rollback(self, *tx_keys):
+        return self._y_state._y_transaction_manager.rollback(*tx_keys)
 
     astichi_hole(facade_base_body)
     astichi_hole(facade_properties)
@@ -2535,12 +2531,12 @@ class default_facade_class_decl_name__astichi_arg__(
         lifecycle_definition_name__astichi_arg__,
         outer_bind=True,
     )
-    __yidl_tx_index_to_group__ = astichi_pass(
+    __yidl_tx_index_to_key__ = astichi_pass(
         tx_groups_for_class_index_name__astichi_arg__,
         outer_bind=True,
     )
-    __yidl_tx_group_to_index__ = {
-        group: index for index, group in enumerate(
+    __yidl_tx_key_to_index__ = {
+        key: index for index, key in enumerate(
             astichi_pass(
                 tx_groups_for_class_map_name__astichi_arg__,
                 outer_bind=True,
@@ -2590,7 +2586,7 @@ class working_facade_class_decl_name__astichi_arg__(
     __slots__ = ()
     astichi_hole(working_facade_properties)""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=312,
+            line_number=316,
             keep_names=(
                 "DEFAULT_TRANSACTION",
                 "TransactionManager",
@@ -2617,14 +2613,14 @@ return_class_module_ref__astichi_arg__.__module__ = astichi_pass(
 ).__module__
 return return_class_result_ref__astichi_arg__""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=611,
+            line_number=607,
         )
     ),
     "PassStatement": astichi_template(
         from_astichi_code(
             "pass",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=627,
+            line_number=623,
         )
     ),
 }

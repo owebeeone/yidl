@@ -278,10 +278,10 @@ concept LifecycleManaged extends core.LifecycleCore {
             state = self._y_state
             if state.astichi_ref(external=working_slot) is not VOID:
                 return state.astichi_ref(external=working_slot)
-            tx_group = state.__yidl_tx_index_to_group__[
+            tx_key = state.__yidl_tx_index_to_key__[
                 astichi_bind_external(working_tx_index)
             ]
-            if state._y_transaction_manager.active_transaction_for(tx_group) is None:
+            if state._y_transaction_manager.active_transaction_for(tx_key) is None:
                 return state.astichi_ref(external=current_slot)
             state._y_ensure_working_transaction(astichi_bind_external(working_tx_index))
             next_value = thaw_func_name__astichi_arg__(
@@ -305,10 +305,10 @@ concept LifecycleManaged extends core.LifecycleCore {
             state = self._y_state
             if state.astichi_ref(external=working_slot) is not VOID:
                 return state.astichi_ref(external=working_slot)
-            tx_group = state.__yidl_tx_index_to_group__[
+            tx_key = state.__yidl_tx_index_to_key__[
                 astichi_bind_external(working_tx_index)
             ]
-            if state._y_transaction_manager.active_transaction_for(tx_group) is None:
+            if state._y_transaction_manager.active_transaction_for(tx_key) is None:
                 return state.astichi_ref(external=current_slot)
             state._y_ensure_working_transaction(astichi_bind_external(working_tx_index))
             current_value = state.astichi_ref(external=current_slot)
@@ -429,8 +429,8 @@ concept LifecycleManaged extends core.LifecycleCore {
             self,
             outer_bind=True,
         )._y_get_default_facade().astichi_ref(external=method_name)()
-        if result is False:
-            return False
+        if not result:
+            return result
     ]$
 
     resource TransactionHookHelperCall = template $[
@@ -441,51 +441,57 @@ concept LifecycleManaged extends core.LifecycleCore {
     ]$
 
     resource CommitOrderKeyDispatchCall = template $[
-        if astichi_pass(tx_index, outer_bind=True) == astichi_bind_external(tx_index_value):
-            return astichi_pass(
-                self,
-                outer_bind=True,
-            ).astichi_ref(external=commit_order_key_function_name)()
+        match astichi_pass(tx_index, outer_bind=True):
+            case _ if astichi_pass(tx_index, outer_bind=True) == astichi_bind_external(tx_index_value):
+                return astichi_pass(
+                    self,
+                    outer_bind=True,
+                ).astichi_ref(external=commit_order_key_function_name)()
     ]$
 
     resource RequiresValidationDispatchCall = template $[
-        if astichi_pass(tx_index, outer_bind=True) == astichi_bind_external(tx_index_value):
-            return astichi_pass(
-                self,
-                outer_bind=True,
-            ).astichi_ref(external=requires_validation_function_name)()
+        match astichi_pass(tx_index, outer_bind=True):
+            case _ if astichi_pass(tx_index, outer_bind=True) == astichi_bind_external(tx_index_value):
+                return astichi_pass(
+                    self,
+                    outer_bind=True,
+                ).astichi_ref(external=requires_validation_function_name)()
     ]$
 
     resource ValidateCommitDispatchCall = template $[
-        if astichi_pass(tx_index, outer_bind=True) == astichi_bind_external(tx_index_value):
-            return astichi_pass(
-                self,
-                outer_bind=True,
-            ).astichi_ref(external=validate_commit_function_name)()
+        match astichi_pass(tx_index, outer_bind=True):
+            case _ if astichi_pass(tx_index, outer_bind=True) == astichi_bind_external(tx_index_value):
+                return astichi_pass(
+                    self,
+                    outer_bind=True,
+                ).astichi_ref(external=validate_commit_function_name)()
     ]$
 
     resource BeforeCommitDispatchCall = template $[
-        if astichi_pass(tx_index, outer_bind=True) == astichi_bind_external(tx_index_value):
-            astichi_pass(
-                self,
-                outer_bind=True,
-            ).astichi_ref(external=before_commit_function_name)()
+        match astichi_pass(tx_index, outer_bind=True):
+            case _ if astichi_pass(tx_index, outer_bind=True) == astichi_bind_external(tx_index_value):
+                astichi_pass(
+                    self,
+                    outer_bind=True,
+                ).astichi_ref(external=before_commit_function_name)()
     ]$
 
     resource AfterCommitDispatchCall = template $[
-        if astichi_pass(tx_index, outer_bind=True) == astichi_bind_external(tx_index_value):
-            astichi_pass(
-                self,
-                outer_bind=True,
-            ).astichi_ref(external=after_commit_function_name)()
+        match astichi_pass(tx_index, outer_bind=True):
+            case _ if astichi_pass(tx_index, outer_bind=True) == astichi_bind_external(tx_index_value):
+                astichi_pass(
+                    self,
+                    outer_bind=True,
+                ).astichi_ref(external=after_commit_function_name)()
     ]$
 
     resource AfterRollbackDispatchCall = template $[
-        if astichi_pass(tx_index, outer_bind=True) == astichi_bind_external(tx_index_value):
-            astichi_pass(
-                self,
-                outer_bind=True,
-            ).astichi_ref(external=after_rollback_function_name)()
+        match astichi_pass(tx_index, outer_bind=True):
+            case _ if astichi_pass(tx_index, outer_bind=True) == astichi_bind_external(tx_index_value):
+                astichi_pass(
+                    self,
+                    outer_bind=True,
+                ).astichi_ref(external=after_rollback_function_name)()
     ]$
 
     resource PrepareCommitFieldsFunction = template $[
@@ -504,27 +510,30 @@ concept LifecycleManaged extends core.LifecycleCore {
     ]$
 
     resource ApplyPreparedCommitDispatchBranch = template $[
-        if astichi_pass(tx_index, outer_bind=True) == astichi_bind_external(tx_index_value):
-            astichi_pass(
-                self,
-                outer_bind=True,
-            ).astichi_ref(external=apply_prepared_commit_fields_function_name)()
+        match astichi_pass(tx_index, outer_bind=True):
+            case _ if astichi_pass(tx_index, outer_bind=True) == astichi_bind_external(tx_index_value):
+                astichi_pass(
+                    self,
+                    outer_bind=True,
+                ).astichi_ref(external=apply_prepared_commit_fields_function_name)()
     ]$
 
     resource PrepareCommitDispatchBranch = template $[
-        if astichi_pass(tx_index, outer_bind=True) == astichi_bind_external(tx_index_value):
-            astichi_pass(
-                self,
-                outer_bind=True,
-            ).astichi_ref(external=prepare_commit_fields_function_name)()
+        match astichi_pass(tx_index, outer_bind=True):
+            case _ if astichi_pass(tx_index, outer_bind=True) == astichi_bind_external(tx_index_value):
+                astichi_pass(
+                    self,
+                    outer_bind=True,
+                ).astichi_ref(external=prepare_commit_fields_function_name)()
     ]$
 
     resource RollbackDispatchBranch = template $[
-        if astichi_pass(tx_index, outer_bind=True) == astichi_bind_external(tx_index_value):
-            astichi_pass(
-                self,
-                outer_bind=True,
-            ).astichi_ref(external=rollback_fields_function_name)()
+        match astichi_pass(tx_index, outer_bind=True):
+            case _ if astichi_pass(tx_index, outer_bind=True) == astichi_bind_external(tx_index_value):
+                astichi_pass(
+                    self,
+                    outer_bind=True,
+                ).astichi_ref(external=rollback_fields_function_name)()
     ]$
 
     contribution ManagedCurrentStateSlot = StateSlotEntry {

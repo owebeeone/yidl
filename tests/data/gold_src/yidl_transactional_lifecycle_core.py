@@ -171,8 +171,8 @@ def _assert_generated_class(namespace: Mapping[str, object]) -> None:
     assert generated.__yidl_lifecycle_generated__ is True
     assert generated.__yidl_lifecycle_user_class__ is Counter
     assert generated.__yidl_lifecycle_definition__ is lifecycle_definition
-    assert generated.__yidl_tx_index_to_group__ == (DEFAULT_TRANSACTION,)
-    assert generated.__yidl_tx_group_to_index__ == {DEFAULT_TRANSACTION: 0}
+    assert generated.__yidl_tx_index_to_key__ == (DEFAULT_TRANSACTION,)
+    assert generated.__yidl_tx_key_to_index__ == {DEFAULT_TRANSACTION: 0}
 
     counter = generated()
     assert isinstance(counter, Counter)

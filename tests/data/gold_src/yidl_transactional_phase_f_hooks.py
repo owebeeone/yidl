@@ -125,7 +125,7 @@ def _assert_counter_class(
     assert generated.__module__ == counter_cls.__module__
     assert generated.__yidl_lifecycle_generated__ is True
     assert generated.__yidl_lifecycle_user_class__ is counter_cls
-    assert generated.__yidl_tx_index_to_group__ == (DEFAULT_TRANSACTION, "audit")
+    assert generated.__yidl_tx_index_to_key__ == (DEFAULT_TRANSACTION, "audit")
 
     item = generated()
     assert item._y_state.commit_order_key_for(DEFAULT_TRANSACTION) == (5,)
@@ -203,10 +203,16 @@ def _assert_source_shape(sources: Mapping[str, str]) -> None:
         assert "self._y_get_default_facade()._before_default()" in generated
         assert "self._y_get_default_facade()._after_default()" in generated
         assert "self._y_get_default_facade()._after_audit_rollback()" in generated
-        assert 'if tx_group == "default_transaction":' not in generated
-        assert 'if tx_group == "audit":' not in generated
-        assert "if tx_index == 0:" in generated
-        assert "if tx_index == 1:" in generated
+        assert "if result is False:" not in generated
+        assert "return self._y_get_default_facade()._commit_key()\n            return ()" not in generated
+        assert "return True\n            return False" not in generated
+        assert "__weakref__" in generated
+        assert 'if tx_key == "default_transaction":' not in generated
+        assert 'if tx_key == "audit":' not in generated
+        assert "tx_index = self.__yidl_tx_key_to_index__[tx_key]" in generated
+        assert "match tx_index:" in generated
+        assert "case _ if tx_index == 0:" in generated
+        assert "case _ if tx_index == 1:" in generated
         assert "def _prepare_commit_tx_by_key(" in generated
         assert "def _apply_prepared_commit_tx_by_key(" in generated
         assert "def _after_commit_tx_by_key(" in generated

@@ -5,6 +5,7 @@ import os
 from pathlib import Path
 import runpy
 from time import perf_counter
+import weakref
 
 import pytest
 
@@ -51,8 +52,8 @@ def test_lifecycle_decorator_builds_phase_a_generated_class() -> None:
     assert generated.__module__ == __name__
     assert generated.__yidl_lifecycle_generated__ is True
     assert generated.__yidl_lifecycle_user_class__ is Counter
-    assert generated.__yidl_tx_index_to_group__ == (DEFAULT_TRANSACTION, "audit")
-    assert generated.__yidl_tx_group_to_index__ == {
+    assert generated.__yidl_tx_index_to_key__ == (DEFAULT_TRANSACTION, "audit")
+    assert generated.__yidl_tx_key_to_index__ == {
         DEFAULT_TRANSACTION: 0,
         "audit": 1,
     }
@@ -94,6 +95,22 @@ def test_lifecycle_decorator_builds_phase_a_generated_class() -> None:
         assert counter.audit_count == 20
         assert counter.current.audit_count == 10
     assert counter.current.audit_count == 20
+
+
+def test_lifecycle_decorator_facades_are_weakrefable_with_slotted_user_class() -> None:
+    class Counter:
+        __slots__ = ()
+
+        count: int = managed(default=1)
+
+    generated = lifecycle(Counter)
+    counter = generated()
+    current = counter.current
+    working = counter.working
+
+    assert weakref.ref(counter)() is counter
+    assert weakref.ref(current)() is current
+    assert weakref.ref(working)() is working
 
 
 def test_lifecycle_source_uses_unpacked_builder_parameters() -> None:

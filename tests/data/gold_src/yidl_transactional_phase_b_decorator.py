@@ -128,8 +128,8 @@ def _assert_counter_class(
     assert generated.__module__ == counter_cls.__module__
     assert generated.__yidl_lifecycle_generated__ is True
     assert generated.__yidl_lifecycle_user_class__ is counter_cls
-    assert generated.__yidl_tx_index_to_group__ == (DEFAULT_TRANSACTION, "audit")
-    assert generated.__yidl_tx_group_to_index__ == {
+    assert generated.__yidl_tx_index_to_key__ == (DEFAULT_TRANSACTION, "audit")
+    assert generated.__yidl_tx_key_to_index__ == {
         DEFAULT_TRANSACTION: 0,
         "audit": 1,
     }
