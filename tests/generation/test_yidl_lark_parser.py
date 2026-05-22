@@ -1469,6 +1469,218 @@ def test_yidl_lark_production_extension_stores_inherited_phase_apply() -> None:
     ]
 
 
+def test_yidl_lark_production_extension_flattens_into_runtime_production() -> None:
+    source = """
+    module phases
+
+    concept Base {
+        resource Root = code $[
+            VALUE = []
+            astichi_hole(body)
+        ]$
+        resource AddBase = code `VALUE.append("base")`
+        resource AddFeature = code `VALUE.append("feature")`
+        resource AddAfter = code `VALUE.append("after")`
+
+        contribution AddBase = AddBase {
+            target body { build /Root }
+        }
+        contribution AddFeature = AddFeature {
+            target body { build /Root }
+        }
+        contribution AddAfter = AddAfter {
+            target body { build /Root }
+        }
+
+        matcher BaseContributions() -> contribution {
+            default -> AddBase
+        }
+        matcher FeatureContributions() -> contribution {
+            default -> AddFeature
+        }
+        matcher AfterContributions() -> contribution {
+            default -> AddAfter
+        }
+
+        production ModuleProduction -> composable {
+            root Root = Root
+            phase body {
+                apply base using BaseContributions
+            }
+            apply after using AfterContributions
+        }
+
+        assembly Module = ModuleProduction
+    }
+
+    concept Feature extends Base {
+        extend production ModuleProduction {
+            phase body {
+                apply feature using FeatureContributions
+            }
+        }
+    }
+    """
+
+    concept = compile_yidl_files({"phases.yidl": source}, "phases.yidl").concepts[
+        "Feature"
+    ]
+    production = concept.composable_productions["ModuleProduction"]
+
+    assert [_apply_name(apply) for apply in production.applies] == [
+        "ModuleProduction.base",
+        "ModuleProduction.feature",
+        "ModuleProduction.after",
+    ]
+    assert "ModuleProduction.feature" in concept.assembly_edges
+
+    generated = emit_concept_runtime_source(
+        concept.plan.build_data_definition(),
+        resources=concept.resources,
+        assembly_plan=concept,
+    )
+    namespace: dict[str, object] = {}
+    exec(generated, namespace)
+    emitted = namespace["build_Module"](
+        namespace["new_builder"]().freeze(),
+    ).emit_commented()
+
+    assert emitted.index(".append('base')") < emitted.index(".append('feature')")
+    assert emitted.index(".append('feature')") < emitted.index(".append('after')")
+
+
+def test_yidl_lark_production_extension_diamond_merges_distinct_extensions() -> None:
+    source = """
+    module phases
+
+    concept Base {
+        resource Root = code $[
+            VALUE = []
+            astichi_hole(body)
+        ]$
+        resource AddBase = code `VALUE.append("base")`
+        resource AddLeft = code `VALUE.append("left")`
+        resource AddRight = code `VALUE.append("right")`
+
+        contribution AddBase = AddBase {
+            target body { build /Root }
+        }
+        contribution AddLeft = AddLeft {
+            target body { build /Root }
+        }
+        contribution AddRight = AddRight {
+            target body { build /Root }
+        }
+
+        matcher BaseContributions() -> contribution {
+            default -> AddBase
+        }
+        matcher LeftContributions() -> contribution {
+            default -> AddLeft
+        }
+        matcher RightContributions() -> contribution {
+            default -> AddRight
+        }
+
+        production ModuleProduction -> composable {
+            root Root = Root
+            phase body {
+                apply base using BaseContributions
+            }
+        }
+
+        assembly Module = ModuleProduction
+    }
+
+    concept Left extends Base {
+        extend production ModuleProduction {
+            phase body {
+                apply left using LeftContributions
+            }
+        }
+    }
+
+    concept Right extends Base {
+        extend production ModuleProduction {
+            phase body {
+                apply right using RightContributions
+            }
+        }
+    }
+
+    concept Combined extends Left, Right {}
+    """
+
+    concept = compile_yidl_files({"phases.yidl": source}, "phases.yidl").concepts[
+        "Combined"
+    ]
+    production = concept.composable_productions["ModuleProduction"]
+
+    assert [_apply_name(apply) for apply in production.applies] == [
+        "ModuleProduction.base",
+        "ModuleProduction.left",
+        "ModuleProduction.right",
+    ]
+
+    generated = emit_concept_runtime_source(
+        concept.plan.build_data_definition(),
+        resources=concept.resources,
+        assembly_plan=concept,
+    )
+    namespace: dict[str, object] = {}
+    exec(generated, namespace)
+    emitted = namespace["build_Module"](
+        namespace["new_builder"]().freeze(),
+    ).emit_commented()
+
+    assert emitted.index(".append('base')") < emitted.index(".append('left')")
+    assert emitted.index(".append('left')") < emitted.index(".append('right')")
+
+
+def test_yidl_lark_production_extension_duplicate_apply_edge_rejects() -> None:
+    source = """
+    module phases
+
+    concept Base {
+        resource Root = code $[
+            VALUE = []
+            astichi_hole(body)
+        ]$
+        resource Add = code `VALUE.append("x")`
+
+        contribution Add = Add {
+            target body { build /Root }
+        }
+
+        matcher AddContributions() -> contribution {
+            default -> Add
+        }
+
+        production ModuleProduction -> composable {
+            root Root = Root
+            phase body {
+            }
+        }
+    }
+
+    concept Feature extends Base {
+        extend production ModuleProduction {
+            phase body {
+                apply duplicate using AddContributions
+            }
+        }
+        extend production ModuleProduction {
+            phase body {
+                apply duplicate using AddContributions
+            }
+        }
+    }
+    """
+
+    with pytest.raises(YidlSymbolError, match="assembly edge .* already defined"):
+        compile_yidl_files({"phases.yidl": source}, "phases.yidl")
+
+
 def test_yidl_lark_production_extension_missing_target_rejects() -> None:
     source = """
     module phases

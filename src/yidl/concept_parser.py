@@ -96,9 +96,12 @@ class YidlCompiledConcept:
     contributions: Mapping[str, ContributionSpec]
     contribution_matchers: Mapping[str, ContributionMatcherSpec]
     operation_matchers: Mapping[str, OperationMatcherSpec]
+    production_definitions: Mapping[str, ComposableProductionSpec]
     composable_productions: Mapping[str, ComposableProductionSpec]
     production_phases: Mapping[str, frozenset[str]]
+    production_phase_specs: Mapping[str, tuple[_ProductionPhaseSpec, ...]]
     production_extensions: tuple[_ProductionExtensionSpec, ...]
+    assembly_edge_definitions: Mapping[str, AssemblyEdgeSpec]
     assembly_edges: Mapping[str, AssemblyEdgeSpec]
     assemblies: Mapping[str, AssemblySpec]
 
@@ -143,6 +146,13 @@ class _ResourceOptions:
 
 
 @dataclass(frozen=True, slots=True)
+class _ProductionPhaseSpec:
+    name: str
+    applies: tuple[ApplySpec, ...]
+    extensible: bool
+
+
+@dataclass(frozen=True, slots=True)
 class _ProductionPhaseExtensionSpec:
     phase_name: str
     applies: tuple[ApplySpec, ...]
@@ -177,6 +187,7 @@ _VALUE_CONSTANTS: dict[str, object] = {
     "set": set,
     "tuple": tuple,
 }
+_IMPLICIT_PHASE_PREFIX = "__body__"
 
 
 def parse_yidl_source(path: str, source: str) -> Tree:
@@ -346,6 +357,9 @@ class _ConceptCompiler:
         self._local_operation_matchers: dict[str, OperationMatcherSpec] = {}
         self._local_composable_productions: dict[str, ComposableProductionSpec] = {}
         self._local_composable_production_phases: dict[str, frozenset[str]] = {}
+        self._local_composable_production_phase_specs: dict[
+            str, tuple[_ProductionPhaseSpec, ...]
+        ] = {}
         self._local_production_extensions: list[_ProductionExtensionSpec] = []
         self._local_assembly_edges: dict[str, AssemblyEdgeSpec] = {}
         self._local_assemblies: dict[str, AssemblySpec] = {}
@@ -434,8 +448,6 @@ class _ConceptCompiler:
             }:
                 raise YidlSymbolError(f"{member.data} lowering is not implemented yet")
         plan = builder.build()
-        self._validate_assembly_value_contexts(plan)
-        self._validate_static_assembly_scopes()
         properties = _merge_named_maps(
             kind="property",
             extensions=self._extensions,
@@ -509,11 +521,11 @@ class _ConceptCompiler:
             local=self._local_operation_matchers,
             concept_name=name,
         )
-        composable_productions = _merge_named_maps(
+        production_definitions = _merge_named_maps(
             kind="composable production",
             extensions=self._extensions,
             local=self._local_composable_productions,
-            getter=lambda concept: concept.composable_productions,
+            getter=lambda concept: concept.production_definitions,
             concept_name=name,
         )
         production_phases = _merge_production_phase_maps(
@@ -521,16 +533,27 @@ class _ConceptCompiler:
             local=self._local_composable_production_phases,
             concept_name=name,
         )
+        production_phase_specs = _merge_production_phase_specs(
+            extensions=self._extensions,
+            local=self._local_composable_production_phase_specs,
+            concept_name=name,
+        )
         production_extensions = _merge_production_extensions(
             extensions=self._extensions,
             local=tuple(self._local_production_extensions),
         )
-        assembly_edges = _merge_named_maps(
+        assembly_edge_definitions = _merge_named_maps(
             kind="assembly edge",
             extensions=self._extensions,
             local=self._local_assembly_edges,
-            getter=lambda concept: concept.assembly_edges,
+            getter=lambda concept: concept.assembly_edge_definitions,
             concept_name=name,
+        )
+        composable_productions, assembly_edges = _flatten_production_extensions(
+            production_definitions=production_definitions,
+            production_phase_specs=production_phase_specs,
+            production_extensions=production_extensions,
+            assembly_edge_definitions=assembly_edge_definitions,
         )
         assemblies = _merge_named_maps(
             kind="assembly",
@@ -538,6 +561,15 @@ class _ConceptCompiler:
             local=self._local_assemblies,
             getter=lambda concept: concept.assemblies,
             concept_name=name,
+        )
+        self._validate_assembly_value_contexts(
+            plan,
+            composable_productions=composable_productions,
+            assembly_edges=assembly_edges,
+        )
+        self._validate_static_assembly_scopes(
+            composable_productions=composable_productions,
+            assembly_edges=assembly_edges,
         )
         return YidlCompiledConcept(
             name=name,
@@ -553,9 +585,12 @@ class _ConceptCompiler:
             contributions=contributions,
             contribution_matchers=contribution_matchers,
             operation_matchers=operation_matchers,
+            production_definitions=production_definitions,
             composable_productions=composable_productions,
             production_phases=production_phases,
+            production_phase_specs=production_phase_specs,
             production_extensions=production_extensions,
+            assembly_edge_definitions=assembly_edge_definitions,
             assembly_edges=assembly_edges,
             assemblies=assemblies,
         )
@@ -1410,7 +1445,25 @@ class _ConceptCompiler:
         )
         root: RootSpec | None = None
         applies: list[ApplySpec] = []
+        pending_applies: list[ApplySpec] = []
+        phase_specs: list[_ProductionPhaseSpec] = []
         phase_names: set[str] = set()
+        implicit_phase_count = 0
+
+        def flush_pending_applies() -> None:
+            nonlocal implicit_phase_count
+            if not pending_applies:
+                return
+            phase_specs.append(
+                _ProductionPhaseSpec(
+                    name=f"{_IMPLICIT_PHASE_PREFIX}{implicit_phase_count}",
+                    applies=tuple(pending_applies),
+                    extensible=False,
+                )
+            )
+            implicit_phase_count += 1
+            pending_applies.clear()
+
         for member in _wrapped_children(tree, "composable_production_member"):
             if member.data == "root_decl":
                 if root is not None:
@@ -1421,18 +1474,29 @@ class _ConceptCompiler:
                 apply_spec = self._apply_spec(name, inputs, member)
                 self._register_inline_apply_edge(apply_spec)
                 applies.append(apply_spec)
+                pending_applies.append(apply_spec)
                 continue
             if member.data == "phase_decl":
+                flush_pending_applies()
                 phase_name = _token_text(member.children[0])
                 if phase_name in phase_names:
                     raise YidlSymbolError(
                         f"production {name!r} repeats phase {phase_name!r}"
                     )
                 phase_names.add(phase_name)
+                phase_applies: list[ApplySpec] = []
                 for apply_tree in _children(member, "apply_decl"):
                     apply_spec = self._apply_spec(name, inputs, apply_tree)
                     self._register_inline_apply_edge(apply_spec)
                     applies.append(apply_spec)
+                    phase_applies.append(apply_spec)
+                phase_specs.append(
+                    _ProductionPhaseSpec(
+                        name=phase_name,
+                        applies=tuple(phase_applies),
+                        extensible=True,
+                    )
+                )
                 continue
             raise YidlSymbolError(
                 f"production {name!r} has invalid member {member.data!r}"
@@ -1441,7 +1505,9 @@ class _ConceptCompiler:
         if root is None:
             raise YidlSymbolError(f"production {name!r} must declare a root")
 
+        flush_pending_applies()
         self._local_composable_production_phases[name] = frozenset(phase_names)
+        self._local_composable_production_phase_specs[name] = tuple(phase_specs)
         return ComposableProductionSpec(
             name=name,
             inputs=inputs,
@@ -1850,13 +1916,13 @@ class _ConceptCompiler:
             if parts[0] in self._declared_composable_productions:
                 return True
             return any(
-                parts[0] in extension.composable_productions
+                parts[0] in extension.production_definitions
                 for extension in self._extensions
             )
         if len(parts) == 2:
             module = self._import_module(parts[0])
             return any(
-                parts[1] in concept.composable_productions
+                parts[1] in concept.production_definitions
                 for concept in module.concepts.values()
             )
         return False
@@ -1874,7 +1940,7 @@ class _ConceptCompiler:
                 return production
             inherited: list[ComposableProductionSpec] = []
             for extension in self._extensions:
-                production = extension.composable_productions.get(parts[0])
+                production = extension.production_definitions.get(parts[0])
                 if production is not None and not any(
                     production is existing for existing in inherited
                 ):
@@ -1912,7 +1978,7 @@ class _ConceptCompiler:
         module = self._import_module(alias)
         matches: list[ComposableProductionSpec] = []
         for concept in module.concepts.values():
-            production = concept.composable_productions.get(production_name)
+            production = concept.production_definitions.get(production_name)
             if production is not None and not any(
                 production is existing for existing in matches
             ):
@@ -1939,7 +2005,13 @@ class _ConceptCompiler:
                 return phases
         return frozenset()
 
-    def _validate_assembly_value_contexts(self, plan: CapsuleConceptPlan) -> None:
+    def _validate_assembly_value_contexts(
+        self,
+        plan: CapsuleConceptPlan,
+        *,
+        composable_productions: Mapping[str, ComposableProductionSpec],
+        assembly_edges: Mapping[str, AssemblyEdgeSpec],
+    ) -> None:
         for matcher in self._local_contribution_matchers.values():
             names = self._value_names_for_inputs(
                 plan,
@@ -1953,7 +2025,7 @@ class _ConceptCompiler:
                     context=f"matcher {matcher.name!r} rule {rule.name!r}",
                 )
 
-        for production in self._local_composable_productions.values():
+        for production in composable_productions.values():
             production_names = self._value_names_for_inputs(
                 plan,
                 production.inputs,
@@ -1967,13 +2039,13 @@ class _ConceptCompiler:
                 )
             for apply in production.applies:
                 if isinstance(apply, EdgeApplySpec):
-                    if apply.edge_name not in self._local_assembly_edges:
+                    if apply.edge_name not in assembly_edges:
                         raise YidlSymbolError(
                             f"production {production.name!r} apply references "
                             f"undefined assembly edge {apply.edge_name!r}"
                         )
 
-        for edge in self._local_assembly_edges.values():
+        for edge in assembly_edges.values():
             names = self._value_names_for_inputs(
                 plan,
                 (*edge.context_inputs, *edge.from_inputs),
@@ -2128,10 +2200,21 @@ class _ConceptCompiler:
             return imported.target
         raise YidlSymbolError(f"undefined contribution matcher {name!r}")
 
-    def _validate_static_assembly_scopes(self) -> None:
+    def _validate_static_assembly_scopes(
+        self,
+        *,
+        composable_productions: Mapping[str, ComposableProductionSpec],
+        assembly_edges: Mapping[str, AssemblyEdgeSpec],
+    ) -> None:
         validated: set[str] = set()
-        for production in self._local_composable_productions.values():
-            self._validate_static_scope(production, visiting=set(), validated=validated)
+        for production in composable_productions.values():
+            self._validate_static_scope(
+                production,
+                visiting=set(),
+                validated=validated,
+                composable_productions=composable_productions,
+                assembly_edges=assembly_edges,
+            )
 
     def _validate_static_scope(
         self,
@@ -2139,6 +2222,8 @@ class _ConceptCompiler:
         *,
         visiting: set[str],
         validated: set[str],
+        composable_productions: Mapping[str, ComposableProductionSpec],
+        assembly_edges: Mapping[str, AssemblyEdgeSpec],
     ) -> None:
         if production.name in validated:
             return
@@ -2160,13 +2245,13 @@ class _ConceptCompiler:
             edge = (
                 apply.edge
                 if isinstance(apply, InlineApplySpec)
-                else self._local_assembly_edges[apply.edge_name]
+                else assembly_edges[apply.edge_name]
             )
             matcher = self._resolve_contribution_matcher_spec(edge.matcher_name)
             for contribution_name in _matcher_contribution_names(matcher):
                 contribution = self._resolve_contribution_spec(contribution_name)
                 if contribution.source_kind == "production":
-                    source = self._local_composable_productions.get(
+                    source = composable_productions.get(
                         contribution.source_name
                     )
                     if source is not None:
@@ -2174,10 +2259,13 @@ class _ConceptCompiler:
                             source,
                             visiting=visiting,
                             validated=validated,
+                            composable_productions=composable_productions,
+                            assembly_edges=assembly_edges,
                         )
                 self._validate_static_contribution(
                     contribution,
                     path_holes,
+                    composable_productions=composable_productions,
                     context=(
                         f"contribution {contribution.name!r} selected by "
                         f"apply {edge.name!r}"
@@ -2192,6 +2280,7 @@ class _ConceptCompiler:
         contribution: ContributionSpec,
         path_holes: dict[tuple[str, ...], frozenset[str]],
         *,
+        composable_productions: Mapping[str, ComposableProductionSpec],
         context: str,
     ) -> None:
         concrete_build_paths: list[tuple[str, ...]] = []
@@ -2217,20 +2306,25 @@ class _ConceptCompiler:
                     )
                 concrete_build_paths.append(parts)
 
-        source_holes = self._contribution_source_hole_names(contribution)
+        source_holes = self._contribution_source_hole_names(
+            contribution,
+            composable_productions=composable_productions,
+        )
         for build_path in concrete_build_paths:
             path_holes[build_path + (contribution.build_name,)] = source_holes
 
     def _contribution_source_hole_names(
         self,
         contribution: ContributionSpec,
+        *,
+        composable_productions: Mapping[str, ComposableProductionSpec],
     ) -> frozenset[str]:
         if contribution.source_kind == "resource":
             return self._resource_hole_names(
                 contribution.source_name,
                 context=f"contribution {contribution.name!r} source",
             )
-        production = self._local_composable_productions.get(contribution.source_name)
+        production = composable_productions.get(contribution.source_name)
         if production is None:
             return frozenset()
         return self._resource_hole_names(
@@ -2898,6 +2992,37 @@ def _merge_production_phase_maps(
     return merged
 
 
+def _merge_production_phase_specs(
+    *,
+    extensions: tuple[YidlCompiledConcept, ...],
+    local: Mapping[str, tuple[_ProductionPhaseSpec, ...]],
+    concept_name: str,
+) -> dict[str, tuple[_ProductionPhaseSpec, ...]]:
+    merged: dict[str, tuple[_ProductionPhaseSpec, ...]] = {}
+    owners: dict[str, str] = {}
+    for extension in extensions:
+        for name, phases in extension.production_phase_specs.items():
+            existing = merged.get(name)
+            if existing is None:
+                merged[name] = phases
+                owners[name] = extension.name
+                continue
+            if existing == phases:
+                continue
+            raise YidlSymbolError(
+                f"composable production phase layout {name!r} is inherited "
+                f"from both {owners[name]!r} and {extension.name!r}"
+            )
+    for name, phases in local.items():
+        if name in merged and merged[name] != phases:
+            raise YidlSymbolError(
+                f"composable production phase layout {name!r} is already "
+                f"inherited by concept {concept_name!r}"
+            )
+        merged[name] = phases
+    return merged
+
+
 def _merge_production_extensions(
     *,
     extensions: tuple[YidlCompiledConcept, ...],
@@ -2914,6 +3039,70 @@ def _merge_production_extensions(
             merged.append(production_extension)
     merged.extend(local)
     return tuple(merged)
+
+
+def _flatten_production_extensions(
+    *,
+    production_definitions: Mapping[str, ComposableProductionSpec],
+    production_phase_specs: Mapping[str, tuple[_ProductionPhaseSpec, ...]],
+    production_extensions: tuple[_ProductionExtensionSpec, ...],
+    assembly_edge_definitions: Mapping[str, AssemblyEdgeSpec],
+) -> tuple[dict[str, ComposableProductionSpec], dict[str, AssemblyEdgeSpec]]:
+    extension_applies: dict[str, dict[str, list[ApplySpec]]] = {}
+    assembly_edges = dict(assembly_edge_definitions)
+
+    for production_extension in production_extensions:
+        production = production_definitions.get(production_extension.target_name)
+        if production is None:
+            raise YidlSymbolError(
+                f"production extension targets undefined composable production "
+                f"{production_extension.target_name!r}"
+            )
+        phase_names = {
+            phase.name
+            for phase in production_phase_specs.get(production.name, ())
+            if phase.extensible
+        }
+        production_applies = extension_applies.setdefault(production.name, {})
+        for phase_extension in production_extension.phases:
+            if phase_extension.phase_name not in phase_names:
+                raise YidlSymbolError(
+                    f"production {production.name!r} has no phase "
+                    f"{phase_extension.phase_name!r}"
+                )
+            phase_applies = production_applies.setdefault(
+                phase_extension.phase_name,
+                [],
+            )
+            for apply in phase_extension.applies:
+                if isinstance(apply, InlineApplySpec):
+                    existing = assembly_edges.get(apply.edge.name)
+                    if existing is not None and existing is not apply.edge:
+                        raise YidlSymbolError(
+                            f"assembly edge {apply.edge.name!r} is already defined"
+                        )
+                    assembly_edges[apply.edge.name] = apply.edge
+                phase_applies.append(apply)
+
+    flattened: dict[str, ComposableProductionSpec] = {}
+    for name, production in production_definitions.items():
+        phase_specs = production_phase_specs.get(name)
+        if phase_specs is None:
+            flattened[name] = production
+            continue
+        applies: list[ApplySpec] = []
+        production_applies = extension_applies.get(name, {})
+        for phase in phase_specs:
+            applies.extend(phase.applies)
+            if phase.extensible:
+                applies.extend(production_applies.get(phase.name, ()))
+        flattened[name] = ComposableProductionSpec(
+            name=production.name,
+            inputs=production.inputs,
+            root=production.root,
+            applies=tuple(applies),
+        )
+    return flattened, assembly_edges
 
 
 def _merge_contribution_matchers(
@@ -3312,7 +3501,7 @@ def _imported_symbol_targets(
             continue
         if kind == "production":
             production = concept.productions.get(name)
-            composable = concept.composable_productions.get(name)
+            composable = concept.production_definitions.get(name)
             if production is not None:
                 targets.append(production)
             if composable is not None:
