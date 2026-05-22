@@ -10,6 +10,7 @@ import weakref
 import pytest
 
 from yidl.runtime.bindings import BindingBase
+from yidl.runtime.bindings import BindingDict
 from yidl.runtime.lifecycle import _generate_lifecycle_source
 from yidl.runtime.lifecycle import LifecycleDefinitionError
 from yidl.runtime.lifecycle import after_commit
@@ -282,6 +283,24 @@ def test_lifecycle_decorator_binding_fields_are_stored_and_validated() -> None:
         generated(handle=object())
 
 
+def test_lifecycle_decorator_binding_map_fields_normalize_and_validate() -> None:
+    class Holder:
+        handles: dict[str, BindingBase] = binding(default_factory=lambda: {})
+
+    item = lifecycle(Holder)()
+    first = _TestBinding()
+
+    assert isinstance(item.handles, BindingDict)
+    item.handles = {"first": first}
+    assert isinstance(item.handles, BindingDict)
+    assert item.handles["first"] is first
+
+    with pytest.raises(TypeError, match="binding map field 'handles' expects"):
+        item.handles = object()
+    with pytest.raises(TypeError, match="expects BindingBase values"):
+        item.handles = {"bad": object()}
+
+
 def test_lifecycle_decorator_rejects_invalid_binding_default_factory_result() -> None:
     class Holder:
         handle: object = binding(default_factory=object)
@@ -348,6 +367,41 @@ def test_lifecycle_decorator_owned_scalar_rejects_invalid_values() -> None:
     with item.begin(DEFAULT_TRANSACTION):
         with pytest.raises(TypeError, match="binding field 'child' expects"):
             item.child = object()
+
+
+def test_lifecycle_decorator_owned_map_commits_and_rolls_back() -> None:
+    class Owner:
+        children: dict[str, BindingBase] = owned(default_factory=lambda: {})
+
+    item = lifecycle(Owner)()
+    first = _TestBinding()
+
+    assert isinstance(item.children, BindingDict)
+    with item.begin(DEFAULT_TRANSACTION):
+        item.children = {"first": first}
+        assert item.children["first"] is first
+        assert item.current.children == {}
+        assert first.is_accepted is False
+
+    assert item.children["first"] is first
+    assert item.current.children["first"] is first
+    assert first.is_accepted is True
+
+    replacement = _TestBinding()
+    with pytest.raises(RuntimeError, match="abort owned map"):
+        with item.begin(DEFAULT_TRANSACTION):
+            item.children = {"replacement": replacement}
+            assert "replacement" in item.children
+            assert "replacement" not in item.current.children
+            raise RuntimeError("abort owned map")
+
+    assert "replacement" not in item.children
+    assert item.children["first"] is first
+    assert replacement.is_accepted is False
+
+    with item.begin(DEFAULT_TRANSACTION):
+        with pytest.raises(TypeError, match="expects BindingBase values"):
+            item.children = {"bad": object()}
 
 
 def test_lifecycle_source_uses_direct_default_factory_calls() -> None:

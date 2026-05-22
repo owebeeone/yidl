@@ -211,6 +211,7 @@ def _field_fact(
         "field_name": name,
         "field_order": order,
         "field_kind": kind,
+        "binding_shape": _binding_shape(decl.annotation),
         "annotation": decl.annotation,
         "init": decl.init,
         "has_default": decl.has_default,
@@ -289,6 +290,7 @@ def _remap_inherited_field_fact(
     has_default_factory = bool(inherited["has_default_factory"])
     fact = dict(inherited)
     fact.setdefault("default_factory_param_names", ())
+    fact.setdefault("binding_shape", _binding_shape(fact.get("annotation")))
     fact.setdefault("has_freeze", False)
     fact.setdefault("freeze", MISSING)
     fact.setdefault("has_thaw", False)
@@ -524,6 +526,17 @@ def _has_optional_none(annotation: object) -> bool:
     if origin is UnionType:
         return NoneType in get_args(annotation)
     return NoneType in get_args(annotation)
+
+
+def _binding_shape(annotation: object) -> str:
+    if isinstance(annotation, str):
+        if "dict[" in annotation or "Mapping[" in annotation:
+            return "map"
+        return "scalar"
+    origin = get_origin(annotation)
+    if origin in {dict, Mapping}:
+        return "map"
+    return "scalar"
 
 
 def _inherited_lifecycle_definitions(

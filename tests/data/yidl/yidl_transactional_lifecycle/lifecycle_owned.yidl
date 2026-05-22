@@ -16,12 +16,21 @@ concept LifecycleOwned extends transient.LifecycleTransient {
 
     computed collection BindingFields: LifecycleFieldSpec from Fields where FieldKind == "binding"
     computed collection OwnedFields: LifecycleFieldSpec from Fields where FieldKind == "owned"
+    computed collection BindingScalarFields:
+        LifecycleFieldSpec from Fields where FieldKind == "binding" and BindingShape == "scalar"
+    computed collection BindingMapFields:
+        LifecycleFieldSpec from Fields where FieldKind == "binding" and BindingShape == "map"
+    computed collection OwnedScalarFields:
+        LifecycleFieldSpec from Fields where FieldKind == "owned" and BindingShape == "scalar"
+    computed collection OwnedMapFields:
+        LifecycleFieldSpec from Fields where FieldKind == "owned" and BindingShape == "map"
 
     record IndexedOwnedField {
         FieldId
         FieldOwner
         FieldName
         FieldOrder
+        BindingShape
         TxGroupKey
         TxIndex
         CurrentSlotName
@@ -51,6 +60,7 @@ concept LifecycleOwned extends transient.LifecycleTransient {
                     field_owner=field.field_owner,
                     field_name=field.field_name,
                     field_order=field.field_order,
+                    binding_shape=field.binding_shape,
                     tx_group_key=tx_group,
                     tx_index=tx_groups[(field.field_owner, tx_group)],
                     current_slot_name=field.current_slot_name,
@@ -80,12 +90,44 @@ concept LifecycleOwned extends transient.LifecycleTransient {
                     + " expects BindingBase or None"
                 )
             return value
+
+        def _y_validate_binding_map_value(field_name, value):
+            from collections.abc import Mapping
+
+            from yidl.runtime.bindings import BindingBase
+            from yidl.runtime.bindings import BindingDict
+
+            if value is None:
+                return None
+            if not isinstance(value, Mapping):
+                raise TypeError(
+                    "binding map field " + repr(field_name)
+                    + " expects a mapping or None"
+                )
+            result = value if isinstance(value, BindingDict) else BindingDict(value)
+            for key, item in result.items():
+                if not isinstance(item, BindingBase):
+                    raise TypeError(
+                        "binding map field " + repr(field_name)
+                        + " expects BindingBase values; key "
+                        + repr(key)
+                        + " has "
+                        + type(item).__name__
+                    )
+            return result
     ]$
 
     resource OwnedScalarStateAssignment = template $[
         value = astichi_pass(init_value_name__astichi_arg__, outer_bind=True)
         astichi_pass(state, outer_bind=True).astichi_ref(external=state_slot)._ = (
             _y_validate_binding_value(astichi_bind_external(field_name), value)
+        )
+    ]$
+
+    resource OwnedMapStateAssignment = template $[
+        value = astichi_pass(init_value_name__astichi_arg__, outer_bind=True)
+        astichi_pass(state, outer_bind=True).astichi_ref(external=state_slot)._ = (
+            _y_validate_binding_map_value(astichi_bind_external(field_name), value)
         )
     ]$
 
@@ -109,6 +151,25 @@ concept LifecycleOwned extends transient.LifecycleTransient {
             state._y_ensure_working_transaction(astichi_bind_external(tx_index))
             state.astichi_ref(external=working_slot)._ = (
                 _y_validate_binding_value(astichi_bind_external(field_name), value)
+            )
+    ]$ {
+        keep VOID
+    }
+
+    resource OwnedMapDefaultProperty = template $[
+        @property
+        def property_getter_name__astichi_arg__(self):
+            state = self._y_state
+            if state.astichi_ref(external=working_slot) is not VOID:
+                return state.astichi_ref(external=working_slot)
+            return state.astichi_ref(external=current_slot)
+
+        @property_setter_target_name__astichi_arg__.setter
+        def property_setter_name__astichi_arg__(self, value):
+            state = self._y_state
+            state._y_ensure_working_transaction(astichi_bind_external(tx_index))
+            state.astichi_ref(external=working_slot)._ = (
+                _y_validate_binding_map_value(astichi_bind_external(field_name), value)
             )
     ]$ {
         keep VOID
@@ -147,6 +208,25 @@ concept LifecycleOwned extends transient.LifecycleTransient {
         keep VOID
     }
 
+    resource OwnedMapWorkingProperty = template $[
+        @property
+        def property_getter_name__astichi_arg__(self):
+            state = self._y_state
+            if state.astichi_ref(external=working_slot) is not VOID:
+                return state.astichi_ref(external=working_slot)
+            return state.astichi_ref(external=current_slot)
+
+        @property_setter_target_name__astichi_arg__.setter
+        def property_setter_name__astichi_arg__(self, value):
+            state = self._y_state
+            state._y_ensure_working_transaction(astichi_bind_external(tx_index))
+            state.astichi_ref(external=working_slot)._ = (
+                _y_validate_binding_map_value(astichi_bind_external(field_name), value)
+            )
+    ]$ {
+        keep VOID
+    }
+
     resource OwnedPrepareCommitBranch = template $[
         if astichi_pass(self, outer_bind=True).astichi_ref(external=working_slot) is not VOID:
             value = astichi_pass(self, outer_bind=True).astichi_ref(external=working_slot)
@@ -156,6 +236,111 @@ concept LifecycleOwned extends transient.LifecycleTransient {
     ]$ {
         keep VOID
     }
+
+    resource OwnedMapPrepareCommitBranch = template $[
+        if astichi_pass(self, outer_bind=True).astichi_ref(external=working_slot) is not VOID:
+            value = astichi_pass(self, outer_bind=True).astichi_ref(external=working_slot)
+            if value is not None:
+                for item in value.values():
+                    item.accepted()
+            astichi_pass(self, outer_bind=True).astichi_ref(external=staged_slot)._ = value
+    ]$ {
+        keep VOID
+    }
+
+    resource OwnedScalarDefaultFactoryEvalInit = template $[
+        if astichi_pass(field_name__astichi_arg__, outer_bind=True) is _HAS_DEFAULT_FACTORY:
+            astichi_pass(field_name__astichi_arg__, outer_bind=True)._ = (
+                default_factory_name__astichi_arg__(
+                    **astichi_hole(default_factory_args)
+                )
+            )
+        value = astichi_pass(field_name__astichi_arg__, outer_bind=True)
+        from yidl.runtime.bindings import BindingBase
+        if value is not None and not isinstance(value, BindingBase):
+            raise TypeError(
+                "binding field " + repr(astichi_bind_external(field_name_value))
+                + " expects BindingBase or None"
+            )
+        astichi_pass(state, outer_bind=True).astichi_ref(external=state_slot)._ = value
+    ]$ {
+        keep _HAS_DEFAULT_FACTORY
+    }
+
+    resource OwnedScalarDefaultFactoryEvalNoInit = template $[
+        field_name__astichi_arg__ = default_factory_name__astichi_arg__(
+            **astichi_hole(default_factory_args)
+        )
+        value = astichi_pass(field_name__astichi_arg__, outer_bind=True)
+        from yidl.runtime.bindings import BindingBase
+        if value is not None and not isinstance(value, BindingBase):
+            raise TypeError(
+                "binding field " + repr(astichi_bind_external(field_name_value))
+                + " expects BindingBase or None"
+            )
+        astichi_pass(state, outer_bind=True).astichi_ref(external=state_slot)._ = value
+    ]$
+
+    resource OwnedMapDefaultFactoryEvalInit = template $[
+        if astichi_pass(field_name__astichi_arg__, outer_bind=True) is _HAS_DEFAULT_FACTORY:
+            astichi_pass(field_name__astichi_arg__, outer_bind=True)._ = (
+                default_factory_name__astichi_arg__(
+                    **astichi_hole(default_factory_args)
+                )
+            )
+        value = astichi_pass(field_name__astichi_arg__, outer_bind=True)
+        from collections.abc import Mapping
+        from yidl.runtime.bindings import BindingBase
+        from yidl.runtime.bindings import BindingDict
+        if value is not None and not isinstance(value, Mapping):
+            raise TypeError(
+                "binding map field " + repr(astichi_bind_external(field_name_value))
+                + " expects a mapping or None"
+            )
+        if value is not None:
+            value = value if isinstance(value, BindingDict) else BindingDict(value)
+            for key, item in value.items():
+                if not isinstance(item, BindingBase):
+                    raise TypeError(
+                        "binding map field "
+                        + repr(astichi_bind_external(field_name_value))
+                        + " expects BindingBase values; key "
+                        + repr(key)
+                        + " has "
+                        + type(item).__name__
+                    )
+        astichi_pass(state, outer_bind=True).astichi_ref(external=state_slot)._ = value
+    ]$ {
+        keep _HAS_DEFAULT_FACTORY
+    }
+
+    resource OwnedMapDefaultFactoryEvalNoInit = template $[
+        field_name__astichi_arg__ = default_factory_name__astichi_arg__(
+            **astichi_hole(default_factory_args)
+        )
+        value = astichi_pass(field_name__astichi_arg__, outer_bind=True)
+        from collections.abc import Mapping
+        from yidl.runtime.bindings import BindingBase
+        from yidl.runtime.bindings import BindingDict
+        if value is not None and not isinstance(value, Mapping):
+            raise TypeError(
+                "binding map field " + repr(astichi_bind_external(field_name_value))
+                + " expects a mapping or None"
+            )
+        if value is not None:
+            value = value if isinstance(value, BindingDict) else BindingDict(value)
+            for key, item in value.items():
+                if not isinstance(item, BindingBase):
+                    raise TypeError(
+                        "binding map field "
+                        + repr(astichi_bind_external(field_name_value))
+                        + " expects BindingBase values; key "
+                        + repr(key)
+                        + " has "
+                        + type(item).__name__
+                    )
+        astichi_pass(state, outer_bind=True).astichi_ref(external=state_slot)._ = value
+    ]$
 
     resource OwnedApplyPreparedCommitBranch = template $[
         if astichi_pass(self, outer_bind=True).astichi_ref(external=staged_slot) is not VOID:
@@ -184,6 +369,15 @@ concept LifecycleOwned extends transient.LifecycleTransient {
         )
     ]$
 
+    resource BindingMapStateAssignment = template $[
+        astichi_pass(state, outer_bind=True).astichi_ref(external=state_slot)._ = (
+            _y_validate_binding_map_value(
+                astichi_bind_external(field_name),
+                astichi_pass(init_value_name__astichi_arg__, outer_bind=True),
+            )
+        )
+    ]$
+
     resource BindingProperty = template $[
         @property
         def property_getter_name__astichi_arg__(self):
@@ -193,6 +387,18 @@ concept LifecycleOwned extends transient.LifecycleTransient {
         def property_setter_name__astichi_arg__(self, value):
             self._y_state.astichi_ref(external=state_slot)._ = (
                 _y_validate_binding_value(astichi_bind_external(field_name), value)
+            )
+    ]$
+
+    resource BindingMapProperty = template $[
+        @property
+        def property_getter_name__astichi_arg__(self):
+            return self._y_state.astichi_ref(external=state_slot)
+
+        @property_setter_target_name__astichi_arg__.setter
+        def property_setter_name__astichi_arg__(self, value):
+            self._y_state.astichi_ref(external=state_slot)._ = (
+                _y_validate_binding_map_value(astichi_bind_external(field_name), value)
             )
     ]$
 
@@ -387,7 +593,51 @@ concept LifecycleOwned extends transient.LifecycleTransient {
         external state_slot = ValueSlotName
     }
 
+    contribution BindingMapInitAssignment = BindingMapStateAssignment {
+        as BindingInitAssignment
+        index FieldOrder
+        order FieldOrder
+
+        target state_init_body {
+            build /ClassDef
+        }
+
+        ident init_value_name = FieldName
+        external field_name = FieldName
+        external state_slot = ValueSlotName
+    }
+
+    contribution BindingMapDefaultAssignment = BindingMapStateAssignment {
+        as BindingInitAssignment
+        index FieldOrder
+        order FieldOrder
+
+        target state_init_body {
+            build /ClassDef
+        }
+
+        ident init_value_name = DefaultValueParamName
+        external field_name = FieldName
+        external state_slot = ValueSlotName
+    }
+
     contribution BindingFieldProperty = BindingProperty {
+        as BindingFieldProperty
+        index FieldOrder
+        order FieldOrder
+
+        target facade_properties {
+            build /ClassDef
+        }
+
+        ident property_getter_name = FieldName
+        ident property_setter_target_name = FieldName
+        ident property_setter_name = FieldName
+        external field_name = FieldName
+        external state_slot = ValueSlotName
+    }
+
+    contribution BindingMapFieldProperty = BindingMapProperty {
         as BindingFieldProperty
         index FieldOrder
         order FieldOrder
@@ -418,6 +668,34 @@ concept LifecycleOwned extends transient.LifecycleTransient {
     }
 
     contribution OwnedCurrentDefaultAssignment = OwnedScalarStateAssignment {
+        as OwnedCurrentInitAssignment
+        index FieldOrder
+        order FieldOrder
+
+        target state_init_body {
+            build /ClassDef
+        }
+
+        ident init_value_name = DefaultValueParamName
+        external field_name = FieldName
+        external state_slot = CurrentSlotName
+    }
+
+    contribution OwnedMapCurrentInitAssignment = OwnedMapStateAssignment {
+        as OwnedCurrentInitAssignment
+        index FieldOrder
+        order FieldOrder
+
+        target state_init_body {
+            build /ClassDef
+        }
+
+        ident init_value_name = FieldName
+        external field_name = FieldName
+        external state_slot = CurrentSlotName
+    }
+
+    contribution OwnedMapCurrentDefaultAssignment = OwnedMapStateAssignment {
         as OwnedCurrentInitAssignment
         index FieldOrder
         order FieldOrder
@@ -473,6 +751,24 @@ concept LifecycleOwned extends transient.LifecycleTransient {
         external tx_index = TxIndex
     }
 
+    contribution OwnedMapDefaultFacadeProperty = OwnedMapDefaultProperty {
+        as OwnedDefaultFacadeProperty
+        index FieldOrder
+        order FieldOrder
+
+        target default_facade_properties {
+            build /ClassDef
+        }
+
+        ident property_getter_name = FieldName
+        ident property_setter_target_name = FieldName
+        ident property_setter_name = FieldName
+        external current_slot = CurrentSlotName
+        external working_slot = WorkingSlotName
+        external field_name = FieldName
+        external tx_index = TxIndex
+    }
+
     contribution OwnedCurrentFacadeProperty = OwnedCurrentProperty {
         as OwnedCurrentFacadeProperty
         index FieldOrder
@@ -507,7 +803,38 @@ concept LifecycleOwned extends transient.LifecycleTransient {
         external tx_index = TxIndex
     }
 
+    contribution OwnedMapWorkingFacadeProperty = OwnedMapWorkingProperty {
+        as OwnedWorkingFacadeProperty
+        index FieldOrder
+        order FieldOrder
+
+        target working_facade_properties {
+            build /ClassDef
+        }
+
+        ident property_getter_name = FieldName
+        ident property_setter_target_name = FieldName
+        ident property_setter_name = FieldName
+        external current_slot = CurrentSlotName
+        external working_slot = WorkingSlotName
+        external field_name = FieldName
+        external tx_index = TxIndex
+    }
+
     contribution OwnedPrepareCommit = OwnedPrepareCommitBranch {
+        as OwnedPrepareCommit
+        index FieldOrder
+        order FieldOrder
+
+        target prepare_commit_fields_body {
+            build /ClassDef/PrepareCommitFields[TxIndex]
+        }
+
+        external working_slot = WorkingSlotName
+        external staged_slot = StagedSlotName
+    }
+
+    contribution OwnedMapPrepareCommit = OwnedMapPrepareCommitBranch {
         as OwnedPrepareCommit
         index FieldOrder
         order FieldOrder
@@ -545,6 +872,66 @@ concept LifecycleOwned extends transient.LifecycleTransient {
 
         external working_slot = WorkingSlotName
         external staged_slot = StagedSlotName
+    }
+
+    contribution OwnedScalarDefaultFactoryEvalInitContribution = OwnedScalarDefaultFactoryEvalInit {
+        as DefaultFactoryEval
+        index EvalOrder
+        order EvalStatementOrder
+
+        target state_init_body {
+            build /ClassDef
+        }
+
+        ident field_name = EvalFieldName
+        ident default_factory_name = EvalDefaultFactoryParamName
+        external field_name_value = EvalFieldName
+        external state_slot = EvalStateSlotName
+    }
+
+    contribution OwnedScalarDefaultFactoryEvalNoInitContribution = OwnedScalarDefaultFactoryEvalNoInit {
+        as DefaultFactoryEval
+        index EvalOrder
+        order EvalStatementOrder
+
+        target state_init_body {
+            build /ClassDef
+        }
+
+        ident field_name = EvalFieldName
+        ident default_factory_name = EvalDefaultFactoryParamName
+        external field_name_value = EvalFieldName
+        external state_slot = EvalStateSlotName
+    }
+
+    contribution OwnedMapDefaultFactoryEvalInitContribution = OwnedMapDefaultFactoryEvalInit {
+        as DefaultFactoryEval
+        index EvalOrder
+        order EvalStatementOrder
+
+        target state_init_body {
+            build /ClassDef
+        }
+
+        ident field_name = EvalFieldName
+        ident default_factory_name = EvalDefaultFactoryParamName
+        external field_name_value = EvalFieldName
+        external state_slot = EvalStateSlotName
+    }
+
+    contribution OwnedMapDefaultFactoryEvalNoInitContribution = OwnedMapDefaultFactoryEvalNoInit {
+        as DefaultFactoryEval
+        index EvalOrder
+        order EvalStatementOrder
+
+        target state_init_body {
+            build /ClassDef
+        }
+
+        ident field_name = EvalFieldName
+        ident default_factory_name = EvalDefaultFactoryParamName
+        external field_name_value = EvalFieldName
+        external state_slot = EvalStateSlotName
     }
 
     contribution BindingDefaultFactoryEvalInitContribution = BindingDefaultFactoryEvalInit {
@@ -625,26 +1012,49 @@ concept LifecycleOwned extends transient.LifecycleTransient {
 
     matcher BindingInitAssignmentContributions(field: BindingFields) -> contribution {
         rule init_field when Init == True
+                        and BindingShape == "scalar"
                         and HasDefaultFactory == False
                         -> BindingInitAssignment
         rule default_value when Init == False
+                           and BindingShape == "scalar"
                            and HasDefault == True
                            and HasDefaultFactory == False
                            -> BindingDefaultAssignment
+        rule map_init_field when Init == True
+                            and BindingShape == "map"
+                            and HasDefaultFactory == False
+                            -> BindingMapInitAssignment
+        rule map_default_value when Init == False
+                               and BindingShape == "map"
+                               and HasDefault == True
+                               and HasDefaultFactory == False
+                               -> BindingMapDefaultAssignment
     }
 
     matcher BindingPropertyContributions(field: BindingFields) -> contribution {
         default -> BindingFieldProperty
+        rule map_field when BindingShape == "map" -> BindingMapFieldProperty
     }
 
     matcher OwnedCurrentInitAssignmentContributions(field: OwnedFields) -> contribution {
         rule init_field when Init == True
+                        and BindingShape == "scalar"
                         and HasDefaultFactory == False
                         -> OwnedCurrentInitAssignment
         rule default_value when Init == False
+                           and BindingShape == "scalar"
                            and HasDefault == True
                            and HasDefaultFactory == False
                            -> OwnedCurrentDefaultAssignment
+        rule map_init_field when Init == True
+                            and BindingShape == "map"
+                            and HasDefaultFactory == False
+                            -> OwnedMapCurrentInitAssignment
+        rule map_default_value when Init == False
+                               and BindingShape == "map"
+                               and HasDefault == True
+                               and HasDefaultFactory == False
+                               -> OwnedMapCurrentDefaultAssignment
     }
 
     matcher OwnedWorkingInitAssignmentContributions(field: OwnedFields) -> contribution {
@@ -657,6 +1067,7 @@ concept LifecycleOwned extends transient.LifecycleTransient {
 
     matcher OwnedDefaultFacadePropertyContributions(field: IndexedOwnedFields) -> contribution {
         default -> OwnedDefaultFacadeProperty
+        rule map_field when BindingShape == "map" -> OwnedMapDefaultFacadeProperty
     }
 
     matcher OwnedCurrentFacadePropertyContributions(field: IndexedOwnedFields) -> contribution {
@@ -665,10 +1076,12 @@ concept LifecycleOwned extends transient.LifecycleTransient {
 
     matcher OwnedWorkingFacadePropertyContributions(field: IndexedOwnedFields) -> contribution {
         default -> OwnedWorkingFacadeProperty
+        rule map_field when BindingShape == "map" -> OwnedMapWorkingFacadeProperty
     }
 
     matcher OwnedPrepareCommitContributions(field: IndexedOwnedFields) -> contribution {
         default -> OwnedPrepareCommit
+        rule map_field when BindingShape == "map" -> OwnedMapPrepareCommit
     }
 
     matcher OwnedApplyPreparedCommitContributions(field: IndexedOwnedFields) -> contribution {
@@ -686,11 +1099,21 @@ concept LifecycleOwned extends transient.LifecycleTransient {
         rule binding_no_init when EvalFieldKind == "binding"
                              and EvalInit == False
                              -> BindingDefaultFactoryEvalNoInitContribution
-        rule owned_init when EvalFieldKind == "owned"
-                        and EvalInit == True
-                        -> StoredDefaultFactoryEvalInitContribution
-        rule owned_no_init when EvalFieldKind == "owned"
-                           and EvalInit == False
-                           -> StoredDefaultFactoryEvalNoInitContribution
+        rule owned_scalar_init when EvalFieldKind == "owned"
+                               and EvalBindingShape == "scalar"
+                               and EvalInit == True
+                               -> OwnedScalarDefaultFactoryEvalInitContribution
+        rule owned_scalar_no_init when EvalFieldKind == "owned"
+                                  and EvalBindingShape == "scalar"
+                                  and EvalInit == False
+                                  -> OwnedScalarDefaultFactoryEvalNoInitContribution
+        rule owned_map_init when EvalFieldKind == "owned"
+                            and EvalBindingShape == "map"
+                            and EvalInit == True
+                            -> OwnedMapDefaultFactoryEvalInitContribution
+        rule owned_map_no_init when EvalFieldKind == "owned"
+                               and EvalBindingShape == "map"
+                               and EvalInit == False
+                               -> OwnedMapDefaultFactoryEvalNoInitContribution
     }
 }

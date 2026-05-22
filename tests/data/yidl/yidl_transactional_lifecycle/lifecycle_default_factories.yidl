@@ -28,6 +28,7 @@ concept LifecycleDefaultFactories extends managed.LifecycleManaged {
     property EvalFieldId: str
     property EvalFieldName: str
     property EvalFieldKind: str = ""
+    property EvalBindingShape: str = "scalar"
     property EvalInit: bool = True
     property EvalStateSlotName: str = ""
     property EvalDefaultFactoryParamName: str = ""
@@ -60,6 +61,7 @@ concept LifecycleDefaultFactories extends managed.LifecycleManaged {
         EvalFieldId
         EvalFieldName
         EvalFieldKind
+        EvalBindingShape
         EvalInit
         EvalStateSlotName
         EvalDefaultFactoryParamName
@@ -270,6 +272,7 @@ concept LifecycleDefaultFactories extends managed.LifecycleManaged {
                         eval_field_id=field.field_id,
                         eval_field_name=field.field_name,
                         eval_field_kind=field.field_kind,
+                        eval_binding_shape=field.binding_shape,
                         eval_init=field.init,
                         eval_state_slot_name=state_slot,
                         eval_default_factory_param_name=(
