@@ -185,6 +185,11 @@ def test_lifecycle_decorator_transient_working_overlay_materializes_in_transacti
             default=None,
             working_default_factory=list,
         )
+        audit_buffer: list[int] | None = transient(
+            "audit",
+            default=None,
+            working_default_factory=list,
+        )
 
     generated = lifecycle(Scratch)
     item = generated()
@@ -201,6 +206,26 @@ def test_lifecycle_decorator_transient_working_overlay_materializes_in_transacti
         assert item.buffer == [1]
         assert item.working.buffer == [1]
         assert item.current.buffer is None
+
+    assert item.buffer is None
+    assert item.current.buffer is None
+
+    with pytest.raises(RuntimeError, match="abort"):
+        with item.begin(DEFAULT_TRANSACTION):
+            item.buffer = [2]
+            raise RuntimeError("abort")
+
+    assert item.buffer is None
+    assert item.current.buffer is None
+
+    with item.begin("audit"):
+        assert item.buffer is None
+        assert item.audit_buffer == []
+        item.audit_buffer.append(3)
+        assert item.current.audit_buffer is None
+
+    assert item.audit_buffer is None
+    assert item.current.audit_buffer is None
 
 
 def test_lifecycle_source_uses_direct_default_factory_calls() -> None:

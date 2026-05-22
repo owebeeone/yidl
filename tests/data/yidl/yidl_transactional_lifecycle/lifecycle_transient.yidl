@@ -124,6 +124,12 @@ concept LifecycleTransient extends default_factories.LifecycleDefaultFactories {
         keep VOID
     }
 
+    resource TransientClearWorkingBranch = template $[
+        astichi_pass(self, outer_bind=True).astichi_ref(external=working_slot)._ = VOID
+    ]$ {
+        keep VOID
+    }
+
     contribution TransientCurrentStateSlot = StateSlotEntry {
         as TransientCurrentStateSlot
         index FieldOrder
@@ -321,6 +327,30 @@ concept LifecycleTransient extends default_factories.LifecycleDefaultFactories {
         external tx_index = TxIndex
     }
 
+    contribution TransientApplyPreparedCommit = TransientClearWorkingBranch {
+        as TransientApplyPreparedCommit
+        index FieldOrder
+        order FieldOrder
+
+        target apply_prepared_commit_fields_body {
+            build /ClassDef/ApplyPreparedCommitFields[TxIndex]
+        }
+
+        external working_slot = WorkingSlotName
+    }
+
+    contribution TransientRollback = TransientClearWorkingBranch {
+        as TransientRollback
+        index FieldOrder
+        order FieldOrder
+
+        target rollback_fields_body {
+            build /ClassDef/RollbackFields[TxIndex]
+        }
+
+        external working_slot = WorkingSlotName
+    }
+
     matcher TransientCurrentStateSlotContributions(field: TransientFields) -> contribution {
         default -> TransientCurrentStateSlot
     }
@@ -376,6 +406,14 @@ concept LifecycleTransient extends default_factories.LifecycleDefaultFactories {
         default -> TransientWorkingFacadeProperty
         rule working_default_factory when HasWorkingDefaultFactory == True
                                      -> TransientWorkingWorkingDefaultFactoryProperty
+    }
+
+    matcher TransientApplyPreparedCommitContributions(field: IndexedTransientFields) -> contribution {
+        default -> TransientApplyPreparedCommit
+    }
+
+    matcher TransientRollbackContributions(field: IndexedTransientFields) -> contribution {
+        default -> TransientRollback
     }
 
     matcher DefaultFactoryEvalContributions(step: DefaultFactoryEvaluationSteps) -> contribution {

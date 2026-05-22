@@ -459,10 +459,20 @@ concept LifecycleBase extends transient.LifecycleTransient {
             where FieldOwner == ClassId
             using ManagedApplyPreparedCommitContributions
 
+        apply transient_apply_prepared_commit
+            from field: IndexedTransientFields
+            where FieldOwner == ClassId
+            using TransientApplyPreparedCommitContributions
+
         apply managed_rollback
             from field: IndexedTransactionalFields
             where FieldOwner == ClassId
             using ManagedRollbackContributions
+
+        apply transient_rollback
+            from field: IndexedTransientFields
+            where FieldOwner == ClassId
+            using TransientRollbackContributions
     }
 
     assembly LifecycleModule = ModuleProduction
