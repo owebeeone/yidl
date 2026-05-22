@@ -14,12 +14,14 @@ from yidl.runtime.lifecycle_markers import _HAS_DEFAULT_FACTORY
 from yidl.runtime.lifecycle_markers import after_commit
 from yidl.runtime.lifecycle_markers import after_rollback
 from yidl.runtime.lifecycle_markers import before_commit
+from yidl.runtime.lifecycle_markers import binding
 from yidl.runtime.lifecycle_markers import classvar
 from yidl.runtime.lifecycle_markers import commit_order_key
 from yidl.runtime.lifecycle_markers import field
 from yidl.runtime.lifecycle_markers import initvar
 from yidl.runtime.lifecycle_markers import managed
 from yidl.runtime.lifecycle_markers import normalize_marker
+from yidl.runtime.lifecycle_markers import owned
 from yidl.runtime.lifecycle_markers import transient
 from yidl.runtime.lifecycle_markers import validate_commit
 from yidl.runtime.lifecycle_harvester import HarvestedLifecycle
@@ -117,6 +119,10 @@ def _field_record_type(generated: ModuleType, kind: str) -> type[object]:
         return _required_record_type(generated, "ClassVarField", kind)
     if kind == "managed":
         return _required_record_type(generated, "ManagedField", kind)
+    if kind == "owned":
+        return _required_record_type(generated, "OwnedField", kind)
+    if kind == "binding":
+        return _required_record_type(generated, "BindingField", kind)
     if kind == "transient":
         return _required_record_type(generated, "TransientField", kind)
     raise LifecycleDefinitionError(f"unsupported lifecycle field kind: {kind!r}")
@@ -242,6 +248,7 @@ __all__ = [
     "after_commit",
     "after_rollback",
     "before_commit",
+    "binding",
     "classvar",
     "commit_order_key",
     "field",
@@ -251,6 +258,7 @@ __all__ = [
     "lifecycle",
     "managed",
     "normalize_marker",
+    "owned",
     "transient",
     "validate_commit",
 ]

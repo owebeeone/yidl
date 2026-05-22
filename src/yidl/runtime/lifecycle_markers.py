@@ -133,6 +133,43 @@ def managed(
     )
 
 
+def owned(
+    tx_key: object = DEFAULT_TRANSACTION,
+    *,
+    default: object = MISSING,
+    default_factory: object = MISSING,
+    init: bool = True,
+) -> LifecycleMarker:
+    """Declare an owned retained BindingBase resource field."""
+
+    return _marker(
+        kind="owned",
+        default=default,
+        default_factory=default_factory,
+        working_default_factory=MISSING,
+        init=init,
+        tx_group=tx_key,
+    )
+
+
+def binding(
+    *,
+    default: object = MISSING,
+    default_factory: object = MISSING,
+    init: bool = True,
+) -> LifecycleMarker:
+    """Declare a plain stored BindingBase resource field."""
+
+    return _marker(
+        kind="binding",
+        default=default,
+        default_factory=default_factory,
+        working_default_factory=MISSING,
+        init=init,
+        tx_group=MISSING,
+    )
+
+
 def transient(
     tx_key: object = DEFAULT_TRANSACTION,
     *,
@@ -241,7 +278,8 @@ def normalize_marker(
         working_default_factory=marker.working_default_factory,
         tx_group=(
             DEFAULT_TRANSACTION
-            if marker.kind in {"managed", "transient"} and marker.tx_group is MISSING
+            if marker.kind in {"managed", "owned", "transient"}
+            and marker.tx_group is MISSING
             else marker.tx_group
         ),
         has_freeze=marker.freeze is not MISSING,

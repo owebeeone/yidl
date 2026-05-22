@@ -5,11 +5,13 @@ import pytest
 from yidl.runtime.lifecycle import LifecycleDefinitionError
 from yidl.runtime.lifecycle import MISSING
 from yidl.runtime.lifecycle import _HAS_DEFAULT_FACTORY
+from yidl.runtime.lifecycle import binding
 from yidl.runtime.lifecycle import classvar
 from yidl.runtime.lifecycle import field
 from yidl.runtime.lifecycle import harvest_lifecycle_definition
 from yidl.runtime.lifecycle import initvar
 from yidl.runtime.lifecycle import managed
+from yidl.runtime.lifecycle import owned
 from yidl.runtime.lifecycle import normalize_marker
 from yidl.runtime.lifecycle import transient
 from yidl.runtime.transaction_yidl import DEFAULT_TRANSACTION
@@ -142,6 +144,58 @@ def test_transient_marker_accepts_transaction_key_and_working_factory() -> None:
     assert decl.default is None
     assert decl.has_working_default_factory is True
     assert decl.working_default_factory is working_factory
+
+
+def test_owned_marker_defaults_to_default_transaction_key() -> None:
+    decl = normalize_marker("child", object, owned(default=None))
+
+    assert decl.kind == "owned"
+    assert decl.tx_group == DEFAULT_TRANSACTION
+    assert decl.has_default is True
+    assert decl.default is None
+
+
+def test_owned_marker_accepts_transaction_key_and_factory() -> None:
+    def factory() -> object:
+        return object()
+
+    decl = normalize_marker("child", object, owned("audit", default_factory=factory))
+
+    assert decl.kind == "owned"
+    assert decl.tx_group == "audit"
+    assert decl.has_default is False
+    assert decl.has_default_factory is True
+    assert decl.default_factory is factory
+
+
+def test_binding_marker_normalizes_as_plain_binding_resource() -> None:
+    decl = normalize_marker("handle", object, binding(default=None))
+
+    assert decl.kind == "binding"
+    assert decl.tx_group is MISSING
+    assert decl.has_default is True
+    assert decl.default is None
+
+
+def test_harvester_emits_owned_and_binding_field_facts() -> None:
+    class Example:
+        child: object = owned("audit", default=None)
+        handle: object = binding(default=None)
+
+    harvested = harvest_lifecycle_definition(Example)
+    child = next(fact for fact in harvested.field_facts if fact["field_name"] == "child")
+    handle = next(
+        fact for fact in harvested.field_facts if fact["field_name"] == "handle"
+    )
+
+    assert child["field_kind"] == "owned"
+    assert child["tx_group_key"] == "audit"
+    assert child["current_slot_name"] == "_y_child_current"
+    assert child["working_slot_name"] == "_y_child_working"
+    assert handle["field_kind"] == "binding"
+    assert handle["value_slot_name"] == "_y_handle_value"
+    assert harvested.tx_groups == (DEFAULT_TRANSACTION, "audit")
+    assert harvested.class_fact["lifecycle_field_names"] == ("child", "handle")
 
 
 def test_harvester_emits_transient_field_facts() -> None:

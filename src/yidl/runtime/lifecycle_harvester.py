@@ -106,7 +106,7 @@ def harvest_lifecycle_definition(cls: type[object]) -> HarvestedLifecycle:
             order = int(existing["field_order"])
         fact = _field_fact(class_id, class_name, decl, order)
         field_facts_by_name[name] = MappingProxyType(fact)
-        if decl.kind in {"managed", "transient"}:
+        if decl.kind in {"managed", "owned", "transient"}:
             tx_groups.add(decl.tx_group)
 
     field_facts = tuple(
@@ -118,12 +118,10 @@ def harvest_lifecycle_definition(cls: type[object]) -> HarvestedLifecycle:
     class_fact["lifecycle_field_names"] = tuple(
         str(fact["field_name"])
         for fact in field_facts
-        if fact["field_kind"] in {"field", "managed", "transient"}
+        if fact["field_kind"] in {"binding", "field", "managed", "owned", "transient"}
     )
     for fact in field_facts:
-        if fact["field_kind"] == "managed":
-            tx_groups.add(fact["tx_group_key"])
-        if fact["field_kind"] == "transient":
+        if fact["field_kind"] in {"managed", "owned", "transient"}:
             tx_groups.add(fact["tx_group_key"])
         if fact["has_default"]:
             build_kwargs[str(fact["default_value_param_name"])] = fact["default_value"]
@@ -253,21 +251,24 @@ def _field_fact(
         "thaw_param_name": "",
         "has_optional_none": _has_optional_none(decl.annotation),
     }
-    if kind == "field":
+    if kind in {"binding", "field"}:
         fact["value_slot_name"] = f"_y_{name}_value"
-    elif kind == "managed":
+    elif kind in {"managed", "owned"}:
         fact["tx_group_key"] = decl.tx_group
         fact["current_slot_name"] = f"_y_{name}_current"
         fact["working_slot_name"] = f"_y_{name}_working"
-        fact["staged_slot_name"] = f"_y_{name}_staged"
-        fact["has_freeze"] = decl.has_freeze
-        fact["freeze"] = decl.freeze
-        fact["freeze_param_name"] = (
-            f"_{class_name}_{name}_freeze" if decl.has_freeze else ""
-        )
-        fact["has_thaw"] = decl.has_thaw
-        fact["thaw"] = decl.thaw
-        fact["thaw_param_name"] = f"_{class_name}_{name}_thaw" if decl.has_thaw else ""
+        if kind == "managed":
+            fact["staged_slot_name"] = f"_y_{name}_staged"
+            fact["has_freeze"] = decl.has_freeze
+            fact["freeze"] = decl.freeze
+            fact["freeze_param_name"] = (
+                f"_{class_name}_{name}_freeze" if decl.has_freeze else ""
+            )
+            fact["has_thaw"] = decl.has_thaw
+            fact["thaw"] = decl.thaw
+            fact["thaw_param_name"] = (
+                f"_{class_name}_{name}_thaw" if decl.has_thaw else ""
+            )
     elif kind == "transient":
         fact["tx_group_key"] = decl.tx_group
         fact["current_slot_name"] = f"_y_{name}_current"
@@ -320,12 +321,13 @@ def _remap_inherited_field_fact(
             "thaw_param_name": f"_{class_name}_{name}_thaw" if has_thaw else "",
         },
     )
-    if kind == "field":
+    if kind in {"binding", "field"}:
         fact["value_slot_name"] = f"_y_{name}_value"
-    elif kind == "managed":
+    elif kind in {"managed", "owned"}:
         fact["current_slot_name"] = f"_y_{name}_current"
         fact["working_slot_name"] = f"_y_{name}_working"
-        fact["staged_slot_name"] = f"_y_{name}_staged"
+        if kind == "managed":
+            fact["staged_slot_name"] = f"_y_{name}_staged"
     elif kind == "transient":
         fact["current_slot_name"] = f"_y_{name}_current"
         fact["working_slot_name"] = f"_y_{name}_working"
@@ -587,11 +589,11 @@ def _validate_inherited_definition(
             f"{cls.__name__}: inherited transaction group indexes contain duplicates",
         )
     for field_fact in _definition_field_facts(definition):
-        if field_fact["field_kind"] != "managed":
+        if field_fact["field_kind"] not in {"managed", "owned"}:
             continue
         if field_fact["tx_group_key"] not in tx_groups:
             raise LifecycleDefinitionError(
-                f"{cls.__name__}: inherited managed field references an unknown "
+                f"{cls.__name__}: inherited transactional field references an unknown "
                 "transaction group",
             )
     for method_fact in _definition_transaction_method_facts(definition):
