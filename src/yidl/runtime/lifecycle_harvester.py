@@ -106,7 +106,7 @@ def harvest_lifecycle_definition(cls: type[object]) -> HarvestedLifecycle:
             order = int(existing["field_order"])
         fact = _field_fact(class_id, class_name, decl, order)
         field_facts_by_name[name] = MappingProxyType(fact)
-        if decl.kind == "managed":
+        if decl.kind in {"managed", "transient"}:
             tx_groups.add(decl.tx_group)
 
     field_facts = tuple(
@@ -118,16 +118,22 @@ def harvest_lifecycle_definition(cls: type[object]) -> HarvestedLifecycle:
     class_fact["lifecycle_field_names"] = tuple(
         str(fact["field_name"])
         for fact in field_facts
-        if fact["field_kind"] in {"field", "managed"}
+        if fact["field_kind"] in {"field", "managed", "transient"}
     )
     for fact in field_facts:
         if fact["field_kind"] == "managed":
+            tx_groups.add(fact["tx_group_key"])
+        if fact["field_kind"] == "transient":
             tx_groups.add(fact["tx_group_key"])
         if fact["has_default"]:
             build_kwargs[str(fact["default_value_param_name"])] = fact["default_value"]
         if fact["has_default_factory"]:
             build_kwargs[str(fact["default_factory_param_name"])] = fact[
                 "default_factory"
+            ]
+        if fact.get("has_working_default_factory"):
+            build_kwargs[str(fact["working_default_factory_param_name"])] = fact[
+                "working_default_factory"
             ]
         if fact["has_freeze"]:
             build_kwargs[str(fact["freeze_param_name"])] = fact["freeze"]
@@ -223,6 +229,17 @@ def _field_fact(
         "default_factory_param_name": (
             f"_{class_name}_{name}_default_factory" if decl.has_default_factory else ""
         ),
+        "has_working_default_factory": decl.has_working_default_factory,
+        "working_default_factory": decl.working_default_factory,
+        "working_default_factory_param_names": _working_default_factory_param_names(
+            class_name,
+            decl,
+        ),
+        "working_default_factory_param_name": (
+            f"_{class_name}_{name}_working_default_factory"
+            if decl.has_working_default_factory
+            else ""
+        ),
         "tx_group_key": None,
         "value_slot_name": "",
         "current_slot_name": "",
@@ -250,9 +267,11 @@ def _field_fact(
         )
         fact["has_thaw"] = decl.has_thaw
         fact["thaw"] = decl.thaw
-        fact["thaw_param_name"] = (
-            f"_{class_name}_{name}_thaw" if decl.has_thaw else ""
-        )
+        fact["thaw_param_name"] = f"_{class_name}_{name}_thaw" if decl.has_thaw else ""
+    elif kind == "transient":
+        fact["tx_group_key"] = decl.tx_group
+        fact["current_slot_name"] = f"_y_{name}_current"
+        fact["working_slot_name"] = f"_y_{name}_working"
     return fact
 
 
@@ -272,8 +291,12 @@ def _remap_inherited_field_fact(
     fact.setdefault("has_thaw", False)
     fact.setdefault("thaw", MISSING)
     fact.setdefault("has_optional_none", _has_optional_none(fact.get("annotation")))
+    fact.setdefault("has_working_default_factory", False)
+    fact.setdefault("working_default_factory", MISSING)
+    fact.setdefault("working_default_factory_param_names", ())
     has_freeze = bool(fact["has_freeze"])
     has_thaw = bool(fact["has_thaw"])
+    has_working_default_factory = bool(fact["has_working_default_factory"])
     fact.update(
         {
             "field_id": f"{class_id}.{name}",
@@ -283,6 +306,11 @@ def _remap_inherited_field_fact(
             ),
             "default_factory_param_name": (
                 f"_{class_name}_{name}_default_factory" if has_default_factory else ""
+            ),
+            "working_default_factory_param_name": (
+                f"_{class_name}_{name}_working_default_factory"
+                if has_working_default_factory
+                else ""
             ),
             "value_slot_name": "",
             "current_slot_name": "",
@@ -298,6 +326,9 @@ def _remap_inherited_field_fact(
         fact["current_slot_name"] = f"_y_{name}_current"
         fact["working_slot_name"] = f"_y_{name}_working"
         fact["staged_slot_name"] = f"_y_{name}_staged"
+    elif kind == "transient":
+        fact["current_slot_name"] = f"_y_{name}_current"
+        fact["working_slot_name"] = f"_y_{name}_working"
     return fact
 
 
@@ -404,6 +435,32 @@ def _default_factory_param_names(
     return tuple(names)
 
 
+def _working_default_factory_param_names(
+    class_name: str,
+    decl: FieldDecl,
+) -> tuple[str, ...]:
+    if not decl.has_working_default_factory:
+        return ()
+    try:
+        signature = inspect.signature(decl.working_default_factory)
+    except (TypeError, ValueError):
+        _warn_unintrospectable_working_default_factory(class_name, decl)
+        return ()
+    names: list[str] = []
+    for parameter in signature.parameters.values():
+        if parameter.kind in (
+            inspect.Parameter.VAR_POSITIONAL,
+            inspect.Parameter.VAR_KEYWORD,
+        ):
+            _raise_unbindable_working_default_factory_param(class_name, decl)
+        if parameter.kind is inspect.Parameter.POSITIONAL_ONLY:
+            if parameter.default is inspect.Parameter.empty:
+                _raise_unbindable_working_default_factory_param(class_name, decl)
+            continue
+        names.append(parameter.name)
+    return tuple(names)
+
+
 def _warn_unintrospectable_default_factory(
     class_name: str,
     decl: FieldDecl,
@@ -418,12 +475,36 @@ def _warn_unintrospectable_default_factory(
     )
 
 
+def _warn_unintrospectable_working_default_factory(
+    class_name: str,
+    decl: FieldDecl,
+) -> None:
+    warnings.warn(
+        (
+            f"{class_name}.{decl.name}: working_default_factory signature could "
+            "not be introspected; treating it as zero-argument"
+        ),
+        LifecycleDefinitionWarning,
+        stacklevel=4,
+    )
+
+
 def _raise_unbindable_default_factory_param(
     class_name: str,
     decl: FieldDecl,
 ) -> None:
     raise LifecycleDefinitionError(
         f"{class_name}.{decl.name}: default_factory parameters must be "
+        "bindable by name",
+    )
+
+
+def _raise_unbindable_working_default_factory_param(
+    class_name: str,
+    decl: FieldDecl,
+) -> None:
+    raise LifecycleDefinitionError(
+        f"{class_name}.{decl.name}: working_default_factory parameters must be "
         "bindable by name",
     )
 

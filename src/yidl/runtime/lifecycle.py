@@ -20,6 +20,7 @@ from yidl.runtime.lifecycle_markers import field
 from yidl.runtime.lifecycle_markers import initvar
 from yidl.runtime.lifecycle_markers import managed
 from yidl.runtime.lifecycle_markers import normalize_marker
+from yidl.runtime.lifecycle_markers import transient
 from yidl.runtime.lifecycle_markers import validate_commit
 from yidl.runtime.lifecycle_harvester import HarvestedLifecycle
 from yidl.runtime.lifecycle_harvester import harvest_lifecycle_definition
@@ -248,5 +249,6 @@ __all__ = [
     "lifecycle",
     "managed",
     "normalize_marker",
+    "transient",
     "validate_commit",
 ]

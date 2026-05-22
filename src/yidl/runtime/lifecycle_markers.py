@@ -5,7 +5,6 @@ from dataclasses import dataclass
 from yidl.runtime.transaction_yidl import DEFAULT_TRANSACTION
 from yidl.sentinel_maker import sentinels
 
-
 MISSING = sentinels.MISSING
 _HAS_DEFAULT_FACTORY = sentinels.HAS_DEFAULT_FACTORY
 _TRANSACTION_METHOD_MARKERS_ATTR = "__yidl_lifecycle_transaction_method_markers__"
@@ -26,6 +25,7 @@ class LifecycleMarker:
     kind: str
     default: object = MISSING
     default_factory: object = MISSING
+    working_default_factory: object = MISSING
     init: bool = True
     tx_group: object = MISSING
     freeze: object = MISSING
@@ -44,6 +44,8 @@ class FieldDecl:
     default: object
     has_default_factory: bool
     default_factory: object
+    has_working_default_factory: bool
+    working_default_factory: object
     tx_group: object
     has_freeze: bool = False
     freeze: object = MISSING
@@ -71,6 +73,7 @@ def field(
         kind="field",
         default=default,
         default_factory=default_factory,
+        working_default_factory=MISSING,
         init=init,
         tx_group=MISSING,
     )
@@ -88,6 +91,7 @@ def initvar(
         kind="initvar",
         default=default,
         default_factory=default_factory,
+        working_default_factory=MISSING,
         init=init,
         tx_group=MISSING,
     )
@@ -100,6 +104,7 @@ def classvar(*, default: object = MISSING) -> LifecycleMarker:
         kind="classvar",
         default=default,
         default_factory=MISSING,
+        working_default_factory=MISSING,
         init=False,
         tx_group=MISSING,
     )
@@ -120,10 +125,31 @@ def managed(
         kind="managed",
         default=default,
         default_factory=default_factory,
+        working_default_factory=MISSING,
         init=init,
         tx_group=tx_group,
         freeze=freeze,
         thaw=thaw,
+    )
+
+
+def transient(
+    tx_key: object = DEFAULT_TRANSACTION,
+    *,
+    default: object = MISSING,
+    default_factory: object = MISSING,
+    working_default_factory: object = MISSING,
+    init: bool = True,
+) -> LifecycleMarker:
+    """Declare a transient lifecycle field with a tx-local working overlay."""
+
+    return _marker(
+        kind="transient",
+        default=default,
+        default_factory=default_factory,
+        working_default_factory=working_default_factory,
+        init=init,
+        tx_group=tx_key,
     )
 
 
@@ -180,7 +206,9 @@ def transaction_method_markers(value: object) -> tuple[TransactionMethodMarker, 
         raise LifecycleDefinitionError("transaction method marker metadata is invalid")
     for marker in markers:
         if not isinstance(marker, TransactionMethodMarker):
-            raise LifecycleDefinitionError("transaction method marker metadata is invalid")
+            raise LifecycleDefinitionError(
+                "transaction method marker metadata is invalid"
+            )
     return markers
 
 
@@ -195,7 +223,9 @@ def normalize_marker(
 
     if not isinstance(marker, LifecycleMarker):
         raise LifecycleDefinitionError(
-            _message(context, name, f"expected lifecycle marker, got {type(marker).__name__}"),
+            _message(
+                context, name, f"expected lifecycle marker, got {type(marker).__name__}"
+            ),
         )
     _validate_name(name, context=context)
     return FieldDecl(
@@ -207,9 +237,11 @@ def normalize_marker(
         default=marker.default,
         has_default_factory=marker.default_factory is not MISSING,
         default_factory=marker.default_factory,
+        has_working_default_factory=marker.working_default_factory is not MISSING,
+        working_default_factory=marker.working_default_factory,
         tx_group=(
             DEFAULT_TRANSACTION
-            if marker.kind == "managed" and marker.tx_group is MISSING
+            if marker.kind in {"managed", "transient"} and marker.tx_group is MISSING
             else marker.tx_group
         ),
         has_freeze=marker.freeze is not MISSING,
@@ -224,27 +256,39 @@ def _marker(
     kind: str,
     default: object,
     default_factory: object,
+    working_default_factory: object,
     init: bool,
     tx_group: object,
     freeze: object = MISSING,
     thaw: object = MISSING,
 ) -> LifecycleMarker:
     if default is not MISSING and default_factory is not MISSING:
-        raise LifecycleDefinitionError("cannot specify both default and default_factory")
+        raise LifecycleDefinitionError(
+            "cannot specify both default and default_factory"
+        )
     if not isinstance(init, bool):
         raise LifecycleDefinitionError("init must be a bool")
     if default_factory is not MISSING and not callable(default_factory):
         raise LifecycleDefinitionError("default_factory must be callable")
+    if working_default_factory is not MISSING and not callable(working_default_factory):
+        raise LifecycleDefinitionError("working_default_factory must be callable")
+    if working_default_factory is not MISSING and kind != "transient":
+        raise LifecycleDefinitionError(
+            "working_default_factory is only valid for transient fields",
+        )
     if freeze is not MISSING and not callable(freeze):
         raise LifecycleDefinitionError("freeze must be callable")
     if thaw is not MISSING and not callable(thaw):
         raise LifecycleDefinitionError("thaw must be callable")
     if kind != "managed" and (freeze is not MISSING or thaw is not MISSING):
-        raise LifecycleDefinitionError("freeze and thaw are only valid for managed fields")
+        raise LifecycleDefinitionError(
+            "freeze and thaw are only valid for managed fields"
+        )
     return LifecycleMarker(
         kind=kind,
         default=default,
         default_factory=default_factory,
+        working_default_factory=working_default_factory,
         init=init,
         tx_group=tx_group,
         freeze=freeze,
@@ -268,9 +312,7 @@ def _transaction_method_marker(
                 "transaction method marker requires an explicit transaction group",
             )
     else:
-        selected_tx_group = (
-            DEFAULT_TRANSACTION if tx_group is MISSING else tx_group
-        )
+        selected_tx_group = DEFAULT_TRANSACTION if tx_group is MISSING else tx_group
 
     def decorate(target: object) -> object:
         if not callable(target):
@@ -290,10 +332,10 @@ def _transaction_method_marker(
 
 def _validate_name(name: str, *, context: str | None) -> None:
     if not name:
-        raise LifecycleDefinitionError(_message(context, name, "field name is required"))
-    if name.startswith("_y_") or (
-        name.startswith("__yidl_") and name.endswith("__")
-    ):
+        raise LifecycleDefinitionError(
+            _message(context, name, "field name is required")
+        )
+    if name.startswith("_y_") or (name.startswith("__yidl_") and name.endswith("__")):
         raise LifecycleDefinitionError(
             _message(context, name, "field name uses a reserved lifecycle prefix"),
         )

@@ -7,9 +7,11 @@ from yidl.runtime.lifecycle import MISSING
 from yidl.runtime.lifecycle import _HAS_DEFAULT_FACTORY
 from yidl.runtime.lifecycle import classvar
 from yidl.runtime.lifecycle import field
+from yidl.runtime.lifecycle import harvest_lifecycle_definition
 from yidl.runtime.lifecycle import initvar
 from yidl.runtime.lifecycle import managed
 from yidl.runtime.lifecycle import normalize_marker
+from yidl.runtime.lifecycle import transient
 from yidl.runtime.transaction_yidl import DEFAULT_TRANSACTION
 
 
@@ -111,14 +113,88 @@ def test_managed_marker_preserves_freeze_and_thaw_callables() -> None:
     assert decl.has_thaw is True
 
 
+def test_transient_marker_defaults_to_default_transaction_key() -> None:
+    decl = normalize_marker("scratch", list[int], transient(default_factory=list))
+
+    assert decl.kind == "transient"
+    assert decl.tx_group == DEFAULT_TRANSACTION
+    assert decl.has_default_factory is True
+    assert decl.default_factory is list
+    assert decl.has_working_default_factory is False
+    assert decl.working_default_factory is MISSING
+
+
+def test_transient_marker_accepts_transaction_key_and_working_factory() -> None:
+    def working_factory() -> list[int]:
+        return []
+
+    decl = normalize_marker(
+        "scratch",
+        list[int],
+        transient(
+            tx_key="audit", default=None, working_default_factory=working_factory
+        ),
+    )
+
+    assert decl.kind == "transient"
+    assert decl.tx_group == "audit"
+    assert decl.has_default is True
+    assert decl.default is None
+    assert decl.has_working_default_factory is True
+    assert decl.working_default_factory is working_factory
+
+
+def test_harvester_emits_transient_field_facts() -> None:
+    def working_factory(seed: int) -> list[int]:
+        return [seed]
+
+    class Example:
+        seed: int = initvar(default=7)
+        scratch: list[int] | None = transient(
+            tx_key="audit",
+            default=None,
+            working_default_factory=working_factory,
+        )
+
+    harvested = harvest_lifecycle_definition(Example)
+    scratch = next(
+        fact for fact in harvested.field_facts if fact["field_name"] == "scratch"
+    )
+
+    assert scratch["field_kind"] == "transient"
+    assert scratch["tx_group_key"] == "audit"
+    assert scratch["current_slot_name"] == "_y_scratch_current"
+    assert scratch["working_slot_name"] == "_y_scratch_working"
+    assert scratch["has_working_default_factory"] is True
+    assert scratch["working_default_factory"] is working_factory
+    assert scratch["working_default_factory_param_names"] == ("seed",)
+    assert (
+        harvested.build_kwargs["_Example_scratch_working_default_factory"]
+        is working_factory
+    )
+    assert harvested.tx_groups == (DEFAULT_TRANSACTION, "audit")
+
+
 def test_marker_rejects_default_and_default_factory() -> None:
-    with pytest.raises(LifecycleDefinitionError, match="both default and default_factory"):
+    with pytest.raises(
+        LifecycleDefinitionError, match="both default and default_factory"
+    ):
         field(default=1, default_factory=int)
 
 
 def test_marker_rejects_non_callable_default_factory() -> None:
-    with pytest.raises(LifecycleDefinitionError, match="default_factory must be callable"):
+    with pytest.raises(
+        LifecycleDefinitionError, match="default_factory must be callable"
+    ):
         managed(default_factory=1)
+
+
+def test_transient_marker_rejects_non_callable_working_default_factory() -> None:
+    with pytest.raises(
+        LifecycleDefinitionError,
+        match="working_default_factory must be callable",
+    ):
+        transient(working_default_factory=1)
 
 
 def test_managed_marker_rejects_non_callable_conversions() -> None:
