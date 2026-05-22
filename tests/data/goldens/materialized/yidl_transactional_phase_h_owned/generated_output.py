@@ -336,28 +336,17 @@ def build_lifecycle_class(decorated_cls, *, _Owner_lifecycle_definition, _Owner_
             state._y_default_ref = weakref.ref(self)
             state._y_current_ref = None
             state._y_working_ref = None
-            value = child
-            if value is not None and (not isinstance(value, BindingBase)):
-                raise TypeError('binding field ' + repr('child') + ' expects BindingBase or None')
+            value = _y_validate_binding_value('child', child)
             state._y_child_current = value
             state._y_child_working = VOID
             state._y_child_staged = VOID
             state._y_children_working = VOID
             state._y_children_staged = VOID
-            value__astichi_scoped_2 = handle
-            if value__astichi_scoped_2 is not None and (not isinstance(value__astichi_scoped_2, BindingBase)):
-                raise TypeError('binding field ' + repr('handle') + ' expects BindingBase or None')
+            value__astichi_scoped_2 = _y_validate_binding_value('handle', handle)
             state._y_handle_value = value__astichi_scoped_2
             if children is _HAS_DEFAULT_FACTORY:
                 children = _Owner_children_default_factory()
-            value__astichi_scoped_3 = children
-            if value__astichi_scoped_3 is not None and (not isinstance(value__astichi_scoped_3, Mapping)):
-                raise TypeError('binding map field ' + repr('children') + ' expects a mapping or None')
-            if value__astichi_scoped_3 is not None:
-                value__astichi_scoped_3 = value__astichi_scoped_3 if isinstance(value__astichi_scoped_3, BindingDict) else BindingDict(value__astichi_scoped_3)
-                for key, item in value__astichi_scoped_3.items():
-                    if not isinstance(item, BindingBase):
-                        raise TypeError('binding map field ' + repr('children') + ' expects BindingBase values; key ' + repr(key) + ' has ' + type(item).__name__)
+            value__astichi_scoped_3 = _y_validate_binding_map_value('children', children)
             state._y_children_current = value__astichi_scoped_3
             if handles is _HAS_DEFAULT_FACTORY:
                 handles = _Owner_handles_default_factory()

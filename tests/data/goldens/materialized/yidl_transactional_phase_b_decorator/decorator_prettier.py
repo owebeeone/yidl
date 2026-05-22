@@ -7808,14 +7808,10 @@ def _y_validate_binding_map_value(field_name, value):
     "OwnedScalarStateAssignment": astichi_template(
         from_astichi_code(
             """\
-astichi_pyimport(module=yidl.runtime.bindings, names=(BindingBase,))
-
-value = astichi_pass(init_value_name__astichi_arg__, outer_bind=True)
-if value is not None and not isinstance(value, BindingBase):
-    raise TypeError(
-        "binding field " + repr(astichi_bind_external(field_name))
-        + " expects BindingBase or None"
-    )
+value = astichi_pass(_y_validate_binding_value, outer_bind=True)(
+    astichi_bind_external(field_name),
+    astichi_pass(init_value_name__astichi_arg__, outer_bind=True),
+)
 astichi_pass(state, outer_bind=True).astichi_ref(external=state_slot)._ = value""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_owned.yidl",
             line_number=118,
@@ -7824,37 +7820,20 @@ astichi_pass(state, outer_bind=True).astichi_ref(external=state_slot)._ = value"
     "OwnedMapStateAssignment": astichi_template(
         from_astichi_code(
             """\
-astichi_pyimport(module=collections.abc, names=(Mapping,))
-astichi_pyimport(module=yidl.runtime.bindings, names=(BindingBase, BindingDict,))
-
-value = astichi_pass(init_value_name__astichi_arg__, outer_bind=True)
-if value is not None and not isinstance(value, Mapping):
-    raise TypeError(
-        "binding map field " + repr(astichi_bind_external(field_name))
-        + " expects a mapping or None"
-    )
-if value is not None:
-    value = value if isinstance(value, BindingDict) else BindingDict(value)
-    for key, item in value.items():
-        if not isinstance(item, BindingBase):
-            raise TypeError(
-                "binding map field "
-                + repr(astichi_bind_external(field_name))
-                + " expects BindingBase values; key "
-                + repr(key)
-                + " has "
-                + type(item).__name__
-            )
+value = astichi_pass(_y_validate_binding_map_value, outer_bind=True)(
+    astichi_bind_external(field_name),
+    astichi_pass(init_value_name__astichi_arg__, outer_bind=True),
+)
 astichi_pass(state, outer_bind=True).astichi_ref(external=state_slot)._ = value""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_owned.yidl",
-            line_number=130,
+            line_number=126,
         )
     ),
     "OwnedEmptyStateAssignment": astichi_template(
         from_astichi_code(
             "astichi_pass(state, outer_bind=True).astichi_ref(external=state_slot)._ = VOID",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_owned.yidl",
-            line_number=155,
+            line_number=134,
             keep_names=("VOID",),
         )
     ),
@@ -7873,10 +7852,13 @@ def property_setter_name__astichi_arg__(self, value):
     state = self._y_state
     state._y_ensure_working_transaction(astichi_bind_external(tx_index))
     state.astichi_ref(external=working_slot)._ = (
-        _y_validate_binding_value(astichi_bind_external(field_name), value)
+        astichi_pass(_y_validate_binding_value, outer_bind=True)(
+            astichi_bind_external(field_name),
+            value,
+        )
     )""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_owned.yidl",
-            line_number=161,
+            line_number=140,
             keep_names=("VOID",),
         )
     ),
@@ -7895,10 +7877,13 @@ def property_setter_name__astichi_arg__(self, value):
     state = self._y_state
     state._y_ensure_working_transaction(astichi_bind_external(tx_index))
     state.astichi_ref(external=working_slot)._ = (
-        _y_validate_binding_map_value(astichi_bind_external(field_name), value)
+        astichi_pass(_y_validate_binding_map_value, outer_bind=True)(
+            astichi_bind_external(field_name),
+            value,
+        )
     )""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_owned.yidl",
-            line_number=180,
+            line_number=162,
             keep_names=("VOID",),
         )
     ),
@@ -7917,7 +7902,7 @@ def property_setter_name__astichi_arg__(self, value):
         + astichi_bind_external(field_name)
     )""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_owned.yidl",
-            line_number=199,
+            line_number=184,
         )
     ),
     "OwnedWorkingProperty": astichi_template(
@@ -7935,10 +7920,13 @@ def property_setter_name__astichi_arg__(self, value):
     state = self._y_state
     state._y_ensure_working_transaction(astichi_bind_external(tx_index))
     state.astichi_ref(external=working_slot)._ = (
-        _y_validate_binding_value(astichi_bind_external(field_name), value)
+        astichi_pass(_y_validate_binding_value, outer_bind=True)(
+            astichi_bind_external(field_name),
+            value,
+        )
     )""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_owned.yidl",
-            line_number=213,
+            line_number=198,
             keep_names=("VOID",),
         )
     ),
@@ -7957,10 +7945,13 @@ def property_setter_name__astichi_arg__(self, value):
     state = self._y_state
     state._y_ensure_working_transaction(astichi_bind_external(tx_index))
     state.astichi_ref(external=working_slot)._ = (
-        _y_validate_binding_map_value(astichi_bind_external(field_name), value)
+        astichi_pass(_y_validate_binding_map_value, outer_bind=True)(
+            astichi_bind_external(field_name),
+            value,
+        )
     )""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_owned.yidl",
-            line_number=232,
+            line_number=220,
             keep_names=("VOID",),
         )
     ),
@@ -7973,7 +7964,7 @@ if astichi_pass(self, outer_bind=True).astichi_ref(external=working_slot) is not
         value.accepted()
     astichi_pass(self, outer_bind=True).astichi_ref(external=staged_slot)._ = value""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_owned.yidl",
-            line_number=251,
+            line_number=242,
             keep_names=("VOID",),
         )
     ),
@@ -7987,118 +7978,76 @@ if astichi_pass(self, outer_bind=True).astichi_ref(external=working_slot) is not
             item.accepted()
     astichi_pass(self, outer_bind=True).astichi_ref(external=staged_slot)._ = value""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_owned.yidl",
-            line_number=261,
+            line_number=252,
             keep_names=("VOID",),
         )
     ),
     "OwnedScalarDefaultFactoryEvalInit": astichi_template(
         from_astichi_code(
             """\
-astichi_pyimport(module=yidl.runtime.bindings, names=(BindingBase,))
-
 if astichi_pass(field_name__astichi_arg__, outer_bind=True) is _HAS_DEFAULT_FACTORY:
     astichi_pass(field_name__astichi_arg__, outer_bind=True)._ = (
         default_factory_name__astichi_arg__(
             **astichi_hole(default_factory_args)
         )
     )
-value = astichi_pass(field_name__astichi_arg__, outer_bind=True)
-if value is not None and not isinstance(value, BindingBase):
-    raise TypeError(
-        "binding field " + repr(astichi_bind_external(field_name_value))
-        + " expects BindingBase or None"
-    )
+value = astichi_pass(_y_validate_binding_value, outer_bind=True)(
+    astichi_bind_external(field_name_value),
+    astichi_pass(field_name__astichi_arg__, outer_bind=True),
+)
 astichi_pass(state, outer_bind=True).astichi_ref(external=state_slot)._ = value""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_owned.yidl",
-            line_number=272,
+            line_number=263,
             keep_names=("_HAS_DEFAULT_FACTORY",),
         )
     ),
     "OwnedScalarDefaultFactoryEvalNoInit": astichi_template(
         from_astichi_code(
             """\
-astichi_pyimport(module=yidl.runtime.bindings, names=(BindingBase,))
-
 field_name__astichi_arg__ = default_factory_name__astichi_arg__(
     **astichi_hole(default_factory_args)
 )
-value = astichi_pass(field_name__astichi_arg__, outer_bind=True)
-if value is not None and not isinstance(value, BindingBase):
-    raise TypeError(
-        "binding field " + repr(astichi_bind_external(field_name_value))
-        + " expects BindingBase or None"
-    )
+value = astichi_pass(_y_validate_binding_value, outer_bind=True)(
+    astichi_bind_external(field_name_value),
+    astichi_pass(field_name__astichi_arg__, outer_bind=True),
+)
 astichi_pass(state, outer_bind=True).astichi_ref(external=state_slot)._ = value""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_owned.yidl",
-            line_number=292,
+            line_number=279,
         )
     ),
     "OwnedMapDefaultFactoryEvalInit": astichi_template(
         from_astichi_code(
             """\
-astichi_pyimport(module=collections.abc, names=(Mapping,))
-astichi_pyimport(module=yidl.runtime.bindings, names=(BindingBase, BindingDict,))
-
 if astichi_pass(field_name__astichi_arg__, outer_bind=True) is _HAS_DEFAULT_FACTORY:
     astichi_pass(field_name__astichi_arg__, outer_bind=True)._ = (
         default_factory_name__astichi_arg__(
             **astichi_hole(default_factory_args)
         )
     )
-value = astichi_pass(field_name__astichi_arg__, outer_bind=True)
-if value is not None and not isinstance(value, Mapping):
-    raise TypeError(
-        "binding map field " + repr(astichi_bind_external(field_name_value))
-        + " expects a mapping or None"
-    )
-if value is not None:
-    value = value if isinstance(value, BindingDict) else BindingDict(value)
-    for key, item in value.items():
-        if not isinstance(item, BindingBase):
-            raise TypeError(
-                "binding map field "
-                + repr(astichi_bind_external(field_name_value))
-                + " expects BindingBase values; key "
-                + repr(key)
-                + " has "
-                + type(item).__name__
-            )
+value = astichi_pass(_y_validate_binding_map_value, outer_bind=True)(
+    astichi_bind_external(field_name_value),
+    astichi_pass(field_name__astichi_arg__, outer_bind=True),
+)
 astichi_pass(state, outer_bind=True).astichi_ref(external=state_slot)._ = value""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_owned.yidl",
-            line_number=307,
+            line_number=290,
             keep_names=("_HAS_DEFAULT_FACTORY",),
         )
     ),
     "OwnedMapDefaultFactoryEvalNoInit": astichi_template(
         from_astichi_code(
             """\
-astichi_pyimport(module=collections.abc, names=(Mapping,))
-astichi_pyimport(module=yidl.runtime.bindings, names=(BindingBase, BindingDict,))
-
 field_name__astichi_arg__ = default_factory_name__astichi_arg__(
     **astichi_hole(default_factory_args)
 )
-value = astichi_pass(field_name__astichi_arg__, outer_bind=True)
-if value is not None and not isinstance(value, Mapping):
-    raise TypeError(
-        "binding map field " + repr(astichi_bind_external(field_name_value))
-        + " expects a mapping or None"
-    )
-if value is not None:
-    value = value if isinstance(value, BindingDict) else BindingDict(value)
-    for key, item in value.items():
-        if not isinstance(item, BindingBase):
-            raise TypeError(
-                "binding map field "
-                + repr(astichi_bind_external(field_name_value))
-                + " expects BindingBase values; key "
-                + repr(key)
-                + " has "
-                + type(item).__name__
-            )
+value = astichi_pass(_y_validate_binding_map_value, outer_bind=True)(
+    astichi_bind_external(field_name_value),
+    astichi_pass(field_name__astichi_arg__, outer_bind=True),
+)
 astichi_pass(state, outer_bind=True).astichi_ref(external=state_slot)._ = value""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_owned.yidl",
-            line_number=340,
+            line_number=306,
         )
     ),
     "OwnedApplyPreparedCommitBranch": astichi_template(
@@ -8111,7 +8060,7 @@ if astichi_pass(self, outer_bind=True).astichi_ref(external=staged_slot) is not 
     astichi_pass(self, outer_bind=True).astichi_ref(external=staged_slot)._ = VOID
     astichi_pass(self, outer_bind=True).astichi_ref(external=working_slot)._ = VOID""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_owned.yidl",
-            line_number=368,
+            line_number=317,
             keep_names=("VOID",),
         )
     ),
@@ -8121,53 +8070,32 @@ if astichi_pass(self, outer_bind=True).astichi_ref(external=staged_slot) is not 
 astichi_pass(self, outer_bind=True).astichi_ref(external=staged_slot)._ = VOID
 astichi_pass(self, outer_bind=True).astichi_ref(external=working_slot)._ = VOID""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_owned.yidl",
-            line_number=379,
+            line_number=328,
             keep_names=("VOID",),
         )
     ),
     "BindingStateAssignment": astichi_template(
         from_astichi_code(
             """\
-astichi_pyimport(module=yidl.runtime.bindings, names=(BindingBase,))
-
-value = astichi_pass(init_value_name__astichi_arg__, outer_bind=True)
-if value is not None and not isinstance(value, BindingBase):
-    raise TypeError(
-        "binding field " + repr(astichi_bind_external(field_name))
-        + " expects BindingBase or None"
-    )
+value = astichi_pass(_y_validate_binding_value, outer_bind=True)(
+    astichi_bind_external(field_name),
+    astichi_pass(init_value_name__astichi_arg__, outer_bind=True),
+)
 astichi_pass(state, outer_bind=True).astichi_ref(external=state_slot)._ = value""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_owned.yidl",
-            line_number=386,
+            line_number=335,
         )
     ),
     "BindingMapStateAssignment": astichi_template(
         from_astichi_code(
             """\
-astichi_pyimport(module=collections.abc, names=(Mapping,))
-astichi_pyimport(module=yidl.runtime.bindings, names=(BindingBase, BindingDict,))
-
-value = astichi_pass(init_value_name__astichi_arg__, outer_bind=True)
-if value is not None and not isinstance(value, Mapping):
-    raise TypeError(
-        "binding map field " + repr(astichi_bind_external(field_name))
-        + " expects a mapping or None"
-    )
-if value is not None:
-    value = value if isinstance(value, BindingDict) else BindingDict(value)
-    for key, item in value.items():
-        if not isinstance(item, BindingBase):
-            raise TypeError(
-                "binding map field "
-                + repr(astichi_bind_external(field_name))
-                + " expects BindingBase values; key "
-                + repr(key)
-                + " has "
-                + type(item).__name__
-            )
+value = astichi_pass(_y_validate_binding_map_value, outer_bind=True)(
+    astichi_bind_external(field_name),
+    astichi_pass(init_value_name__astichi_arg__, outer_bind=True),
+)
 astichi_pass(state, outer_bind=True).astichi_ref(external=state_slot)._ = value""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_owned.yidl",
-            line_number=398,
+            line_number=343,
         )
     ),
     "BindingProperty": astichi_template(
@@ -8180,10 +8108,13 @@ def property_getter_name__astichi_arg__(self):
 @property_setter_target_name__astichi_arg__.setter
 def property_setter_name__astichi_arg__(self, value):
     self._y_state.astichi_ref(external=state_slot)._ = (
-        _y_validate_binding_value(astichi_bind_external(field_name), value)
+        astichi_pass(_y_validate_binding_value, outer_bind=True)(
+            astichi_bind_external(field_name),
+            value,
+        )
     )""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_owned.yidl",
-            line_number=423,
+            line_number=351,
         )
     ),
     "BindingMapProperty": astichi_template(
@@ -8196,10 +8127,13 @@ def property_getter_name__astichi_arg__(self):
 @property_setter_target_name__astichi_arg__.setter
 def property_setter_name__astichi_arg__(self, value):
     self._y_state.astichi_ref(external=state_slot)._ = (
-        _y_validate_binding_map_value(astichi_bind_external(field_name), value)
+        astichi_pass(_y_validate_binding_map_value, outer_bind=True)(
+            astichi_bind_external(field_name),
+            value,
+        )
     )""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_owned.yidl",
-            line_number=435,
+            line_number=366,
         )
     ),
     "BindingDefaultFactoryEvalInit": astichi_template(
@@ -8216,7 +8150,7 @@ astichi_pass(self, outer_bind=True).astichi_ref(external=property_name)._ = asti
     outer_bind=True,
 )""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_owned.yidl",
-            line_number=447,
+            line_number=381,
             keep_names=("_HAS_DEFAULT_FACTORY",),
         )
     ),
@@ -8231,7 +8165,7 @@ astichi_pass(self, outer_bind=True).astichi_ref(external=property_name)._ = asti
     outer_bind=True,
 )""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_owned.yidl",
-            line_number=462,
+            line_number=396,
         )
     ),
 }
