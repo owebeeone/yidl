@@ -8,6 +8,12 @@ field kind gains new behavior.
 `tx_key` is the canonical name for the transaction partition key. The older
 `tx_group` wording should not be reintroduced.
 
+Normal `default_factory` callables may request provider names by parameter name.
+Slice 3 also allows the special `cls` parameter, which receives the original
+decorated user class for the current lifecycle layer. The `self`, `current`,
+and `working` names remain unavailable to normal factories until an explicit
+later policy enables them.
+
 ## Field Kinds
 
 | Kind | Stored In State? | Constructor Parameter? | Settable After Construction? | Default / Factory Support | Retained Initvar Support | Transaction State | Facade Visibility | Factory Evaluation Timing | Commit / Rollback | Teardown / Close |

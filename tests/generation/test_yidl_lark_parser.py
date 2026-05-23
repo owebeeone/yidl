@@ -360,7 +360,7 @@ def test_yidl_transactional_default_factory_facts_are_computed() -> None:
             field_kind="managed",
             has_default_factory=True,
             default_factory_param_name="_Example_v2_default_factory",
-            default_factory_param_names=("v1",),
+            default_factory_param_names=("cls", "v1"),
         ),
     )
     builder.add(
@@ -400,7 +400,8 @@ def test_yidl_transactional_default_factory_facts_are_computed() -> None:
     ] == [
         ("temp", "seed", "seed", "initvar", False, 0),
         ("temp", "v1", "v1", "field", True, 1),
-        ("v2", "v1", "v1", "field", True, 0),
+        ("v2", "cls", "cls", "cls", True, 0),
+        ("v2", "v1", "v1", "field", True, 1),
         ("v3", "v2", "v2", "managed", True, 0),
         ("v3", "v1", "v1", "field", True, 1),
     ]
@@ -415,6 +416,18 @@ def test_yidl_transactional_default_factory_unknown_provider_diagnostic() -> Non
         for record in container.DefaultFactoryDiagnostics.sequence()
     ] == [
         "Example.v2: default_factory references unknown name 'missing'",
+    ]
+
+
+def test_yidl_transactional_default_factory_self_diagnostic() -> None:
+    container = _default_factory_diagnostic_container(("self",), ())
+
+    assert [
+        record.diagnostic_message
+        for record in container.DefaultFactoryDiagnostics.sequence()
+    ] == [
+        "Example.v2: default_factory parameter 'self' requires Slice 4 "
+        "explicit self factory policy",
     ]
 
 

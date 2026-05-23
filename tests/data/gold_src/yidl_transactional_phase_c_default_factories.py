@@ -108,6 +108,10 @@ def _fixture_class() -> type[object]:
         SCALE: int = classvar(default=10)
         v1: int
         seed: int = initvar(init=False, default=4)
+        class_name_size: int = initvar(
+            init=False,
+            default_factory=lambda cls: len(cls.__name__),
+        )
         temp: int = initvar(
             init=False,
             default_factory=lambda seed, v1: seed + v1,
@@ -117,7 +121,9 @@ def _fixture_class() -> type[object]:
         v4: int = managed(init=False, default_factory=lambda v3: v3 * 2)
         v5: int = managed(
             init=False,
-            default_factory=lambda SCALE, v4: SCALE + v4,
+            default_factory=lambda class_name_size, SCALE, v4: (
+                class_name_size + SCALE + v4
+            ),
         )
 
     return Example
@@ -156,15 +162,16 @@ def _assert_example_class(generated: type[object]) -> None:
     assert item.v2 == 3
     assert item.v3 == 6
     assert item.v4 == 12
-    assert item.v5 == 22
+    assert item.v5 == 29
     assert not hasattr(item._y_state, "_y_seed_value")
+    assert not hasattr(item._y_state, "_y_class_name_size_value")
     assert not hasattr(item._y_state, "_y_temp_value")
 
     explicit = generated(v1=1, v2=20, v3=30)
     assert explicit.v2 == 20
     assert explicit.v3 == 30
     assert explicit.v4 == 60
-    assert explicit.v5 == 70
+    assert explicit.v5 == 77
 
 
 def _assert_inherited_generated_class(namespace: Mapping[str, object]) -> None:
@@ -205,7 +212,11 @@ def _assert_source_shape(sources: Mapping[str, str]) -> None:
     assert "_Example_v2_default_factory(v1=self.v1)" in source
     assert "_Example_v3_default_factory(v2=self.v2, v1=self.v1)" in source
     assert "_Example_v4_default_factory(v3=self.v3)" in source
-    assert "_Example_v5_default_factory(SCALE=self.SCALE, v4=self.v4)" in source
+    assert "_Example_class_name_size_default_factory(cls=decorated_cls)" in source
+    assert (
+        "_Example_v5_default_factory("
+        "class_name_size=class_name_size, SCALE=self.SCALE, v4=self.v4)"
+    ) in source
 
     inherited_source = sources["generated_inherited_output.py"]
     assert "_Derived_v2_default_factory(v1=self.v1)" in inherited_source

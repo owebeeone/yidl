@@ -2542,6 +2542,23 @@ def run_build_default_factory_facts(builder):
             for param_order, param_name in enumerate(
                 consumer.default_factory_param_names
             ):
+                if param_name == "cls":
+                    deps.append((consumer, None, param_name, param_order))
+                    continue
+                if param_name == "self":
+                    add_diagnostic(
+                        consumer,
+                        "self",
+                        f"{lifecycle_class.class_name}.{consumer.field_name}: default_factory parameter 'self' requires Slice 4 explicit self factory policy",
+                    )
+                    continue
+                if param_name in {"current", "working"}:
+                    add_diagnostic(
+                        consumer,
+                        f"special.{param_name}",
+                        f"{lifecycle_class.class_name}.{consumer.field_name}: default_factory cannot use special injection {param_name!r} in this slice",
+                    )
+                    continue
                 provider = by_name.get(param_name)
                 if provider is None:
                     add_diagnostic(
@@ -2600,18 +2617,31 @@ def run_build_default_factory_facts(builder):
             for eval_order, field_id in enumerate(ordered_field_ids)
         }
         for consumer, provider, param_name, param_order in deps:
+            provider_name = param_name
+            provider_field_id = ""
+            provider_field_kind = "cls"
+            provider_init = True
+            provider_has_default = False
+            provider_has_default_factory = False
+            if provider is not None:
+                provider_name = provider.field_name
+                provider_field_id = provider.field_id
+                provider_field_kind = provider.field_kind
+                provider_init = provider.init
+                provider_has_default = provider.has_default
+                provider_has_default_factory = provider.has_default_factory
             ctx.write(
                 DefaultFactoryDependenciesCollection,
                 DefaultFactoryDependency(
                     dependency_owner=lifecycle_class.class_id,
                     consumer_field_id=consumer.field_id,
                     consumer_field_name=consumer.field_name,
-                    provider_name=provider.field_name,
-                    provider_field_id=provider.field_id,
-                    provider_field_kind=provider.field_kind,
-                    provider_init=provider.init,
-                    provider_has_default=provider.has_default,
-                    provider_has_default_factory=provider.has_default_factory,
+                    provider_name=provider_name,
+                    provider_field_id=provider_field_id,
+                    provider_field_kind=provider_field_kind,
+                    provider_init=provider_init,
+                    provider_has_default=provider_has_default,
+                    provider_has_default_factory=provider_has_default_factory,
                     param_name=param_name,
                     param_order=param_order,
                     consumer_eval_order=eval_order_by_id[consumer.field_id],
@@ -3076,6 +3106,33 @@ for lifecycle_class in classes:
         for param_order, param_name in enumerate(
             consumer.default_factory_param_names
         ):
+            if param_name == "cls":
+                deps.append((consumer, None, param_name, param_order))
+                continue
+            if param_name == "self":
+                add_diagnostic(
+                    consumer,
+                    "self",
+                    (
+                        f"{lifecycle_class.class_name}."
+                        f"{consumer.field_name}: default_factory "
+                        "parameter 'self' requires Slice 4 explicit "
+                        "self factory policy"
+                    ),
+                )
+                continue
+            if param_name in {"current", "working"}:
+                add_diagnostic(
+                    consumer,
+                    f"special.{param_name}",
+                    (
+                        f"{lifecycle_class.class_name}."
+                        f"{consumer.field_name}: default_factory "
+                        f"cannot use special injection {param_name!r} "
+                        "in this slice"
+                    ),
+                )
+                continue
             provider = by_name.get(param_name)
             if provider is None:
                 add_diagnostic(
@@ -3153,18 +3210,31 @@ for lifecycle_class in classes:
     }
 
     for consumer, provider, param_name, param_order in deps:
+        provider_name = param_name
+        provider_field_id = ""
+        provider_field_kind = "cls"
+        provider_init = True
+        provider_has_default = False
+        provider_has_default_factory = False
+        if provider is not None:
+            provider_name = provider.field_name
+            provider_field_id = provider.field_id
+            provider_field_kind = provider.field_kind
+            provider_init = provider.init
+            provider_has_default = provider.has_default
+            provider_has_default_factory = provider.has_default_factory
         ctx.write(
             DefaultFactoryDependenciesCollection,
             DefaultFactoryDependency(
                 dependency_owner=lifecycle_class.class_id,
                 consumer_field_id=consumer.field_id,
                 consumer_field_name=consumer.field_name,
-                provider_name=provider.field_name,
-                provider_field_id=provider.field_id,
-                provider_field_kind=provider.field_kind,
-                provider_init=provider.init,
-                provider_has_default=provider.has_default,
-                provider_has_default_factory=provider.has_default_factory,
+                provider_name=provider_name,
+                provider_field_id=provider_field_id,
+                provider_field_kind=provider_field_kind,
+                provider_init=provider_init,
+                provider_has_default=provider_has_default,
+                provider_has_default_factory=provider_has_default_factory,
                 param_name=param_name,
                 param_order=param_order,
                 consumer_eval_order=eval_order_by_id[consumer.field_id],
@@ -3218,7 +3288,7 @@ for lifecycle_class in classes:
 for diagnostic in ctx.records(DefaultFactoryDiagnosticsCollection):
     raise AssemblyDiagnosticError(diagnostic.diagnostic_message)""",
         file_name="tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl",
-        line_number=551,
+        line_number=591,
         keep_names=(
             "ctx",
             "DefaultFactoryDiagnosticsCollection",
@@ -3243,7 +3313,7 @@ def build_lifecycle_class(decorated_cls, builder_params__astichi_param_hole__):
     astichi_hole(function_body)
     astichi_hole(return_statement)""",
         file_name="tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl",
-        line_number=567,
+        line_number=607,
     ),
     "BuilderParam": astichi_template(
         from_astichi_code(
@@ -3251,7 +3321,7 @@ def build_lifecycle_class(decorated_cls, builder_params__astichi_param_hole__):
 def astichi_params(*, value_name__astichi_arg__):
     pass""",
             file_name="tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl",
-            line_number=585,
+            line_number=625,
         )
     ),
     "TransactionManagerParam": astichi_template(
@@ -3260,14 +3330,14 @@ def astichi_params(*, value_name__astichi_arg__):
 def astichi_params(*, transaction_manager=None):
     pass""",
             file_name="tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl",
-            line_number=590,
+            line_number=630,
         )
     ),
     "StateSlotEntry": astichi_template(
         from_astichi_code(
             "astichi_bind_external(slot_name)",
             file_name="tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl",
-            line_number=595,
+            line_number=635,
         )
     ),
     "InitParamRequired": astichi_template(
@@ -3276,7 +3346,7 @@ def astichi_params(*, transaction_manager=None):
 def astichi_params(param_name__astichi_arg__: astichi_bind_external(annotation)):
     pass""",
             file_name="tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl",
-            line_number=599,
+            line_number=639,
         )
     ),
     "InitParamDefault": astichi_template(
@@ -3288,7 +3358,7 @@ def astichi_params(
 ):
     pass""",
             file_name="tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl",
-            line_number=604,
+            line_number=644,
         )
     ),
     "InitParamDefaultFactory": astichi_template(
@@ -3300,7 +3370,7 @@ def astichi_params(
 ):
     pass""",
             file_name="tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl",
-            line_number=612,
+            line_number=652,
             keep_names=("_HAS_DEFAULT_FACTORY",),
         )
     ),
@@ -3312,7 +3382,7 @@ astichi_pass(state, outer_bind=True).astichi_ref(external=state_slot)._ = astich
     outer_bind=True,
 )""",
             file_name="tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl",
-            line_number=622,
+            line_number=662,
         )
     ),
     "InitVarLocalDefaultAssignment": astichi_template(
@@ -3323,7 +3393,7 @@ init_value_name__astichi_arg__ = astichi_pass(
     outer_bind=True,
 )""",
             file_name="tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl",
-            line_number=629,
+            line_number=669,
         )
     ),
     "PlainProperty": astichi_template(
@@ -3337,7 +3407,7 @@ def property_getter_name__astichi_arg__(self):
 def property_setter_name__astichi_arg__(self, value):
     self._y_state.astichi_ref(external=state_slot)._ = value""",
             file_name="tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl",
-            line_number=636,
+            line_number=676,
         )
     ),
     "ClassVarDefaultAssignment": astichi_template(
@@ -3348,7 +3418,7 @@ classvar_name__astichi_arg__ = astichi_pass(
     outer_bind=True,
 )""",
             file_name="tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl",
-            line_number=646,
+            line_number=686,
         )
     ),
     "ManagedCurrentStateAssignment": astichi_template(
@@ -3359,14 +3429,14 @@ astichi_pass(state, outer_bind=True).astichi_ref(external=current_slot)._ = asti
     outer_bind=True,
 )""",
             file_name="tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl",
-            line_number=653,
+            line_number=693,
         )
     ),
     "ManagedWorkingStateAssignment": astichi_template(
         from_astichi_code(
             "astichi_pass(state, outer_bind=True).astichi_ref(external=working_slot)._ = VOID",
             file_name="tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl",
-            line_number=660,
+            line_number=700,
             keep_names=("VOID",),
         )
     ),
@@ -3386,7 +3456,7 @@ def property_setter_name__astichi_arg__(self, value):
     state._y_ensure_working_transaction(astichi_bind_external(tx_index))
     state.astichi_ref(external=working_slot)._ = value""",
             file_name="tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl",
-            line_number=666,
+            line_number=706,
             keep_names=("VOID",),
         )
     ),
@@ -3405,7 +3475,7 @@ def property_setter_name__astichi_arg__(self, value):
         + astichi_bind_external(field_name)
     )""",
             file_name="tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl",
-            line_number=683,
+            line_number=723,
         )
     ),
     "ManagedWorkingProperty": astichi_template(
@@ -3424,7 +3494,7 @@ def property_setter_name__astichi_arg__(self, value):
     state._y_ensure_working_transaction(astichi_bind_external(tx_index))
     state.astichi_ref(external=working_slot)._ = value""",
             file_name="tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl",
-            line_number=697,
+            line_number=737,
             keep_names=("VOID",),
         )
     ),
@@ -3438,7 +3508,7 @@ if astichi_pass(tx_index, outer_bind=True) == astichi_bind_external(tx_index_val
         )
         astichi_pass(self, outer_bind=True).astichi_ref(external=working_slot)._ = VOID""",
             file_name="tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl",
-            line_number=714,
+            line_number=754,
             keep_names=("VOID",),
         )
     ),
@@ -3448,7 +3518,7 @@ if astichi_pass(tx_index, outer_bind=True) == astichi_bind_external(tx_index_val
 if astichi_pass(tx_index, outer_bind=True) == astichi_bind_external(tx_index_value):
     astichi_pass(self, outer_bind=True).astichi_ref(external=working_slot)._ = VOID""",
             file_name="tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl",
-            line_number=725,
+            line_number=765,
             keep_names=("VOID",),
         )
     ),
@@ -3466,7 +3536,7 @@ astichi_pass(state, outer_bind=True).astichi_ref(external=state_slot)._ = astich
     outer_bind=True,
 )""",
             file_name="tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl",
-            line_number=732,
+            line_number=772,
             keep_names=("_HAS_DEFAULT_FACTORY",),
         )
     ),
@@ -3481,7 +3551,7 @@ astichi_pass(state, outer_bind=True).astichi_ref(external=state_slot)._ = astich
     outer_bind=True,
 )""",
             file_name="tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl",
-            line_number=747,
+            line_number=787,
         )
     ),
     "InitVarDefaultFactoryEvalInit": astichi_template(
@@ -3494,7 +3564,7 @@ if astichi_pass(field_name__astichi_arg__, outer_bind=True) is _HAS_DEFAULT_FACT
         )
     )""",
             file_name="tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl",
-            line_number=757,
+            line_number=797,
             keep_names=("_HAS_DEFAULT_FACTORY",),
         )
     ),
@@ -3505,7 +3575,7 @@ field_name__astichi_arg__ = default_factory_name__astichi_arg__(
     **astichi_hole(default_factory_args)
 )""",
             file_name="tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl",
-            line_number=768,
+            line_number=808,
         )
     ),
     "DefaultFactoryStoredArg": astichi_template(
@@ -3518,7 +3588,7 @@ astichi_funcargs(
     ).astichi_ref(external=provider_name)
 )""",
             file_name="tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl",
-            line_number=774,
+            line_number=814,
         )
     ),
     "DefaultFactoryLocalArg": astichi_template(
@@ -3531,7 +3601,20 @@ astichi_funcargs(
     )
 )""",
             file_name="tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl",
-            line_number=783,
+            line_number=823,
+        )
+    ),
+    "DefaultFactoryClsArg": astichi_template(
+        from_astichi_code(
+            """\
+astichi_funcargs(
+    param_name__astichi_arg__=astichi_pass(
+        decorated_cls,
+        outer_bind=True,
+    )
+)""",
+            file_name="tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl",
+            line_number=832,
         )
     ),
     "ClassBundle": astichi_template(
@@ -3743,7 +3826,7 @@ class working_facade_class_decl_name__astichi_arg__(
     __slots__ = ()
     astichi_hole(working_facade_properties)""",
             file_name="tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl",
-            line_number=792,
+            line_number=841,
             keep_names=(
                 "DEFAULT_TRANSACTION",
                 "TransactionManager",
@@ -3770,14 +3853,14 @@ return_class_module_ref__astichi_arg__.__module__ = astichi_pass(
 ).__module__
 return return_class_result_ref__astichi_arg__""",
             file_name="tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl",
-            line_number=1003,
+            line_number=1052,
         )
     ),
     "PassStatement": astichi_template(
         from_astichi_code(
             "pass",
             file_name="tests/data/yidl/yidl_transactional_phase_a_base/lifecycle_base.yidl",
-            line_number=1019,
+            line_number=1068,
         )
     ),
 }
@@ -5135,6 +5218,35 @@ ASSEMBLY_CONTRIBUTIONS = {
             ),
         ),
     ),
+    "DefaultFactoryClsArgContribution": ContributionSpec(
+        name="DefaultFactoryClsArgContribution",
+        source_name="DefaultFactoryClsArg",
+        source_kind="resource",
+        build_name="DefaultFactoryArg",
+        index=TupleValueRef((ValueRef("ConsumerEvalOrder"), ValueRef("ParamOrder"))),
+        order=ValueRef("ParamOrder"),
+        target=TargetSpec(
+            name="default_factory_args",
+            paths=(
+                TargetPathSpec(
+                    kind="build",
+                    path=PathSpec(
+                        segments=(
+                            PathSegmentSpec(kind="name", name="ClassDef", indexes=()),
+                            PathSegmentSpec(
+                                kind="name",
+                                name="DefaultFactoryEval",
+                                indexes=(ValueRef("ConsumerEvalOrder"),),
+                            ),
+                        )
+                    ),
+                ),
+            ),
+        ),
+        bindings=(
+            BindingSpec(kind="ident", name="param_name", value=ValueRef("ParamName")),
+        ),
+    ),
 }
 ASSEMBLY_MATCHERS = {
     "BuilderParamContributions": ContributionMatcherSpec(
@@ -5868,6 +5980,14 @@ ASSEMBLY_MATCHERS = {
         ),
         default_contribution_name="DefaultFactoryStoredArgContribution",
         rules=(
+            ContributionRuleSpec(
+                name="cls_provider",
+                condition=EqConditionSpec(
+                    left=ValueRef("ProviderFieldKind"), right=LiteralValueRef("cls")
+                ),
+                contribution_name="DefaultFactoryClsArgContribution",
+                weight=1.0,
+            ),
             ContributionRuleSpec(
                 name="local_provider",
                 condition=EqConditionSpec(

@@ -137,6 +137,33 @@ concept LifecycleDefaultFactories extends managed.LifecycleManaged {
                 for param_order, param_name in enumerate(
                     consumer.default_factory_param_names
                 ):
+                    if param_name == "cls":
+                        deps.append((consumer, None, param_name, param_order))
+                        continue
+                    if param_name == "self":
+                        add_diagnostic(
+                            consumer,
+                            "self",
+                            (
+                                f"{lifecycle_class.class_name}."
+                                f"{consumer.field_name}: default_factory "
+                                "parameter 'self' requires Slice 4 explicit "
+                                "self factory policy"
+                            ),
+                        )
+                        continue
+                    if param_name in {"current", "working"}:
+                        add_diagnostic(
+                            consumer,
+                            f"special.{param_name}",
+                            (
+                                f"{lifecycle_class.class_name}."
+                                f"{consumer.field_name}: default_factory "
+                                f"cannot use special injection {param_name!r} "
+                                "in this slice"
+                            ),
+                        )
+                        continue
                     provider = by_name.get(param_name)
                     if provider is None:
                         add_diagnostic(
@@ -229,6 +256,19 @@ concept LifecycleDefaultFactories extends managed.LifecycleManaged {
             }
 
             for consumer, provider, param_name, param_order in deps:
+                provider_name = param_name
+                provider_field_id = ""
+                provider_field_kind = "cls"
+                provider_init = True
+                provider_has_default = False
+                provider_has_default_factory = False
+                if provider is not None:
+                    provider_name = provider.field_name
+                    provider_field_id = provider.field_id
+                    provider_field_kind = provider.field_kind
+                    provider_init = provider.init
+                    provider_has_default = provider.has_default
+                    provider_has_default_factory = provider.has_default_factory
                 ctx.write(
                     DefaultFactoryDependenciesCollection,
                     DefaultFactoryDependency(
@@ -237,12 +277,12 @@ concept LifecycleDefaultFactories extends managed.LifecycleManaged {
                         consumer_field_name=consumer.field_name,
                         consumer_field_kind=consumer.field_kind,
                         consumer_field_order=consumer.field_order,
-                        provider_name=provider.field_name,
-                        provider_field_id=provider.field_id,
-                        provider_field_kind=provider.field_kind,
-                        provider_init=provider.init,
-                        provider_has_default=provider.has_default,
-                        provider_has_default_factory=provider.has_default_factory,
+                        provider_name=provider_name,
+                        provider_field_id=provider_field_id,
+                        provider_field_kind=provider_field_kind,
+                        provider_init=provider_init,
+                        provider_has_default=provider_has_default,
+                        provider_has_default_factory=provider_has_default_factory,
                         param_name=param_name,
                         param_order=param_order,
                         consumer_eval_order=eval_order_by_id[consumer.field_id],
@@ -404,6 +444,15 @@ concept LifecycleDefaultFactories extends managed.LifecycleManaged {
         )
     ]$
 
+    resource DefaultFactoryClsArg = template $[
+        astichi_funcargs(
+            param_name__astichi_arg__=astichi_pass(
+                decorated_cls,
+                outer_bind=True,
+            )
+        )
+    ]$
+
     resource DefaultFactoryEmptyArg = template $[
         astichi_funcargs()
     ]$
@@ -539,6 +588,18 @@ concept LifecycleDefaultFactories extends managed.LifecycleManaged {
         ident provider_name = ProviderName
     }
 
+    contribution DefaultFactoryClsArgContribution = DefaultFactoryClsArg {
+        as DefaultFactoryArg
+        index (ConsumerEvalOrder, ParamOrder)
+        order ParamOrder
+
+        target default_factory_args {
+            build /ClassDef/DefaultFactoryEval[ConsumerEvalOrder]
+        }
+
+        ident param_name = ParamName
+    }
+
     contribution DefaultFactoryEmptyArgContribution = DefaultFactoryEmptyArg {
         as DefaultFactoryArg
         index (ConsumerEvalOrder, ParamOrder)
@@ -595,6 +656,8 @@ concept LifecycleDefaultFactories extends managed.LifecycleManaged {
     matcher DefaultFactoryArgContributions(dep: DefaultFactoryDependencies) -> contribution {
         default -> DefaultFactoryStoredArgContribution
         rule empty_provider when ParamName == "" -> DefaultFactoryEmptyArgContribution
+        rule cls_provider when ProviderFieldKind == "cls"
+                          -> DefaultFactoryClsArgContribution
         rule local_provider when ProviderFieldKind == "initvar"
                             -> DefaultFactoryLocalArgContribution
     }

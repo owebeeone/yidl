@@ -422,38 +422,42 @@ def _default_factory_param_names(
     class_name: str,
     decl: FieldDecl,
 ) -> tuple[str, ...]:
-    if not decl.has_default_factory:
-        return ()
-    try:
-        signature = inspect.signature(decl.default_factory)
-    except (TypeError, ValueError):
-        _warn_unintrospectable_default_factory(class_name, decl)
-        return ()
-    names: list[str] = []
-    for parameter in signature.parameters.values():
-        if parameter.kind in (
-            inspect.Parameter.VAR_POSITIONAL,
-            inspect.Parameter.VAR_KEYWORD,
-        ):
-            _raise_unbindable_default_factory_param(class_name, decl)
-        if parameter.kind is inspect.Parameter.POSITIONAL_ONLY:
-            if parameter.default is inspect.Parameter.empty:
-                _raise_unbindable_default_factory_param(class_name, decl)
-            continue
-        names.append(parameter.name)
-    return tuple(names)
+    return _factory_param_names(
+        class_name,
+        decl,
+        has_factory=decl.has_default_factory,
+        factory=decl.default_factory,
+        role="default_factory",
+    )
 
 
 def _working_default_factory_param_names(
     class_name: str,
     decl: FieldDecl,
 ) -> tuple[str, ...]:
-    if not decl.has_working_default_factory:
+    return _factory_param_names(
+        class_name,
+        decl,
+        has_factory=decl.has_working_default_factory,
+        factory=decl.working_default_factory,
+        role="working_default_factory",
+    )
+
+
+def _factory_param_names(
+    class_name: str,
+    decl: FieldDecl,
+    *,
+    has_factory: bool,
+    factory: object,
+    role: str,
+) -> tuple[str, ...]:
+    if not has_factory:
         return ()
     try:
-        signature = inspect.signature(decl.working_default_factory)
+        signature = inspect.signature(factory)
     except (TypeError, ValueError):
-        _warn_unintrospectable_working_default_factory(class_name, decl)
+        _warn_unintrospectable_factory(class_name, decl, role=role)
         return ()
     names: list[str] = []
     for parameter in signature.parameters.values():
@@ -461,22 +465,24 @@ def _working_default_factory_param_names(
             inspect.Parameter.VAR_POSITIONAL,
             inspect.Parameter.VAR_KEYWORD,
         ):
-            _raise_unbindable_working_default_factory_param(class_name, decl)
+            _raise_unbindable_factory_param(class_name, decl, role=role)
         if parameter.kind is inspect.Parameter.POSITIONAL_ONLY:
             if parameter.default is inspect.Parameter.empty:
-                _raise_unbindable_working_default_factory_param(class_name, decl)
+                _raise_unbindable_factory_param(class_name, decl, role=role)
             continue
         names.append(parameter.name)
     return tuple(names)
 
 
-def _warn_unintrospectable_default_factory(
+def _warn_unintrospectable_factory(
     class_name: str,
     decl: FieldDecl,
+    *,
+    role: str,
 ) -> None:
     warnings.warn(
         (
-            f"{class_name}.{decl.name}: default_factory signature could not be "
+            f"{class_name}.{decl.name}: {role} signature could not be "
             "introspected; treating it as zero-argument"
         ),
         LifecycleDefinitionWarning,
@@ -484,37 +490,14 @@ def _warn_unintrospectable_default_factory(
     )
 
 
-def _warn_unintrospectable_working_default_factory(
+def _raise_unbindable_factory_param(
     class_name: str,
     decl: FieldDecl,
-) -> None:
-    warnings.warn(
-        (
-            f"{class_name}.{decl.name}: working_default_factory signature could "
-            "not be introspected; treating it as zero-argument"
-        ),
-        LifecycleDefinitionWarning,
-        stacklevel=4,
-    )
-
-
-def _raise_unbindable_default_factory_param(
-    class_name: str,
-    decl: FieldDecl,
+    *,
+    role: str,
 ) -> None:
     raise LifecycleDefinitionError(
-        f"{class_name}.{decl.name}: default_factory parameters must be "
-        "bindable by name",
-    )
-
-
-def _raise_unbindable_working_default_factory_param(
-    class_name: str,
-    decl: FieldDecl,
-) -> None:
-    raise LifecycleDefinitionError(
-        f"{class_name}.{decl.name}: working_default_factory parameters must be "
-        "bindable by name",
+        f"{class_name}.{decl.name}: {role} parameters must be bindable by name",
     )
 
 

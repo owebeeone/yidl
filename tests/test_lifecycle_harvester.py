@@ -179,7 +179,8 @@ def test_harvester_rejects_init_false_initvar_without_value_source() -> None:
 
 
 def test_harvester_collects_default_factory_parameter_names() -> None:
-    def make_v3(v2: int, v1: int = 4, *, scale: int) -> int:
+    def make_v3(cls: type[object], v2: int, v1: int = 4, *, scale: int) -> int:
+        del cls
         return v1 + v2 + scale
 
     class Counter:
@@ -195,7 +196,7 @@ def test_harvester_collects_default_factory_parameter_names() -> None:
     ] == [
         ("v1", ()),
         ("v2", ()),
-        ("v3", ("v2", "v1", "scale")),
+        ("v3", ("cls", "v2", "v1", "scale")),
     ]
 
 

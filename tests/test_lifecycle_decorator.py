@@ -144,6 +144,10 @@ def test_lifecycle_decorator_evaluates_parameterized_default_factories() -> None
         SCALE: int = classvar(default=10)
         v1: int
         seed: int = initvar(init=False, default=4)
+        class_name_size: int = initvar(
+            init=False,
+            default_factory=lambda cls: len(cls.__name__),
+        )
         temp: int = initvar(
             init=False,
             default_factory=lambda seed, v1: seed + v1,
@@ -153,7 +157,9 @@ def test_lifecycle_decorator_evaluates_parameterized_default_factories() -> None
         v4: int = managed(init=False, default_factory=lambda v3: v3 * 2)
         v5: int = managed(
             init=False,
-            default_factory=lambda SCALE, v4: SCALE + v4,
+            default_factory=lambda class_name_size, SCALE, v4: (
+                class_name_size + SCALE + v4
+            ),
         )
 
     generated = lifecycle(Example)
@@ -163,15 +169,16 @@ def test_lifecycle_decorator_evaluates_parameterized_default_factories() -> None
     assert item.v2 == 3
     assert item.v3 == 6
     assert item.v4 == 12
-    assert item.v5 == 22
+    assert item.v5 == 29
     assert not hasattr(item._y_state, "_y_seed_value")
+    assert not hasattr(item._y_state, "_y_class_name_size_value")
     assert not hasattr(item._y_state, "_y_temp_value")
 
     explicit = generated(v1=1, v2=20, v3=30)
     assert explicit.v2 == 20
     assert explicit.v3 == 30
     assert explicit.v4 == 60
-    assert explicit.v5 == 70
+    assert explicit.v5 == 77
 
 
 def test_lifecycle_decorator_initializes_transient_current_defaults() -> None:

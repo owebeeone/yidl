@@ -7,7 +7,7 @@ from yidl.runtime.transaction_yidl import DEFAULT_TRANSACTION
 from yidl.runtime.transaction_yidl import TransactionManager
 VOID = object()
 
-def build_lifecycle_class(decorated_cls, *, _Example_lifecycle_definition, _Example_annotations, _Example_tx_keys, _Example_SCALE_default, _Example_seed_default, _Example_temp_default_factory, _Example_v2_default_factory, _Example_v3_default_factory, _Example_v4_default_factory, _Example_v5_default_factory):
+def build_lifecycle_class(decorated_cls, *, _Example_lifecycle_definition, _Example_annotations, _Example_tx_keys, _Example_SCALE_default, _Example_seed_default, _Example_class_name_size_default_factory, _Example_temp_default_factory, _Example_v2_default_factory, _Example_v3_default_factory, _Example_v4_default_factory, _Example_v5_default_factory):
 
     def _y_validate_binding_value(field_name, value):
         if value is not None and (not isinstance(value, BindingBase)):
@@ -374,6 +374,7 @@ def build_lifecycle_class(decorated_cls, *, _Example_lifecycle_definition, _Exam
             state._y_v4_staged = VOID
             state._y_v5_working = VOID
             state._y_v5_staged = VOID
+            class_name_size = _Example_class_name_size_default_factory(cls=decorated_cls)
             temp = _Example_temp_default_factory(seed=seed, v1=self.v1)
             if v2 is _HAS_DEFAULT_FACTORY:
                 v2 = _Example_v2_default_factory(v1=self.v1)
@@ -383,7 +384,7 @@ def build_lifecycle_class(decorated_cls, *, _Example_lifecycle_definition, _Exam
             state._y_v3_current = v3
             v4 = _Example_v4_default_factory(v3=self.v3)
             state._y_v4_current = v4
-            v5 = _Example_v5_default_factory(SCALE=self.SCALE, v4=self.v4)
+            v5 = _Example_v5_default_factory(class_name_size=class_name_size, SCALE=self.SCALE, v4=self.v4)
             state._y_v5_current = v5
             state._y_working_tx_ids = [None for _group in _Example_tx_keys]
 

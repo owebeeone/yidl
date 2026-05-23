@@ -6023,6 +6023,23 @@ def run_build_default_factory_facts(builder):
             for param_order, param_name in enumerate(
                 consumer.default_factory_param_names
             ):
+                if param_name == "cls":
+                    deps.append((consumer, None, param_name, param_order))
+                    continue
+                if param_name == "self":
+                    add_diagnostic(
+                        consumer,
+                        "self",
+                        f"{lifecycle_class.class_name}.{consumer.field_name}: default_factory parameter 'self' requires Slice 4 explicit self factory policy",
+                    )
+                    continue
+                if param_name in {"current", "working"}:
+                    add_diagnostic(
+                        consumer,
+                        f"special.{param_name}",
+                        f"{lifecycle_class.class_name}.{consumer.field_name}: default_factory cannot use special injection {param_name!r} in this slice",
+                    )
+                    continue
                 provider = by_name.get(param_name)
                 if provider is None:
                     add_diagnostic(
@@ -6088,6 +6105,19 @@ def run_build_default_factory_facts(builder):
             for eval_order, field_id in enumerate(ordered_field_ids)
         }
         for consumer, provider, param_name, param_order in deps:
+            provider_name = param_name
+            provider_field_id = ""
+            provider_field_kind = "cls"
+            provider_init = True
+            provider_has_default = False
+            provider_has_default_factory = False
+            if provider is not None:
+                provider_name = provider.field_name
+                provider_field_id = provider.field_id
+                provider_field_kind = provider.field_kind
+                provider_init = provider.init
+                provider_has_default = provider.has_default
+                provider_has_default_factory = provider.has_default_factory
             ctx.write(
                 DefaultFactoryDependenciesCollection,
                 DefaultFactoryDependency(
@@ -6096,12 +6126,12 @@ def run_build_default_factory_facts(builder):
                     consumer_field_name=consumer.field_name,
                     consumer_field_kind=consumer.field_kind,
                     consumer_field_order=consumer.field_order,
-                    provider_name=provider.field_name,
-                    provider_field_id=provider.field_id,
-                    provider_field_kind=provider.field_kind,
-                    provider_init=provider.init,
-                    provider_has_default=provider.has_default,
-                    provider_has_default_factory=provider.has_default_factory,
+                    provider_name=provider_name,
+                    provider_field_id=provider_field_id,
+                    provider_field_kind=provider_field_kind,
+                    provider_init=provider_init,
+                    provider_has_default=provider_has_default,
+                    provider_has_default_factory=provider_has_default_factory,
                     param_name=param_name,
                     param_order=param_order,
                     consumer_eval_order=eval_order_by_id[consumer.field_id],
@@ -7913,6 +7943,33 @@ for lifecycle_class in classes:
         for param_order, param_name in enumerate(
             consumer.default_factory_param_names
         ):
+            if param_name == "cls":
+                deps.append((consumer, None, param_name, param_order))
+                continue
+            if param_name == "self":
+                add_diagnostic(
+                    consumer,
+                    "self",
+                    (
+                        f"{lifecycle_class.class_name}."
+                        f"{consumer.field_name}: default_factory "
+                        "parameter 'self' requires Slice 4 explicit "
+                        "self factory policy"
+                    ),
+                )
+                continue
+            if param_name in {"current", "working"}:
+                add_diagnostic(
+                    consumer,
+                    f"special.{param_name}",
+                    (
+                        f"{lifecycle_class.class_name}."
+                        f"{consumer.field_name}: default_factory "
+                        f"cannot use special injection {param_name!r} "
+                        "in this slice"
+                    ),
+                )
+                continue
             provider = by_name.get(param_name)
             if provider is None:
                 add_diagnostic(
@@ -8005,6 +8062,19 @@ for lifecycle_class in classes:
     }
 
     for consumer, provider, param_name, param_order in deps:
+        provider_name = param_name
+        provider_field_id = ""
+        provider_field_kind = "cls"
+        provider_init = True
+        provider_has_default = False
+        provider_has_default_factory = False
+        if provider is not None:
+            provider_name = provider.field_name
+            provider_field_id = provider.field_id
+            provider_field_kind = provider.field_kind
+            provider_init = provider.init
+            provider_has_default = provider.has_default
+            provider_has_default_factory = provider.has_default_factory
         ctx.write(
             DefaultFactoryDependenciesCollection,
             DefaultFactoryDependency(
@@ -8013,12 +8083,12 @@ for lifecycle_class in classes:
                 consumer_field_name=consumer.field_name,
                 consumer_field_kind=consumer.field_kind,
                 consumer_field_order=consumer.field_order,
-                provider_name=provider.field_name,
-                provider_field_id=provider.field_id,
-                provider_field_kind=provider.field_kind,
-                provider_init=provider.init,
-                provider_has_default=provider.has_default,
-                provider_has_default_factory=provider.has_default_factory,
+                provider_name=provider_name,
+                provider_field_id=provider_field_id,
+                provider_field_kind=provider_field_kind,
+                provider_init=provider_init,
+                provider_has_default=provider_has_default,
+                provider_has_default_factory=provider_has_default_factory,
                 param_name=param_name,
                 param_order=param_order,
                 consumer_eval_order=eval_order_by_id[consumer.field_id],
@@ -8101,7 +8171,7 @@ for lifecycle_class in classes:
 for diagnostic in ctx.records(DefaultFactoryDiagnosticsCollection):
     raise AssemblyDiagnosticError(diagnostic.diagnostic_message)""",
         file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_default_factories.yidl",
-        line_number=322,
+        line_number=362,
         keep_names=(
             "ctx",
             "DefaultFactoryDiagnosticsCollection",
@@ -8117,7 +8187,7 @@ def astichi_params(
 ):
     pass""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_default_factories.yidl",
-            line_number=338,
+            line_number=378,
             keep_names=("_HAS_DEFAULT_FACTORY",),
         )
     ),
@@ -8135,7 +8205,7 @@ astichi_pass(state, outer_bind=True).astichi_ref(external=state_slot)._ = astich
     outer_bind=True,
 )""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_default_factories.yidl",
-            line_number=348,
+            line_number=388,
             keep_names=("_HAS_DEFAULT_FACTORY",),
         )
     ),
@@ -8150,7 +8220,7 @@ astichi_pass(state, outer_bind=True).astichi_ref(external=state_slot)._ = astich
     outer_bind=True,
 )""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_default_factories.yidl",
-            line_number=363,
+            line_number=403,
         )
     ),
     "InitVarDefaultFactoryEvalInit": astichi_template(
@@ -8163,7 +8233,7 @@ if astichi_pass(field_name__astichi_arg__, outer_bind=True) is _HAS_DEFAULT_FACT
         )
     )""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_default_factories.yidl",
-            line_number=373,
+            line_number=413,
             keep_names=("_HAS_DEFAULT_FACTORY",),
         )
     ),
@@ -8174,7 +8244,7 @@ field_name__astichi_arg__ = default_factory_name__astichi_arg__(
     **astichi_hole(default_factory_args)
 )""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_default_factories.yidl",
-            line_number=384,
+            line_number=424,
         )
     ),
     "DefaultFactoryStoredArg": astichi_template(
@@ -8187,7 +8257,7 @@ astichi_funcargs(
     ).astichi_ref(external=provider_name)
 )""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_default_factories.yidl",
-            line_number=390,
+            line_number=430,
         )
     ),
     "DefaultFactoryLocalArg": astichi_template(
@@ -8200,14 +8270,27 @@ astichi_funcargs(
     )
 )""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_default_factories.yidl",
-            line_number=399,
+            line_number=439,
+        )
+    ),
+    "DefaultFactoryClsArg": astichi_template(
+        from_astichi_code(
+            """\
+astichi_funcargs(
+    param_name__astichi_arg__=astichi_pass(
+        decorated_cls,
+        outer_bind=True,
+    )
+)""",
+            file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_default_factories.yidl",
+            line_number=448,
         )
     ),
     "DefaultFactoryEmptyArg": astichi_template(
         from_astichi_code(
             "astichi_funcargs()",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_default_factories.yidl",
-            line_number=408,
+            line_number=457,
         )
     ),
     "BuildTransientFactsBody": from_astichi_code(
@@ -9079,11 +9162,24 @@ astichi_funcargs(
             line_number=130,
         )
     ),
+    "StaticDefaultFactoryClsArg": astichi_template(
+        from_astichi_code(
+            """\
+astichi_funcargs(
+    param_name__astichi_arg__=astichi_pass(
+        decorated_cls,
+        outer_bind=True,
+    )
+)""",
+            file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_const_static.yidl",
+            line_number=139,
+        )
+    ),
     "StaticDefaultFactoryEmptyArg": astichi_template(
         from_astichi_code(
             "astichi_funcargs()",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_const_static.yidl",
-            line_number=139,
+            line_number=148,
         )
     ),
 }
@@ -11659,6 +11755,35 @@ ASSEMBLY_CONTRIBUTIONS = {
             BindingSpec(
                 kind="ident", name="provider_name", value=ValueRef("ProviderName")
             ),
+        ),
+    ),
+    "DefaultFactoryClsArgContribution": ContributionSpec(
+        name="DefaultFactoryClsArgContribution",
+        source_name="DefaultFactoryClsArg",
+        source_kind="resource",
+        build_name="DefaultFactoryArg",
+        index=TupleValueRef((ValueRef("ConsumerEvalOrder"), ValueRef("ParamOrder"))),
+        order=ValueRef("ParamOrder"),
+        target=TargetSpec(
+            name="default_factory_args",
+            paths=(
+                TargetPathSpec(
+                    kind="build",
+                    path=PathSpec(
+                        segments=(
+                            PathSegmentSpec(kind="name", name="ClassDef", indexes=()),
+                            PathSegmentSpec(
+                                kind="name",
+                                name="DefaultFactoryEval",
+                                indexes=(ValueRef("ConsumerEvalOrder"),),
+                            ),
+                        )
+                    ),
+                ),
+            ),
+        ),
+        bindings=(
+            BindingSpec(kind="ident", name="param_name", value=ValueRef("ParamName")),
         ),
     ),
     "DefaultFactoryEmptyArgContribution": ContributionSpec(
@@ -14361,6 +14486,35 @@ ASSEMBLY_CONTRIBUTIONS = {
             ),
         ),
     ),
+    "StaticDefaultFactoryClsArgContribution": ContributionSpec(
+        name="StaticDefaultFactoryClsArgContribution",
+        source_name="StaticDefaultFactoryClsArg",
+        source_kind="resource",
+        build_name="StaticDefaultFactoryArg",
+        index=TupleValueRef((ValueRef("ConsumerFieldOrder"), ValueRef("ParamOrder"))),
+        order=ValueRef("ParamOrder"),
+        target=TargetSpec(
+            name="static_default_factory_args",
+            paths=(
+                TargetPathSpec(
+                    kind="build",
+                    path=PathSpec(
+                        segments=(
+                            PathSegmentSpec(kind="name", name="ClassDef", indexes=()),
+                            PathSegmentSpec(
+                                kind="name",
+                                name="StaticFieldProperty",
+                                indexes=(ValueRef("ConsumerFieldOrder"),),
+                            ),
+                        )
+                    ),
+                ),
+            ),
+        ),
+        bindings=(
+            BindingSpec(kind="ident", name="param_name", value=ValueRef("ParamName")),
+        ),
+    ),
     "StaticDefaultFactoryEmptyArgContribution": ContributionSpec(
         name="StaticDefaultFactoryEmptyArgContribution",
         source_name="StaticDefaultFactoryEmptyArg",
@@ -15707,6 +15861,14 @@ ASSEMBLY_MATCHERS = {
                 weight=1.0,
             ),
             ContributionRuleSpec(
+                name="cls_provider",
+                condition=EqConditionSpec(
+                    left=ValueRef("ProviderFieldKind"), right=LiteralValueRef("cls")
+                ),
+                contribution_name="DefaultFactoryClsArgContribution",
+                weight=1.0,
+            ),
+            ContributionRuleSpec(
                 name="local_provider",
                 condition=EqConditionSpec(
                     left=ValueRef("ProviderFieldKind"), right=LiteralValueRef("initvar")
@@ -16840,6 +17002,23 @@ ASSEMBLY_MATCHERS = {
                     )
                 ),
                 contribution_name="StaticDefaultFactoryEmptyArgContribution",
+                weight=1.0,
+            ),
+            ContributionRuleSpec(
+                name="static_cls",
+                condition=AndConditionSpec(
+                    items=(
+                        EqConditionSpec(
+                            left=ValueRef("ConsumerFieldKind"),
+                            right=LiteralValueRef("static"),
+                        ),
+                        EqConditionSpec(
+                            left=ValueRef("ProviderFieldKind"),
+                            right=LiteralValueRef("cls"),
+                        ),
+                    )
+                ),
+                contribution_name="StaticDefaultFactoryClsArgContribution",
                 weight=1.0,
             ),
             ContributionRuleSpec(
