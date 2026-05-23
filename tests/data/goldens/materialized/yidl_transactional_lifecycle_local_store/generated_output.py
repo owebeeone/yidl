@@ -299,8 +299,16 @@ def build_lifecycle_class(decorated_cls, *, _Scratch_lifecycle_definition, _Scra
         @count.setter
         def count(self, value):
             state = self._y_state
+            state._y_require_active_transaction(0)
+            if state._y_count_working is not VOID:
+                current = state._y_count_working
+            else:
+                current = state._y_count_current
+            next_value = value
+            if current == next_value:
+                return
             state._y_ensure_working_transaction(0)
-            state._y_count_working = value
+            state._y_count_working = next_value
 
         def __init__(self, count: 'int'=_Scratch_count_default, *, transaction_manager=None):
             state = object.__new__(Scratch_State)
@@ -343,8 +351,16 @@ def build_lifecycle_class(decorated_cls, *, _Scratch_lifecycle_definition, _Scra
         @count.setter
         def count(self, value):
             state = self._y_state
+            state._y_require_active_transaction(0)
+            if state._y_count_working is not VOID:
+                current = state._y_count_working
+            else:
+                current = state._y_count_current
+            next_value = value
+            if current == next_value:
+                return
             state._y_ensure_working_transaction(0)
-            state._y_count_working = value
+            state._y_count_working = next_value
     Scratch.__name__ = decorated_cls.__name__
     Scratch.__qualname__ = decorated_cls.__qualname__
     Scratch.__module__ = decorated_cls.__module__

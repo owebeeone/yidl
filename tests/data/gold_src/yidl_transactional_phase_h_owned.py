@@ -12,6 +12,7 @@ from yidl.runtime.lifecycle import _generate_lifecycle_source
 from yidl.runtime.lifecycle import binding
 from yidl.runtime.lifecycle import harvest_lifecycle_definition
 from yidl.runtime.lifecycle import lifecycle
+from yidl.runtime.lifecycle import managed
 from yidl.runtime.lifecycle import owned
 from yidl.runtime.transaction_yidl import DEFAULT_TRANSACTION
 
@@ -22,6 +23,9 @@ class SpyBinding(BindingBase):
     def __init__(self, name: str):
         super().__init__()
         self.name = name
+
+    def __eq__(self, other: object) -> bool:
+        return isinstance(other, SpyBinding) and self.name == other.name
 
 
 def render_case() -> Mapping[str, str]:
@@ -58,7 +62,10 @@ def validate_case(sources: Mapping[str, str]) -> None:
 
 def _fixture_class() -> type[object]:
     class Owner:
+        value_state: list[int] = managed(default_factory=lambda: [1])
+        identity_state: list[int] = managed(compare="identity", default_factory=lambda: [1])
         child: BindingBase | None = owned(default=None)
+        identity_child: BindingBase | None = owned(compare="identity", default=None)
         children: dict[str, BindingBase] = owned(default_factory=lambda: {})
         handle: BindingBase | None = binding(default=None)
         handles: dict[str, BindingBase] = binding(default_factory=lambda: {})
@@ -86,10 +93,26 @@ def _assert_owner_class(generated: type[object]) -> None:
     assert generated.__name__ == "Owner"
     assert generated.__yidl_tx_index_to_key__ == (DEFAULT_TRANSACTION,)
 
+    assert owner.value_state == [1]
+    assert owner.identity_state == [1]
     assert owner.child is None
+    assert owner.identity_child is None
     assert isinstance(owner.children, BindingDict)
     assert owner.handle is None
     assert isinstance(owner.handles, BindingDict)
+
+    current_value_state = owner.value_state
+    with owner.begin(DEFAULT_TRANSACTION):
+        owner.value_state = [1]
+        assert owner.value_state is current_value_state
+
+    identity_replacement = [1]
+    with owner.begin(DEFAULT_TRANSACTION):
+        owner.identity_state = identity_replacement
+        assert owner.identity_state is identity_replacement
+        assert owner.current.identity_state is not identity_replacement
+
+    assert owner.identity_state is identity_replacement
 
     handle = SpyBinding("handle")
     owner.handle = handle
@@ -128,6 +151,23 @@ def _assert_owner_class(generated: type[object]) -> None:
     assert owner.child is child
     assert owner.current.child is child
     assert child.is_accepted is True
+
+    equal_child = SpyBinding("child")
+    with owner.begin(DEFAULT_TRANSACTION):
+        owner.child = equal_child
+        assert owner.child is child
+
+    identity_child = SpyBinding("identity-child")
+    with owner.begin(DEFAULT_TRANSACTION):
+        owner.identity_child = identity_child
+
+    equal_identity_child = SpyBinding("identity-child")
+    with owner.begin(DEFAULT_TRANSACTION):
+        owner.identity_child = equal_identity_child
+        assert owner.identity_child is equal_identity_child
+        assert owner.current.identity_child is identity_child
+
+    assert owner.identity_child is equal_identity_child
 
     first = SpyBinding("first")
     second = SpyBinding("second")
@@ -187,6 +227,8 @@ def _assert_source_shape(sources: Mapping[str, str]) -> None:
     for generated in (source, prettier_source):
         assert "_y_validate_binding_value" in generated
         assert "_y_validate_binding_map_value" in generated
+        assert "if current == next_value:" in generated
+        assert "if current is next_value:" in generated
         assert ".accepted()" in generated
         assert "BindingDict" in generated
         assert "state._y_ensure_working_transaction(0)" in generated

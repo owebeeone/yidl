@@ -80,6 +80,9 @@ _FieldKindProperty = RuntimeProperty(
 _BindingShapeProperty = RuntimeProperty(
     "BindingShape", str, default="scalar", storage_name="binding_shape"
 )
+_CompareProperty = RuntimeProperty(
+    "Compare", str, default="value", storage_name="compare"
+)
 _AnnotationProperty = RuntimeProperty(
     "Annotation", object, default=object, storage_name="annotation"
 )
@@ -543,6 +546,7 @@ _PlainFieldSpec = RuntimeRecord(
         _FieldOrderProperty,
         _FieldKindProperty,
         _BindingShapeProperty,
+        _CompareProperty,
         _AnnotationProperty,
         _InitProperty,
         _HasDefaultProperty,
@@ -580,6 +584,7 @@ _InitVarFieldSpec = RuntimeRecord(
         _FieldOrderProperty,
         _FieldKindProperty,
         _BindingShapeProperty,
+        _CompareProperty,
         _AnnotationProperty,
         _InitProperty,
         _HasDefaultProperty,
@@ -617,6 +622,7 @@ _ClassVarFieldSpec = RuntimeRecord(
         _FieldOrderProperty,
         _FieldKindProperty,
         _BindingShapeProperty,
+        _CompareProperty,
         _AnnotationProperty,
         _InitProperty,
         _HasDefaultProperty,
@@ -652,6 +658,7 @@ _TransactionalFieldSpec = RuntimeRecord(
         _FieldOwnerProperty,
         _FieldNameProperty,
         _FieldOrderProperty,
+        _CompareProperty,
         _TxKeyKeyProperty,
     ),
 )
@@ -680,6 +687,7 @@ _IndexedTransactionalFieldSpec = RuntimeRecord(
         _FieldOwnerProperty,
         _FieldNameProperty,
         _FieldOrderProperty,
+        _CompareProperty,
         _TxKeyKeyProperty,
         _TxIndexProperty,
         _CurrentSlotNameProperty,
@@ -701,6 +709,7 @@ _ManagedFieldSpec = RuntimeRecord(
         _FieldOrderProperty,
         _FieldKindProperty,
         _BindingShapeProperty,
+        _CompareProperty,
         _AnnotationProperty,
         _InitProperty,
         _HasDefaultProperty,
@@ -822,6 +831,7 @@ _TransientFieldSpec = RuntimeRecord(
         _FieldOrderProperty,
         _FieldKindProperty,
         _BindingShapeProperty,
+        _CompareProperty,
         _AnnotationProperty,
         _InitProperty,
         _HasDefaultProperty,
@@ -858,6 +868,7 @@ _IndexedOwnedFieldSpec = RuntimeRecord(
         _FieldNameProperty,
         _FieldOrderProperty,
         _BindingShapeProperty,
+        _CompareProperty,
         _TxKeyKeyProperty,
         _TxIndexProperty,
         _CurrentSlotNameProperty,
@@ -874,6 +885,7 @@ _BindingFieldSpec = RuntimeRecord(
         _FieldOrderProperty,
         _FieldKindProperty,
         _BindingShapeProperty,
+        _CompareProperty,
         _AnnotationProperty,
         _InitProperty,
         _HasDefaultProperty,
@@ -911,6 +923,7 @@ _OwnedFieldSpec = RuntimeRecord(
         _FieldOrderProperty,
         _FieldKindProperty,
         _BindingShapeProperty,
+        _CompareProperty,
         _AnnotationProperty,
         _InitProperty,
         _HasDefaultProperty,
@@ -948,6 +961,7 @@ _ConstFieldSpec = RuntimeRecord(
         _FieldOrderProperty,
         _FieldKindProperty,
         _BindingShapeProperty,
+        _CompareProperty,
         _AnnotationProperty,
         _InitProperty,
         _HasDefaultProperty,
@@ -985,6 +999,7 @@ _StaticFieldSpec = RuntimeRecord(
         _FieldOrderProperty,
         _FieldKindProperty,
         _BindingShapeProperty,
+        _CompareProperty,
         _AnnotationProperty,
         _InitProperty,
         _HasDefaultProperty,
@@ -1022,6 +1037,7 @@ _LocalStoreFieldSpec = RuntimeRecord(
         _FieldOrderProperty,
         _FieldKindProperty,
         _BindingShapeProperty,
+        _CompareProperty,
         _AnnotationProperty,
         _InitProperty,
         _HasDefaultProperty,
@@ -1702,6 +1718,7 @@ class PlainField:
         "field_order",
         "field_kind",
         "binding_shape",
+        "compare",
         "annotation",
         "init",
         "has_default",
@@ -1736,6 +1753,7 @@ class PlainField:
     field_order: int
     field_kind: str
     binding_shape: str
+    compare: str
     annotation: object
     init: bool
     has_default: bool
@@ -1772,6 +1790,7 @@ class PlainField:
         field_order: int,
         field_kind: str = "field",
         binding_shape: str = "scalar",
+        compare: str = "value",
         annotation: object = object,
         init: bool = True,
         has_default: bool = False,
@@ -1819,6 +1838,9 @@ class PlainField:
                 "BindingShape must be str, got " + type(binding_shape).__name__
             )
         object.__setattr__(self, "binding_shape", binding_shape)
+        if not isinstance(compare, str):
+            raise TypeError("Compare must be str, got " + type(compare).__name__)
+        object.__setattr__(self, "compare", compare)
         object.__setattr__(self, "annotation", annotation)
         if not isinstance(init, bool):
             raise TypeError("Init must be bool, got " + type(init).__name__)
@@ -1936,6 +1958,7 @@ class PlainField:
             "field_order",
             "field_kind",
             "binding_shape",
+            "compare",
             "annotation",
             "init",
             "has_default",
@@ -1974,6 +1997,7 @@ class PlainField:
         pieces.append("field_order=" + repr(self.field_order))
         pieces.append("field_kind=" + repr(self.field_kind))
         pieces.append("binding_shape=" + repr(self.binding_shape))
+        pieces.append("compare=" + repr(self.compare))
         pieces.append("annotation=" + repr(self.annotation))
         pieces.append("init=" + repr(self.init))
         pieces.append("has_default=" + repr(self.has_default))
@@ -2026,6 +2050,7 @@ class InitVarField:
         "field_order",
         "field_kind",
         "binding_shape",
+        "compare",
         "annotation",
         "init",
         "has_default",
@@ -2060,6 +2085,7 @@ class InitVarField:
     field_order: int
     field_kind: str
     binding_shape: str
+    compare: str
     annotation: object
     init: bool
     has_default: bool
@@ -2096,6 +2122,7 @@ class InitVarField:
         field_order: int,
         field_kind: str = "field",
         binding_shape: str = "scalar",
+        compare: str = "value",
         annotation: object = object,
         init: bool = True,
         has_default: bool = False,
@@ -2143,6 +2170,9 @@ class InitVarField:
                 "BindingShape must be str, got " + type(binding_shape).__name__
             )
         object.__setattr__(self, "binding_shape", binding_shape)
+        if not isinstance(compare, str):
+            raise TypeError("Compare must be str, got " + type(compare).__name__)
+        object.__setattr__(self, "compare", compare)
         object.__setattr__(self, "annotation", annotation)
         if not isinstance(init, bool):
             raise TypeError("Init must be bool, got " + type(init).__name__)
@@ -2260,6 +2290,7 @@ class InitVarField:
             "field_order",
             "field_kind",
             "binding_shape",
+            "compare",
             "annotation",
             "init",
             "has_default",
@@ -2298,6 +2329,7 @@ class InitVarField:
         pieces.append("field_order=" + repr(self.field_order))
         pieces.append("field_kind=" + repr(self.field_kind))
         pieces.append("binding_shape=" + repr(self.binding_shape))
+        pieces.append("compare=" + repr(self.compare))
         pieces.append("annotation=" + repr(self.annotation))
         pieces.append("init=" + repr(self.init))
         pieces.append("has_default=" + repr(self.has_default))
@@ -2350,6 +2382,7 @@ class ClassVarField:
         "field_order",
         "field_kind",
         "binding_shape",
+        "compare",
         "annotation",
         "init",
         "has_default",
@@ -2384,6 +2417,7 @@ class ClassVarField:
     field_order: int
     field_kind: str
     binding_shape: str
+    compare: str
     annotation: object
     init: bool
     has_default: bool
@@ -2420,6 +2454,7 @@ class ClassVarField:
         field_order: int,
         field_kind: str = "field",
         binding_shape: str = "scalar",
+        compare: str = "value",
         annotation: object = object,
         init: bool = True,
         has_default: bool = False,
@@ -2467,6 +2502,9 @@ class ClassVarField:
                 "BindingShape must be str, got " + type(binding_shape).__name__
             )
         object.__setattr__(self, "binding_shape", binding_shape)
+        if not isinstance(compare, str):
+            raise TypeError("Compare must be str, got " + type(compare).__name__)
+        object.__setattr__(self, "compare", compare)
         object.__setattr__(self, "annotation", annotation)
         if not isinstance(init, bool):
             raise TypeError("Init must be bool, got " + type(init).__name__)
@@ -2584,6 +2622,7 @@ class ClassVarField:
             "field_order",
             "field_kind",
             "binding_shape",
+            "compare",
             "annotation",
             "init",
             "has_default",
@@ -2622,6 +2661,7 @@ class ClassVarField:
         pieces.append("field_order=" + repr(self.field_order))
         pieces.append("field_kind=" + repr(self.field_kind))
         pieces.append("binding_shape=" + repr(self.binding_shape))
+        pieces.append("compare=" + repr(self.compare))
         pieces.append("annotation=" + repr(self.annotation))
         pieces.append("init=" + repr(self.init))
         pieces.append("has_default=" + repr(self.has_default))
@@ -2667,12 +2707,20 @@ _ClassVarFieldSpec.bind_record_class(ClassVarField)
 
 
 class TransactionalField:
-    __slots__ = ("field_id", "field_owner", "field_name", "field_order", "tx_key_key")
+    __slots__ = (
+        "field_id",
+        "field_owner",
+        "field_name",
+        "field_order",
+        "compare",
+        "tx_key_key",
+    )
     __dds_record_spec__ = _TransactionalFieldSpec
     field_id: str
     field_owner: str
     field_name: str
     field_order: int
+    compare: str
     tx_key_key: object
 
     def __init__(
@@ -2682,6 +2730,7 @@ class TransactionalField:
         field_owner: str,
         field_name: str,
         field_order: int,
+        compare: str = "value",
         tx_key_key: object = None,
     ):
         if not isinstance(field_id, str):
@@ -2696,6 +2745,9 @@ class TransactionalField:
         if not isinstance(field_order, int):
             raise TypeError("FieldOrder must be int, got " + type(field_order).__name__)
         object.__setattr__(self, "field_order", field_order)
+        if not isinstance(compare, str):
+            raise TypeError("Compare must be str, got " + type(compare).__name__)
+        object.__setattr__(self, "compare", compare)
         object.__setattr__(self, "tx_key_key", tx_key_key)
 
     def __setattr__(self, name, value):
@@ -2704,6 +2756,7 @@ class TransactionalField:
             "field_owner",
             "field_name",
             "field_order",
+            "compare",
             "tx_key_key",
         ):
             raise AttributeError("TransactionalField records are immutable")
@@ -2715,6 +2768,7 @@ class TransactionalField:
         pieces.append("field_owner=" + repr(self.field_owner))
         pieces.append("field_name=" + repr(self.field_name))
         pieces.append("field_order=" + repr(self.field_order))
+        pieces.append("compare=" + repr(self.compare))
         pieces.append("tx_key_key=" + repr(self.tx_key_key))
         return "TransactionalField" + "(" + ", ".join(pieces) + ")"
 
@@ -2927,6 +2981,7 @@ class IndexedTransactionalField:
         "field_owner",
         "field_name",
         "field_order",
+        "compare",
         "tx_key_key",
         "tx_index",
         "current_slot_name",
@@ -2943,6 +2998,7 @@ class IndexedTransactionalField:
     field_owner: str
     field_name: str
     field_order: int
+    compare: str
     tx_key_key: object
     tx_index: int
     current_slot_name: str
@@ -2961,6 +3017,7 @@ class IndexedTransactionalField:
         field_owner: str,
         field_name: str,
         field_order: int,
+        compare: str = "value",
         tx_key_key: object = None,
         tx_index: int = 0,
         current_slot_name: str = "",
@@ -2984,6 +3041,9 @@ class IndexedTransactionalField:
         if not isinstance(field_order, int):
             raise TypeError("FieldOrder must be int, got " + type(field_order).__name__)
         object.__setattr__(self, "field_order", field_order)
+        if not isinstance(compare, str):
+            raise TypeError("Compare must be str, got " + type(compare).__name__)
+        object.__setattr__(self, "compare", compare)
         object.__setattr__(self, "tx_key_key", tx_key_key)
         if not isinstance(tx_index, int):
             raise TypeError("TxIndex must be int, got " + type(tx_index).__name__)
@@ -3031,6 +3091,7 @@ class IndexedTransactionalField:
             "field_owner",
             "field_name",
             "field_order",
+            "compare",
             "tx_key_key",
             "tx_index",
             "current_slot_name",
@@ -3051,6 +3112,7 @@ class IndexedTransactionalField:
         pieces.append("field_owner=" + repr(self.field_owner))
         pieces.append("field_name=" + repr(self.field_name))
         pieces.append("field_order=" + repr(self.field_order))
+        pieces.append("compare=" + repr(self.compare))
         pieces.append("tx_key_key=" + repr(self.tx_key_key))
         pieces.append("tx_index=" + repr(self.tx_index))
         pieces.append("current_slot_name=" + repr(self.current_slot_name))
@@ -3075,6 +3137,7 @@ class ManagedField:
         "field_order",
         "field_kind",
         "binding_shape",
+        "compare",
         "annotation",
         "init",
         "has_default",
@@ -3109,6 +3172,7 @@ class ManagedField:
     field_order: int
     field_kind: str
     binding_shape: str
+    compare: str
     annotation: object
     init: bool
     has_default: bool
@@ -3145,6 +3209,7 @@ class ManagedField:
         field_order: int,
         field_kind: str = "field",
         binding_shape: str = "scalar",
+        compare: str = "value",
         annotation: object = object,
         init: bool = True,
         has_default: bool = False,
@@ -3192,6 +3257,9 @@ class ManagedField:
                 "BindingShape must be str, got " + type(binding_shape).__name__
             )
         object.__setattr__(self, "binding_shape", binding_shape)
+        if not isinstance(compare, str):
+            raise TypeError("Compare must be str, got " + type(compare).__name__)
+        object.__setattr__(self, "compare", compare)
         object.__setattr__(self, "annotation", annotation)
         if not isinstance(init, bool):
             raise TypeError("Init must be bool, got " + type(init).__name__)
@@ -3309,6 +3377,7 @@ class ManagedField:
             "field_order",
             "field_kind",
             "binding_shape",
+            "compare",
             "annotation",
             "init",
             "has_default",
@@ -3347,6 +3416,7 @@ class ManagedField:
         pieces.append("field_order=" + repr(self.field_order))
         pieces.append("field_kind=" + repr(self.field_kind))
         pieces.append("binding_shape=" + repr(self.binding_shape))
+        pieces.append("compare=" + repr(self.compare))
         pieces.append("annotation=" + repr(self.annotation))
         pieces.append("init=" + repr(self.init))
         pieces.append("has_default=" + repr(self.has_default))
@@ -4100,6 +4170,7 @@ class TransientField:
         "field_order",
         "field_kind",
         "binding_shape",
+        "compare",
         "annotation",
         "init",
         "has_default",
@@ -4134,6 +4205,7 @@ class TransientField:
     field_order: int
     field_kind: str
     binding_shape: str
+    compare: str
     annotation: object
     init: bool
     has_default: bool
@@ -4170,6 +4242,7 @@ class TransientField:
         field_order: int,
         field_kind: str = "field",
         binding_shape: str = "scalar",
+        compare: str = "value",
         annotation: object = object,
         init: bool = True,
         has_default: bool = False,
@@ -4217,6 +4290,9 @@ class TransientField:
                 "BindingShape must be str, got " + type(binding_shape).__name__
             )
         object.__setattr__(self, "binding_shape", binding_shape)
+        if not isinstance(compare, str):
+            raise TypeError("Compare must be str, got " + type(compare).__name__)
+        object.__setattr__(self, "compare", compare)
         object.__setattr__(self, "annotation", annotation)
         if not isinstance(init, bool):
             raise TypeError("Init must be bool, got " + type(init).__name__)
@@ -4334,6 +4410,7 @@ class TransientField:
             "field_order",
             "field_kind",
             "binding_shape",
+            "compare",
             "annotation",
             "init",
             "has_default",
@@ -4372,6 +4449,7 @@ class TransientField:
         pieces.append("field_order=" + repr(self.field_order))
         pieces.append("field_kind=" + repr(self.field_kind))
         pieces.append("binding_shape=" + repr(self.binding_shape))
+        pieces.append("compare=" + repr(self.compare))
         pieces.append("annotation=" + repr(self.annotation))
         pieces.append("init=" + repr(self.init))
         pieces.append("has_default=" + repr(self.has_default))
@@ -4423,6 +4501,7 @@ class IndexedOwnedField:
         "field_name",
         "field_order",
         "binding_shape",
+        "compare",
         "tx_key_key",
         "tx_index",
         "current_slot_name",
@@ -4435,6 +4514,7 @@ class IndexedOwnedField:
     field_name: str
     field_order: int
     binding_shape: str
+    compare: str
     tx_key_key: object
     tx_index: int
     current_slot_name: str
@@ -4449,6 +4529,7 @@ class IndexedOwnedField:
         field_name: str,
         field_order: int,
         binding_shape: str = "scalar",
+        compare: str = "value",
         tx_key_key: object = None,
         tx_index: int = 0,
         current_slot_name: str = "",
@@ -4472,6 +4553,9 @@ class IndexedOwnedField:
                 "BindingShape must be str, got " + type(binding_shape).__name__
             )
         object.__setattr__(self, "binding_shape", binding_shape)
+        if not isinstance(compare, str):
+            raise TypeError("Compare must be str, got " + type(compare).__name__)
+        object.__setattr__(self, "compare", compare)
         object.__setattr__(self, "tx_key_key", tx_key_key)
         if not isinstance(tx_index, int):
             raise TypeError("TxIndex must be int, got " + type(tx_index).__name__)
@@ -4499,6 +4583,7 @@ class IndexedOwnedField:
             "field_name",
             "field_order",
             "binding_shape",
+            "compare",
             "tx_key_key",
             "tx_index",
             "current_slot_name",
@@ -4515,6 +4600,7 @@ class IndexedOwnedField:
         pieces.append("field_name=" + repr(self.field_name))
         pieces.append("field_order=" + repr(self.field_order))
         pieces.append("binding_shape=" + repr(self.binding_shape))
+        pieces.append("compare=" + repr(self.compare))
         pieces.append("tx_key_key=" + repr(self.tx_key_key))
         pieces.append("tx_index=" + repr(self.tx_index))
         pieces.append("current_slot_name=" + repr(self.current_slot_name))
@@ -4534,6 +4620,7 @@ class BindingField:
         "field_order",
         "field_kind",
         "binding_shape",
+        "compare",
         "annotation",
         "init",
         "has_default",
@@ -4568,6 +4655,7 @@ class BindingField:
     field_order: int
     field_kind: str
     binding_shape: str
+    compare: str
     annotation: object
     init: bool
     has_default: bool
@@ -4604,6 +4692,7 @@ class BindingField:
         field_order: int,
         field_kind: str = "field",
         binding_shape: str = "scalar",
+        compare: str = "value",
         annotation: object = object,
         init: bool = True,
         has_default: bool = False,
@@ -4651,6 +4740,9 @@ class BindingField:
                 "BindingShape must be str, got " + type(binding_shape).__name__
             )
         object.__setattr__(self, "binding_shape", binding_shape)
+        if not isinstance(compare, str):
+            raise TypeError("Compare must be str, got " + type(compare).__name__)
+        object.__setattr__(self, "compare", compare)
         object.__setattr__(self, "annotation", annotation)
         if not isinstance(init, bool):
             raise TypeError("Init must be bool, got " + type(init).__name__)
@@ -4768,6 +4860,7 @@ class BindingField:
             "field_order",
             "field_kind",
             "binding_shape",
+            "compare",
             "annotation",
             "init",
             "has_default",
@@ -4806,6 +4899,7 @@ class BindingField:
         pieces.append("field_order=" + repr(self.field_order))
         pieces.append("field_kind=" + repr(self.field_kind))
         pieces.append("binding_shape=" + repr(self.binding_shape))
+        pieces.append("compare=" + repr(self.compare))
         pieces.append("annotation=" + repr(self.annotation))
         pieces.append("init=" + repr(self.init))
         pieces.append("has_default=" + repr(self.has_default))
@@ -4858,6 +4952,7 @@ class OwnedField:
         "field_order",
         "field_kind",
         "binding_shape",
+        "compare",
         "annotation",
         "init",
         "has_default",
@@ -4892,6 +4987,7 @@ class OwnedField:
     field_order: int
     field_kind: str
     binding_shape: str
+    compare: str
     annotation: object
     init: bool
     has_default: bool
@@ -4928,6 +5024,7 @@ class OwnedField:
         field_order: int,
         field_kind: str = "field",
         binding_shape: str = "scalar",
+        compare: str = "value",
         annotation: object = object,
         init: bool = True,
         has_default: bool = False,
@@ -4975,6 +5072,9 @@ class OwnedField:
                 "BindingShape must be str, got " + type(binding_shape).__name__
             )
         object.__setattr__(self, "binding_shape", binding_shape)
+        if not isinstance(compare, str):
+            raise TypeError("Compare must be str, got " + type(compare).__name__)
+        object.__setattr__(self, "compare", compare)
         object.__setattr__(self, "annotation", annotation)
         if not isinstance(init, bool):
             raise TypeError("Init must be bool, got " + type(init).__name__)
@@ -5092,6 +5192,7 @@ class OwnedField:
             "field_order",
             "field_kind",
             "binding_shape",
+            "compare",
             "annotation",
             "init",
             "has_default",
@@ -5130,6 +5231,7 @@ class OwnedField:
         pieces.append("field_order=" + repr(self.field_order))
         pieces.append("field_kind=" + repr(self.field_kind))
         pieces.append("binding_shape=" + repr(self.binding_shape))
+        pieces.append("compare=" + repr(self.compare))
         pieces.append("annotation=" + repr(self.annotation))
         pieces.append("init=" + repr(self.init))
         pieces.append("has_default=" + repr(self.has_default))
@@ -5182,6 +5284,7 @@ class ConstField:
         "field_order",
         "field_kind",
         "binding_shape",
+        "compare",
         "annotation",
         "init",
         "has_default",
@@ -5216,6 +5319,7 @@ class ConstField:
     field_order: int
     field_kind: str
     binding_shape: str
+    compare: str
     annotation: object
     init: bool
     has_default: bool
@@ -5252,6 +5356,7 @@ class ConstField:
         field_order: int,
         field_kind: str = "field",
         binding_shape: str = "scalar",
+        compare: str = "value",
         annotation: object = object,
         init: bool = True,
         has_default: bool = False,
@@ -5299,6 +5404,9 @@ class ConstField:
                 "BindingShape must be str, got " + type(binding_shape).__name__
             )
         object.__setattr__(self, "binding_shape", binding_shape)
+        if not isinstance(compare, str):
+            raise TypeError("Compare must be str, got " + type(compare).__name__)
+        object.__setattr__(self, "compare", compare)
         object.__setattr__(self, "annotation", annotation)
         if not isinstance(init, bool):
             raise TypeError("Init must be bool, got " + type(init).__name__)
@@ -5416,6 +5524,7 @@ class ConstField:
             "field_order",
             "field_kind",
             "binding_shape",
+            "compare",
             "annotation",
             "init",
             "has_default",
@@ -5454,6 +5563,7 @@ class ConstField:
         pieces.append("field_order=" + repr(self.field_order))
         pieces.append("field_kind=" + repr(self.field_kind))
         pieces.append("binding_shape=" + repr(self.binding_shape))
+        pieces.append("compare=" + repr(self.compare))
         pieces.append("annotation=" + repr(self.annotation))
         pieces.append("init=" + repr(self.init))
         pieces.append("has_default=" + repr(self.has_default))
@@ -5506,6 +5616,7 @@ class StaticField:
         "field_order",
         "field_kind",
         "binding_shape",
+        "compare",
         "annotation",
         "init",
         "has_default",
@@ -5540,6 +5651,7 @@ class StaticField:
     field_order: int
     field_kind: str
     binding_shape: str
+    compare: str
     annotation: object
     init: bool
     has_default: bool
@@ -5576,6 +5688,7 @@ class StaticField:
         field_order: int,
         field_kind: str = "field",
         binding_shape: str = "scalar",
+        compare: str = "value",
         annotation: object = object,
         init: bool = True,
         has_default: bool = False,
@@ -5623,6 +5736,9 @@ class StaticField:
                 "BindingShape must be str, got " + type(binding_shape).__name__
             )
         object.__setattr__(self, "binding_shape", binding_shape)
+        if not isinstance(compare, str):
+            raise TypeError("Compare must be str, got " + type(compare).__name__)
+        object.__setattr__(self, "compare", compare)
         object.__setattr__(self, "annotation", annotation)
         if not isinstance(init, bool):
             raise TypeError("Init must be bool, got " + type(init).__name__)
@@ -5740,6 +5856,7 @@ class StaticField:
             "field_order",
             "field_kind",
             "binding_shape",
+            "compare",
             "annotation",
             "init",
             "has_default",
@@ -5778,6 +5895,7 @@ class StaticField:
         pieces.append("field_order=" + repr(self.field_order))
         pieces.append("field_kind=" + repr(self.field_kind))
         pieces.append("binding_shape=" + repr(self.binding_shape))
+        pieces.append("compare=" + repr(self.compare))
         pieces.append("annotation=" + repr(self.annotation))
         pieces.append("init=" + repr(self.init))
         pieces.append("has_default=" + repr(self.has_default))
@@ -5830,6 +5948,7 @@ class LocalStoreField:
         "field_order",
         "field_kind",
         "binding_shape",
+        "compare",
         "annotation",
         "init",
         "has_default",
@@ -5864,6 +5983,7 @@ class LocalStoreField:
     field_order: int
     field_kind: str
     binding_shape: str
+    compare: str
     annotation: object
     init: bool
     has_default: bool
@@ -5900,6 +6020,7 @@ class LocalStoreField:
         field_order: int,
         field_kind: str = "field",
         binding_shape: str = "scalar",
+        compare: str = "value",
         annotation: object = object,
         init: bool = True,
         has_default: bool = False,
@@ -5947,6 +6068,9 @@ class LocalStoreField:
                 "BindingShape must be str, got " + type(binding_shape).__name__
             )
         object.__setattr__(self, "binding_shape", binding_shape)
+        if not isinstance(compare, str):
+            raise TypeError("Compare must be str, got " + type(compare).__name__)
+        object.__setattr__(self, "compare", compare)
         object.__setattr__(self, "annotation", annotation)
         if not isinstance(init, bool):
             raise TypeError("Init must be bool, got " + type(init).__name__)
@@ -6064,6 +6188,7 @@ class LocalStoreField:
             "field_order",
             "field_kind",
             "binding_shape",
+            "compare",
             "annotation",
             "init",
             "has_default",
@@ -6102,6 +6227,7 @@ class LocalStoreField:
         pieces.append("field_order=" + repr(self.field_order))
         pieces.append("field_kind=" + repr(self.field_kind))
         pieces.append("binding_shape=" + repr(self.binding_shape))
+        pieces.append("compare=" + repr(self.compare))
         pieces.append("annotation=" + repr(self.annotation))
         pieces.append("init=" + repr(self.init))
         pieces.append("has_default=" + repr(self.has_default))
@@ -6436,6 +6562,7 @@ def run_build_transaction_facts(builder):
                     field_owner=field.field_owner,
                     field_name=field.field_name,
                     field_order=field.field_order,
+                    compare=field.compare,
                     tx_key_key=tx_key,
                 ),
                 policy=RejectDuplicate,
@@ -6449,6 +6576,7 @@ def run_build_transaction_facts(builder):
                     field_owner=field.field_owner,
                     field_name=field.field_name,
                     field_order=field.field_order,
+                    compare=field.compare,
                     tx_key_key=tx_key,
                     tx_index=tx_index,
                     current_slot_name=field.current_slot_name,
@@ -6818,6 +6946,7 @@ def run_build_owned_facts(builder):
                 field_name=field.field_name,
                 field_order=field.field_order,
                 binding_shape=field.binding_shape,
+                compare=field.compare,
                 tx_key_key=tx_key,
                 tx_index=tx_keys[field.field_owner, tx_key],
                 current_slot_name=field.current_slot_name,
@@ -6953,6 +7082,7 @@ ASSEMBLY_PROPERTIES = {
     "BindingShape": _YidlSimpleNamespace(
         name="BindingShape", storage_name="binding_shape"
     ),
+    "Compare": _YidlSimpleNamespace(name="Compare", storage_name="compare"),
     "Annotation": _YidlSimpleNamespace(name="Annotation", storage_name="annotation"),
     "Init": _YidlSimpleNamespace(name="Init", storage_name="init"),
     "HasDefault": _YidlSimpleNamespace(name="HasDefault", storage_name="has_default"),
@@ -7244,7 +7374,7 @@ def build_lifecycle_class(decorated_cls, builder_params__astichi_param_hole__):
     astichi_hole(function_body)
     astichi_hole(return_statement)""",
         file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-        line_number=215,
+        line_number=217,
     ),
     "BuilderParam": astichi_template(
         from_astichi_code(
@@ -7252,7 +7382,7 @@ def build_lifecycle_class(decorated_cls, builder_params__astichi_param_hole__):
 def astichi_params(*, value_name__astichi_arg__):
     pass""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=233,
+            line_number=235,
         )
     ),
     "TransactionManagerParam": astichi_template(
@@ -7261,14 +7391,14 @@ def astichi_params(*, value_name__astichi_arg__):
 def astichi_params(*, transaction_manager=None):
     pass""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=238,
+            line_number=240,
         )
     ),
     "StateSlotEntry": astichi_template(
         from_astichi_code(
             "astichi_bind_external(slot_name)",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=243,
+            line_number=245,
         )
     ),
     "InitParamRequired": astichi_template(
@@ -7277,7 +7407,7 @@ def astichi_params(*, transaction_manager=None):
 def astichi_params(param_name__astichi_arg__: astichi_bind_external(annotation)):
     pass""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=247,
+            line_number=249,
         )
     ),
     "InitParamDefault": astichi_template(
@@ -7289,7 +7419,7 @@ def astichi_params(
 ):
     pass""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=252,
+            line_number=254,
         )
     ),
     "PlainStateAssignment": astichi_template(
@@ -7300,7 +7430,7 @@ astichi_pass(state, outer_bind=True).astichi_ref(external=state_slot)._ = astich
     outer_bind=True,
 )""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=260,
+            line_number=262,
         )
     ),
     "InitVarLocalDefaultAssignment": astichi_template(
@@ -7311,7 +7441,7 @@ init_value_name__astichi_arg__ = astichi_pass(
     outer_bind=True,
 )""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=267,
+            line_number=269,
         )
     ),
     "PlainProperty": astichi_template(
@@ -7325,7 +7455,7 @@ def property_getter_name__astichi_arg__(self):
 def property_setter_name__astichi_arg__(self, value):
     self._y_state.astichi_ref(external=state_slot)._ = value""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=274,
+            line_number=276,
         )
     ),
     "ClassVarDefaultAssignment": astichi_template(
@@ -7336,7 +7466,7 @@ classvar_name__astichi_arg__ = astichi_pass(
     outer_bind=True,
 )""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=284,
+            line_number=286,
         )
     ),
     "CommitOrderKeyBranch": astichi_template(
@@ -7349,7 +7479,7 @@ def astichi_elif():
     if tx_index == astichi_bind_external(tx_index_value):
         return self._y_get_default_facade().astichi_ref(external=method_name)()""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=291,
+            line_number=293,
         )
     ),
     "RequiresValidationBranch": astichi_template(
@@ -7361,7 +7491,7 @@ def astichi_elif():
     if tx_index == astichi_bind_external(tx_index_value):
         return True""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=300,
+            line_number=302,
         )
     ),
     "ValidateCommitBranch": astichi_template(
@@ -7376,7 +7506,7 @@ def astichi_elif():
         if result is False:
             return False""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=308,
+            line_number=310,
         )
     ),
     "TransactionHookCall": astichi_template(
@@ -7389,7 +7519,7 @@ def astichi_elif():
     if tx_index == astichi_bind_external(tx_index_value):
         self._y_get_default_facade().astichi_ref(external=method_name)()""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=319,
+            line_number=321,
         )
     ),
     "CommitOrderKeyFallbackBranch": astichi_template(
@@ -7399,7 +7529,7 @@ def astichi_elif():
     if True:
         return ()""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=328,
+            line_number=330,
         )
     ),
     "RequiresValidationFallbackBranch": astichi_template(
@@ -7409,7 +7539,7 @@ def astichi_elif():
     if True:
         return False""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=334,
+            line_number=336,
         )
     ),
     "ValidateCommitFallbackBranch": astichi_template(
@@ -7419,7 +7549,7 @@ def astichi_elif():
     if True:
         return True""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=340,
+            line_number=342,
         )
     ),
     "PassFallbackBranch": astichi_template(
@@ -7429,7 +7559,7 @@ def astichi_elif():
     if True:
         pass""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=346,
+            line_number=348,
         )
     ),
     "ClassBundle": astichi_template(
@@ -7758,7 +7888,7 @@ class working_facade_class_decl_name__astichi_arg__(
     with astichi_hole(working_facade_properties) as astichi_fallback:
         pass""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=352,
+            line_number=354,
             keep_names=(
                 "DEFAULT_TRANSACTION",
                 "TransactionManager",
@@ -7785,7 +7915,7 @@ return_class_module_ref__astichi_arg__.__module__ = astichi_pass(
 ).__module__
 return return_class_result_ref__astichi_arg__""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=680,
+            line_number=682,
         )
     ),
     "BuildTransactionFactsBody": from_astichi_code(
@@ -7880,6 +8010,7 @@ for lifecycle_class in classes:
                 field_owner=field.field_owner,
                 field_name=field.field_name,
                 field_order=field.field_order,
+                compare=field.compare,
                 tx_key_key=tx_key,
             ),
             policy=RejectDuplicate,
@@ -7893,6 +8024,7 @@ for lifecycle_class in classes:
                 field_owner=field.field_owner,
                 field_name=field.field_name,
                 field_order=field.field_order,
+                compare=field.compare,
                 tx_key_key=tx_key,
                 tx_index=tx_index,
                 current_slot_name=field.current_slot_name,
@@ -7907,7 +8039,7 @@ for lifecycle_class in classes:
             policy=RejectDuplicate,
         )""",
         file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_managed.yidl",
-        line_number=77,
+        line_number=79,
         keep_names=(
             "ctx",
             "ClassesCollection",
@@ -7929,14 +8061,14 @@ astichi_pass(state, outer_bind=True).astichi_ref(external=current_slot)._ = asti
     outer_bind=True,
 )""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_managed.yidl",
-            line_number=211,
+            line_number=215,
         )
     ),
     "ManagedWorkingStateAssignment": astichi_template(
         from_astichi_code(
             "astichi_pass(state, outer_bind=True).astichi_ref(external=working_slot)._ = VOID",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_managed.yidl",
-            line_number=218,
+            line_number=222,
             keep_names=("VOID",),
         )
     ),
@@ -7944,8 +8076,20 @@ astichi_pass(state, outer_bind=True).astichi_ref(external=current_slot)._ = asti
         from_astichi_code(
             "astichi_pass(state, outer_bind=True).astichi_ref(external=staged_slot)._ = VOID",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_managed.yidl",
-            line_number=224,
+            line_number=228,
             keep_names=("VOID",),
+        )
+    ),
+    "IdentityCompareGuard": astichi_template(
+        from_astichi_code(
+            """\
+if astichi_pass(current, outer_bind=True) is astichi_pass(
+    next_value,
+    outer_bind=True,
+):
+    return""",
+            file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_managed.yidl",
+            line_number=234,
         )
     ),
     "ManagedDefaultProperty": astichi_template(
@@ -7961,10 +8105,19 @@ def property_getter_name__astichi_arg__(self):
 @property_setter_target_name__astichi_arg__.setter
 def property_setter_name__astichi_arg__(self, value):
     state = self._y_state
+    state._y_require_active_transaction(astichi_bind_external(tx_index))
+    if state.astichi_ref(external=working_slot) is not VOID:
+        current = state.astichi_ref(external=working_slot)
+    else:
+        current = state.astichi_ref(external=current_slot)
+    next_value = value
+    with astichi_hole(compare_guard) as astichi_fallback:
+        if current == next_value:
+            return
     state._y_ensure_working_transaction(astichi_bind_external(tx_index))
-    state.astichi_ref(external=working_slot)._ = value""",
+    state.astichi_ref(external=working_slot)._ = next_value""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_managed.yidl",
-            line_number=230,
+            line_number=242,
             keep_names=("VOID",),
         )
     ),
@@ -7983,7 +8136,7 @@ def property_setter_name__astichi_arg__(self, value):
         + astichi_bind_external(field_name)
     )""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_managed.yidl",
-            line_number=247,
+            line_number=268,
         )
     ),
     "ManagedWorkingProperty": astichi_template(
@@ -7999,10 +8152,19 @@ def property_getter_name__astichi_arg__(self):
 @property_setter_target_name__astichi_arg__.setter
 def property_setter_name__astichi_arg__(self, value):
     state = self._y_state
+    state._y_require_active_transaction(astichi_bind_external(tx_index))
+    if state.astichi_ref(external=working_slot) is not VOID:
+        current = state.astichi_ref(external=working_slot)
+    else:
+        current = state.astichi_ref(external=current_slot)
+    next_value = value
+    with astichi_hole(compare_guard) as astichi_fallback:
+        if current == next_value:
+            return
     state._y_ensure_working_transaction(astichi_bind_external(tx_index))
-    state.astichi_ref(external=working_slot)._ = value""",
+    state.astichi_ref(external=working_slot)._ = next_value""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_managed.yidl",
-            line_number=261,
+            line_number=282,
             keep_names=("VOID",),
         )
     ),
@@ -8029,10 +8191,21 @@ def property_getter_name__astichi_arg__(self):
 @property_setter_target_name__astichi_arg__.setter
 def property_setter_name__astichi_arg__(self, value):
     state = self._y_state
+    state._y_require_active_transaction(astichi_bind_external(working_tx_index))
+    if state.astichi_ref(external=working_slot) is not VOID:
+        current = state.astichi_ref(external=working_slot)
+    else:
+        current = thaw_func_name__astichi_arg__(
+            state.astichi_ref(external=current_slot)
+        )
+    next_value = value
+    with astichi_hole(compare_guard) as astichi_fallback:
+        if current == next_value:
+            return
     state._y_ensure_working_transaction(astichi_bind_external(working_tx_index))
-    state.astichi_ref(external=working_slot)._ = value""",
+    state.astichi_ref(external=working_slot)._ = next_value""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_managed.yidl",
-            line_number=278,
+            line_number=308,
             keep_names=("VOID",),
         )
     ),
@@ -8062,10 +8235,23 @@ def property_getter_name__astichi_arg__(self):
 @property_setter_target_name__astichi_arg__.setter
 def property_setter_name__astichi_arg__(self, value):
     state = self._y_state
+    state._y_require_active_transaction(astichi_bind_external(working_tx_index))
+    if state.astichi_ref(external=working_slot) is not VOID:
+        current = state.astichi_ref(external=working_slot)
+    elif state.astichi_ref(external=current_slot) is None:
+        current = None
+    else:
+        current = thaw_func_name__astichi_arg__(
+            state.astichi_ref(external=current_slot)
+        )
+    next_value = value
+    with astichi_hole(compare_guard) as astichi_fallback:
+        if current == next_value:
+            return
     state._y_ensure_working_transaction(astichi_bind_external(working_tx_index))
-    state.astichi_ref(external=working_slot)._ = value""",
+    state.astichi_ref(external=working_slot)._ = next_value""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_managed.yidl",
-            line_number=305,
+            line_number=346,
             keep_names=("VOID",),
         )
     ),
@@ -8077,7 +8263,7 @@ if astichi_pass(self, outer_bind=True).astichi_ref(external=working_slot) is not
         astichi_pass(self, outer_bind=True).astichi_ref(external=working_slot)
     )""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_managed.yidl",
-            line_number=335,
+            line_number=389,
             keep_names=("VOID",),
         )
     ),
@@ -8091,7 +8277,7 @@ if astichi_pass(self, outer_bind=True).astichi_ref(external=working_slot) is not
         )
     )""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_managed.yidl",
-            line_number=344,
+            line_number=398,
             keep_names=("VOID",),
         )
     ),
@@ -8107,7 +8293,7 @@ if astichi_pass(self, outer_bind=True).astichi_ref(external=working_slot) is not
         )
     )""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_managed.yidl",
-            line_number=355,
+            line_number=409,
             keep_names=("VOID",),
         )
     ),
@@ -8121,7 +8307,7 @@ if astichi_pass(self, outer_bind=True).astichi_ref(external=staged_slot) is not 
     astichi_pass(self, outer_bind=True).astichi_ref(external=staged_slot)._ = VOID
     astichi_pass(self, outer_bind=True).astichi_ref(external=working_slot)._ = VOID""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_managed.yidl",
-            line_number=368,
+            line_number=422,
             keep_names=("VOID",),
         )
     ),
@@ -8131,7 +8317,7 @@ if astichi_pass(self, outer_bind=True).astichi_ref(external=staged_slot) is not 
 astichi_pass(self, outer_bind=True).astichi_ref(external=staged_slot)._ = VOID
 astichi_pass(self, outer_bind=True).astichi_ref(external=working_slot)._ = VOID""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_managed.yidl",
-            line_number=379,
+            line_number=433,
             keep_names=("VOID",),
         )
     ),
@@ -8143,7 +8329,7 @@ def commit_order_key_function_name__astichi_arg__(self):
         pass
     return ()""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_managed.yidl",
-            line_number=386,
+            line_number=440,
         )
     ),
     "RequiresValidationFunction": astichi_template(
@@ -8154,7 +8340,7 @@ def requires_validation_function_name__astichi_arg__(self):
         pass
     return False""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_managed.yidl",
-            line_number=393,
+            line_number=447,
         )
     ),
     "ValidateCommitFunction": astichi_template(
@@ -8165,7 +8351,7 @@ def validate_commit_function_name__astichi_arg__(self):
         pass
     return True""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_managed.yidl",
-            line_number=400,
+            line_number=454,
         )
     ),
     "BeforeCommitFunction": astichi_template(
@@ -8175,7 +8361,7 @@ def before_commit_function_name__astichi_arg__(self):
     with astichi_hole(before_commit_tx_body) as astichi_fallback:
         pass""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_managed.yidl",
-            line_number=407,
+            line_number=461,
         )
     ),
     "AfterCommitFunction": astichi_template(
@@ -8185,7 +8371,7 @@ def after_commit_function_name__astichi_arg__(self):
     with astichi_hole(after_commit_tx_body) as astichi_fallback:
         pass""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_managed.yidl",
-            line_number=413,
+            line_number=467,
         )
     ),
     "AfterRollbackFunction": astichi_template(
@@ -8195,7 +8381,7 @@ def after_rollback_function_name__astichi_arg__(self):
     with astichi_hole(after_rollback_tx_body) as astichi_fallback:
         pass""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_managed.yidl",
-            line_number=419,
+            line_number=473,
         )
     ),
     "CommitOrderKeyHelperCall": astichi_template(
@@ -8206,14 +8392,14 @@ return astichi_pass(
     outer_bind=True,
 )._y_get_default_facade().astichi_ref(external=method_name)()""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_managed.yidl",
-            line_number=425,
+            line_number=479,
         )
     ),
     "RequiresValidationHelperCall": astichi_template(
         from_astichi_code(
             "return True",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_managed.yidl",
-            line_number=432,
+            line_number=486,
         )
     ),
     "ValidateCommitHelperCall": astichi_template(
@@ -8226,7 +8412,7 @@ result = astichi_pass(
 if not result:
     return result""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_managed.yidl",
-            line_number=436,
+            line_number=490,
         )
     ),
     "TransactionHookHelperCall": astichi_template(
@@ -8237,7 +8423,7 @@ astichi_pass(
     outer_bind=True,
 )._y_get_default_facade().astichi_ref(external=method_name)()""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_managed.yidl",
-            line_number=445,
+            line_number=499,
         )
     ),
     "CommitOrderKeyDispatchCall": astichi_template(
@@ -8250,7 +8436,7 @@ def astichi_elif():
     if tx_index == astichi_bind_external(tx_index_value):
         return self.astichi_ref(external=commit_order_key_function_name)()""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_managed.yidl",
-            line_number=452,
+            line_number=506,
         )
     ),
     "RequiresValidationDispatchCall": astichi_template(
@@ -8263,7 +8449,7 @@ def astichi_elif():
     if tx_index == astichi_bind_external(tx_index_value):
         return self.astichi_ref(external=requires_validation_function_name)()""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_managed.yidl",
-            line_number=461,
+            line_number=515,
         )
     ),
     "ValidateCommitDispatchCall": astichi_template(
@@ -8276,7 +8462,7 @@ def astichi_elif():
     if tx_index == astichi_bind_external(tx_index_value):
         return self.astichi_ref(external=validate_commit_function_name)()""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_managed.yidl",
-            line_number=470,
+            line_number=524,
         )
     ),
     "BeforeCommitDispatchCall": astichi_template(
@@ -8289,7 +8475,7 @@ def astichi_elif():
     if tx_index == astichi_bind_external(tx_index_value):
         self.astichi_ref(external=before_commit_function_name)()""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_managed.yidl",
-            line_number=479,
+            line_number=533,
         )
     ),
     "AfterCommitDispatchCall": astichi_template(
@@ -8302,7 +8488,7 @@ def astichi_elif():
     if tx_index == astichi_bind_external(tx_index_value):
         self.astichi_ref(external=after_commit_function_name)()""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_managed.yidl",
-            line_number=488,
+            line_number=542,
         )
     ),
     "AfterRollbackDispatchCall": astichi_template(
@@ -8315,7 +8501,7 @@ def astichi_elif():
     if tx_index == astichi_bind_external(tx_index_value):
         self.astichi_ref(external=after_rollback_function_name)()""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_managed.yidl",
-            line_number=497,
+            line_number=551,
         )
     ),
     "PrepareCommitFieldsFunction": astichi_template(
@@ -8325,7 +8511,7 @@ def prepare_commit_fields_function_name__astichi_arg__(self):
     with astichi_hole(prepare_commit_fields_body) as astichi_fallback:
         pass""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_managed.yidl",
-            line_number=506,
+            line_number=560,
         )
     ),
     "ApplyPreparedCommitFieldsFunction": astichi_template(
@@ -8335,7 +8521,7 @@ def apply_prepared_commit_fields_function_name__astichi_arg__(self):
     with astichi_hole(apply_prepared_commit_fields_body) as astichi_fallback:
         pass""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_managed.yidl",
-            line_number=512,
+            line_number=566,
         )
     ),
     "RollbackFieldsFunction": astichi_template(
@@ -8345,7 +8531,7 @@ def rollback_fields_function_name__astichi_arg__(self):
     with astichi_hole(rollback_fields_body) as astichi_fallback:
         pass""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_managed.yidl",
-            line_number=518,
+            line_number=572,
         )
     ),
     "ApplyPreparedCommitDispatchBranch": astichi_template(
@@ -8358,7 +8544,7 @@ def astichi_elif():
     if tx_index == astichi_bind_external(tx_index_value):
         self.astichi_ref(external=apply_prepared_commit_fields_function_name)()""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_managed.yidl",
-            line_number=524,
+            line_number=578,
         )
     ),
     "PrepareCommitDispatchBranch": astichi_template(
@@ -8371,7 +8557,7 @@ def astichi_elif():
     if tx_index == astichi_bind_external(tx_index_value):
         self.astichi_ref(external=prepare_commit_fields_function_name)()""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_managed.yidl",
-            line_number=533,
+            line_number=587,
         )
     ),
     "RollbackDispatchBranch": astichi_template(
@@ -8384,7 +8570,7 @@ def astichi_elif():
     if tx_index == astichi_bind_external(tx_index_value):
         self.astichi_ref(external=rollback_fields_function_name)()""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_managed.yidl",
-            line_number=542,
+            line_number=596,
         )
     ),
     "BuildDefaultFactoryFactsBody": from_astichi_code(
@@ -9117,6 +9303,7 @@ for field in ctx.records(FieldsCollection):
             field_name=field.field_name,
             field_order=field.field_order,
             binding_shape=field.binding_shape,
+            compare=field.compare,
             tx_key_key=tx_key,
             tx_index=tx_keys[(field.field_owner, tx_key)],
             current_slot_name=field.current_slot_name,
@@ -9126,7 +9313,7 @@ for field in ctx.records(FieldsCollection):
         policy=RejectDuplicate,
     )""",
         file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_owned.yidl",
-        line_number=44,
+        line_number=45,
         keep_names=(
             "ctx",
             "FieldsCollection",
@@ -9170,7 +9357,7 @@ def _y_validate_binding_map_value(field_name, value):
             )
     return result""",
         file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_owned.yidl",
-        line_number=84,
+        line_number=86,
     ),
     "OwnedScalarStateAssignment": astichi_template(
         from_astichi_code(
@@ -9181,7 +9368,7 @@ value = astichi_pass(_y_validate_binding_value, outer_bind=True)(
 )
 astichi_pass(state, outer_bind=True).astichi_ref(external=state_slot)._ = value""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_owned.yidl",
-            line_number=118,
+            line_number=120,
         )
     ),
     "OwnedMapStateAssignment": astichi_template(
@@ -9193,14 +9380,14 @@ value = astichi_pass(_y_validate_binding_map_value, outer_bind=True)(
 )
 astichi_pass(state, outer_bind=True).astichi_ref(external=state_slot)._ = value""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_owned.yidl",
-            line_number=126,
+            line_number=128,
         )
     ),
     "OwnedEmptyStateAssignment": astichi_template(
         from_astichi_code(
             "astichi_pass(state, outer_bind=True).astichi_ref(external=state_slot)._ = VOID",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_owned.yidl",
-            line_number=134,
+            line_number=136,
             keep_names=("VOID",),
         )
     ),
@@ -9217,15 +9404,22 @@ def property_getter_name__astichi_arg__(self):
 @property_setter_target_name__astichi_arg__.setter
 def property_setter_name__astichi_arg__(self, value):
     state = self._y_state
+    state._y_require_active_transaction(astichi_bind_external(tx_index))
+    next_value = astichi_pass(_y_validate_binding_value, outer_bind=True)(
+        astichi_bind_external(field_name),
+        value,
+    )
+    if state.astichi_ref(external=working_slot) is not VOID:
+        current = state.astichi_ref(external=working_slot)
+    else:
+        current = state.astichi_ref(external=current_slot)
+    with astichi_hole(compare_guard) as astichi_fallback:
+        if current == next_value:
+            return
     state._y_ensure_working_transaction(astichi_bind_external(tx_index))
-    state.astichi_ref(external=working_slot)._ = (
-        astichi_pass(_y_validate_binding_value, outer_bind=True)(
-            astichi_bind_external(field_name),
-            value,
-        )
-    )""",
+    state.astichi_ref(external=working_slot)._ = next_value""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_owned.yidl",
-            line_number=140,
+            line_number=142,
             keep_names=("VOID",),
         )
     ),
@@ -9242,15 +9436,22 @@ def property_getter_name__astichi_arg__(self):
 @property_setter_target_name__astichi_arg__.setter
 def property_setter_name__astichi_arg__(self, value):
     state = self._y_state
+    state._y_require_active_transaction(astichi_bind_external(tx_index))
+    next_value = astichi_pass(_y_validate_binding_map_value, outer_bind=True)(
+        astichi_bind_external(field_name),
+        value,
+    )
+    if state.astichi_ref(external=working_slot) is not VOID:
+        current = state.astichi_ref(external=working_slot)
+    else:
+        current = state.astichi_ref(external=current_slot)
+    with astichi_hole(compare_guard) as astichi_fallback:
+        if current == next_value:
+            return
     state._y_ensure_working_transaction(astichi_bind_external(tx_index))
-    state.astichi_ref(external=working_slot)._ = (
-        astichi_pass(_y_validate_binding_map_value, outer_bind=True)(
-            astichi_bind_external(field_name),
-            value,
-        )
-    )""",
+    state.astichi_ref(external=working_slot)._ = next_value""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_owned.yidl",
-            line_number=162,
+            line_number=171,
             keep_names=("VOID",),
         )
     ),
@@ -9269,7 +9470,7 @@ def property_setter_name__astichi_arg__(self, value):
         + astichi_bind_external(field_name)
     )""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_owned.yidl",
-            line_number=184,
+            line_number=200,
         )
     ),
     "OwnedWorkingProperty": astichi_template(
@@ -9285,15 +9486,22 @@ def property_getter_name__astichi_arg__(self):
 @property_setter_target_name__astichi_arg__.setter
 def property_setter_name__astichi_arg__(self, value):
     state = self._y_state
+    state._y_require_active_transaction(astichi_bind_external(tx_index))
+    next_value = astichi_pass(_y_validate_binding_value, outer_bind=True)(
+        astichi_bind_external(field_name),
+        value,
+    )
+    if state.astichi_ref(external=working_slot) is not VOID:
+        current = state.astichi_ref(external=working_slot)
+    else:
+        current = state.astichi_ref(external=current_slot)
+    with astichi_hole(compare_guard) as astichi_fallback:
+        if current == next_value:
+            return
     state._y_ensure_working_transaction(astichi_bind_external(tx_index))
-    state.astichi_ref(external=working_slot)._ = (
-        astichi_pass(_y_validate_binding_value, outer_bind=True)(
-            astichi_bind_external(field_name),
-            value,
-        )
-    )""",
+    state.astichi_ref(external=working_slot)._ = next_value""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_owned.yidl",
-            line_number=198,
+            line_number=214,
             keep_names=("VOID",),
         )
     ),
@@ -9310,15 +9518,22 @@ def property_getter_name__astichi_arg__(self):
 @property_setter_target_name__astichi_arg__.setter
 def property_setter_name__astichi_arg__(self, value):
     state = self._y_state
+    state._y_require_active_transaction(astichi_bind_external(tx_index))
+    next_value = astichi_pass(_y_validate_binding_map_value, outer_bind=True)(
+        astichi_bind_external(field_name),
+        value,
+    )
+    if state.astichi_ref(external=working_slot) is not VOID:
+        current = state.astichi_ref(external=working_slot)
+    else:
+        current = state.astichi_ref(external=current_slot)
+    with astichi_hole(compare_guard) as astichi_fallback:
+        if current == next_value:
+            return
     state._y_ensure_working_transaction(astichi_bind_external(tx_index))
-    state.astichi_ref(external=working_slot)._ = (
-        astichi_pass(_y_validate_binding_map_value, outer_bind=True)(
-            astichi_bind_external(field_name),
-            value,
-        )
-    )""",
+    state.astichi_ref(external=working_slot)._ = next_value""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_owned.yidl",
-            line_number=220,
+            line_number=243,
             keep_names=("VOID",),
         )
     ),
@@ -9331,7 +9546,7 @@ if astichi_pass(self, outer_bind=True).astichi_ref(external=working_slot) is not
         value.accepted()
     astichi_pass(self, outer_bind=True).astichi_ref(external=staged_slot)._ = value""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_owned.yidl",
-            line_number=242,
+            line_number=272,
             keep_names=("VOID",),
         )
     ),
@@ -9345,7 +9560,7 @@ if astichi_pass(self, outer_bind=True).astichi_ref(external=working_slot) is not
             item.accepted()
     astichi_pass(self, outer_bind=True).astichi_ref(external=staged_slot)._ = value""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_owned.yidl",
-            line_number=252,
+            line_number=282,
             keep_names=("VOID",),
         )
     ),
@@ -9364,7 +9579,7 @@ value = astichi_pass(_y_validate_binding_value, outer_bind=True)(
 )
 astichi_pass(state, outer_bind=True).astichi_ref(external=state_slot)._ = value""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_owned.yidl",
-            line_number=263,
+            line_number=293,
             keep_names=("_HAS_DEFAULT_FACTORY",),
         )
     ),
@@ -9380,7 +9595,7 @@ value = astichi_pass(_y_validate_binding_value, outer_bind=True)(
 )
 astichi_pass(state, outer_bind=True).astichi_ref(external=state_slot)._ = value""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_owned.yidl",
-            line_number=279,
+            line_number=309,
         )
     ),
     "OwnedMapDefaultFactoryEvalInit": astichi_template(
@@ -9398,7 +9613,7 @@ value = astichi_pass(_y_validate_binding_map_value, outer_bind=True)(
 )
 astichi_pass(state, outer_bind=True).astichi_ref(external=state_slot)._ = value""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_owned.yidl",
-            line_number=290,
+            line_number=320,
             keep_names=("_HAS_DEFAULT_FACTORY",),
         )
     ),
@@ -9414,7 +9629,7 @@ value = astichi_pass(_y_validate_binding_map_value, outer_bind=True)(
 )
 astichi_pass(state, outer_bind=True).astichi_ref(external=state_slot)._ = value""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_owned.yidl",
-            line_number=306,
+            line_number=336,
         )
     ),
     "OwnedApplyPreparedCommitBranch": astichi_template(
@@ -9427,7 +9642,7 @@ if astichi_pass(self, outer_bind=True).astichi_ref(external=staged_slot) is not 
     astichi_pass(self, outer_bind=True).astichi_ref(external=staged_slot)._ = VOID
     astichi_pass(self, outer_bind=True).astichi_ref(external=working_slot)._ = VOID""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_owned.yidl",
-            line_number=317,
+            line_number=347,
             keep_names=("VOID",),
         )
     ),
@@ -9437,7 +9652,7 @@ if astichi_pass(self, outer_bind=True).astichi_ref(external=staged_slot) is not 
 astichi_pass(self, outer_bind=True).astichi_ref(external=staged_slot)._ = VOID
 astichi_pass(self, outer_bind=True).astichi_ref(external=working_slot)._ = VOID""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_owned.yidl",
-            line_number=328,
+            line_number=358,
             keep_names=("VOID",),
         )
     ),
@@ -9450,7 +9665,7 @@ value = astichi_pass(_y_validate_binding_value, outer_bind=True)(
 )
 astichi_pass(state, outer_bind=True).astichi_ref(external=state_slot)._ = value""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_owned.yidl",
-            line_number=335,
+            line_number=365,
         )
     ),
     "BindingMapStateAssignment": astichi_template(
@@ -9462,7 +9677,7 @@ value = astichi_pass(_y_validate_binding_map_value, outer_bind=True)(
 )
 astichi_pass(state, outer_bind=True).astichi_ref(external=state_slot)._ = value""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_owned.yidl",
-            line_number=343,
+            line_number=373,
         )
     ),
     "BindingProperty": astichi_template(
@@ -9481,7 +9696,7 @@ def property_setter_name__astichi_arg__(self, value):
         )
     )""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_owned.yidl",
-            line_number=351,
+            line_number=381,
         )
     ),
     "BindingMapProperty": astichi_template(
@@ -9500,7 +9715,7 @@ def property_setter_name__astichi_arg__(self, value):
         )
     )""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_owned.yidl",
-            line_number=366,
+            line_number=396,
         )
     ),
     "BindingDefaultFactoryEvalInit": astichi_template(
@@ -9517,7 +9732,7 @@ astichi_pass(self, outer_bind=True).astichi_ref(external=property_name)._ = asti
     outer_bind=True,
 )""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_owned.yidl",
-            line_number=381,
+            line_number=411,
             keep_names=("_HAS_DEFAULT_FACTORY",),
         )
     ),
@@ -9532,7 +9747,7 @@ astichi_pass(self, outer_bind=True).astichi_ref(external=property_name)._ = asti
     outer_bind=True,
 )""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_owned.yidl",
-            line_number=396,
+            line_number=426,
         )
     ),
     "ConstReadOnlyProperty": astichi_template(
@@ -10947,6 +11162,33 @@ ASSEMBLY_CONTRIBUTIONS = {
             BindingSpec(kind="external", name="tx_index", value=ValueRef("TxIndex")),
         ),
     ),
+    "ManagedDefaultIdentityCompareGuard": ContributionSpec(
+        name="ManagedDefaultIdentityCompareGuard",
+        source_name="IdentityCompareGuard",
+        source_kind="resource",
+        build_name="ManagedDefaultIdentityCompareGuard",
+        index=ValueRef("FieldOrder"),
+        order=ValueRef("FieldOrder"),
+        target=TargetSpec(
+            name="compare_guard",
+            paths=(
+                TargetPathSpec(
+                    kind="build",
+                    path=PathSpec(
+                        segments=(
+                            PathSegmentSpec(kind="name", name="ClassDef", indexes=()),
+                            PathSegmentSpec(
+                                kind="name",
+                                name="ManagedDefaultFacadeProperty",
+                                indexes=(ValueRef("FieldOrder"),),
+                            ),
+                        )
+                    ),
+                ),
+            ),
+        ),
+        bindings=(),
+    ),
     "ManagedCurrentFacadeProperty": ContributionSpec(
         name="ManagedCurrentFacadeProperty",
         source_name="ManagedCurrentProperty",
@@ -11027,6 +11269,33 @@ ASSEMBLY_CONTRIBUTIONS = {
             ),
             BindingSpec(kind="external", name="tx_index", value=ValueRef("TxIndex")),
         ),
+    ),
+    "ManagedWorkingIdentityCompareGuard": ContributionSpec(
+        name="ManagedWorkingIdentityCompareGuard",
+        source_name="IdentityCompareGuard",
+        source_kind="resource",
+        build_name="ManagedWorkingIdentityCompareGuard",
+        index=ValueRef("FieldOrder"),
+        order=ValueRef("FieldOrder"),
+        target=TargetSpec(
+            name="compare_guard",
+            paths=(
+                TargetPathSpec(
+                    kind="build",
+                    path=PathSpec(
+                        segments=(
+                            PathSegmentSpec(kind="name", name="ClassDef", indexes=()),
+                            PathSegmentSpec(
+                                kind="name",
+                                name="ManagedWorkingFacadeProperty",
+                                indexes=(ValueRef("FieldOrder"),),
+                            ),
+                        )
+                    ),
+                ),
+            ),
+        ),
+        bindings=(),
     ),
     "ManagedThawWorkingFacadeProperty": ContributionSpec(
         name="ManagedThawWorkingFacadeProperty",
@@ -14072,6 +14341,33 @@ ASSEMBLY_CONTRIBUTIONS = {
             BindingSpec(kind="external", name="tx_index", value=ValueRef("TxIndex")),
         ),
     ),
+    "OwnedDefaultIdentityCompareGuard": ContributionSpec(
+        name="OwnedDefaultIdentityCompareGuard",
+        source_name="IdentityCompareGuard",
+        source_kind="resource",
+        build_name="OwnedDefaultIdentityCompareGuard",
+        index=ValueRef("FieldOrder"),
+        order=ValueRef("FieldOrder"),
+        target=TargetSpec(
+            name="compare_guard",
+            paths=(
+                TargetPathSpec(
+                    kind="build",
+                    path=PathSpec(
+                        segments=(
+                            PathSegmentSpec(kind="name", name="ClassDef", indexes=()),
+                            PathSegmentSpec(
+                                kind="name",
+                                name="OwnedDefaultFacadeProperty",
+                                indexes=(ValueRef("FieldOrder"),),
+                            ),
+                        )
+                    ),
+                ),
+            ),
+        ),
+        bindings=(),
+    ),
     "OwnedCurrentFacadeProperty": ContributionSpec(
         name="OwnedCurrentFacadeProperty",
         source_name="OwnedCurrentProperty",
@@ -14199,6 +14495,33 @@ ASSEMBLY_CONTRIBUTIONS = {
             ),
             BindingSpec(kind="external", name="tx_index", value=ValueRef("TxIndex")),
         ),
+    ),
+    "OwnedWorkingIdentityCompareGuard": ContributionSpec(
+        name="OwnedWorkingIdentityCompareGuard",
+        source_name="IdentityCompareGuard",
+        source_kind="resource",
+        build_name="OwnedWorkingIdentityCompareGuard",
+        index=ValueRef("FieldOrder"),
+        order=ValueRef("FieldOrder"),
+        target=TargetSpec(
+            name="compare_guard",
+            paths=(
+                TargetPathSpec(
+                    kind="build",
+                    path=PathSpec(
+                        segments=(
+                            PathSegmentSpec(kind="name", name="ClassDef", indexes=()),
+                            PathSegmentSpec(
+                                kind="name",
+                                name="OwnedWorkingFacadeProperty",
+                                indexes=(ValueRef("FieldOrder"),),
+                            ),
+                        )
+                    ),
+                ),
+            ),
+        ),
+        bindings=(),
     ),
     "OwnedPrepareCommit": ContributionSpec(
         name="OwnedPrepareCommit",
@@ -16045,6 +16368,48 @@ ASSEMBLY_MATCHERS = {
             ),
         ),
     ),
+    "ManagedDefaultCompareGuardContributions": ContributionMatcherSpec(
+        name="ManagedDefaultCompareGuardContributions",
+        inputs=(
+            AssemblyInputSpec(
+                name="field",
+                collection_name="IndexedTransactionalFields",
+                collection=None,
+            ),
+        ),
+        default_contribution_name=None,
+        rules=(
+            ContributionRuleSpec(
+                name="identity",
+                condition=EqConditionSpec(
+                    left=ValueRef("Compare"), right=LiteralValueRef("identity")
+                ),
+                contribution_name="ManagedDefaultIdentityCompareGuard",
+                weight=1.0,
+            ),
+        ),
+    ),
+    "ManagedWorkingCompareGuardContributions": ContributionMatcherSpec(
+        name="ManagedWorkingCompareGuardContributions",
+        inputs=(
+            AssemblyInputSpec(
+                name="field",
+                collection_name="IndexedTransactionalFields",
+                collection=None,
+            ),
+        ),
+        default_contribution_name=None,
+        rules=(
+            ContributionRuleSpec(
+                name="identity",
+                condition=EqConditionSpec(
+                    left=ValueRef("Compare"), right=LiteralValueRef("identity")
+                ),
+                contribution_name="ManagedWorkingIdentityCompareGuard",
+                weight=1.0,
+            ),
+        ),
+    ),
     "ManagedPrepareCommitContributions": ContributionMatcherSpec(
         name="ManagedPrepareCommitContributions",
         inputs=(
@@ -17446,6 +17811,25 @@ ASSEMBLY_MATCHERS = {
             ),
         ),
     ),
+    "OwnedDefaultCompareGuardContributions": ContributionMatcherSpec(
+        name="OwnedDefaultCompareGuardContributions",
+        inputs=(
+            AssemblyInputSpec(
+                name="field", collection_name="IndexedOwnedFields", collection=None
+            ),
+        ),
+        default_contribution_name=None,
+        rules=(
+            ContributionRuleSpec(
+                name="identity",
+                condition=EqConditionSpec(
+                    left=ValueRef("Compare"), right=LiteralValueRef("identity")
+                ),
+                contribution_name="OwnedDefaultIdentityCompareGuard",
+                weight=1.0,
+            ),
+        ),
+    ),
     "OwnedCurrentFacadePropertyContributions": ContributionMatcherSpec(
         name="OwnedCurrentFacadePropertyContributions",
         inputs=(
@@ -17471,6 +17855,25 @@ ASSEMBLY_MATCHERS = {
                     left=ValueRef("BindingShape"), right=LiteralValueRef("map")
                 ),
                 contribution_name="OwnedMapWorkingFacadeProperty",
+                weight=1.0,
+            ),
+        ),
+    ),
+    "OwnedWorkingCompareGuardContributions": ContributionMatcherSpec(
+        name="OwnedWorkingCompareGuardContributions",
+        inputs=(
+            AssemblyInputSpec(
+                name="field", collection_name="IndexedOwnedFields", collection=None
+            ),
+        ),
+        default_contribution_name=None,
+        rules=(
+            ContributionRuleSpec(
+                name="identity",
+                condition=EqConditionSpec(
+                    left=ValueRef("Compare"), right=LiteralValueRef("identity")
+                ),
+                contribution_name="OwnedWorkingIdentityCompareGuard",
                 weight=1.0,
             ),
         ),
@@ -18713,6 +19116,25 @@ ASSEMBLY_EDGES = {
         ),
         matcher_name="ManagedDefaultFacadePropertyContributions",
     ),
+    "CoreClassProduction.managed_default_compare_guards": AssemblyEdgeSpec(
+        name="CoreClassProduction.managed_default_compare_guards",
+        context_inputs=(
+            AssemblyInputSpec(
+                name="lifecycle_class", collection_name="Classes", collection=None
+            ),
+        ),
+        from_inputs=(
+            AssemblyInputSpec(
+                name="field",
+                collection_name="IndexedTransactionalFields",
+                collection=None,
+            ),
+        ),
+        condition=EqConditionSpec(
+            left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
+        ),
+        matcher_name="ManagedDefaultCompareGuardContributions",
+    ),
     "CoreClassProduction.managed_current_properties": AssemblyEdgeSpec(
         name="CoreClassProduction.managed_current_properties",
         context_inputs=(
@@ -18750,6 +19172,25 @@ ASSEMBLY_EDGES = {
             left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
         ),
         matcher_name="ManagedWorkingFacadePropertyContributions",
+    ),
+    "CoreClassProduction.managed_working_compare_guards": AssemblyEdgeSpec(
+        name="CoreClassProduction.managed_working_compare_guards",
+        context_inputs=(
+            AssemblyInputSpec(
+                name="lifecycle_class", collection_name="Classes", collection=None
+            ),
+        ),
+        from_inputs=(
+            AssemblyInputSpec(
+                name="field",
+                collection_name="IndexedTransactionalFields",
+                collection=None,
+            ),
+        ),
+        condition=EqConditionSpec(
+            left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
+        ),
+        matcher_name="ManagedWorkingCompareGuardContributions",
     ),
     "CoreClassProduction.apply_prepared_commit_helpers": AssemblyEdgeSpec(
         name="CoreClassProduction.apply_prepared_commit_helpers",
@@ -19390,6 +19831,23 @@ ASSEMBLY_EDGES = {
         ),
         matcher_name="OwnedDefaultFacadePropertyContributions",
     ),
+    "CoreClassProduction.owned_default_compare_guards": AssemblyEdgeSpec(
+        name="CoreClassProduction.owned_default_compare_guards",
+        context_inputs=(
+            AssemblyInputSpec(
+                name="lifecycle_class", collection_name="Classes", collection=None
+            ),
+        ),
+        from_inputs=(
+            AssemblyInputSpec(
+                name="field", collection_name="IndexedOwnedFields", collection=None
+            ),
+        ),
+        condition=EqConditionSpec(
+            left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
+        ),
+        matcher_name="OwnedDefaultCompareGuardContributions",
+    ),
     "CoreClassProduction.owned_current_properties": AssemblyEdgeSpec(
         name="CoreClassProduction.owned_current_properties",
         context_inputs=(
@@ -19423,6 +19881,23 @@ ASSEMBLY_EDGES = {
             left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
         ),
         matcher_name="OwnedWorkingFacadePropertyContributions",
+    ),
+    "CoreClassProduction.owned_working_compare_guards": AssemblyEdgeSpec(
+        name="CoreClassProduction.owned_working_compare_guards",
+        context_inputs=(
+            AssemblyInputSpec(
+                name="lifecycle_class", collection_name="Classes", collection=None
+            ),
+        ),
+        from_inputs=(
+            AssemblyInputSpec(
+                name="field", collection_name="IndexedOwnedFields", collection=None
+            ),
+        ),
+        condition=EqConditionSpec(
+            left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
+        ),
+        matcher_name="OwnedWorkingCompareGuardContributions",
     ),
     "CoreClassProduction.owned_apply_prepared_commit": AssemblyEdgeSpec(
         name="CoreClassProduction.owned_apply_prepared_commit",
@@ -21548,6 +22023,29 @@ ASSEMBLY_PRODUCTIONS = {
             ),
             InlineApplySpec(
                 edge=AssemblyEdgeSpec(
+                    name="CoreClassProduction.owned_default_compare_guards",
+                    context_inputs=(
+                        AssemblyInputSpec(
+                            name="lifecycle_class",
+                            collection_name="Classes",
+                            collection=None,
+                        ),
+                    ),
+                    from_inputs=(
+                        AssemblyInputSpec(
+                            name="field",
+                            collection_name="IndexedOwnedFields",
+                            collection=None,
+                        ),
+                    ),
+                    condition=EqConditionSpec(
+                        left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
+                    ),
+                    matcher_name="OwnedDefaultCompareGuardContributions",
+                )
+            ),
+            InlineApplySpec(
+                edge=AssemblyEdgeSpec(
                     name="CoreClassProduction.managed_default_properties",
                     context_inputs=(
                         AssemblyInputSpec(
@@ -21567,6 +22065,29 @@ ASSEMBLY_PRODUCTIONS = {
                         left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
                     ),
                     matcher_name="ManagedDefaultFacadePropertyContributions",
+                )
+            ),
+            InlineApplySpec(
+                edge=AssemblyEdgeSpec(
+                    name="CoreClassProduction.managed_default_compare_guards",
+                    context_inputs=(
+                        AssemblyInputSpec(
+                            name="lifecycle_class",
+                            collection_name="Classes",
+                            collection=None,
+                        ),
+                    ),
+                    from_inputs=(
+                        AssemblyInputSpec(
+                            name="field",
+                            collection_name="IndexedTransactionalFields",
+                            collection=None,
+                        ),
+                    ),
+                    condition=EqConditionSpec(
+                        left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
+                    ),
+                    matcher_name="ManagedDefaultCompareGuardContributions",
                 )
             ),
             InlineApplySpec(
@@ -21686,6 +22207,29 @@ ASSEMBLY_PRODUCTIONS = {
             ),
             InlineApplySpec(
                 edge=AssemblyEdgeSpec(
+                    name="CoreClassProduction.managed_working_compare_guards",
+                    context_inputs=(
+                        AssemblyInputSpec(
+                            name="lifecycle_class",
+                            collection_name="Classes",
+                            collection=None,
+                        ),
+                    ),
+                    from_inputs=(
+                        AssemblyInputSpec(
+                            name="field",
+                            collection_name="IndexedTransactionalFields",
+                            collection=None,
+                        ),
+                    ),
+                    condition=EqConditionSpec(
+                        left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
+                    ),
+                    matcher_name="ManagedWorkingCompareGuardContributions",
+                )
+            ),
+            InlineApplySpec(
+                edge=AssemblyEdgeSpec(
                     name="CoreClassProduction.owned_working_properties",
                     context_inputs=(
                         AssemblyInputSpec(
@@ -21705,6 +22249,29 @@ ASSEMBLY_PRODUCTIONS = {
                         left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
                     ),
                     matcher_name="OwnedWorkingFacadePropertyContributions",
+                )
+            ),
+            InlineApplySpec(
+                edge=AssemblyEdgeSpec(
+                    name="CoreClassProduction.owned_working_compare_guards",
+                    context_inputs=(
+                        AssemblyInputSpec(
+                            name="lifecycle_class",
+                            collection_name="Classes",
+                            collection=None,
+                        ),
+                    ),
+                    from_inputs=(
+                        AssemblyInputSpec(
+                            name="field",
+                            collection_name="IndexedOwnedFields",
+                            collection=None,
+                        ),
+                    ),
+                    condition=EqConditionSpec(
+                        left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
+                    ),
+                    matcher_name="OwnedWorkingCompareGuardContributions",
                 )
             ),
             InlineApplySpec(

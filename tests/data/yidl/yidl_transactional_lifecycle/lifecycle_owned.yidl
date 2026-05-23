@@ -31,6 +31,7 @@ concept LifecycleOwned extends transient.LifecycleTransient {
         FieldName
         FieldOrder
         BindingShape
+        Compare
         TxKeyKey
         TxIndex
         CurrentSlotName
@@ -61,6 +62,7 @@ concept LifecycleOwned extends transient.LifecycleTransient {
                     field_name=field.field_name,
                     field_order=field.field_order,
                     binding_shape=field.binding_shape,
+                    compare=field.compare,
                     tx_key_key=tx_key,
                     tx_index=tx_keys[(field.field_owner, tx_key)],
                     current_slot_name=field.current_slot_name,
@@ -147,13 +149,20 @@ concept LifecycleOwned extends transient.LifecycleTransient {
         @property_setter_target_name__astichi_arg__.setter
         def property_setter_name__astichi_arg__(self, value):
             state = self._y_state
-            state._y_ensure_working_transaction(astichi_bind_external(tx_index))
-            state.astichi_ref(external=working_slot)._ = (
-                astichi_pass(_y_validate_binding_value, outer_bind=True)(
-                    astichi_bind_external(field_name),
-                    value,
-                )
+            state._y_require_active_transaction(astichi_bind_external(tx_index))
+            next_value = astichi_pass(_y_validate_binding_value, outer_bind=True)(
+                astichi_bind_external(field_name),
+                value,
             )
+            if state.astichi_ref(external=working_slot) is not VOID:
+                current = state.astichi_ref(external=working_slot)
+            else:
+                current = state.astichi_ref(external=current_slot)
+            with astichi_hole(compare_guard) as astichi_fallback:
+                if current == next_value:
+                    return
+            state._y_ensure_working_transaction(astichi_bind_external(tx_index))
+            state.astichi_ref(external=working_slot)._ = next_value
     ]$ {
         keep VOID
     }
@@ -169,13 +178,20 @@ concept LifecycleOwned extends transient.LifecycleTransient {
         @property_setter_target_name__astichi_arg__.setter
         def property_setter_name__astichi_arg__(self, value):
             state = self._y_state
-            state._y_ensure_working_transaction(astichi_bind_external(tx_index))
-            state.astichi_ref(external=working_slot)._ = (
-                astichi_pass(_y_validate_binding_map_value, outer_bind=True)(
-                    astichi_bind_external(field_name),
-                    value,
-                )
+            state._y_require_active_transaction(astichi_bind_external(tx_index))
+            next_value = astichi_pass(_y_validate_binding_map_value, outer_bind=True)(
+                astichi_bind_external(field_name),
+                value,
             )
+            if state.astichi_ref(external=working_slot) is not VOID:
+                current = state.astichi_ref(external=working_slot)
+            else:
+                current = state.astichi_ref(external=current_slot)
+            with astichi_hole(compare_guard) as astichi_fallback:
+                if current == next_value:
+                    return
+            state._y_ensure_working_transaction(astichi_bind_external(tx_index))
+            state.astichi_ref(external=working_slot)._ = next_value
     ]$ {
         keep VOID
     }
@@ -205,13 +221,20 @@ concept LifecycleOwned extends transient.LifecycleTransient {
         @property_setter_target_name__astichi_arg__.setter
         def property_setter_name__astichi_arg__(self, value):
             state = self._y_state
-            state._y_ensure_working_transaction(astichi_bind_external(tx_index))
-            state.astichi_ref(external=working_slot)._ = (
-                astichi_pass(_y_validate_binding_value, outer_bind=True)(
-                    astichi_bind_external(field_name),
-                    value,
-                )
+            state._y_require_active_transaction(astichi_bind_external(tx_index))
+            next_value = astichi_pass(_y_validate_binding_value, outer_bind=True)(
+                astichi_bind_external(field_name),
+                value,
             )
+            if state.astichi_ref(external=working_slot) is not VOID:
+                current = state.astichi_ref(external=working_slot)
+            else:
+                current = state.astichi_ref(external=current_slot)
+            with astichi_hole(compare_guard) as astichi_fallback:
+                if current == next_value:
+                    return
+            state._y_ensure_working_transaction(astichi_bind_external(tx_index))
+            state.astichi_ref(external=working_slot)._ = next_value
     ]$ {
         keep VOID
     }
@@ -227,13 +250,20 @@ concept LifecycleOwned extends transient.LifecycleTransient {
         @property_setter_target_name__astichi_arg__.setter
         def property_setter_name__astichi_arg__(self, value):
             state = self._y_state
-            state._y_ensure_working_transaction(astichi_bind_external(tx_index))
-            state.astichi_ref(external=working_slot)._ = (
-                astichi_pass(_y_validate_binding_map_value, outer_bind=True)(
-                    astichi_bind_external(field_name),
-                    value,
-                )
+            state._y_require_active_transaction(astichi_bind_external(tx_index))
+            next_value = astichi_pass(_y_validate_binding_map_value, outer_bind=True)(
+                astichi_bind_external(field_name),
+                value,
             )
+            if state.astichi_ref(external=working_slot) is not VOID:
+                current = state.astichi_ref(external=working_slot)
+            else:
+                current = state.astichi_ref(external=current_slot)
+            with astichi_hole(compare_guard) as astichi_fallback:
+                if current == next_value:
+                    return
+            state._y_ensure_working_transaction(astichi_bind_external(tx_index))
+            state.astichi_ref(external=working_slot)._ = next_value
     ]$ {
         keep VOID
     }
@@ -744,6 +774,15 @@ concept LifecycleOwned extends transient.LifecycleTransient {
         external tx_index = TxIndex
     }
 
+    contribution OwnedDefaultIdentityCompareGuard = IdentityCompareGuard {
+        index FieldOrder
+        order FieldOrder
+
+        target compare_guard {
+            build /ClassDef/OwnedDefaultFacadeProperty[FieldOrder]
+        }
+    }
+
     contribution OwnedCurrentFacadeProperty = OwnedCurrentProperty {
         as OwnedCurrentFacadeProperty
         index FieldOrder
@@ -794,6 +833,15 @@ concept LifecycleOwned extends transient.LifecycleTransient {
         external working_slot = WorkingSlotName
         external field_name = FieldName
         external tx_index = TxIndex
+    }
+
+    contribution OwnedWorkingIdentityCompareGuard = IdentityCompareGuard {
+        index FieldOrder
+        order FieldOrder
+
+        target compare_guard {
+            build /ClassDef/OwnedWorkingFacadeProperty[FieldOrder]
+        }
     }
 
     contribution OwnedPrepareCommit = OwnedPrepareCommitBranch {
@@ -1045,6 +1093,10 @@ concept LifecycleOwned extends transient.LifecycleTransient {
         rule map_field when BindingShape == "map" -> OwnedMapDefaultFacadeProperty
     }
 
+    matcher OwnedDefaultCompareGuardContributions(field: IndexedOwnedFields) -> contribution {
+        rule identity when Compare == "identity" -> OwnedDefaultIdentityCompareGuard
+    }
+
     matcher OwnedCurrentFacadePropertyContributions(field: IndexedOwnedFields) -> contribution {
         default -> OwnedCurrentFacadeProperty
     }
@@ -1052,6 +1104,10 @@ concept LifecycleOwned extends transient.LifecycleTransient {
     matcher OwnedWorkingFacadePropertyContributions(field: IndexedOwnedFields) -> contribution {
         default -> OwnedWorkingFacadeProperty
         rule map_field when BindingShape == "map" -> OwnedMapWorkingFacadeProperty
+    }
+
+    matcher OwnedWorkingCompareGuardContributions(field: IndexedOwnedFields) -> contribution {
+        rule identity when Compare == "identity" -> OwnedWorkingIdentityCompareGuard
     }
 
     matcher OwnedPrepareCommitContributions(field: IndexedOwnedFields) -> contribution {
@@ -1170,6 +1226,7 @@ concept LifecycleOwned extends transient.LifecycleTransient {
             from field: IndexedOwnedFields
             where FieldOwner == ClassId {
             apply owned_default_properties using OwnedDefaultFacadePropertyContributions
+            apply owned_default_compare_guards using OwnedDefaultCompareGuardContributions
         }
 
         phase properties_owned_current after properties_plain order 70
@@ -1182,6 +1239,7 @@ concept LifecycleOwned extends transient.LifecycleTransient {
             from field: IndexedOwnedFields
             where FieldOwner == ClassId {
             apply owned_working_properties using OwnedWorkingFacadePropertyContributions
+            apply owned_working_compare_guards using OwnedWorkingCompareGuardContributions
         }
 
         phase tx_apply_prepared_fields_owned after properties_plain order 280

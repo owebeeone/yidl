@@ -26,6 +26,7 @@ concept LifecycleCore {
     property FieldOrder: int
     property FieldKind: str = "field"
     property BindingShape: str = "scalar"
+    property Compare: str = "value"
     property Annotation: object = object
     property Init: bool = True
     property HasDefault: bool = False
@@ -77,6 +78,7 @@ concept LifecycleCore {
 
     family LifecycleFieldSpec {
         common FieldId, FieldOwner, FieldName, FieldOrder, FieldKind, BindingShape
+        common Compare
         common Annotation
         common Init, HasDefault, DefaultValue, DefaultValueParamName
         common HasDefaultFactory, DefaultFactory, AllowSelfFactory

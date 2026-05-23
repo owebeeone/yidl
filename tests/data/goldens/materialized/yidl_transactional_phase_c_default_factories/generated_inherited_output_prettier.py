@@ -352,8 +352,16 @@ def build_lifecycle_class(
         @v1.setter
         def v1(self, value):
             state = self._y_state
+            state._y_require_active_transaction(0)
+            if state._y_v1_working is not VOID:
+                current = state._y_v1_working
+            else:
+                current = state._y_v1_current
+            next_value = value
+            if current == next_value:
+                return
             state._y_ensure_working_transaction(0)
-            state._y_v1_working = value
+            state._y_v1_working = next_value
 
         @property
         def v2(self):
@@ -365,8 +373,16 @@ def build_lifecycle_class(
         @v2.setter
         def v2(self, value):
             state = self._y_state
+            state._y_require_active_transaction(0)
+            if state._y_v2_working is not VOID:
+                current = state._y_v2_working
+            else:
+                current = state._y_v2_current
+            next_value = value
+            if current == next_value:
+                return
             state._y_ensure_working_transaction(0)
-            state._y_v2_working = value
+            state._y_v2_working = next_value
 
         def __init__(
             self,
@@ -439,8 +455,16 @@ def build_lifecycle_class(
         @v1.setter
         def v1(self, value):
             state = self._y_state
+            state._y_require_active_transaction(0)
+            if state._y_v1_working is not VOID:
+                current = state._y_v1_working
+            else:
+                current = state._y_v1_current
+            next_value = value
+            if current == next_value:
+                return
             state._y_ensure_working_transaction(0)
-            state._y_v1_working = value
+            state._y_v1_working = next_value
 
         @property
         def v2(self):
@@ -452,8 +476,16 @@ def build_lifecycle_class(
         @v2.setter
         def v2(self, value):
             state = self._y_state
+            state._y_require_active_transaction(0)
+            if state._y_v2_working is not VOID:
+                current = state._y_v2_working
+            else:
+                current = state._y_v2_current
+            next_value = value
+            if current == next_value:
+                return
             state._y_ensure_working_transaction(0)
-            state._y_v2_working = value
+            state._y_v2_working = next_value
 
     Derived.__name__ = decorated_cls.__name__
     Derived.__qualname__ = decorated_cls.__qualname__

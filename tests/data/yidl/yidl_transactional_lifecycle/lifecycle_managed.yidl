@@ -33,6 +33,7 @@ concept LifecycleManaged extends core.LifecycleCore {
         FieldOwner
         FieldName
         FieldOrder
+        Compare
         TxKeyKey
     }
 
@@ -57,6 +58,7 @@ concept LifecycleManaged extends core.LifecycleCore {
         FieldOwner
         FieldName
         FieldOrder
+        Compare
         TxKeyKey
         TxIndex
         CurrentSlotName
@@ -164,6 +166,7 @@ concept LifecycleManaged extends core.LifecycleCore {
                         field_owner=field.field_owner,
                         field_name=field.field_name,
                         field_order=field.field_order,
+                        compare=field.compare,
                         tx_key_key=tx_key,
                     ),
                     policy=RejectDuplicate,
@@ -177,6 +180,7 @@ concept LifecycleManaged extends core.LifecycleCore {
                         field_owner=field.field_owner,
                         field_name=field.field_name,
                         field_order=field.field_order,
+                        compare=field.compare,
                         tx_key_key=tx_key,
                         tx_index=tx_index,
                         current_slot_name=field.current_slot_name,
@@ -226,6 +230,14 @@ concept LifecycleManaged extends core.LifecycleCore {
         keep VOID
     }
 
+    resource IdentityCompareGuard = template $[
+        if astichi_pass(current, outer_bind=True) is astichi_pass(
+            next_value,
+            outer_bind=True,
+        ):
+            return
+    ]$
+
     resource ManagedDefaultProperty = template $[
         @property
         def property_getter_name__astichi_arg__(self):
@@ -237,8 +249,17 @@ concept LifecycleManaged extends core.LifecycleCore {
         @property_setter_target_name__astichi_arg__.setter
         def property_setter_name__astichi_arg__(self, value):
             state = self._y_state
+            state._y_require_active_transaction(astichi_bind_external(tx_index))
+            if state.astichi_ref(external=working_slot) is not VOID:
+                current = state.astichi_ref(external=working_slot)
+            else:
+                current = state.astichi_ref(external=current_slot)
+            next_value = value
+            with astichi_hole(compare_guard) as astichi_fallback:
+                if current == next_value:
+                    return
             state._y_ensure_working_transaction(astichi_bind_external(tx_index))
-            state.astichi_ref(external=working_slot)._ = value
+            state.astichi_ref(external=working_slot)._ = next_value
     ]$ {
         keep VOID
     }
@@ -268,8 +289,17 @@ concept LifecycleManaged extends core.LifecycleCore {
         @property_setter_target_name__astichi_arg__.setter
         def property_setter_name__astichi_arg__(self, value):
             state = self._y_state
+            state._y_require_active_transaction(astichi_bind_external(tx_index))
+            if state.astichi_ref(external=working_slot) is not VOID:
+                current = state.astichi_ref(external=working_slot)
+            else:
+                current = state.astichi_ref(external=current_slot)
+            next_value = value
+            with astichi_hole(compare_guard) as astichi_fallback:
+                if current == next_value:
+                    return
             state._y_ensure_working_transaction(astichi_bind_external(tx_index))
-            state.astichi_ref(external=working_slot)._ = value
+            state.astichi_ref(external=working_slot)._ = next_value
     ]$ {
         keep VOID
     }
@@ -295,8 +325,19 @@ concept LifecycleManaged extends core.LifecycleCore {
         @property_setter_target_name__astichi_arg__.setter
         def property_setter_name__astichi_arg__(self, value):
             state = self._y_state
+            state._y_require_active_transaction(astichi_bind_external(working_tx_index))
+            if state.astichi_ref(external=working_slot) is not VOID:
+                current = state.astichi_ref(external=working_slot)
+            else:
+                current = thaw_func_name__astichi_arg__(
+                    state.astichi_ref(external=current_slot)
+                )
+            next_value = value
+            with astichi_hole(compare_guard) as astichi_fallback:
+                if current == next_value:
+                    return
             state._y_ensure_working_transaction(astichi_bind_external(working_tx_index))
-            state.astichi_ref(external=working_slot)._ = value
+            state.astichi_ref(external=working_slot)._ = next_value
     ]$ {
         keep VOID
     }
@@ -325,8 +366,21 @@ concept LifecycleManaged extends core.LifecycleCore {
         @property_setter_target_name__astichi_arg__.setter
         def property_setter_name__astichi_arg__(self, value):
             state = self._y_state
+            state._y_require_active_transaction(astichi_bind_external(working_tx_index))
+            if state.astichi_ref(external=working_slot) is not VOID:
+                current = state.astichi_ref(external=working_slot)
+            elif state.astichi_ref(external=current_slot) is None:
+                current = None
+            else:
+                current = thaw_func_name__astichi_arg__(
+                    state.astichi_ref(external=current_slot)
+                )
+            next_value = value
+            with astichi_hole(compare_guard) as astichi_fallback:
+                if current == next_value:
+                    return
             state._y_ensure_working_transaction(astichi_bind_external(working_tx_index))
-            state.astichi_ref(external=working_slot)._ = value
+            state.astichi_ref(external=working_slot)._ = next_value
     ]$ {
         keep VOID
     }
@@ -701,6 +755,15 @@ concept LifecycleManaged extends core.LifecycleCore {
         external tx_index = TxIndex
     }
 
+    contribution ManagedDefaultIdentityCompareGuard = IdentityCompareGuard {
+        index FieldOrder
+        order FieldOrder
+
+        target compare_guard {
+            build /ClassDef/ManagedDefaultFacadeProperty[FieldOrder]
+        }
+    }
+
     contribution ManagedCurrentFacadeProperty = ManagedCurrentProperty {
         as ManagedCurrentFacadeProperty
         index FieldOrder
@@ -732,6 +795,15 @@ concept LifecycleManaged extends core.LifecycleCore {
         external current_slot = CurrentSlotName
         external working_slot = WorkingSlotName
         external tx_index = TxIndex
+    }
+
+    contribution ManagedWorkingIdentityCompareGuard = IdentityCompareGuard {
+        index FieldOrder
+        order FieldOrder
+
+        target compare_guard {
+            build /ClassDef/ManagedWorkingFacadeProperty[FieldOrder]
+        }
     }
 
     contribution ManagedThawWorkingFacadeProperty = ManagedThawWorkingProperty {
@@ -1187,6 +1259,14 @@ concept LifecycleManaged extends core.LifecycleCore {
         rule with_thaw when HasThaw == True -> ManagedThawWorkingFacadeProperty
     }
 
+    matcher ManagedDefaultCompareGuardContributions(field: IndexedTransactionalFields) -> contribution {
+        rule identity when Compare == "identity" -> ManagedDefaultIdentityCompareGuard
+    }
+
+    matcher ManagedWorkingCompareGuardContributions(field: IndexedTransactionalFields) -> contribution {
+        rule identity when Compare == "identity" -> ManagedWorkingIdentityCompareGuard
+    }
+
     matcher ManagedPrepareCommitContributions(field: IndexedTransactionalFields) -> contribution {
         default -> ManagedPlainPrepareCommit
         rule with_optional_freeze when HasFreeze == True
@@ -1391,6 +1471,7 @@ concept LifecycleManaged extends core.LifecycleCore {
             from field: IndexedTransactionalFields
             where FieldOwner == ClassId {
             apply managed_default_properties using ManagedDefaultFacadePropertyContributions
+            apply managed_default_compare_guards using ManagedDefaultCompareGuardContributions
         }
 
         phase properties_managed_current after properties_plain order 50
@@ -1403,6 +1484,7 @@ concept LifecycleManaged extends core.LifecycleCore {
             from field: IndexedTransactionalFields
             where FieldOwner == ClassId {
             apply managed_working_properties using ManagedWorkingFacadePropertyContributions
+            apply managed_working_compare_guards using ManagedWorkingCompareGuardContributions
         }
 
         phase tx_apply_prepared_helpers after properties_plain order 200

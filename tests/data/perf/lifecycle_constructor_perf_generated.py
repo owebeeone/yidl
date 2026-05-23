@@ -337,20 +337,23 @@ def build_lifecycle_class(decorated_cls, *, _PerfLifecycle5_lifecycle_definition
         def working(self):
             return self._y_state._y_get_working_facade()
 
+        def _y_get_transaction_manager(self):
+            return self._y_state._y_transaction_manager
+
         def begin(self, *tx_keys):
-            return self._y_state._y_transaction_manager.begin(*tx_keys)
+            return self._y_get_transaction_manager().begin(*tx_keys)
 
         def validate(self, *tx_keys):
-            return self._y_state._y_transaction_manager.validate(*tx_keys)
+            return self._y_get_transaction_manager().validate(*tx_keys)
 
         def commit_only(self, *tx_keys):
-            return self._y_state._y_transaction_manager.commit_only(*tx_keys)
+            return self._y_get_transaction_manager().commit_only(*tx_keys)
 
         def commit(self, *tx_keys):
-            return self._y_state._y_transaction_manager.commit(*tx_keys)
+            return self._y_get_transaction_manager().commit(*tx_keys)
 
         def rollback(self, *tx_keys):
-            return self._y_state._y_transaction_manager.rollback(*tx_keys)
+            return self._y_get_transaction_manager().rollback(*tx_keys)
 
         @property
         def plain_0(self):
@@ -411,8 +414,16 @@ def build_lifecycle_class(decorated_cls, *, _PerfLifecycle5_lifecycle_definition
         @count_0.setter
         def count_0(self, value):
             state = self._y_state
+            state._y_require_active_transaction(0)
+            if state._y_count_0_working is not VOID:
+                current = state._y_count_0_working
+            else:
+                current = state._y_count_0_current
+            next_value = value
+            if current == next_value:
+                return
             state._y_ensure_working_transaction(0)
-            state._y_count_0_working = value
+            state._y_count_0_working = next_value
 
         @property
         def count_1(self):
@@ -424,8 +435,16 @@ def build_lifecycle_class(decorated_cls, *, _PerfLifecycle5_lifecycle_definition
         @count_1.setter
         def count_1(self, value):
             state = self._y_state
+            state._y_require_active_transaction(0)
+            if state._y_count_1_working is not VOID:
+                current = state._y_count_1_working
+            else:
+                current = state._y_count_1_current
+            next_value = value
+            if current == next_value:
+                return
             state._y_ensure_working_transaction(0)
-            state._y_count_1_working = value
+            state._y_count_1_working = next_value
 
         @property
         def count_2(self):
@@ -437,8 +456,16 @@ def build_lifecycle_class(decorated_cls, *, _PerfLifecycle5_lifecycle_definition
         @count_2.setter
         def count_2(self, value):
             state = self._y_state
+            state._y_require_active_transaction(0)
+            if state._y_count_2_working is not VOID:
+                current = state._y_count_2_working
+            else:
+                current = state._y_count_2_current
+            next_value = value
+            if current == next_value:
+                return
             state._y_ensure_working_transaction(0)
-            state._y_count_2_working = value
+            state._y_count_2_working = next_value
 
         @property
         def count_3(self):
@@ -450,8 +477,16 @@ def build_lifecycle_class(decorated_cls, *, _PerfLifecycle5_lifecycle_definition
         @count_3.setter
         def count_3(self, value):
             state = self._y_state
+            state._y_require_active_transaction(0)
+            if state._y_count_3_working is not VOID:
+                current = state._y_count_3_working
+            else:
+                current = state._y_count_3_current
+            next_value = value
+            if current == next_value:
+                return
             state._y_ensure_working_transaction(0)
-            state._y_count_3_working = value
+            state._y_count_3_working = next_value
 
         @property
         def count_4(self):
@@ -463,8 +498,16 @@ def build_lifecycle_class(decorated_cls, *, _PerfLifecycle5_lifecycle_definition
         @count_4.setter
         def count_4(self, value):
             state = self._y_state
+            state._y_require_active_transaction(0)
+            if state._y_count_4_working is not VOID:
+                current = state._y_count_4_working
+            else:
+                current = state._y_count_4_current
+            next_value = value
+            if current == next_value:
+                return
             state._y_ensure_working_transaction(0)
-            state._y_count_4_working = value
+            state._y_count_4_working = next_value
 
         @property
         def derived_0(self):
@@ -476,8 +519,16 @@ def build_lifecycle_class(decorated_cls, *, _PerfLifecycle5_lifecycle_definition
         @derived_0.setter
         def derived_0(self, value):
             state = self._y_state
+            state._y_require_active_transaction(0)
+            if state._y_derived_0_working is not VOID:
+                current = state._y_derived_0_working
+            else:
+                current = state._y_derived_0_current
+            next_value = value
+            if current == next_value:
+                return
             state._y_ensure_working_transaction(0)
-            state._y_derived_0_working = value
+            state._y_derived_0_working = next_value
 
         @property
         def derived_1(self):
@@ -489,8 +540,16 @@ def build_lifecycle_class(decorated_cls, *, _PerfLifecycle5_lifecycle_definition
         @derived_1.setter
         def derived_1(self, value):
             state = self._y_state
+            state._y_require_active_transaction(0)
+            if state._y_derived_1_working is not VOID:
+                current = state._y_derived_1_working
+            else:
+                current = state._y_derived_1_current
+            next_value = value
+            if current == next_value:
+                return
             state._y_ensure_working_transaction(0)
-            state._y_derived_1_working = value
+            state._y_derived_1_working = next_value
 
         @property
         def derived_2(self):
@@ -502,8 +561,16 @@ def build_lifecycle_class(decorated_cls, *, _PerfLifecycle5_lifecycle_definition
         @derived_2.setter
         def derived_2(self, value):
             state = self._y_state
+            state._y_require_active_transaction(0)
+            if state._y_derived_2_working is not VOID:
+                current = state._y_derived_2_working
+            else:
+                current = state._y_derived_2_current
+            next_value = value
+            if current == next_value:
+                return
             state._y_ensure_working_transaction(0)
-            state._y_derived_2_working = value
+            state._y_derived_2_working = next_value
 
         @property
         def derived_3(self):
@@ -515,8 +582,16 @@ def build_lifecycle_class(decorated_cls, *, _PerfLifecycle5_lifecycle_definition
         @derived_3.setter
         def derived_3(self, value):
             state = self._y_state
+            state._y_require_active_transaction(0)
+            if state._y_derived_3_working is not VOID:
+                current = state._y_derived_3_working
+            else:
+                current = state._y_derived_3_current
+            next_value = value
+            if current == next_value:
+                return
             state._y_ensure_working_transaction(0)
-            state._y_derived_3_working = value
+            state._y_derived_3_working = next_value
 
         @property
         def derived_4(self):
@@ -528,8 +603,16 @@ def build_lifecycle_class(decorated_cls, *, _PerfLifecycle5_lifecycle_definition
         @derived_4.setter
         def derived_4(self, value):
             state = self._y_state
+            state._y_require_active_transaction(0)
+            if state._y_derived_4_working is not VOID:
+                current = state._y_derived_4_working
+            else:
+                current = state._y_derived_4_current
+            next_value = value
+            if current == next_value:
+                return
             state._y_ensure_working_transaction(0)
-            state._y_derived_4_working = value
+            state._y_derived_4_working = next_value
 
         def __init__(self, plain_0: 'int'=_PerfLifecycle5_plain_0_default, plain_1: 'int'=_PerfLifecycle5_plain_1_default, plain_2: 'int'=_PerfLifecycle5_plain_2_default, plain_3: 'int'=_PerfLifecycle5_plain_3_default, plain_4: 'int'=_PerfLifecycle5_plain_4_default, count_0: 'int'=_PerfLifecycle5_count_0_default, count_1: 'int'=_PerfLifecycle5_count_1_default, count_2: 'int'=_PerfLifecycle5_count_2_default, count_3: 'int'=_PerfLifecycle5_count_3_default, count_4: 'int'=_PerfLifecycle5_count_4_default, derived_0: 'int'=_HAS_DEFAULT_FACTORY, derived_1: 'int'=_HAS_DEFAULT_FACTORY, derived_2: 'int'=_HAS_DEFAULT_FACTORY, derived_3: 'int'=_HAS_DEFAULT_FACTORY, derived_4: 'int'=_HAS_DEFAULT_FACTORY, *, transaction_manager=None):
             state = object.__new__(PerfLifecycle5_State)
@@ -693,8 +776,16 @@ def build_lifecycle_class(decorated_cls, *, _PerfLifecycle5_lifecycle_definition
         @count_0.setter
         def count_0(self, value):
             state = self._y_state
+            state._y_require_active_transaction(0)
+            if state._y_count_0_working is not VOID:
+                current = state._y_count_0_working
+            else:
+                current = state._y_count_0_current
+            next_value = value
+            if current == next_value:
+                return
             state._y_ensure_working_transaction(0)
-            state._y_count_0_working = value
+            state._y_count_0_working = next_value
 
         @property
         def count_1(self):
@@ -706,8 +797,16 @@ def build_lifecycle_class(decorated_cls, *, _PerfLifecycle5_lifecycle_definition
         @count_1.setter
         def count_1(self, value):
             state = self._y_state
+            state._y_require_active_transaction(0)
+            if state._y_count_1_working is not VOID:
+                current = state._y_count_1_working
+            else:
+                current = state._y_count_1_current
+            next_value = value
+            if current == next_value:
+                return
             state._y_ensure_working_transaction(0)
-            state._y_count_1_working = value
+            state._y_count_1_working = next_value
 
         @property
         def count_2(self):
@@ -719,8 +818,16 @@ def build_lifecycle_class(decorated_cls, *, _PerfLifecycle5_lifecycle_definition
         @count_2.setter
         def count_2(self, value):
             state = self._y_state
+            state._y_require_active_transaction(0)
+            if state._y_count_2_working is not VOID:
+                current = state._y_count_2_working
+            else:
+                current = state._y_count_2_current
+            next_value = value
+            if current == next_value:
+                return
             state._y_ensure_working_transaction(0)
-            state._y_count_2_working = value
+            state._y_count_2_working = next_value
 
         @property
         def count_3(self):
@@ -732,8 +839,16 @@ def build_lifecycle_class(decorated_cls, *, _PerfLifecycle5_lifecycle_definition
         @count_3.setter
         def count_3(self, value):
             state = self._y_state
+            state._y_require_active_transaction(0)
+            if state._y_count_3_working is not VOID:
+                current = state._y_count_3_working
+            else:
+                current = state._y_count_3_current
+            next_value = value
+            if current == next_value:
+                return
             state._y_ensure_working_transaction(0)
-            state._y_count_3_working = value
+            state._y_count_3_working = next_value
 
         @property
         def count_4(self):
@@ -745,8 +860,16 @@ def build_lifecycle_class(decorated_cls, *, _PerfLifecycle5_lifecycle_definition
         @count_4.setter
         def count_4(self, value):
             state = self._y_state
+            state._y_require_active_transaction(0)
+            if state._y_count_4_working is not VOID:
+                current = state._y_count_4_working
+            else:
+                current = state._y_count_4_current
+            next_value = value
+            if current == next_value:
+                return
             state._y_ensure_working_transaction(0)
-            state._y_count_4_working = value
+            state._y_count_4_working = next_value
 
         @property
         def derived_0(self):
@@ -758,8 +881,16 @@ def build_lifecycle_class(decorated_cls, *, _PerfLifecycle5_lifecycle_definition
         @derived_0.setter
         def derived_0(self, value):
             state = self._y_state
+            state._y_require_active_transaction(0)
+            if state._y_derived_0_working is not VOID:
+                current = state._y_derived_0_working
+            else:
+                current = state._y_derived_0_current
+            next_value = value
+            if current == next_value:
+                return
             state._y_ensure_working_transaction(0)
-            state._y_derived_0_working = value
+            state._y_derived_0_working = next_value
 
         @property
         def derived_1(self):
@@ -771,8 +902,16 @@ def build_lifecycle_class(decorated_cls, *, _PerfLifecycle5_lifecycle_definition
         @derived_1.setter
         def derived_1(self, value):
             state = self._y_state
+            state._y_require_active_transaction(0)
+            if state._y_derived_1_working is not VOID:
+                current = state._y_derived_1_working
+            else:
+                current = state._y_derived_1_current
+            next_value = value
+            if current == next_value:
+                return
             state._y_ensure_working_transaction(0)
-            state._y_derived_1_working = value
+            state._y_derived_1_working = next_value
 
         @property
         def derived_2(self):
@@ -784,8 +923,16 @@ def build_lifecycle_class(decorated_cls, *, _PerfLifecycle5_lifecycle_definition
         @derived_2.setter
         def derived_2(self, value):
             state = self._y_state
+            state._y_require_active_transaction(0)
+            if state._y_derived_2_working is not VOID:
+                current = state._y_derived_2_working
+            else:
+                current = state._y_derived_2_current
+            next_value = value
+            if current == next_value:
+                return
             state._y_ensure_working_transaction(0)
-            state._y_derived_2_working = value
+            state._y_derived_2_working = next_value
 
         @property
         def derived_3(self):
@@ -797,8 +944,16 @@ def build_lifecycle_class(decorated_cls, *, _PerfLifecycle5_lifecycle_definition
         @derived_3.setter
         def derived_3(self, value):
             state = self._y_state
+            state._y_require_active_transaction(0)
+            if state._y_derived_3_working is not VOID:
+                current = state._y_derived_3_working
+            else:
+                current = state._y_derived_3_current
+            next_value = value
+            if current == next_value:
+                return
             state._y_ensure_working_transaction(0)
-            state._y_derived_3_working = value
+            state._y_derived_3_working = next_value
 
         @property
         def derived_4(self):
@@ -810,8 +965,16 @@ def build_lifecycle_class(decorated_cls, *, _PerfLifecycle5_lifecycle_definition
         @derived_4.setter
         def derived_4(self, value):
             state = self._y_state
+            state._y_require_active_transaction(0)
+            if state._y_derived_4_working is not VOID:
+                current = state._y_derived_4_working
+            else:
+                current = state._y_derived_4_current
+            next_value = value
+            if current == next_value:
+                return
             state._y_ensure_working_transaction(0)
-            state._y_derived_4_working = value
+            state._y_derived_4_working = next_value
     PerfLifecycle5.__name__ = decorated_cls.__name__
     PerfLifecycle5.__qualname__ = decorated_cls.__qualname__
     PerfLifecycle5.__module__ = decorated_cls.__module__
@@ -1264,20 +1427,23 @@ def build_lifecycle_class(decorated_cls, *, _PerfLifecycle10_lifecycle_definitio
         def working(self):
             return self._y_state._y_get_working_facade()
 
+        def _y_get_transaction_manager(self):
+            return self._y_state._y_transaction_manager
+
         def begin(self, *tx_keys):
-            return self._y_state._y_transaction_manager.begin(*tx_keys)
+            return self._y_get_transaction_manager().begin(*tx_keys)
 
         def validate(self, *tx_keys):
-            return self._y_state._y_transaction_manager.validate(*tx_keys)
+            return self._y_get_transaction_manager().validate(*tx_keys)
 
         def commit_only(self, *tx_keys):
-            return self._y_state._y_transaction_manager.commit_only(*tx_keys)
+            return self._y_get_transaction_manager().commit_only(*tx_keys)
 
         def commit(self, *tx_keys):
-            return self._y_state._y_transaction_manager.commit(*tx_keys)
+            return self._y_get_transaction_manager().commit(*tx_keys)
 
         def rollback(self, *tx_keys):
-            return self._y_state._y_transaction_manager.rollback(*tx_keys)
+            return self._y_get_transaction_manager().rollback(*tx_keys)
 
         @property
         def plain_0(self):
@@ -1378,8 +1544,16 @@ def build_lifecycle_class(decorated_cls, *, _PerfLifecycle10_lifecycle_definitio
         @count_0.setter
         def count_0(self, value):
             state = self._y_state
+            state._y_require_active_transaction(0)
+            if state._y_count_0_working is not VOID:
+                current = state._y_count_0_working
+            else:
+                current = state._y_count_0_current
+            next_value = value
+            if current == next_value:
+                return
             state._y_ensure_working_transaction(0)
-            state._y_count_0_working = value
+            state._y_count_0_working = next_value
 
         @property
         def count_1(self):
@@ -1391,8 +1565,16 @@ def build_lifecycle_class(decorated_cls, *, _PerfLifecycle10_lifecycle_definitio
         @count_1.setter
         def count_1(self, value):
             state = self._y_state
+            state._y_require_active_transaction(0)
+            if state._y_count_1_working is not VOID:
+                current = state._y_count_1_working
+            else:
+                current = state._y_count_1_current
+            next_value = value
+            if current == next_value:
+                return
             state._y_ensure_working_transaction(0)
-            state._y_count_1_working = value
+            state._y_count_1_working = next_value
 
         @property
         def count_2(self):
@@ -1404,8 +1586,16 @@ def build_lifecycle_class(decorated_cls, *, _PerfLifecycle10_lifecycle_definitio
         @count_2.setter
         def count_2(self, value):
             state = self._y_state
+            state._y_require_active_transaction(0)
+            if state._y_count_2_working is not VOID:
+                current = state._y_count_2_working
+            else:
+                current = state._y_count_2_current
+            next_value = value
+            if current == next_value:
+                return
             state._y_ensure_working_transaction(0)
-            state._y_count_2_working = value
+            state._y_count_2_working = next_value
 
         @property
         def count_3(self):
@@ -1417,8 +1607,16 @@ def build_lifecycle_class(decorated_cls, *, _PerfLifecycle10_lifecycle_definitio
         @count_3.setter
         def count_3(self, value):
             state = self._y_state
+            state._y_require_active_transaction(0)
+            if state._y_count_3_working is not VOID:
+                current = state._y_count_3_working
+            else:
+                current = state._y_count_3_current
+            next_value = value
+            if current == next_value:
+                return
             state._y_ensure_working_transaction(0)
-            state._y_count_3_working = value
+            state._y_count_3_working = next_value
 
         @property
         def count_4(self):
@@ -1430,8 +1628,16 @@ def build_lifecycle_class(decorated_cls, *, _PerfLifecycle10_lifecycle_definitio
         @count_4.setter
         def count_4(self, value):
             state = self._y_state
+            state._y_require_active_transaction(0)
+            if state._y_count_4_working is not VOID:
+                current = state._y_count_4_working
+            else:
+                current = state._y_count_4_current
+            next_value = value
+            if current == next_value:
+                return
             state._y_ensure_working_transaction(0)
-            state._y_count_4_working = value
+            state._y_count_4_working = next_value
 
         @property
         def count_5(self):
@@ -1443,8 +1649,16 @@ def build_lifecycle_class(decorated_cls, *, _PerfLifecycle10_lifecycle_definitio
         @count_5.setter
         def count_5(self, value):
             state = self._y_state
+            state._y_require_active_transaction(0)
+            if state._y_count_5_working is not VOID:
+                current = state._y_count_5_working
+            else:
+                current = state._y_count_5_current
+            next_value = value
+            if current == next_value:
+                return
             state._y_ensure_working_transaction(0)
-            state._y_count_5_working = value
+            state._y_count_5_working = next_value
 
         @property
         def count_6(self):
@@ -1456,8 +1670,16 @@ def build_lifecycle_class(decorated_cls, *, _PerfLifecycle10_lifecycle_definitio
         @count_6.setter
         def count_6(self, value):
             state = self._y_state
+            state._y_require_active_transaction(0)
+            if state._y_count_6_working is not VOID:
+                current = state._y_count_6_working
+            else:
+                current = state._y_count_6_current
+            next_value = value
+            if current == next_value:
+                return
             state._y_ensure_working_transaction(0)
-            state._y_count_6_working = value
+            state._y_count_6_working = next_value
 
         @property
         def count_7(self):
@@ -1469,8 +1691,16 @@ def build_lifecycle_class(decorated_cls, *, _PerfLifecycle10_lifecycle_definitio
         @count_7.setter
         def count_7(self, value):
             state = self._y_state
+            state._y_require_active_transaction(0)
+            if state._y_count_7_working is not VOID:
+                current = state._y_count_7_working
+            else:
+                current = state._y_count_7_current
+            next_value = value
+            if current == next_value:
+                return
             state._y_ensure_working_transaction(0)
-            state._y_count_7_working = value
+            state._y_count_7_working = next_value
 
         @property
         def count_8(self):
@@ -1482,8 +1712,16 @@ def build_lifecycle_class(decorated_cls, *, _PerfLifecycle10_lifecycle_definitio
         @count_8.setter
         def count_8(self, value):
             state = self._y_state
+            state._y_require_active_transaction(0)
+            if state._y_count_8_working is not VOID:
+                current = state._y_count_8_working
+            else:
+                current = state._y_count_8_current
+            next_value = value
+            if current == next_value:
+                return
             state._y_ensure_working_transaction(0)
-            state._y_count_8_working = value
+            state._y_count_8_working = next_value
 
         @property
         def count_9(self):
@@ -1495,8 +1733,16 @@ def build_lifecycle_class(decorated_cls, *, _PerfLifecycle10_lifecycle_definitio
         @count_9.setter
         def count_9(self, value):
             state = self._y_state
+            state._y_require_active_transaction(0)
+            if state._y_count_9_working is not VOID:
+                current = state._y_count_9_working
+            else:
+                current = state._y_count_9_current
+            next_value = value
+            if current == next_value:
+                return
             state._y_ensure_working_transaction(0)
-            state._y_count_9_working = value
+            state._y_count_9_working = next_value
 
         @property
         def derived_0(self):
@@ -1508,8 +1754,16 @@ def build_lifecycle_class(decorated_cls, *, _PerfLifecycle10_lifecycle_definitio
         @derived_0.setter
         def derived_0(self, value):
             state = self._y_state
+            state._y_require_active_transaction(0)
+            if state._y_derived_0_working is not VOID:
+                current = state._y_derived_0_working
+            else:
+                current = state._y_derived_0_current
+            next_value = value
+            if current == next_value:
+                return
             state._y_ensure_working_transaction(0)
-            state._y_derived_0_working = value
+            state._y_derived_0_working = next_value
 
         @property
         def derived_1(self):
@@ -1521,8 +1775,16 @@ def build_lifecycle_class(decorated_cls, *, _PerfLifecycle10_lifecycle_definitio
         @derived_1.setter
         def derived_1(self, value):
             state = self._y_state
+            state._y_require_active_transaction(0)
+            if state._y_derived_1_working is not VOID:
+                current = state._y_derived_1_working
+            else:
+                current = state._y_derived_1_current
+            next_value = value
+            if current == next_value:
+                return
             state._y_ensure_working_transaction(0)
-            state._y_derived_1_working = value
+            state._y_derived_1_working = next_value
 
         @property
         def derived_2(self):
@@ -1534,8 +1796,16 @@ def build_lifecycle_class(decorated_cls, *, _PerfLifecycle10_lifecycle_definitio
         @derived_2.setter
         def derived_2(self, value):
             state = self._y_state
+            state._y_require_active_transaction(0)
+            if state._y_derived_2_working is not VOID:
+                current = state._y_derived_2_working
+            else:
+                current = state._y_derived_2_current
+            next_value = value
+            if current == next_value:
+                return
             state._y_ensure_working_transaction(0)
-            state._y_derived_2_working = value
+            state._y_derived_2_working = next_value
 
         @property
         def derived_3(self):
@@ -1547,8 +1817,16 @@ def build_lifecycle_class(decorated_cls, *, _PerfLifecycle10_lifecycle_definitio
         @derived_3.setter
         def derived_3(self, value):
             state = self._y_state
+            state._y_require_active_transaction(0)
+            if state._y_derived_3_working is not VOID:
+                current = state._y_derived_3_working
+            else:
+                current = state._y_derived_3_current
+            next_value = value
+            if current == next_value:
+                return
             state._y_ensure_working_transaction(0)
-            state._y_derived_3_working = value
+            state._y_derived_3_working = next_value
 
         @property
         def derived_4(self):
@@ -1560,8 +1838,16 @@ def build_lifecycle_class(decorated_cls, *, _PerfLifecycle10_lifecycle_definitio
         @derived_4.setter
         def derived_4(self, value):
             state = self._y_state
+            state._y_require_active_transaction(0)
+            if state._y_derived_4_working is not VOID:
+                current = state._y_derived_4_working
+            else:
+                current = state._y_derived_4_current
+            next_value = value
+            if current == next_value:
+                return
             state._y_ensure_working_transaction(0)
-            state._y_derived_4_working = value
+            state._y_derived_4_working = next_value
 
         @property
         def derived_5(self):
@@ -1573,8 +1859,16 @@ def build_lifecycle_class(decorated_cls, *, _PerfLifecycle10_lifecycle_definitio
         @derived_5.setter
         def derived_5(self, value):
             state = self._y_state
+            state._y_require_active_transaction(0)
+            if state._y_derived_5_working is not VOID:
+                current = state._y_derived_5_working
+            else:
+                current = state._y_derived_5_current
+            next_value = value
+            if current == next_value:
+                return
             state._y_ensure_working_transaction(0)
-            state._y_derived_5_working = value
+            state._y_derived_5_working = next_value
 
         @property
         def derived_6(self):
@@ -1586,8 +1880,16 @@ def build_lifecycle_class(decorated_cls, *, _PerfLifecycle10_lifecycle_definitio
         @derived_6.setter
         def derived_6(self, value):
             state = self._y_state
+            state._y_require_active_transaction(0)
+            if state._y_derived_6_working is not VOID:
+                current = state._y_derived_6_working
+            else:
+                current = state._y_derived_6_current
+            next_value = value
+            if current == next_value:
+                return
             state._y_ensure_working_transaction(0)
-            state._y_derived_6_working = value
+            state._y_derived_6_working = next_value
 
         @property
         def derived_7(self):
@@ -1599,8 +1901,16 @@ def build_lifecycle_class(decorated_cls, *, _PerfLifecycle10_lifecycle_definitio
         @derived_7.setter
         def derived_7(self, value):
             state = self._y_state
+            state._y_require_active_transaction(0)
+            if state._y_derived_7_working is not VOID:
+                current = state._y_derived_7_working
+            else:
+                current = state._y_derived_7_current
+            next_value = value
+            if current == next_value:
+                return
             state._y_ensure_working_transaction(0)
-            state._y_derived_7_working = value
+            state._y_derived_7_working = next_value
 
         @property
         def derived_8(self):
@@ -1612,8 +1922,16 @@ def build_lifecycle_class(decorated_cls, *, _PerfLifecycle10_lifecycle_definitio
         @derived_8.setter
         def derived_8(self, value):
             state = self._y_state
+            state._y_require_active_transaction(0)
+            if state._y_derived_8_working is not VOID:
+                current = state._y_derived_8_working
+            else:
+                current = state._y_derived_8_current
+            next_value = value
+            if current == next_value:
+                return
             state._y_ensure_working_transaction(0)
-            state._y_derived_8_working = value
+            state._y_derived_8_working = next_value
 
         @property
         def derived_9(self):
@@ -1625,8 +1943,16 @@ def build_lifecycle_class(decorated_cls, *, _PerfLifecycle10_lifecycle_definitio
         @derived_9.setter
         def derived_9(self, value):
             state = self._y_state
+            state._y_require_active_transaction(0)
+            if state._y_derived_9_working is not VOID:
+                current = state._y_derived_9_working
+            else:
+                current = state._y_derived_9_current
+            next_value = value
+            if current == next_value:
+                return
             state._y_ensure_working_transaction(0)
-            state._y_derived_9_working = value
+            state._y_derived_9_working = next_value
 
         def __init__(self, plain_0: 'int'=_PerfLifecycle10_plain_0_default, plain_1: 'int'=_PerfLifecycle10_plain_1_default, plain_2: 'int'=_PerfLifecycle10_plain_2_default, plain_3: 'int'=_PerfLifecycle10_plain_3_default, plain_4: 'int'=_PerfLifecycle10_plain_4_default, plain_5: 'int'=_PerfLifecycle10_plain_5_default, plain_6: 'int'=_PerfLifecycle10_plain_6_default, plain_7: 'int'=_PerfLifecycle10_plain_7_default, plain_8: 'int'=_PerfLifecycle10_plain_8_default, plain_9: 'int'=_PerfLifecycle10_plain_9_default, count_0: 'int'=_PerfLifecycle10_count_0_default, count_1: 'int'=_PerfLifecycle10_count_1_default, count_2: 'int'=_PerfLifecycle10_count_2_default, count_3: 'int'=_PerfLifecycle10_count_3_default, count_4: 'int'=_PerfLifecycle10_count_4_default, count_5: 'int'=_PerfLifecycle10_count_5_default, count_6: 'int'=_PerfLifecycle10_count_6_default, count_7: 'int'=_PerfLifecycle10_count_7_default, count_8: 'int'=_PerfLifecycle10_count_8_default, count_9: 'int'=_PerfLifecycle10_count_9_default, derived_0: 'int'=_HAS_DEFAULT_FACTORY, derived_1: 'int'=_HAS_DEFAULT_FACTORY, derived_2: 'int'=_HAS_DEFAULT_FACTORY, derived_3: 'int'=_HAS_DEFAULT_FACTORY, derived_4: 'int'=_HAS_DEFAULT_FACTORY, derived_5: 'int'=_HAS_DEFAULT_FACTORY, derived_6: 'int'=_HAS_DEFAULT_FACTORY, derived_7: 'int'=_HAS_DEFAULT_FACTORY, derived_8: 'int'=_HAS_DEFAULT_FACTORY, derived_9: 'int'=_HAS_DEFAULT_FACTORY, *, transaction_manager=None):
             state = object.__new__(PerfLifecycle10_State)
@@ -1925,8 +2251,16 @@ def build_lifecycle_class(decorated_cls, *, _PerfLifecycle10_lifecycle_definitio
         @count_0.setter
         def count_0(self, value):
             state = self._y_state
+            state._y_require_active_transaction(0)
+            if state._y_count_0_working is not VOID:
+                current = state._y_count_0_working
+            else:
+                current = state._y_count_0_current
+            next_value = value
+            if current == next_value:
+                return
             state._y_ensure_working_transaction(0)
-            state._y_count_0_working = value
+            state._y_count_0_working = next_value
 
         @property
         def count_1(self):
@@ -1938,8 +2272,16 @@ def build_lifecycle_class(decorated_cls, *, _PerfLifecycle10_lifecycle_definitio
         @count_1.setter
         def count_1(self, value):
             state = self._y_state
+            state._y_require_active_transaction(0)
+            if state._y_count_1_working is not VOID:
+                current = state._y_count_1_working
+            else:
+                current = state._y_count_1_current
+            next_value = value
+            if current == next_value:
+                return
             state._y_ensure_working_transaction(0)
-            state._y_count_1_working = value
+            state._y_count_1_working = next_value
 
         @property
         def count_2(self):
@@ -1951,8 +2293,16 @@ def build_lifecycle_class(decorated_cls, *, _PerfLifecycle10_lifecycle_definitio
         @count_2.setter
         def count_2(self, value):
             state = self._y_state
+            state._y_require_active_transaction(0)
+            if state._y_count_2_working is not VOID:
+                current = state._y_count_2_working
+            else:
+                current = state._y_count_2_current
+            next_value = value
+            if current == next_value:
+                return
             state._y_ensure_working_transaction(0)
-            state._y_count_2_working = value
+            state._y_count_2_working = next_value
 
         @property
         def count_3(self):
@@ -1964,8 +2314,16 @@ def build_lifecycle_class(decorated_cls, *, _PerfLifecycle10_lifecycle_definitio
         @count_3.setter
         def count_3(self, value):
             state = self._y_state
+            state._y_require_active_transaction(0)
+            if state._y_count_3_working is not VOID:
+                current = state._y_count_3_working
+            else:
+                current = state._y_count_3_current
+            next_value = value
+            if current == next_value:
+                return
             state._y_ensure_working_transaction(0)
-            state._y_count_3_working = value
+            state._y_count_3_working = next_value
 
         @property
         def count_4(self):
@@ -1977,8 +2335,16 @@ def build_lifecycle_class(decorated_cls, *, _PerfLifecycle10_lifecycle_definitio
         @count_4.setter
         def count_4(self, value):
             state = self._y_state
+            state._y_require_active_transaction(0)
+            if state._y_count_4_working is not VOID:
+                current = state._y_count_4_working
+            else:
+                current = state._y_count_4_current
+            next_value = value
+            if current == next_value:
+                return
             state._y_ensure_working_transaction(0)
-            state._y_count_4_working = value
+            state._y_count_4_working = next_value
 
         @property
         def count_5(self):
@@ -1990,8 +2356,16 @@ def build_lifecycle_class(decorated_cls, *, _PerfLifecycle10_lifecycle_definitio
         @count_5.setter
         def count_5(self, value):
             state = self._y_state
+            state._y_require_active_transaction(0)
+            if state._y_count_5_working is not VOID:
+                current = state._y_count_5_working
+            else:
+                current = state._y_count_5_current
+            next_value = value
+            if current == next_value:
+                return
             state._y_ensure_working_transaction(0)
-            state._y_count_5_working = value
+            state._y_count_5_working = next_value
 
         @property
         def count_6(self):
@@ -2003,8 +2377,16 @@ def build_lifecycle_class(decorated_cls, *, _PerfLifecycle10_lifecycle_definitio
         @count_6.setter
         def count_6(self, value):
             state = self._y_state
+            state._y_require_active_transaction(0)
+            if state._y_count_6_working is not VOID:
+                current = state._y_count_6_working
+            else:
+                current = state._y_count_6_current
+            next_value = value
+            if current == next_value:
+                return
             state._y_ensure_working_transaction(0)
-            state._y_count_6_working = value
+            state._y_count_6_working = next_value
 
         @property
         def count_7(self):
@@ -2016,8 +2398,16 @@ def build_lifecycle_class(decorated_cls, *, _PerfLifecycle10_lifecycle_definitio
         @count_7.setter
         def count_7(self, value):
             state = self._y_state
+            state._y_require_active_transaction(0)
+            if state._y_count_7_working is not VOID:
+                current = state._y_count_7_working
+            else:
+                current = state._y_count_7_current
+            next_value = value
+            if current == next_value:
+                return
             state._y_ensure_working_transaction(0)
-            state._y_count_7_working = value
+            state._y_count_7_working = next_value
 
         @property
         def count_8(self):
@@ -2029,8 +2419,16 @@ def build_lifecycle_class(decorated_cls, *, _PerfLifecycle10_lifecycle_definitio
         @count_8.setter
         def count_8(self, value):
             state = self._y_state
+            state._y_require_active_transaction(0)
+            if state._y_count_8_working is not VOID:
+                current = state._y_count_8_working
+            else:
+                current = state._y_count_8_current
+            next_value = value
+            if current == next_value:
+                return
             state._y_ensure_working_transaction(0)
-            state._y_count_8_working = value
+            state._y_count_8_working = next_value
 
         @property
         def count_9(self):
@@ -2042,8 +2440,16 @@ def build_lifecycle_class(decorated_cls, *, _PerfLifecycle10_lifecycle_definitio
         @count_9.setter
         def count_9(self, value):
             state = self._y_state
+            state._y_require_active_transaction(0)
+            if state._y_count_9_working is not VOID:
+                current = state._y_count_9_working
+            else:
+                current = state._y_count_9_current
+            next_value = value
+            if current == next_value:
+                return
             state._y_ensure_working_transaction(0)
-            state._y_count_9_working = value
+            state._y_count_9_working = next_value
 
         @property
         def derived_0(self):
@@ -2055,8 +2461,16 @@ def build_lifecycle_class(decorated_cls, *, _PerfLifecycle10_lifecycle_definitio
         @derived_0.setter
         def derived_0(self, value):
             state = self._y_state
+            state._y_require_active_transaction(0)
+            if state._y_derived_0_working is not VOID:
+                current = state._y_derived_0_working
+            else:
+                current = state._y_derived_0_current
+            next_value = value
+            if current == next_value:
+                return
             state._y_ensure_working_transaction(0)
-            state._y_derived_0_working = value
+            state._y_derived_0_working = next_value
 
         @property
         def derived_1(self):
@@ -2068,8 +2482,16 @@ def build_lifecycle_class(decorated_cls, *, _PerfLifecycle10_lifecycle_definitio
         @derived_1.setter
         def derived_1(self, value):
             state = self._y_state
+            state._y_require_active_transaction(0)
+            if state._y_derived_1_working is not VOID:
+                current = state._y_derived_1_working
+            else:
+                current = state._y_derived_1_current
+            next_value = value
+            if current == next_value:
+                return
             state._y_ensure_working_transaction(0)
-            state._y_derived_1_working = value
+            state._y_derived_1_working = next_value
 
         @property
         def derived_2(self):
@@ -2081,8 +2503,16 @@ def build_lifecycle_class(decorated_cls, *, _PerfLifecycle10_lifecycle_definitio
         @derived_2.setter
         def derived_2(self, value):
             state = self._y_state
+            state._y_require_active_transaction(0)
+            if state._y_derived_2_working is not VOID:
+                current = state._y_derived_2_working
+            else:
+                current = state._y_derived_2_current
+            next_value = value
+            if current == next_value:
+                return
             state._y_ensure_working_transaction(0)
-            state._y_derived_2_working = value
+            state._y_derived_2_working = next_value
 
         @property
         def derived_3(self):
@@ -2094,8 +2524,16 @@ def build_lifecycle_class(decorated_cls, *, _PerfLifecycle10_lifecycle_definitio
         @derived_3.setter
         def derived_3(self, value):
             state = self._y_state
+            state._y_require_active_transaction(0)
+            if state._y_derived_3_working is not VOID:
+                current = state._y_derived_3_working
+            else:
+                current = state._y_derived_3_current
+            next_value = value
+            if current == next_value:
+                return
             state._y_ensure_working_transaction(0)
-            state._y_derived_3_working = value
+            state._y_derived_3_working = next_value
 
         @property
         def derived_4(self):
@@ -2107,8 +2545,16 @@ def build_lifecycle_class(decorated_cls, *, _PerfLifecycle10_lifecycle_definitio
         @derived_4.setter
         def derived_4(self, value):
             state = self._y_state
+            state._y_require_active_transaction(0)
+            if state._y_derived_4_working is not VOID:
+                current = state._y_derived_4_working
+            else:
+                current = state._y_derived_4_current
+            next_value = value
+            if current == next_value:
+                return
             state._y_ensure_working_transaction(0)
-            state._y_derived_4_working = value
+            state._y_derived_4_working = next_value
 
         @property
         def derived_5(self):
@@ -2120,8 +2566,16 @@ def build_lifecycle_class(decorated_cls, *, _PerfLifecycle10_lifecycle_definitio
         @derived_5.setter
         def derived_5(self, value):
             state = self._y_state
+            state._y_require_active_transaction(0)
+            if state._y_derived_5_working is not VOID:
+                current = state._y_derived_5_working
+            else:
+                current = state._y_derived_5_current
+            next_value = value
+            if current == next_value:
+                return
             state._y_ensure_working_transaction(0)
-            state._y_derived_5_working = value
+            state._y_derived_5_working = next_value
 
         @property
         def derived_6(self):
@@ -2133,8 +2587,16 @@ def build_lifecycle_class(decorated_cls, *, _PerfLifecycle10_lifecycle_definitio
         @derived_6.setter
         def derived_6(self, value):
             state = self._y_state
+            state._y_require_active_transaction(0)
+            if state._y_derived_6_working is not VOID:
+                current = state._y_derived_6_working
+            else:
+                current = state._y_derived_6_current
+            next_value = value
+            if current == next_value:
+                return
             state._y_ensure_working_transaction(0)
-            state._y_derived_6_working = value
+            state._y_derived_6_working = next_value
 
         @property
         def derived_7(self):
@@ -2146,8 +2608,16 @@ def build_lifecycle_class(decorated_cls, *, _PerfLifecycle10_lifecycle_definitio
         @derived_7.setter
         def derived_7(self, value):
             state = self._y_state
+            state._y_require_active_transaction(0)
+            if state._y_derived_7_working is not VOID:
+                current = state._y_derived_7_working
+            else:
+                current = state._y_derived_7_current
+            next_value = value
+            if current == next_value:
+                return
             state._y_ensure_working_transaction(0)
-            state._y_derived_7_working = value
+            state._y_derived_7_working = next_value
 
         @property
         def derived_8(self):
@@ -2159,8 +2629,16 @@ def build_lifecycle_class(decorated_cls, *, _PerfLifecycle10_lifecycle_definitio
         @derived_8.setter
         def derived_8(self, value):
             state = self._y_state
+            state._y_require_active_transaction(0)
+            if state._y_derived_8_working is not VOID:
+                current = state._y_derived_8_working
+            else:
+                current = state._y_derived_8_current
+            next_value = value
+            if current == next_value:
+                return
             state._y_ensure_working_transaction(0)
-            state._y_derived_8_working = value
+            state._y_derived_8_working = next_value
 
         @property
         def derived_9(self):
@@ -2172,8 +2650,16 @@ def build_lifecycle_class(decorated_cls, *, _PerfLifecycle10_lifecycle_definitio
         @derived_9.setter
         def derived_9(self, value):
             state = self._y_state
+            state._y_require_active_transaction(0)
+            if state._y_derived_9_working is not VOID:
+                current = state._y_derived_9_working
+            else:
+                current = state._y_derived_9_current
+            next_value = value
+            if current == next_value:
+                return
             state._y_ensure_working_transaction(0)
-            state._y_derived_9_working = value
+            state._y_derived_9_working = next_value
     PerfLifecycle10.__name__ = decorated_cls.__name__
     PerfLifecycle10.__qualname__ = decorated_cls.__qualname__
     PerfLifecycle10.__module__ = decorated_cls.__module__
@@ -2736,20 +3222,23 @@ def build_lifecycle_class(decorated_cls, *, _PerfLifecycle15_lifecycle_definitio
         def working(self):
             return self._y_state._y_get_working_facade()
 
+        def _y_get_transaction_manager(self):
+            return self._y_state._y_transaction_manager
+
         def begin(self, *tx_keys):
-            return self._y_state._y_transaction_manager.begin(*tx_keys)
+            return self._y_get_transaction_manager().begin(*tx_keys)
 
         def validate(self, *tx_keys):
-            return self._y_state._y_transaction_manager.validate(*tx_keys)
+            return self._y_get_transaction_manager().validate(*tx_keys)
 
         def commit_only(self, *tx_keys):
-            return self._y_state._y_transaction_manager.commit_only(*tx_keys)
+            return self._y_get_transaction_manager().commit_only(*tx_keys)
 
         def commit(self, *tx_keys):
-            return self._y_state._y_transaction_manager.commit(*tx_keys)
+            return self._y_get_transaction_manager().commit(*tx_keys)
 
         def rollback(self, *tx_keys):
-            return self._y_state._y_transaction_manager.rollback(*tx_keys)
+            return self._y_get_transaction_manager().rollback(*tx_keys)
 
         @property
         def plain_0(self):
@@ -2890,8 +3379,16 @@ def build_lifecycle_class(decorated_cls, *, _PerfLifecycle15_lifecycle_definitio
         @count_0.setter
         def count_0(self, value):
             state = self._y_state
+            state._y_require_active_transaction(0)
+            if state._y_count_0_working is not VOID:
+                current = state._y_count_0_working
+            else:
+                current = state._y_count_0_current
+            next_value = value
+            if current == next_value:
+                return
             state._y_ensure_working_transaction(0)
-            state._y_count_0_working = value
+            state._y_count_0_working = next_value
 
         @property
         def count_1(self):
@@ -2903,8 +3400,16 @@ def build_lifecycle_class(decorated_cls, *, _PerfLifecycle15_lifecycle_definitio
         @count_1.setter
         def count_1(self, value):
             state = self._y_state
+            state._y_require_active_transaction(0)
+            if state._y_count_1_working is not VOID:
+                current = state._y_count_1_working
+            else:
+                current = state._y_count_1_current
+            next_value = value
+            if current == next_value:
+                return
             state._y_ensure_working_transaction(0)
-            state._y_count_1_working = value
+            state._y_count_1_working = next_value
 
         @property
         def count_2(self):
@@ -2916,8 +3421,16 @@ def build_lifecycle_class(decorated_cls, *, _PerfLifecycle15_lifecycle_definitio
         @count_2.setter
         def count_2(self, value):
             state = self._y_state
+            state._y_require_active_transaction(0)
+            if state._y_count_2_working is not VOID:
+                current = state._y_count_2_working
+            else:
+                current = state._y_count_2_current
+            next_value = value
+            if current == next_value:
+                return
             state._y_ensure_working_transaction(0)
-            state._y_count_2_working = value
+            state._y_count_2_working = next_value
 
         @property
         def count_3(self):
@@ -2929,8 +3442,16 @@ def build_lifecycle_class(decorated_cls, *, _PerfLifecycle15_lifecycle_definitio
         @count_3.setter
         def count_3(self, value):
             state = self._y_state
+            state._y_require_active_transaction(0)
+            if state._y_count_3_working is not VOID:
+                current = state._y_count_3_working
+            else:
+                current = state._y_count_3_current
+            next_value = value
+            if current == next_value:
+                return
             state._y_ensure_working_transaction(0)
-            state._y_count_3_working = value
+            state._y_count_3_working = next_value
 
         @property
         def count_4(self):
@@ -2942,8 +3463,16 @@ def build_lifecycle_class(decorated_cls, *, _PerfLifecycle15_lifecycle_definitio
         @count_4.setter
         def count_4(self, value):
             state = self._y_state
+            state._y_require_active_transaction(0)
+            if state._y_count_4_working is not VOID:
+                current = state._y_count_4_working
+            else:
+                current = state._y_count_4_current
+            next_value = value
+            if current == next_value:
+                return
             state._y_ensure_working_transaction(0)
-            state._y_count_4_working = value
+            state._y_count_4_working = next_value
 
         @property
         def count_5(self):
@@ -2955,8 +3484,16 @@ def build_lifecycle_class(decorated_cls, *, _PerfLifecycle15_lifecycle_definitio
         @count_5.setter
         def count_5(self, value):
             state = self._y_state
+            state._y_require_active_transaction(0)
+            if state._y_count_5_working is not VOID:
+                current = state._y_count_5_working
+            else:
+                current = state._y_count_5_current
+            next_value = value
+            if current == next_value:
+                return
             state._y_ensure_working_transaction(0)
-            state._y_count_5_working = value
+            state._y_count_5_working = next_value
 
         @property
         def count_6(self):
@@ -2968,8 +3505,16 @@ def build_lifecycle_class(decorated_cls, *, _PerfLifecycle15_lifecycle_definitio
         @count_6.setter
         def count_6(self, value):
             state = self._y_state
+            state._y_require_active_transaction(0)
+            if state._y_count_6_working is not VOID:
+                current = state._y_count_6_working
+            else:
+                current = state._y_count_6_current
+            next_value = value
+            if current == next_value:
+                return
             state._y_ensure_working_transaction(0)
-            state._y_count_6_working = value
+            state._y_count_6_working = next_value
 
         @property
         def count_7(self):
@@ -2981,8 +3526,16 @@ def build_lifecycle_class(decorated_cls, *, _PerfLifecycle15_lifecycle_definitio
         @count_7.setter
         def count_7(self, value):
             state = self._y_state
+            state._y_require_active_transaction(0)
+            if state._y_count_7_working is not VOID:
+                current = state._y_count_7_working
+            else:
+                current = state._y_count_7_current
+            next_value = value
+            if current == next_value:
+                return
             state._y_ensure_working_transaction(0)
-            state._y_count_7_working = value
+            state._y_count_7_working = next_value
 
         @property
         def count_8(self):
@@ -2994,8 +3547,16 @@ def build_lifecycle_class(decorated_cls, *, _PerfLifecycle15_lifecycle_definitio
         @count_8.setter
         def count_8(self, value):
             state = self._y_state
+            state._y_require_active_transaction(0)
+            if state._y_count_8_working is not VOID:
+                current = state._y_count_8_working
+            else:
+                current = state._y_count_8_current
+            next_value = value
+            if current == next_value:
+                return
             state._y_ensure_working_transaction(0)
-            state._y_count_8_working = value
+            state._y_count_8_working = next_value
 
         @property
         def count_9(self):
@@ -3007,8 +3568,16 @@ def build_lifecycle_class(decorated_cls, *, _PerfLifecycle15_lifecycle_definitio
         @count_9.setter
         def count_9(self, value):
             state = self._y_state
+            state._y_require_active_transaction(0)
+            if state._y_count_9_working is not VOID:
+                current = state._y_count_9_working
+            else:
+                current = state._y_count_9_current
+            next_value = value
+            if current == next_value:
+                return
             state._y_ensure_working_transaction(0)
-            state._y_count_9_working = value
+            state._y_count_9_working = next_value
 
         @property
         def count_10(self):
@@ -3020,8 +3589,16 @@ def build_lifecycle_class(decorated_cls, *, _PerfLifecycle15_lifecycle_definitio
         @count_10.setter
         def count_10(self, value):
             state = self._y_state
+            state._y_require_active_transaction(0)
+            if state._y_count_10_working is not VOID:
+                current = state._y_count_10_working
+            else:
+                current = state._y_count_10_current
+            next_value = value
+            if current == next_value:
+                return
             state._y_ensure_working_transaction(0)
-            state._y_count_10_working = value
+            state._y_count_10_working = next_value
 
         @property
         def count_11(self):
@@ -3033,8 +3610,16 @@ def build_lifecycle_class(decorated_cls, *, _PerfLifecycle15_lifecycle_definitio
         @count_11.setter
         def count_11(self, value):
             state = self._y_state
+            state._y_require_active_transaction(0)
+            if state._y_count_11_working is not VOID:
+                current = state._y_count_11_working
+            else:
+                current = state._y_count_11_current
+            next_value = value
+            if current == next_value:
+                return
             state._y_ensure_working_transaction(0)
-            state._y_count_11_working = value
+            state._y_count_11_working = next_value
 
         @property
         def count_12(self):
@@ -3046,8 +3631,16 @@ def build_lifecycle_class(decorated_cls, *, _PerfLifecycle15_lifecycle_definitio
         @count_12.setter
         def count_12(self, value):
             state = self._y_state
+            state._y_require_active_transaction(0)
+            if state._y_count_12_working is not VOID:
+                current = state._y_count_12_working
+            else:
+                current = state._y_count_12_current
+            next_value = value
+            if current == next_value:
+                return
             state._y_ensure_working_transaction(0)
-            state._y_count_12_working = value
+            state._y_count_12_working = next_value
 
         @property
         def count_13(self):
@@ -3059,8 +3652,16 @@ def build_lifecycle_class(decorated_cls, *, _PerfLifecycle15_lifecycle_definitio
         @count_13.setter
         def count_13(self, value):
             state = self._y_state
+            state._y_require_active_transaction(0)
+            if state._y_count_13_working is not VOID:
+                current = state._y_count_13_working
+            else:
+                current = state._y_count_13_current
+            next_value = value
+            if current == next_value:
+                return
             state._y_ensure_working_transaction(0)
-            state._y_count_13_working = value
+            state._y_count_13_working = next_value
 
         @property
         def count_14(self):
@@ -3072,8 +3673,16 @@ def build_lifecycle_class(decorated_cls, *, _PerfLifecycle15_lifecycle_definitio
         @count_14.setter
         def count_14(self, value):
             state = self._y_state
+            state._y_require_active_transaction(0)
+            if state._y_count_14_working is not VOID:
+                current = state._y_count_14_working
+            else:
+                current = state._y_count_14_current
+            next_value = value
+            if current == next_value:
+                return
             state._y_ensure_working_transaction(0)
-            state._y_count_14_working = value
+            state._y_count_14_working = next_value
 
         @property
         def derived_0(self):
@@ -3085,8 +3694,16 @@ def build_lifecycle_class(decorated_cls, *, _PerfLifecycle15_lifecycle_definitio
         @derived_0.setter
         def derived_0(self, value):
             state = self._y_state
+            state._y_require_active_transaction(0)
+            if state._y_derived_0_working is not VOID:
+                current = state._y_derived_0_working
+            else:
+                current = state._y_derived_0_current
+            next_value = value
+            if current == next_value:
+                return
             state._y_ensure_working_transaction(0)
-            state._y_derived_0_working = value
+            state._y_derived_0_working = next_value
 
         @property
         def derived_1(self):
@@ -3098,8 +3715,16 @@ def build_lifecycle_class(decorated_cls, *, _PerfLifecycle15_lifecycle_definitio
         @derived_1.setter
         def derived_1(self, value):
             state = self._y_state
+            state._y_require_active_transaction(0)
+            if state._y_derived_1_working is not VOID:
+                current = state._y_derived_1_working
+            else:
+                current = state._y_derived_1_current
+            next_value = value
+            if current == next_value:
+                return
             state._y_ensure_working_transaction(0)
-            state._y_derived_1_working = value
+            state._y_derived_1_working = next_value
 
         @property
         def derived_2(self):
@@ -3111,8 +3736,16 @@ def build_lifecycle_class(decorated_cls, *, _PerfLifecycle15_lifecycle_definitio
         @derived_2.setter
         def derived_2(self, value):
             state = self._y_state
+            state._y_require_active_transaction(0)
+            if state._y_derived_2_working is not VOID:
+                current = state._y_derived_2_working
+            else:
+                current = state._y_derived_2_current
+            next_value = value
+            if current == next_value:
+                return
             state._y_ensure_working_transaction(0)
-            state._y_derived_2_working = value
+            state._y_derived_2_working = next_value
 
         @property
         def derived_3(self):
@@ -3124,8 +3757,16 @@ def build_lifecycle_class(decorated_cls, *, _PerfLifecycle15_lifecycle_definitio
         @derived_3.setter
         def derived_3(self, value):
             state = self._y_state
+            state._y_require_active_transaction(0)
+            if state._y_derived_3_working is not VOID:
+                current = state._y_derived_3_working
+            else:
+                current = state._y_derived_3_current
+            next_value = value
+            if current == next_value:
+                return
             state._y_ensure_working_transaction(0)
-            state._y_derived_3_working = value
+            state._y_derived_3_working = next_value
 
         @property
         def derived_4(self):
@@ -3137,8 +3778,16 @@ def build_lifecycle_class(decorated_cls, *, _PerfLifecycle15_lifecycle_definitio
         @derived_4.setter
         def derived_4(self, value):
             state = self._y_state
+            state._y_require_active_transaction(0)
+            if state._y_derived_4_working is not VOID:
+                current = state._y_derived_4_working
+            else:
+                current = state._y_derived_4_current
+            next_value = value
+            if current == next_value:
+                return
             state._y_ensure_working_transaction(0)
-            state._y_derived_4_working = value
+            state._y_derived_4_working = next_value
 
         @property
         def derived_5(self):
@@ -3150,8 +3799,16 @@ def build_lifecycle_class(decorated_cls, *, _PerfLifecycle15_lifecycle_definitio
         @derived_5.setter
         def derived_5(self, value):
             state = self._y_state
+            state._y_require_active_transaction(0)
+            if state._y_derived_5_working is not VOID:
+                current = state._y_derived_5_working
+            else:
+                current = state._y_derived_5_current
+            next_value = value
+            if current == next_value:
+                return
             state._y_ensure_working_transaction(0)
-            state._y_derived_5_working = value
+            state._y_derived_5_working = next_value
 
         @property
         def derived_6(self):
@@ -3163,8 +3820,16 @@ def build_lifecycle_class(decorated_cls, *, _PerfLifecycle15_lifecycle_definitio
         @derived_6.setter
         def derived_6(self, value):
             state = self._y_state
+            state._y_require_active_transaction(0)
+            if state._y_derived_6_working is not VOID:
+                current = state._y_derived_6_working
+            else:
+                current = state._y_derived_6_current
+            next_value = value
+            if current == next_value:
+                return
             state._y_ensure_working_transaction(0)
-            state._y_derived_6_working = value
+            state._y_derived_6_working = next_value
 
         @property
         def derived_7(self):
@@ -3176,8 +3841,16 @@ def build_lifecycle_class(decorated_cls, *, _PerfLifecycle15_lifecycle_definitio
         @derived_7.setter
         def derived_7(self, value):
             state = self._y_state
+            state._y_require_active_transaction(0)
+            if state._y_derived_7_working is not VOID:
+                current = state._y_derived_7_working
+            else:
+                current = state._y_derived_7_current
+            next_value = value
+            if current == next_value:
+                return
             state._y_ensure_working_transaction(0)
-            state._y_derived_7_working = value
+            state._y_derived_7_working = next_value
 
         @property
         def derived_8(self):
@@ -3189,8 +3862,16 @@ def build_lifecycle_class(decorated_cls, *, _PerfLifecycle15_lifecycle_definitio
         @derived_8.setter
         def derived_8(self, value):
             state = self._y_state
+            state._y_require_active_transaction(0)
+            if state._y_derived_8_working is not VOID:
+                current = state._y_derived_8_working
+            else:
+                current = state._y_derived_8_current
+            next_value = value
+            if current == next_value:
+                return
             state._y_ensure_working_transaction(0)
-            state._y_derived_8_working = value
+            state._y_derived_8_working = next_value
 
         @property
         def derived_9(self):
@@ -3202,8 +3883,16 @@ def build_lifecycle_class(decorated_cls, *, _PerfLifecycle15_lifecycle_definitio
         @derived_9.setter
         def derived_9(self, value):
             state = self._y_state
+            state._y_require_active_transaction(0)
+            if state._y_derived_9_working is not VOID:
+                current = state._y_derived_9_working
+            else:
+                current = state._y_derived_9_current
+            next_value = value
+            if current == next_value:
+                return
             state._y_ensure_working_transaction(0)
-            state._y_derived_9_working = value
+            state._y_derived_9_working = next_value
 
         @property
         def derived_10(self):
@@ -3215,8 +3904,16 @@ def build_lifecycle_class(decorated_cls, *, _PerfLifecycle15_lifecycle_definitio
         @derived_10.setter
         def derived_10(self, value):
             state = self._y_state
+            state._y_require_active_transaction(0)
+            if state._y_derived_10_working is not VOID:
+                current = state._y_derived_10_working
+            else:
+                current = state._y_derived_10_current
+            next_value = value
+            if current == next_value:
+                return
             state._y_ensure_working_transaction(0)
-            state._y_derived_10_working = value
+            state._y_derived_10_working = next_value
 
         @property
         def derived_11(self):
@@ -3228,8 +3925,16 @@ def build_lifecycle_class(decorated_cls, *, _PerfLifecycle15_lifecycle_definitio
         @derived_11.setter
         def derived_11(self, value):
             state = self._y_state
+            state._y_require_active_transaction(0)
+            if state._y_derived_11_working is not VOID:
+                current = state._y_derived_11_working
+            else:
+                current = state._y_derived_11_current
+            next_value = value
+            if current == next_value:
+                return
             state._y_ensure_working_transaction(0)
-            state._y_derived_11_working = value
+            state._y_derived_11_working = next_value
 
         @property
         def derived_12(self):
@@ -3241,8 +3946,16 @@ def build_lifecycle_class(decorated_cls, *, _PerfLifecycle15_lifecycle_definitio
         @derived_12.setter
         def derived_12(self, value):
             state = self._y_state
+            state._y_require_active_transaction(0)
+            if state._y_derived_12_working is not VOID:
+                current = state._y_derived_12_working
+            else:
+                current = state._y_derived_12_current
+            next_value = value
+            if current == next_value:
+                return
             state._y_ensure_working_transaction(0)
-            state._y_derived_12_working = value
+            state._y_derived_12_working = next_value
 
         @property
         def derived_13(self):
@@ -3254,8 +3967,16 @@ def build_lifecycle_class(decorated_cls, *, _PerfLifecycle15_lifecycle_definitio
         @derived_13.setter
         def derived_13(self, value):
             state = self._y_state
+            state._y_require_active_transaction(0)
+            if state._y_derived_13_working is not VOID:
+                current = state._y_derived_13_working
+            else:
+                current = state._y_derived_13_current
+            next_value = value
+            if current == next_value:
+                return
             state._y_ensure_working_transaction(0)
-            state._y_derived_13_working = value
+            state._y_derived_13_working = next_value
 
         @property
         def derived_14(self):
@@ -3267,8 +3988,16 @@ def build_lifecycle_class(decorated_cls, *, _PerfLifecycle15_lifecycle_definitio
         @derived_14.setter
         def derived_14(self, value):
             state = self._y_state
+            state._y_require_active_transaction(0)
+            if state._y_derived_14_working is not VOID:
+                current = state._y_derived_14_working
+            else:
+                current = state._y_derived_14_current
+            next_value = value
+            if current == next_value:
+                return
             state._y_ensure_working_transaction(0)
-            state._y_derived_14_working = value
+            state._y_derived_14_working = next_value
 
         def __init__(self, plain_0: 'int'=_PerfLifecycle15_plain_0_default, plain_1: 'int'=_PerfLifecycle15_plain_1_default, plain_2: 'int'=_PerfLifecycle15_plain_2_default, plain_3: 'int'=_PerfLifecycle15_plain_3_default, plain_4: 'int'=_PerfLifecycle15_plain_4_default, plain_5: 'int'=_PerfLifecycle15_plain_5_default, plain_6: 'int'=_PerfLifecycle15_plain_6_default, plain_7: 'int'=_PerfLifecycle15_plain_7_default, plain_8: 'int'=_PerfLifecycle15_plain_8_default, plain_9: 'int'=_PerfLifecycle15_plain_9_default, plain_10: 'int'=_PerfLifecycle15_plain_10_default, plain_11: 'int'=_PerfLifecycle15_plain_11_default, plain_12: 'int'=_PerfLifecycle15_plain_12_default, plain_13: 'int'=_PerfLifecycle15_plain_13_default, plain_14: 'int'=_PerfLifecycle15_plain_14_default, count_0: 'int'=_PerfLifecycle15_count_0_default, count_1: 'int'=_PerfLifecycle15_count_1_default, count_2: 'int'=_PerfLifecycle15_count_2_default, count_3: 'int'=_PerfLifecycle15_count_3_default, count_4: 'int'=_PerfLifecycle15_count_4_default, count_5: 'int'=_PerfLifecycle15_count_5_default, count_6: 'int'=_PerfLifecycle15_count_6_default, count_7: 'int'=_PerfLifecycle15_count_7_default, count_8: 'int'=_PerfLifecycle15_count_8_default, count_9: 'int'=_PerfLifecycle15_count_9_default, count_10: 'int'=_PerfLifecycle15_count_10_default, count_11: 'int'=_PerfLifecycle15_count_11_default, count_12: 'int'=_PerfLifecycle15_count_12_default, count_13: 'int'=_PerfLifecycle15_count_13_default, count_14: 'int'=_PerfLifecycle15_count_14_default, derived_0: 'int'=_HAS_DEFAULT_FACTORY, derived_1: 'int'=_HAS_DEFAULT_FACTORY, derived_2: 'int'=_HAS_DEFAULT_FACTORY, derived_3: 'int'=_HAS_DEFAULT_FACTORY, derived_4: 'int'=_HAS_DEFAULT_FACTORY, derived_5: 'int'=_HAS_DEFAULT_FACTORY, derived_6: 'int'=_HAS_DEFAULT_FACTORY, derived_7: 'int'=_HAS_DEFAULT_FACTORY, derived_8: 'int'=_HAS_DEFAULT_FACTORY, derived_9: 'int'=_HAS_DEFAULT_FACTORY, derived_10: 'int'=_HAS_DEFAULT_FACTORY, derived_11: 'int'=_HAS_DEFAULT_FACTORY, derived_12: 'int'=_HAS_DEFAULT_FACTORY, derived_13: 'int'=_HAS_DEFAULT_FACTORY, derived_14: 'int'=_HAS_DEFAULT_FACTORY, *, transaction_manager=None):
             state = object.__new__(PerfLifecycle15_State)
@@ -3702,8 +4431,16 @@ def build_lifecycle_class(decorated_cls, *, _PerfLifecycle15_lifecycle_definitio
         @count_0.setter
         def count_0(self, value):
             state = self._y_state
+            state._y_require_active_transaction(0)
+            if state._y_count_0_working is not VOID:
+                current = state._y_count_0_working
+            else:
+                current = state._y_count_0_current
+            next_value = value
+            if current == next_value:
+                return
             state._y_ensure_working_transaction(0)
-            state._y_count_0_working = value
+            state._y_count_0_working = next_value
 
         @property
         def count_1(self):
@@ -3715,8 +4452,16 @@ def build_lifecycle_class(decorated_cls, *, _PerfLifecycle15_lifecycle_definitio
         @count_1.setter
         def count_1(self, value):
             state = self._y_state
+            state._y_require_active_transaction(0)
+            if state._y_count_1_working is not VOID:
+                current = state._y_count_1_working
+            else:
+                current = state._y_count_1_current
+            next_value = value
+            if current == next_value:
+                return
             state._y_ensure_working_transaction(0)
-            state._y_count_1_working = value
+            state._y_count_1_working = next_value
 
         @property
         def count_2(self):
@@ -3728,8 +4473,16 @@ def build_lifecycle_class(decorated_cls, *, _PerfLifecycle15_lifecycle_definitio
         @count_2.setter
         def count_2(self, value):
             state = self._y_state
+            state._y_require_active_transaction(0)
+            if state._y_count_2_working is not VOID:
+                current = state._y_count_2_working
+            else:
+                current = state._y_count_2_current
+            next_value = value
+            if current == next_value:
+                return
             state._y_ensure_working_transaction(0)
-            state._y_count_2_working = value
+            state._y_count_2_working = next_value
 
         @property
         def count_3(self):
@@ -3741,8 +4494,16 @@ def build_lifecycle_class(decorated_cls, *, _PerfLifecycle15_lifecycle_definitio
         @count_3.setter
         def count_3(self, value):
             state = self._y_state
+            state._y_require_active_transaction(0)
+            if state._y_count_3_working is not VOID:
+                current = state._y_count_3_working
+            else:
+                current = state._y_count_3_current
+            next_value = value
+            if current == next_value:
+                return
             state._y_ensure_working_transaction(0)
-            state._y_count_3_working = value
+            state._y_count_3_working = next_value
 
         @property
         def count_4(self):
@@ -3754,8 +4515,16 @@ def build_lifecycle_class(decorated_cls, *, _PerfLifecycle15_lifecycle_definitio
         @count_4.setter
         def count_4(self, value):
             state = self._y_state
+            state._y_require_active_transaction(0)
+            if state._y_count_4_working is not VOID:
+                current = state._y_count_4_working
+            else:
+                current = state._y_count_4_current
+            next_value = value
+            if current == next_value:
+                return
             state._y_ensure_working_transaction(0)
-            state._y_count_4_working = value
+            state._y_count_4_working = next_value
 
         @property
         def count_5(self):
@@ -3767,8 +4536,16 @@ def build_lifecycle_class(decorated_cls, *, _PerfLifecycle15_lifecycle_definitio
         @count_5.setter
         def count_5(self, value):
             state = self._y_state
+            state._y_require_active_transaction(0)
+            if state._y_count_5_working is not VOID:
+                current = state._y_count_5_working
+            else:
+                current = state._y_count_5_current
+            next_value = value
+            if current == next_value:
+                return
             state._y_ensure_working_transaction(0)
-            state._y_count_5_working = value
+            state._y_count_5_working = next_value
 
         @property
         def count_6(self):
@@ -3780,8 +4557,16 @@ def build_lifecycle_class(decorated_cls, *, _PerfLifecycle15_lifecycle_definitio
         @count_6.setter
         def count_6(self, value):
             state = self._y_state
+            state._y_require_active_transaction(0)
+            if state._y_count_6_working is not VOID:
+                current = state._y_count_6_working
+            else:
+                current = state._y_count_6_current
+            next_value = value
+            if current == next_value:
+                return
             state._y_ensure_working_transaction(0)
-            state._y_count_6_working = value
+            state._y_count_6_working = next_value
 
         @property
         def count_7(self):
@@ -3793,8 +4578,16 @@ def build_lifecycle_class(decorated_cls, *, _PerfLifecycle15_lifecycle_definitio
         @count_7.setter
         def count_7(self, value):
             state = self._y_state
+            state._y_require_active_transaction(0)
+            if state._y_count_7_working is not VOID:
+                current = state._y_count_7_working
+            else:
+                current = state._y_count_7_current
+            next_value = value
+            if current == next_value:
+                return
             state._y_ensure_working_transaction(0)
-            state._y_count_7_working = value
+            state._y_count_7_working = next_value
 
         @property
         def count_8(self):
@@ -3806,8 +4599,16 @@ def build_lifecycle_class(decorated_cls, *, _PerfLifecycle15_lifecycle_definitio
         @count_8.setter
         def count_8(self, value):
             state = self._y_state
+            state._y_require_active_transaction(0)
+            if state._y_count_8_working is not VOID:
+                current = state._y_count_8_working
+            else:
+                current = state._y_count_8_current
+            next_value = value
+            if current == next_value:
+                return
             state._y_ensure_working_transaction(0)
-            state._y_count_8_working = value
+            state._y_count_8_working = next_value
 
         @property
         def count_9(self):
@@ -3819,8 +4620,16 @@ def build_lifecycle_class(decorated_cls, *, _PerfLifecycle15_lifecycle_definitio
         @count_9.setter
         def count_9(self, value):
             state = self._y_state
+            state._y_require_active_transaction(0)
+            if state._y_count_9_working is not VOID:
+                current = state._y_count_9_working
+            else:
+                current = state._y_count_9_current
+            next_value = value
+            if current == next_value:
+                return
             state._y_ensure_working_transaction(0)
-            state._y_count_9_working = value
+            state._y_count_9_working = next_value
 
         @property
         def count_10(self):
@@ -3832,8 +4641,16 @@ def build_lifecycle_class(decorated_cls, *, _PerfLifecycle15_lifecycle_definitio
         @count_10.setter
         def count_10(self, value):
             state = self._y_state
+            state._y_require_active_transaction(0)
+            if state._y_count_10_working is not VOID:
+                current = state._y_count_10_working
+            else:
+                current = state._y_count_10_current
+            next_value = value
+            if current == next_value:
+                return
             state._y_ensure_working_transaction(0)
-            state._y_count_10_working = value
+            state._y_count_10_working = next_value
 
         @property
         def count_11(self):
@@ -3845,8 +4662,16 @@ def build_lifecycle_class(decorated_cls, *, _PerfLifecycle15_lifecycle_definitio
         @count_11.setter
         def count_11(self, value):
             state = self._y_state
+            state._y_require_active_transaction(0)
+            if state._y_count_11_working is not VOID:
+                current = state._y_count_11_working
+            else:
+                current = state._y_count_11_current
+            next_value = value
+            if current == next_value:
+                return
             state._y_ensure_working_transaction(0)
-            state._y_count_11_working = value
+            state._y_count_11_working = next_value
 
         @property
         def count_12(self):
@@ -3858,8 +4683,16 @@ def build_lifecycle_class(decorated_cls, *, _PerfLifecycle15_lifecycle_definitio
         @count_12.setter
         def count_12(self, value):
             state = self._y_state
+            state._y_require_active_transaction(0)
+            if state._y_count_12_working is not VOID:
+                current = state._y_count_12_working
+            else:
+                current = state._y_count_12_current
+            next_value = value
+            if current == next_value:
+                return
             state._y_ensure_working_transaction(0)
-            state._y_count_12_working = value
+            state._y_count_12_working = next_value
 
         @property
         def count_13(self):
@@ -3871,8 +4704,16 @@ def build_lifecycle_class(decorated_cls, *, _PerfLifecycle15_lifecycle_definitio
         @count_13.setter
         def count_13(self, value):
             state = self._y_state
+            state._y_require_active_transaction(0)
+            if state._y_count_13_working is not VOID:
+                current = state._y_count_13_working
+            else:
+                current = state._y_count_13_current
+            next_value = value
+            if current == next_value:
+                return
             state._y_ensure_working_transaction(0)
-            state._y_count_13_working = value
+            state._y_count_13_working = next_value
 
         @property
         def count_14(self):
@@ -3884,8 +4725,16 @@ def build_lifecycle_class(decorated_cls, *, _PerfLifecycle15_lifecycle_definitio
         @count_14.setter
         def count_14(self, value):
             state = self._y_state
+            state._y_require_active_transaction(0)
+            if state._y_count_14_working is not VOID:
+                current = state._y_count_14_working
+            else:
+                current = state._y_count_14_current
+            next_value = value
+            if current == next_value:
+                return
             state._y_ensure_working_transaction(0)
-            state._y_count_14_working = value
+            state._y_count_14_working = next_value
 
         @property
         def derived_0(self):
@@ -3897,8 +4746,16 @@ def build_lifecycle_class(decorated_cls, *, _PerfLifecycle15_lifecycle_definitio
         @derived_0.setter
         def derived_0(self, value):
             state = self._y_state
+            state._y_require_active_transaction(0)
+            if state._y_derived_0_working is not VOID:
+                current = state._y_derived_0_working
+            else:
+                current = state._y_derived_0_current
+            next_value = value
+            if current == next_value:
+                return
             state._y_ensure_working_transaction(0)
-            state._y_derived_0_working = value
+            state._y_derived_0_working = next_value
 
         @property
         def derived_1(self):
@@ -3910,8 +4767,16 @@ def build_lifecycle_class(decorated_cls, *, _PerfLifecycle15_lifecycle_definitio
         @derived_1.setter
         def derived_1(self, value):
             state = self._y_state
+            state._y_require_active_transaction(0)
+            if state._y_derived_1_working is not VOID:
+                current = state._y_derived_1_working
+            else:
+                current = state._y_derived_1_current
+            next_value = value
+            if current == next_value:
+                return
             state._y_ensure_working_transaction(0)
-            state._y_derived_1_working = value
+            state._y_derived_1_working = next_value
 
         @property
         def derived_2(self):
@@ -3923,8 +4788,16 @@ def build_lifecycle_class(decorated_cls, *, _PerfLifecycle15_lifecycle_definitio
         @derived_2.setter
         def derived_2(self, value):
             state = self._y_state
+            state._y_require_active_transaction(0)
+            if state._y_derived_2_working is not VOID:
+                current = state._y_derived_2_working
+            else:
+                current = state._y_derived_2_current
+            next_value = value
+            if current == next_value:
+                return
             state._y_ensure_working_transaction(0)
-            state._y_derived_2_working = value
+            state._y_derived_2_working = next_value
 
         @property
         def derived_3(self):
@@ -3936,8 +4809,16 @@ def build_lifecycle_class(decorated_cls, *, _PerfLifecycle15_lifecycle_definitio
         @derived_3.setter
         def derived_3(self, value):
             state = self._y_state
+            state._y_require_active_transaction(0)
+            if state._y_derived_3_working is not VOID:
+                current = state._y_derived_3_working
+            else:
+                current = state._y_derived_3_current
+            next_value = value
+            if current == next_value:
+                return
             state._y_ensure_working_transaction(0)
-            state._y_derived_3_working = value
+            state._y_derived_3_working = next_value
 
         @property
         def derived_4(self):
@@ -3949,8 +4830,16 @@ def build_lifecycle_class(decorated_cls, *, _PerfLifecycle15_lifecycle_definitio
         @derived_4.setter
         def derived_4(self, value):
             state = self._y_state
+            state._y_require_active_transaction(0)
+            if state._y_derived_4_working is not VOID:
+                current = state._y_derived_4_working
+            else:
+                current = state._y_derived_4_current
+            next_value = value
+            if current == next_value:
+                return
             state._y_ensure_working_transaction(0)
-            state._y_derived_4_working = value
+            state._y_derived_4_working = next_value
 
         @property
         def derived_5(self):
@@ -3962,8 +4851,16 @@ def build_lifecycle_class(decorated_cls, *, _PerfLifecycle15_lifecycle_definitio
         @derived_5.setter
         def derived_5(self, value):
             state = self._y_state
+            state._y_require_active_transaction(0)
+            if state._y_derived_5_working is not VOID:
+                current = state._y_derived_5_working
+            else:
+                current = state._y_derived_5_current
+            next_value = value
+            if current == next_value:
+                return
             state._y_ensure_working_transaction(0)
-            state._y_derived_5_working = value
+            state._y_derived_5_working = next_value
 
         @property
         def derived_6(self):
@@ -3975,8 +4872,16 @@ def build_lifecycle_class(decorated_cls, *, _PerfLifecycle15_lifecycle_definitio
         @derived_6.setter
         def derived_6(self, value):
             state = self._y_state
+            state._y_require_active_transaction(0)
+            if state._y_derived_6_working is not VOID:
+                current = state._y_derived_6_working
+            else:
+                current = state._y_derived_6_current
+            next_value = value
+            if current == next_value:
+                return
             state._y_ensure_working_transaction(0)
-            state._y_derived_6_working = value
+            state._y_derived_6_working = next_value
 
         @property
         def derived_7(self):
@@ -3988,8 +4893,16 @@ def build_lifecycle_class(decorated_cls, *, _PerfLifecycle15_lifecycle_definitio
         @derived_7.setter
         def derived_7(self, value):
             state = self._y_state
+            state._y_require_active_transaction(0)
+            if state._y_derived_7_working is not VOID:
+                current = state._y_derived_7_working
+            else:
+                current = state._y_derived_7_current
+            next_value = value
+            if current == next_value:
+                return
             state._y_ensure_working_transaction(0)
-            state._y_derived_7_working = value
+            state._y_derived_7_working = next_value
 
         @property
         def derived_8(self):
@@ -4001,8 +4914,16 @@ def build_lifecycle_class(decorated_cls, *, _PerfLifecycle15_lifecycle_definitio
         @derived_8.setter
         def derived_8(self, value):
             state = self._y_state
+            state._y_require_active_transaction(0)
+            if state._y_derived_8_working is not VOID:
+                current = state._y_derived_8_working
+            else:
+                current = state._y_derived_8_current
+            next_value = value
+            if current == next_value:
+                return
             state._y_ensure_working_transaction(0)
-            state._y_derived_8_working = value
+            state._y_derived_8_working = next_value
 
         @property
         def derived_9(self):
@@ -4014,8 +4935,16 @@ def build_lifecycle_class(decorated_cls, *, _PerfLifecycle15_lifecycle_definitio
         @derived_9.setter
         def derived_9(self, value):
             state = self._y_state
+            state._y_require_active_transaction(0)
+            if state._y_derived_9_working is not VOID:
+                current = state._y_derived_9_working
+            else:
+                current = state._y_derived_9_current
+            next_value = value
+            if current == next_value:
+                return
             state._y_ensure_working_transaction(0)
-            state._y_derived_9_working = value
+            state._y_derived_9_working = next_value
 
         @property
         def derived_10(self):
@@ -4027,8 +4956,16 @@ def build_lifecycle_class(decorated_cls, *, _PerfLifecycle15_lifecycle_definitio
         @derived_10.setter
         def derived_10(self, value):
             state = self._y_state
+            state._y_require_active_transaction(0)
+            if state._y_derived_10_working is not VOID:
+                current = state._y_derived_10_working
+            else:
+                current = state._y_derived_10_current
+            next_value = value
+            if current == next_value:
+                return
             state._y_ensure_working_transaction(0)
-            state._y_derived_10_working = value
+            state._y_derived_10_working = next_value
 
         @property
         def derived_11(self):
@@ -4040,8 +4977,16 @@ def build_lifecycle_class(decorated_cls, *, _PerfLifecycle15_lifecycle_definitio
         @derived_11.setter
         def derived_11(self, value):
             state = self._y_state
+            state._y_require_active_transaction(0)
+            if state._y_derived_11_working is not VOID:
+                current = state._y_derived_11_working
+            else:
+                current = state._y_derived_11_current
+            next_value = value
+            if current == next_value:
+                return
             state._y_ensure_working_transaction(0)
-            state._y_derived_11_working = value
+            state._y_derived_11_working = next_value
 
         @property
         def derived_12(self):
@@ -4053,8 +4998,16 @@ def build_lifecycle_class(decorated_cls, *, _PerfLifecycle15_lifecycle_definitio
         @derived_12.setter
         def derived_12(self, value):
             state = self._y_state
+            state._y_require_active_transaction(0)
+            if state._y_derived_12_working is not VOID:
+                current = state._y_derived_12_working
+            else:
+                current = state._y_derived_12_current
+            next_value = value
+            if current == next_value:
+                return
             state._y_ensure_working_transaction(0)
-            state._y_derived_12_working = value
+            state._y_derived_12_working = next_value
 
         @property
         def derived_13(self):
@@ -4066,8 +5019,16 @@ def build_lifecycle_class(decorated_cls, *, _PerfLifecycle15_lifecycle_definitio
         @derived_13.setter
         def derived_13(self, value):
             state = self._y_state
+            state._y_require_active_transaction(0)
+            if state._y_derived_13_working is not VOID:
+                current = state._y_derived_13_working
+            else:
+                current = state._y_derived_13_current
+            next_value = value
+            if current == next_value:
+                return
             state._y_ensure_working_transaction(0)
-            state._y_derived_13_working = value
+            state._y_derived_13_working = next_value
 
         @property
         def derived_14(self):
@@ -4079,8 +5040,16 @@ def build_lifecycle_class(decorated_cls, *, _PerfLifecycle15_lifecycle_definitio
         @derived_14.setter
         def derived_14(self, value):
             state = self._y_state
+            state._y_require_active_transaction(0)
+            if state._y_derived_14_working is not VOID:
+                current = state._y_derived_14_working
+            else:
+                current = state._y_derived_14_current
+            next_value = value
+            if current == next_value:
+                return
             state._y_ensure_working_transaction(0)
-            state._y_derived_14_working = value
+            state._y_derived_14_working = next_value
     PerfLifecycle15.__name__ = decorated_cls.__name__
     PerfLifecycle15.__qualname__ = decorated_cls.__qualname__
     PerfLifecycle15.__module__ = decorated_cls.__module__

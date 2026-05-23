@@ -416,8 +416,16 @@ def build_lifecycle_class(
         @v2.setter
         def v2(self, value):
             state = self._y_state
+            state._y_require_active_transaction(0)
+            if state._y_v2_working is not VOID:
+                current = state._y_v2_working
+            else:
+                current = state._y_v2_current
+            next_value = value
+            if current == next_value:
+                return
             state._y_ensure_working_transaction(0)
-            state._y_v2_working = value
+            state._y_v2_working = next_value
 
         @property
         def v3(self):
@@ -429,8 +437,16 @@ def build_lifecycle_class(
         @v3.setter
         def v3(self, value):
             state = self._y_state
+            state._y_require_active_transaction(0)
+            if state._y_v3_working is not VOID:
+                current = state._y_v3_working
+            else:
+                current = state._y_v3_current
+            next_value = value
+            if current == next_value:
+                return
             state._y_ensure_working_transaction(0)
-            state._y_v3_working = value
+            state._y_v3_working = next_value
 
         @property
         def v4(self):
@@ -442,8 +458,16 @@ def build_lifecycle_class(
         @v4.setter
         def v4(self, value):
             state = self._y_state
+            state._y_require_active_transaction(0)
+            if state._y_v4_working is not VOID:
+                current = state._y_v4_working
+            else:
+                current = state._y_v4_current
+            next_value = value
+            if current == next_value:
+                return
             state._y_ensure_working_transaction(0)
-            state._y_v4_working = value
+            state._y_v4_working = next_value
 
         @property
         def v5(self):
@@ -455,8 +479,16 @@ def build_lifecycle_class(
         @v5.setter
         def v5(self, value):
             state = self._y_state
+            state._y_require_active_transaction(0)
+            if state._y_v5_working is not VOID:
+                current = state._y_v5_working
+            else:
+                current = state._y_v5_current
+            next_value = value
+            if current == next_value:
+                return
             state._y_ensure_working_transaction(0)
-            state._y_v5_working = value
+            state._y_v5_working = next_value
 
         def __init__(
             self,
@@ -580,8 +612,16 @@ def build_lifecycle_class(
         @v2.setter
         def v2(self, value):
             state = self._y_state
+            state._y_require_active_transaction(0)
+            if state._y_v2_working is not VOID:
+                current = state._y_v2_working
+            else:
+                current = state._y_v2_current
+            next_value = value
+            if current == next_value:
+                return
             state._y_ensure_working_transaction(0)
-            state._y_v2_working = value
+            state._y_v2_working = next_value
 
         @property
         def v3(self):
@@ -593,8 +633,16 @@ def build_lifecycle_class(
         @v3.setter
         def v3(self, value):
             state = self._y_state
+            state._y_require_active_transaction(0)
+            if state._y_v3_working is not VOID:
+                current = state._y_v3_working
+            else:
+                current = state._y_v3_current
+            next_value = value
+            if current == next_value:
+                return
             state._y_ensure_working_transaction(0)
-            state._y_v3_working = value
+            state._y_v3_working = next_value
 
         @property
         def v4(self):
@@ -606,8 +654,16 @@ def build_lifecycle_class(
         @v4.setter
         def v4(self, value):
             state = self._y_state
+            state._y_require_active_transaction(0)
+            if state._y_v4_working is not VOID:
+                current = state._y_v4_working
+            else:
+                current = state._y_v4_current
+            next_value = value
+            if current == next_value:
+                return
             state._y_ensure_working_transaction(0)
-            state._y_v4_working = value
+            state._y_v4_working = next_value
 
         @property
         def v5(self):
@@ -619,8 +675,16 @@ def build_lifecycle_class(
         @v5.setter
         def v5(self, value):
             state = self._y_state
+            state._y_require_active_transaction(0)
+            if state._y_v5_working is not VOID:
+                current = state._y_v5_working
+            else:
+                current = state._y_v5_current
+            next_value = value
+            if current == next_value:
+                return
             state._y_ensure_working_transaction(0)
-            state._y_v5_working = value
+            state._y_v5_working = next_value
 
     Example.__name__ = decorated_cls.__name__
     Example.__qualname__ = decorated_cls.__qualname__

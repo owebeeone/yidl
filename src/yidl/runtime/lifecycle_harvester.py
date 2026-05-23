@@ -230,6 +230,7 @@ def _field_fact(
         "field_order": order,
         "field_kind": kind,
         "binding_shape": _binding_shape(decl.annotation),
+        "compare": decl.compare,
         "annotation": decl.annotation,
         "init": decl.init,
         "has_default": decl.has_default,
@@ -311,6 +312,7 @@ def _remap_inherited_field_fact(
     fact.setdefault("default_factory_param_names", ())
     fact.setdefault("allow_self_factory", False)
     fact.setdefault("binding_shape", _binding_shape(fact.get("annotation")))
+    fact.setdefault("compare", "value")
     fact.setdefault("has_freeze", False)
     fact.setdefault("freeze", MISSING)
     fact.setdefault("has_thaw", False)

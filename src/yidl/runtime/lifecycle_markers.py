@@ -50,6 +50,7 @@ class FieldDecl:
     has_working_default_factory: bool
     working_default_factory: object
     tx_key: object
+    compare: str
     has_freeze: bool = False
     freeze: object = MISSING
     has_thaw: bool = False
@@ -367,6 +368,7 @@ def normalize_marker(
             and marker.tx_key is MISSING
             else marker.tx_key
         ),
+        compare=marker.compare,
         has_freeze=marker.freeze is not MISSING,
         freeze=marker.freeze,
         has_thaw=marker.thaw is not MISSING,

@@ -441,8 +441,16 @@ def build_lifecycle_class(
         @count.setter
         def count(self, value):
             state = self._y_state
+            state._y_require_active_transaction(0)
+            if state._y_count_working is not VOID:
+                current = state._y_count_working
+            else:
+                current = state._y_count_current
+            next_value = value
+            if current == next_value:
+                return
             state._y_ensure_working_transaction(0)
-            state._y_count_working = value
+            state._y_count_working = next_value
 
         @property
         def items(self):
@@ -454,8 +462,16 @@ def build_lifecycle_class(
         @items.setter
         def items(self, value):
             state = self._y_state
+            state._y_require_active_transaction(0)
+            if state._y_items_working is not VOID:
+                current = state._y_items_working
+            else:
+                current = state._y_items_current
+            next_value = value
+            if current == next_value:
+                return
             state._y_ensure_working_transaction(0)
-            state._y_items_working = value
+            state._y_items_working = next_value
 
         @property
         def optional_items(self):
@@ -467,8 +483,16 @@ def build_lifecycle_class(
         @optional_items.setter
         def optional_items(self, value):
             state = self._y_state
+            state._y_require_active_transaction(0)
+            if state._y_optional_items_working is not VOID:
+                current = state._y_optional_items_working
+            else:
+                current = state._y_optional_items_current
+            next_value = value
+            if current == next_value:
+                return
             state._y_ensure_working_transaction(0)
-            state._y_optional_items_working = value
+            state._y_optional_items_working = next_value
 
         @property
         def audit_count(self):
@@ -480,8 +504,16 @@ def build_lifecycle_class(
         @audit_count.setter
         def audit_count(self, value):
             state = self._y_state
+            state._y_require_active_transaction(1)
+            if state._y_audit_count_working is not VOID:
+                current = state._y_audit_count_working
+            else:
+                current = state._y_audit_count_current
+            next_value = value
+            if current == next_value:
+                return
             state._y_ensure_working_transaction(1)
-            state._y_audit_count_working = value
+            state._y_audit_count_working = next_value
 
         def __init__(
             self,
@@ -585,8 +617,16 @@ def build_lifecycle_class(
         @count.setter
         def count(self, value):
             state = self._y_state
+            state._y_require_active_transaction(0)
+            if state._y_count_working is not VOID:
+                current = state._y_count_working
+            else:
+                current = state._y_count_current
+            next_value = value
+            if current == next_value:
+                return
             state._y_ensure_working_transaction(0)
-            state._y_count_working = value
+            state._y_count_working = next_value
 
         @property
         def items(self):
@@ -604,8 +644,16 @@ def build_lifecycle_class(
         @items.setter
         def items(self, value):
             state = self._y_state
+            state._y_require_active_transaction(0)
+            if state._y_items_working is not VOID:
+                current = state._y_items_working
+            else:
+                current = _Counter_items_thaw(state._y_items_current)
+            next_value = value
+            if current == next_value:
+                return
             state._y_ensure_working_transaction(0)
-            state._y_items_working = value
+            state._y_items_working = next_value
 
         @property
         def optional_items(self):
@@ -628,8 +676,18 @@ def build_lifecycle_class(
         @optional_items.setter
         def optional_items(self, value):
             state = self._y_state
+            state._y_require_active_transaction(0)
+            if state._y_optional_items_working is not VOID:
+                current = state._y_optional_items_working
+            elif state._y_optional_items_current is None:
+                current = None
+            else:
+                current = _Counter_optional_items_thaw(state._y_optional_items_current)
+            next_value = value
+            if current == next_value:
+                return
             state._y_ensure_working_transaction(0)
-            state._y_optional_items_working = value
+            state._y_optional_items_working = next_value
 
         @property
         def audit_count(self):
@@ -641,8 +699,16 @@ def build_lifecycle_class(
         @audit_count.setter
         def audit_count(self, value):
             state = self._y_state
+            state._y_require_active_transaction(1)
+            if state._y_audit_count_working is not VOID:
+                current = state._y_audit_count_working
+            else:
+                current = state._y_audit_count_current
+            next_value = value
+            if current == next_value:
+                return
             state._y_ensure_working_transaction(1)
-            state._y_audit_count_working = value
+            state._y_audit_count_working = next_value
 
     Counter.__name__ = decorated_cls.__name__
     Counter.__qualname__ = decorated_cls.__qualname__

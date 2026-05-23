@@ -360,8 +360,16 @@ def build_lifecycle_class(decorated_cls, *, _Counter_lifecycle_definition, _Coun
         @count.setter
         def count(self, value):
             state = self._y_state
+            state._y_require_active_transaction(0)
+            if state._y_count_working is not VOID:
+                current = state._y_count_working
+            else:
+                current = state._y_count_current
+            next_value = value
+            if current == next_value:
+                return
             state._y_ensure_working_transaction(0)
-            state._y_count_working = value
+            state._y_count_working = next_value
 
         @property
         def items(self):
@@ -373,8 +381,16 @@ def build_lifecycle_class(decorated_cls, *, _Counter_lifecycle_definition, _Coun
         @items.setter
         def items(self, value):
             state = self._y_state
+            state._y_require_active_transaction(0)
+            if state._y_items_working is not VOID:
+                current = state._y_items_working
+            else:
+                current = state._y_items_current
+            next_value = value
+            if current == next_value:
+                return
             state._y_ensure_working_transaction(0)
-            state._y_items_working = value
+            state._y_items_working = next_value
 
         @property
         def optional_items(self):
@@ -386,8 +402,16 @@ def build_lifecycle_class(decorated_cls, *, _Counter_lifecycle_definition, _Coun
         @optional_items.setter
         def optional_items(self, value):
             state = self._y_state
+            state._y_require_active_transaction(0)
+            if state._y_optional_items_working is not VOID:
+                current = state._y_optional_items_working
+            else:
+                current = state._y_optional_items_current
+            next_value = value
+            if current == next_value:
+                return
             state._y_ensure_working_transaction(0)
-            state._y_optional_items_working = value
+            state._y_optional_items_working = next_value
 
         @property
         def audit_count(self):
@@ -399,8 +423,16 @@ def build_lifecycle_class(decorated_cls, *, _Counter_lifecycle_definition, _Coun
         @audit_count.setter
         def audit_count(self, value):
             state = self._y_state
+            state._y_require_active_transaction(1)
+            if state._y_audit_count_working is not VOID:
+                current = state._y_audit_count_working
+            else:
+                current = state._y_audit_count_current
+            next_value = value
+            if current == next_value:
+                return
             state._y_ensure_working_transaction(1)
-            state._y_audit_count_working = value
+            state._y_audit_count_working = next_value
 
         def __init__(self, rank: 'int'=_Counter_rank_default, count: 'int'=_Counter_count_default, items: 'tuple[int, ...]'=_Counter_items_default, optional_items: 'tuple[int, ...] | None'=_Counter_optional_items_default, audit_count: 'int'=_Counter_audit_count_default, *, transaction_manager=None):
             state = object.__new__(Counter_State)
@@ -478,8 +510,16 @@ def build_lifecycle_class(decorated_cls, *, _Counter_lifecycle_definition, _Coun
         @count.setter
         def count(self, value):
             state = self._y_state
+            state._y_require_active_transaction(0)
+            if state._y_count_working is not VOID:
+                current = state._y_count_working
+            else:
+                current = state._y_count_current
+            next_value = value
+            if current == next_value:
+                return
             state._y_ensure_working_transaction(0)
-            state._y_count_working = value
+            state._y_count_working = next_value
 
         @property
         def items(self):
@@ -497,8 +537,16 @@ def build_lifecycle_class(decorated_cls, *, _Counter_lifecycle_definition, _Coun
         @items.setter
         def items(self, value):
             state = self._y_state
+            state._y_require_active_transaction(0)
+            if state._y_items_working is not VOID:
+                current = state._y_items_working
+            else:
+                current = _Counter_items_thaw(state._y_items_current)
+            next_value = value
+            if current == next_value:
+                return
             state._y_ensure_working_transaction(0)
-            state._y_items_working = value
+            state._y_items_working = next_value
 
         @property
         def optional_items(self):
@@ -517,8 +565,18 @@ def build_lifecycle_class(decorated_cls, *, _Counter_lifecycle_definition, _Coun
         @optional_items.setter
         def optional_items(self, value):
             state = self._y_state
+            state._y_require_active_transaction(0)
+            if state._y_optional_items_working is not VOID:
+                current = state._y_optional_items_working
+            elif state._y_optional_items_current is None:
+                current = None
+            else:
+                current = _Counter_optional_items_thaw(state._y_optional_items_current)
+            next_value = value
+            if current == next_value:
+                return
             state._y_ensure_working_transaction(0)
-            state._y_optional_items_working = value
+            state._y_optional_items_working = next_value
 
         @property
         def audit_count(self):
@@ -530,8 +588,16 @@ def build_lifecycle_class(decorated_cls, *, _Counter_lifecycle_definition, _Coun
         @audit_count.setter
         def audit_count(self, value):
             state = self._y_state
+            state._y_require_active_transaction(1)
+            if state._y_audit_count_working is not VOID:
+                current = state._y_audit_count_working
+            else:
+                current = state._y_audit_count_current
+            next_value = value
+            if current == next_value:
+                return
             state._y_ensure_working_transaction(1)
-            state._y_audit_count_working = value
+            state._y_audit_count_working = next_value
     Counter.__name__ = decorated_cls.__name__
     Counter.__qualname__ = decorated_cls.__qualname__
     Counter.__module__ = decorated_cls.__module__
