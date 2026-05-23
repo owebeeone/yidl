@@ -175,6 +175,24 @@ During the compatibility window, old generated goldens may still import
 `yidl.runtime.*` through shims. New `yidl-lifecycle` goldens should pin the new
 imports.
 
+## Compatibility Policy
+
+The initial extraction keeps `yidl.runtime.lifecycle`,
+`yidl.runtime.transaction_yidl`, `yidl.runtime.bindings`, and
+`yidl.runtime.bindings_refcount` as warning-free compatibility shims.
+
+Do not add deprecation warnings in this roll-build. Warning-free shims keep
+existing local consumers stable while `yidl-lifecycle` proves the new import
+surface and while downstream projects move at their own pace.
+
+Future cleanup should be a separate compatibility decision after at least one
+real downstream consumer has moved to `yidl_lifecycle.*` imports. That later
+decision can choose one of:
+
+- keep the shims indefinitely
+- add deprecation warnings
+- remove the shims in a major-version boundary
+
 ## Slice Plan
 
 ### Slice 1: Create The Package Skeleton
@@ -367,4 +385,3 @@ for the normal package path.
 - No attempt to make `yidl-lifecycle` independently releasable in the first
   slice.
 - No removal of compatibility shims during the first extraction.
-
