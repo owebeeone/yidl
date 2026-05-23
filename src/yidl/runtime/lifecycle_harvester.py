@@ -119,11 +119,28 @@ def harvest_lifecycle_definition(cls: type[object]) -> HarvestedLifecycle:
         str(fact["field_name"])
         for fact in field_facts
         if fact["field_kind"]
-        in {"binding", "const", "field", "managed", "owned", "static", "transient"}
+        in {
+            "binding",
+            "const",
+            "field",
+            "local_store",
+            "managed",
+            "owned",
+            "static",
+            "transient",
+        }
     )
     for fact in field_facts:
         if fact["field_kind"] in {"managed", "owned", "transient"}:
             tx_keys.add(fact["tx_key_key"])
+        if (
+            fact["field_kind"] == "local_store"
+            and fact["default_factory_param_names"]
+        ):
+            raise LifecycleDefinitionError(
+                f"{class_name}.{fact['field_name']}: local_store "
+                "default_factory must be zero-argument",
+            )
         if fact["has_default"]:
             build_kwargs[str(fact["default_value_param_name"])] = fact["default_value"]
         if fact["has_default_factory"]:
@@ -254,7 +271,7 @@ def _field_fact(
         "thaw_param_name": "",
         "has_optional_none": _has_optional_none(decl.annotation),
     }
-    if kind in {"binding", "const", "field", "static"}:
+    if kind in {"binding", "const", "field", "local_store", "static"}:
         fact["value_slot_name"] = f"_y_{name}_value"
     elif kind in {"managed", "owned"}:
         fact["tx_key_key"] = decl.tx_key
@@ -328,7 +345,7 @@ def _remap_inherited_field_fact(
             "thaw_param_name": f"_{class_name}_{name}_thaw" if has_thaw else "",
         },
     )
-    if kind in {"binding", "const", "field", "static"}:
+    if kind in {"binding", "const", "field", "local_store", "static"}:
         fact["value_slot_name"] = f"_y_{name}_value"
     elif kind in {"managed", "owned"}:
         fact["current_slot_name"] = f"_y_{name}_current"

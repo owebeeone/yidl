@@ -1,0 +1,133 @@
+module tests.lifecycle_local_store
+
+import "lifecycle_const_static.yidl" as const_static
+
+export concept LifecycleLocalStore
+
+concept LifecycleLocalStore extends const_static.LifecycleConstStatic {
+
+    family const_static.LifecycleFieldSpec {
+        variant LocalStoreField {
+        }
+    }
+
+    computed collection LocalStoreFields: LifecycleFieldSpec from Fields where FieldKind == "local_store"
+
+    resource LocalStoreDefaultAssignment = template $[
+        astichi_pass(state, outer_bind=True).astichi_ref(external=state_slot)._ = astichi_pass(
+            default_value_name__astichi_arg__,
+            outer_bind=True,
+        )
+    ]$
+
+    resource LocalStoreDefaultFactoryAssignment = template $[
+        astichi_pass(state, outer_bind=True).astichi_ref(external=state_slot)._ = (
+            default_factory_name__astichi_arg__()
+        )
+    ]$
+
+    resource LocalStoreNoneAssignment = template $[
+        astichi_pass(state, outer_bind=True).astichi_ref(external=state_slot)._ = None
+    ]$
+
+    contribution LocalStoreStateSlot = StateSlotEntry {
+        as LocalStoreStateSlot
+        index FieldOrder
+        order FieldOrder
+
+        target state_slots {
+            build /ClassDef
+        }
+
+        external slot_name = ValueSlotName
+    }
+
+    contribution LocalStoreDefaultInitAssignment = LocalStoreDefaultAssignment {
+        as LocalStoreInitAssignment
+        index FieldOrder
+        order FieldOrder
+
+        target state_init_body {
+            build /ClassDef
+        }
+
+        external state_slot = ValueSlotName
+        ident default_value_name = DefaultValueParamName
+    }
+
+    contribution LocalStoreDefaultFactoryInitAssignment = LocalStoreDefaultFactoryAssignment {
+        as LocalStoreInitAssignment
+        index FieldOrder
+        order FieldOrder
+
+        target state_init_body {
+            build /ClassDef
+        }
+
+        external state_slot = ValueSlotName
+        ident default_factory_name = DefaultFactoryParamName
+    }
+
+    contribution LocalStoreNoneInitAssignment = LocalStoreNoneAssignment {
+        as LocalStoreInitAssignment
+        index FieldOrder
+        order FieldOrder
+
+        target state_init_body {
+            build /ClassDef
+        }
+
+        external state_slot = ValueSlotName
+    }
+
+    contribution LocalStoreProperty = PlainProperty {
+        as LocalStoreProperty
+        index FieldOrder
+        order FieldOrder
+
+        target facade_properties {
+            build /ClassDef
+        }
+
+        ident property_getter_name = FieldName
+        ident property_setter_target_name = FieldName
+        ident property_setter_name = FieldName
+        external state_slot = ValueSlotName
+    }
+
+    matcher LocalStoreStateSlotContributions(field: LocalStoreFields) -> contribution {
+        default -> LocalStoreStateSlot
+    }
+
+    matcher LocalStoreInitAssignmentContributions(field: LocalStoreFields) -> contribution {
+        default -> LocalStoreNoneInitAssignment
+        rule default_factory when HasDefaultFactory == True
+                             -> LocalStoreDefaultFactoryInitAssignment
+        rule default_value when HasDefault == True
+                           -> LocalStoreDefaultInitAssignment
+    }
+
+    matcher LocalStorePropertyContributions(field: LocalStoreFields) -> contribution {
+        default -> LocalStoreProperty
+    }
+
+    extend production CoreClassProduction {
+        phase state_slots_local_store after state_slots_plain order 8
+            from field: LocalStoreFields
+            where FieldOwner == ClassId {
+            apply local_store_state_slots using LocalStoreStateSlotContributions
+        }
+
+        phase init_assignments_local_store after init_assignments_plain order 8
+            from field: LocalStoreFields
+            where FieldOwner == ClassId {
+            apply local_store_init_assignments using LocalStoreInitAssignmentContributions
+        }
+
+        phase properties_local_store after properties_plain order 8
+            from field: LocalStoreFields
+            where FieldOwner == ClassId {
+            apply local_store_properties using LocalStorePropertyContributions
+        }
+    }
+}

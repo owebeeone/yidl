@@ -15,6 +15,7 @@ from yidl.runtime.lifecycle import commit_order_key
 from yidl.runtime.lifecycle import field
 from yidl.runtime.lifecycle import harvest_lifecycle_definition
 from yidl.runtime.lifecycle import initvar
+from yidl.runtime.lifecycle import local_store
 from yidl.runtime.lifecycle import managed
 from yidl.runtime.lifecycle import validate_commit
 from yidl.runtime.transaction_yidl import DEFAULT_TRANSACTION
@@ -215,6 +216,41 @@ def test_harvester_carries_allow_self_factory() -> None:
 
     assert harvested.field_facts[0]["allow_self_factory"] is True
     assert harvested.field_facts[0]["default_factory_param_names"] == ("self",)
+
+
+def test_harvester_collects_local_store_field() -> None:
+    class Scratch:
+        cache: dict[str, int] = local_store(default_factory=dict)
+
+    harvested = harvest_lifecycle_definition(Scratch)
+
+    assert harvested.field_facts[0]["field_kind"] == "local_store"
+    assert harvested.field_facts[0]["init"] is False
+    assert harvested.field_facts[0]["value_slot_name"] == "_y_cache_value"
+    assert harvested.field_facts[0]["default_factory_param_names"] == ()
+    assert harvested.build_kwargs["_Scratch_cache_default_factory"] is dict
+
+
+def test_harvester_rejects_local_store_default_factory_parameters() -> None:
+    def make_cache(seed: int) -> dict[str, int]:
+        return {"seed": seed}
+
+    class Scratch:
+        cache: dict[str, int] = local_store(default_factory=make_cache)
+
+    with pytest.raises(
+        LifecycleDefinitionError,
+        match="Scratch.cache: local_store default_factory must be zero-argument",
+    ):
+        harvest_lifecycle_definition(Scratch)
+
+
+def test_local_store_marker_rejects_transaction_options() -> None:
+    with pytest.raises(
+        LifecycleDefinitionError,
+        match="local_store does not support tx_key",
+    ):
+        local_store(default_factory=dict, tx_key=DEFAULT_TRANSACTION)
 
 
 def test_harvester_warns_for_unintrospectable_default_factory(

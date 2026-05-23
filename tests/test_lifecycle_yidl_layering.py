@@ -174,7 +174,25 @@ def test_lifecycle_layers_have_distinct_surfaces() -> None:
     assert hasattr(const_static_layer, "StaticField")
     assert hasattr(const_static_layer, "ConstFieldsCollection")
     assert hasattr(const_static_layer, "StaticFieldsCollection")
+    assert not hasattr(const_static_layer, "LocalStoreField")
     assert not hasattr(const_static_layer, "build_LifecycleModule")
+
+    local_store_layer = _compiled_namespace(
+        paths=(
+            _YIDL_DIR / "lifecycle_core.yidl",
+            _YIDL_DIR / "lifecycle_managed.yidl",
+            _YIDL_DIR / "lifecycle_default_factories.yidl",
+            _YIDL_DIR / "lifecycle_transient.yidl",
+            _YIDL_DIR / "lifecycle_owned.yidl",
+            _YIDL_DIR / "lifecycle_const_static.yidl",
+            _YIDL_DIR / "lifecycle_local_store.yidl",
+        ),
+        entry_path=_YIDL_DIR / "lifecycle_local_store.yidl",
+        concept_name="LifecycleLocalStore",
+    )
+    assert hasattr(local_store_layer, "LocalStoreField")
+    assert hasattr(local_store_layer, "LocalStoreFieldsCollection")
+    assert not hasattr(local_store_layer, "build_LifecycleModule")
 
 
 def test_combined_layer_exposes_managed_field_record() -> None:
@@ -189,6 +207,7 @@ def test_combined_layer_exposes_managed_field_record() -> None:
     assert hasattr(generated, "TransientField")
     assert hasattr(generated, "ConstField")
     assert hasattr(generated, "StaticField")
+    assert hasattr(generated, "LocalStoreField")
     assert hasattr(generated, "build_LifecycleModule")
 
 

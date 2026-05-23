@@ -1013,6 +1013,43 @@ _StaticFieldSpec = RuntimeRecord(
         _HasOptionalNoneProperty,
     ),
 )
+_LocalStoreFieldSpec = RuntimeRecord(
+    "LocalStoreField",
+    (
+        _FieldIdProperty,
+        _FieldOwnerProperty,
+        _FieldNameProperty,
+        _FieldOrderProperty,
+        _FieldKindProperty,
+        _BindingShapeProperty,
+        _AnnotationProperty,
+        _InitProperty,
+        _HasDefaultProperty,
+        _DefaultValueProperty,
+        _DefaultValueParamNameProperty,
+        _HasDefaultFactoryProperty,
+        _DefaultFactoryProperty,
+        _AllowSelfFactoryProperty,
+        _DefaultFactoryParamNameProperty,
+        _DefaultFactoryParamNamesProperty,
+        _HasWorkingDefaultFactoryProperty,
+        _WorkingDefaultFactoryProperty,
+        _WorkingDefaultFactoryParamNameProperty,
+        _WorkingDefaultFactoryParamNamesProperty,
+        _TxKeyKeyProperty,
+        _ValueSlotNameProperty,
+        _CurrentSlotNameProperty,
+        _WorkingSlotNameProperty,
+        _StagedSlotNameProperty,
+        _HasFreezeProperty,
+        _FreezeProperty,
+        _FreezeParamNameProperty,
+        _HasThawProperty,
+        _ThawProperty,
+        _ThawParamNameProperty,
+        _HasOptionalNoneProperty,
+    ),
+)
 _LifecycleFieldSpecUnion = RuntimeUnion(
     "LifecycleFieldSpec",
     (
@@ -1025,6 +1062,7 @@ _LifecycleFieldSpecUnion = RuntimeUnion(
         _OwnedFieldSpec,
         _ConstFieldSpec,
         _StaticFieldSpec,
+        _LocalStoreFieldSpec,
     ),
 )
 
@@ -5782,6 +5820,330 @@ class StaticField:
 
 
 _StaticFieldSpec.bind_record_class(StaticField)
+
+
+class LocalStoreField:
+    __slots__ = (
+        "field_id",
+        "field_owner",
+        "field_name",
+        "field_order",
+        "field_kind",
+        "binding_shape",
+        "annotation",
+        "init",
+        "has_default",
+        "default_value",
+        "default_value_param_name",
+        "has_default_factory",
+        "default_factory",
+        "allow_self_factory",
+        "default_factory_param_name",
+        "default_factory_param_names",
+        "has_working_default_factory",
+        "working_default_factory",
+        "working_default_factory_param_name",
+        "working_default_factory_param_names",
+        "tx_key_key",
+        "value_slot_name",
+        "current_slot_name",
+        "working_slot_name",
+        "staged_slot_name",
+        "has_freeze",
+        "freeze",
+        "freeze_param_name",
+        "has_thaw",
+        "thaw",
+        "thaw_param_name",
+        "has_optional_none",
+    )
+    __dds_record_spec__ = _LocalStoreFieldSpec
+    field_id: str
+    field_owner: str
+    field_name: str
+    field_order: int
+    field_kind: str
+    binding_shape: str
+    annotation: object
+    init: bool
+    has_default: bool
+    default_value: object
+    default_value_param_name: str
+    has_default_factory: bool
+    default_factory: object
+    allow_self_factory: bool
+    default_factory_param_name: str
+    default_factory_param_names: object
+    has_working_default_factory: bool
+    working_default_factory: object
+    working_default_factory_param_name: str
+    working_default_factory_param_names: object
+    tx_key_key: object
+    value_slot_name: str
+    current_slot_name: str
+    working_slot_name: str
+    staged_slot_name: str
+    has_freeze: bool
+    freeze: object
+    freeze_param_name: str
+    has_thaw: bool
+    thaw: object
+    thaw_param_name: str
+    has_optional_none: bool
+
+    def __init__(
+        self,
+        *,
+        field_id: str,
+        field_owner: str,
+        field_name: str,
+        field_order: int,
+        field_kind: str = "field",
+        binding_shape: str = "scalar",
+        annotation: object = object,
+        init: bool = True,
+        has_default: bool = False,
+        default_value: object = None,
+        default_value_param_name: str = "",
+        has_default_factory: bool = False,
+        default_factory: object = None,
+        allow_self_factory: bool = False,
+        default_factory_param_name: str = "",
+        default_factory_param_names: object = (),
+        has_working_default_factory: bool = False,
+        working_default_factory: object = None,
+        working_default_factory_param_name: str = "",
+        working_default_factory_param_names: object = (),
+        tx_key_key: object = None,
+        value_slot_name: str = "",
+        current_slot_name: str = "",
+        working_slot_name: str = "",
+        staged_slot_name: str = "",
+        has_freeze: bool = False,
+        freeze: object = None,
+        freeze_param_name: str = "",
+        has_thaw: bool = False,
+        thaw: object = None,
+        thaw_param_name: str = "",
+        has_optional_none: bool = False,
+    ):
+        if not isinstance(field_id, str):
+            raise TypeError("FieldId must be str, got " + type(field_id).__name__)
+        object.__setattr__(self, "field_id", field_id)
+        if not isinstance(field_owner, str):
+            raise TypeError("FieldOwner must be str, got " + type(field_owner).__name__)
+        object.__setattr__(self, "field_owner", field_owner)
+        if not isinstance(field_name, str):
+            raise TypeError("FieldName must be str, got " + type(field_name).__name__)
+        object.__setattr__(self, "field_name", field_name)
+        if not isinstance(field_order, int):
+            raise TypeError("FieldOrder must be int, got " + type(field_order).__name__)
+        object.__setattr__(self, "field_order", field_order)
+        if not isinstance(field_kind, str):
+            raise TypeError("FieldKind must be str, got " + type(field_kind).__name__)
+        object.__setattr__(self, "field_kind", field_kind)
+        if not isinstance(binding_shape, str):
+            raise TypeError(
+                "BindingShape must be str, got " + type(binding_shape).__name__
+            )
+        object.__setattr__(self, "binding_shape", binding_shape)
+        object.__setattr__(self, "annotation", annotation)
+        if not isinstance(init, bool):
+            raise TypeError("Init must be bool, got " + type(init).__name__)
+        object.__setattr__(self, "init", init)
+        if not isinstance(has_default, bool):
+            raise TypeError(
+                "HasDefault must be bool, got " + type(has_default).__name__
+            )
+        object.__setattr__(self, "has_default", has_default)
+        object.__setattr__(self, "default_value", default_value)
+        if not isinstance(default_value_param_name, str):
+            raise TypeError(
+                "DefaultValueParamName must be str, got "
+                + type(default_value_param_name).__name__
+            )
+        object.__setattr__(self, "default_value_param_name", default_value_param_name)
+        if not isinstance(has_default_factory, bool):
+            raise TypeError(
+                "HasDefaultFactory must be bool, got "
+                + type(has_default_factory).__name__
+            )
+        object.__setattr__(self, "has_default_factory", has_default_factory)
+        object.__setattr__(self, "default_factory", default_factory)
+        if not isinstance(allow_self_factory, bool):
+            raise TypeError(
+                "AllowSelfFactory must be bool, got "
+                + type(allow_self_factory).__name__
+            )
+        object.__setattr__(self, "allow_self_factory", allow_self_factory)
+        if not isinstance(default_factory_param_name, str):
+            raise TypeError(
+                "DefaultFactoryParamName must be str, got "
+                + type(default_factory_param_name).__name__
+            )
+        object.__setattr__(
+            self, "default_factory_param_name", default_factory_param_name
+        )
+        object.__setattr__(
+            self, "default_factory_param_names", default_factory_param_names
+        )
+        if not isinstance(has_working_default_factory, bool):
+            raise TypeError(
+                "HasWorkingDefaultFactory must be bool, got "
+                + type(has_working_default_factory).__name__
+            )
+        object.__setattr__(
+            self, "has_working_default_factory", has_working_default_factory
+        )
+        object.__setattr__(self, "working_default_factory", working_default_factory)
+        if not isinstance(working_default_factory_param_name, str):
+            raise TypeError(
+                "WorkingDefaultFactoryParamName must be str, got "
+                + type(working_default_factory_param_name).__name__
+            )
+        object.__setattr__(
+            self,
+            "working_default_factory_param_name",
+            working_default_factory_param_name,
+        )
+        object.__setattr__(
+            self,
+            "working_default_factory_param_names",
+            working_default_factory_param_names,
+        )
+        object.__setattr__(self, "tx_key_key", tx_key_key)
+        if not isinstance(value_slot_name, str):
+            raise TypeError(
+                "ValueSlotName must be str, got " + type(value_slot_name).__name__
+            )
+        object.__setattr__(self, "value_slot_name", value_slot_name)
+        if not isinstance(current_slot_name, str):
+            raise TypeError(
+                "CurrentSlotName must be str, got " + type(current_slot_name).__name__
+            )
+        object.__setattr__(self, "current_slot_name", current_slot_name)
+        if not isinstance(working_slot_name, str):
+            raise TypeError(
+                "WorkingSlotName must be str, got " + type(working_slot_name).__name__
+            )
+        object.__setattr__(self, "working_slot_name", working_slot_name)
+        if not isinstance(staged_slot_name, str):
+            raise TypeError(
+                "StagedSlotName must be str, got " + type(staged_slot_name).__name__
+            )
+        object.__setattr__(self, "staged_slot_name", staged_slot_name)
+        if not isinstance(has_freeze, bool):
+            raise TypeError("HasFreeze must be bool, got " + type(has_freeze).__name__)
+        object.__setattr__(self, "has_freeze", has_freeze)
+        object.__setattr__(self, "freeze", freeze)
+        if not isinstance(freeze_param_name, str):
+            raise TypeError(
+                "FreezeParamName must be str, got " + type(freeze_param_name).__name__
+            )
+        object.__setattr__(self, "freeze_param_name", freeze_param_name)
+        if not isinstance(has_thaw, bool):
+            raise TypeError("HasThaw must be bool, got " + type(has_thaw).__name__)
+        object.__setattr__(self, "has_thaw", has_thaw)
+        object.__setattr__(self, "thaw", thaw)
+        if not isinstance(thaw_param_name, str):
+            raise TypeError(
+                "ThawParamName must be str, got " + type(thaw_param_name).__name__
+            )
+        object.__setattr__(self, "thaw_param_name", thaw_param_name)
+        if not isinstance(has_optional_none, bool):
+            raise TypeError(
+                "HasOptionalNone must be bool, got " + type(has_optional_none).__name__
+            )
+        object.__setattr__(self, "has_optional_none", has_optional_none)
+
+    def __setattr__(self, name, value):
+        if name in (
+            "field_id",
+            "field_owner",
+            "field_name",
+            "field_order",
+            "field_kind",
+            "binding_shape",
+            "annotation",
+            "init",
+            "has_default",
+            "default_value",
+            "default_value_param_name",
+            "has_default_factory",
+            "default_factory",
+            "allow_self_factory",
+            "default_factory_param_name",
+            "default_factory_param_names",
+            "has_working_default_factory",
+            "working_default_factory",
+            "working_default_factory_param_name",
+            "working_default_factory_param_names",
+            "tx_key_key",
+            "value_slot_name",
+            "current_slot_name",
+            "working_slot_name",
+            "staged_slot_name",
+            "has_freeze",
+            "freeze",
+            "freeze_param_name",
+            "has_thaw",
+            "thaw",
+            "thaw_param_name",
+            "has_optional_none",
+        ):
+            raise AttributeError("LocalStoreField records are immutable")
+        object.__setattr__(self, name, value)
+
+    def __repr__(self):
+        pieces = []
+        pieces.append("field_id=" + repr(self.field_id))
+        pieces.append("field_owner=" + repr(self.field_owner))
+        pieces.append("field_name=" + repr(self.field_name))
+        pieces.append("field_order=" + repr(self.field_order))
+        pieces.append("field_kind=" + repr(self.field_kind))
+        pieces.append("binding_shape=" + repr(self.binding_shape))
+        pieces.append("annotation=" + repr(self.annotation))
+        pieces.append("init=" + repr(self.init))
+        pieces.append("has_default=" + repr(self.has_default))
+        pieces.append("default_value=" + repr(self.default_value))
+        pieces.append("default_value_param_name=" + repr(self.default_value_param_name))
+        pieces.append("has_default_factory=" + repr(self.has_default_factory))
+        pieces.append("default_factory=" + repr(self.default_factory))
+        pieces.append("allow_self_factory=" + repr(self.allow_self_factory))
+        pieces.append(
+            "default_factory_param_name=" + repr(self.default_factory_param_name)
+        )
+        pieces.append(
+            "default_factory_param_names=" + repr(self.default_factory_param_names)
+        )
+        pieces.append(
+            "has_working_default_factory=" + repr(self.has_working_default_factory)
+        )
+        pieces.append("working_default_factory=" + repr(self.working_default_factory))
+        pieces.append(
+            "working_default_factory_param_name="
+            + repr(self.working_default_factory_param_name)
+        )
+        pieces.append(
+            "working_default_factory_param_names="
+            + repr(self.working_default_factory_param_names)
+        )
+        pieces.append("tx_key_key=" + repr(self.tx_key_key))
+        pieces.append("value_slot_name=" + repr(self.value_slot_name))
+        pieces.append("current_slot_name=" + repr(self.current_slot_name))
+        pieces.append("working_slot_name=" + repr(self.working_slot_name))
+        pieces.append("staged_slot_name=" + repr(self.staged_slot_name))
+        pieces.append("has_freeze=" + repr(self.has_freeze))
+        pieces.append("freeze=" + repr(self.freeze))
+        pieces.append("freeze_param_name=" + repr(self.freeze_param_name))
+        pieces.append("has_thaw=" + repr(self.has_thaw))
+        pieces.append("thaw=" + repr(self.thaw))
+        pieces.append("thaw_param_name=" + repr(self.thaw_param_name))
+        pieces.append("has_optional_none=" + repr(self.has_optional_none))
+        return "LocalStoreField" + "(" + ", ".join(pieces) + ")"
+
+
+_LocalStoreFieldSpec.bind_record_class(LocalStoreField)
 ClassesCollection = RuntimeCollection(
     "Classes", _LifecycleClassSpec, allows_multiple=True, identity=_ClassIdProperty
 )
@@ -5958,6 +6320,11 @@ ConstFieldsCollection = RuntimeComputedCollection(
 StaticFieldsCollection = RuntimeComputedCollection(
     "StaticFields", source=FieldsCollection, when=(_FieldKindProperty.eq("static"),)
 )
+LocalStoreFieldsCollection = RuntimeComputedCollection(
+    "LocalStoreFields",
+    source=FieldsCollection,
+    when=(_FieldKindProperty.eq("local_store"),),
+)
 _RUNTIME_SPEC = RuntimeContainerSpec(
     collections=(
         ClassesCollection,
@@ -5998,6 +6365,7 @@ _RUNTIME_SPEC = RuntimeContainerSpec(
         OwnedMapFieldsCollection,
         ConstFieldsCollection,
         StaticFieldsCollection,
+        LocalStoreFieldsCollection,
     ),
     ports=(),
     port_index=None,
@@ -6106,7 +6474,11 @@ def run_build_default_factory_facts(builder):
         ]
         by_name = {field.field_name: field for field in class_fields}
         by_id = {field.field_id: field for field in class_fields}
-        factory_fields = [field for field in class_fields if field.has_default_factory]
+        factory_fields = [
+            field
+            for field in class_fields
+            if field.has_default_factory and field.field_kind != "local_store"
+        ]
         factory_fields.sort(
             key=lambda field: (1 if field.allow_self_factory else 0, field.field_order)
         )
@@ -8032,7 +8404,7 @@ for lifecycle_class in classes:
     by_id = {field.field_id: field for field in class_fields}
     factory_fields = [
         field for field in class_fields
-        if field.has_default_factory
+        if field.has_default_factory and field.field_kind != "local_store"
     ]
     factory_fields.sort(
         key=lambda field: (
@@ -9335,6 +9707,34 @@ astichi_funcargs(
             "astichi_funcargs()",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_const_static.yidl",
             line_number=157,
+        )
+    ),
+    "LocalStoreDefaultAssignment": astichi_template(
+        from_astichi_code(
+            """\
+astichi_pass(state, outer_bind=True).astichi_ref(external=state_slot)._ = astichi_pass(
+    default_value_name__astichi_arg__,
+    outer_bind=True,
+)""",
+            file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_local_store.yidl",
+            line_number=17,
+        )
+    ),
+    "LocalStoreDefaultFactoryAssignment": astichi_template(
+        from_astichi_code(
+            """\
+astichi_pass(state, outer_bind=True).astichi_ref(external=state_slot)._ = (
+    default_factory_name__astichi_arg__()
+)""",
+            file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_local_store.yidl",
+            line_number=24,
+        )
+    ),
+    "LocalStoreNoneAssignment": astichi_template(
+        from_astichi_code(
+            "astichi_pass(state, outer_bind=True).astichi_ref(external=state_slot)._ = None",
+            file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_local_store.yidl",
+            line_number=30,
         )
     ),
 }
@@ -14755,6 +15155,157 @@ ASSEMBLY_CONTRIBUTIONS = {
         ),
         bindings=(),
     ),
+    "LocalStoreStateSlot": ContributionSpec(
+        name="LocalStoreStateSlot",
+        source_name="StateSlotEntry",
+        source_kind="resource",
+        build_name="LocalStoreStateSlot",
+        index=ValueRef("FieldOrder"),
+        order=ValueRef("FieldOrder"),
+        target=TargetSpec(
+            name="state_slots",
+            paths=(
+                TargetPathSpec(
+                    kind="build",
+                    path=PathSpec(
+                        segments=(
+                            PathSegmentSpec(kind="name", name="ClassDef", indexes=()),
+                        )
+                    ),
+                ),
+            ),
+        ),
+        bindings=(
+            BindingSpec(
+                kind="external", name="slot_name", value=ValueRef("ValueSlotName")
+            ),
+        ),
+    ),
+    "LocalStoreDefaultInitAssignment": ContributionSpec(
+        name="LocalStoreDefaultInitAssignment",
+        source_name="LocalStoreDefaultAssignment",
+        source_kind="resource",
+        build_name="LocalStoreInitAssignment",
+        index=ValueRef("FieldOrder"),
+        order=ValueRef("FieldOrder"),
+        target=TargetSpec(
+            name="state_init_body",
+            paths=(
+                TargetPathSpec(
+                    kind="build",
+                    path=PathSpec(
+                        segments=(
+                            PathSegmentSpec(kind="name", name="ClassDef", indexes=()),
+                        )
+                    ),
+                ),
+            ),
+        ),
+        bindings=(
+            BindingSpec(
+                kind="external", name="state_slot", value=ValueRef("ValueSlotName")
+            ),
+            BindingSpec(
+                kind="ident",
+                name="default_value_name",
+                value=ValueRef("DefaultValueParamName"),
+            ),
+        ),
+    ),
+    "LocalStoreDefaultFactoryInitAssignment": ContributionSpec(
+        name="LocalStoreDefaultFactoryInitAssignment",
+        source_name="LocalStoreDefaultFactoryAssignment",
+        source_kind="resource",
+        build_name="LocalStoreInitAssignment",
+        index=ValueRef("FieldOrder"),
+        order=ValueRef("FieldOrder"),
+        target=TargetSpec(
+            name="state_init_body",
+            paths=(
+                TargetPathSpec(
+                    kind="build",
+                    path=PathSpec(
+                        segments=(
+                            PathSegmentSpec(kind="name", name="ClassDef", indexes=()),
+                        )
+                    ),
+                ),
+            ),
+        ),
+        bindings=(
+            BindingSpec(
+                kind="external", name="state_slot", value=ValueRef("ValueSlotName")
+            ),
+            BindingSpec(
+                kind="ident",
+                name="default_factory_name",
+                value=ValueRef("DefaultFactoryParamName"),
+            ),
+        ),
+    ),
+    "LocalStoreNoneInitAssignment": ContributionSpec(
+        name="LocalStoreNoneInitAssignment",
+        source_name="LocalStoreNoneAssignment",
+        source_kind="resource",
+        build_name="LocalStoreInitAssignment",
+        index=ValueRef("FieldOrder"),
+        order=ValueRef("FieldOrder"),
+        target=TargetSpec(
+            name="state_init_body",
+            paths=(
+                TargetPathSpec(
+                    kind="build",
+                    path=PathSpec(
+                        segments=(
+                            PathSegmentSpec(kind="name", name="ClassDef", indexes=()),
+                        )
+                    ),
+                ),
+            ),
+        ),
+        bindings=(
+            BindingSpec(
+                kind="external", name="state_slot", value=ValueRef("ValueSlotName")
+            ),
+        ),
+    ),
+    "LocalStoreProperty": ContributionSpec(
+        name="LocalStoreProperty",
+        source_name="PlainProperty",
+        source_kind="resource",
+        build_name="LocalStoreProperty",
+        index=ValueRef("FieldOrder"),
+        order=ValueRef("FieldOrder"),
+        target=TargetSpec(
+            name="facade_properties",
+            paths=(
+                TargetPathSpec(
+                    kind="build",
+                    path=PathSpec(
+                        segments=(
+                            PathSegmentSpec(kind="name", name="ClassDef", indexes=()),
+                        )
+                    ),
+                ),
+            ),
+        ),
+        bindings=(
+            BindingSpec(
+                kind="ident", name="property_getter_name", value=ValueRef("FieldName")
+            ),
+            BindingSpec(
+                kind="ident",
+                name="property_setter_target_name",
+                value=ValueRef("FieldName"),
+            ),
+            BindingSpec(
+                kind="ident", name="property_setter_name", value=ValueRef("FieldName")
+            ),
+            BindingSpec(
+                kind="external", name="state_slot", value=ValueRef("ValueSlotName")
+            ),
+        ),
+    ),
 }
 ASSEMBLY_MATCHERS = {
     "BuilderParamContributions": ContributionMatcherSpec(
@@ -17397,6 +17948,53 @@ ASSEMBLY_MATCHERS = {
             ),
         ),
     ),
+    "LocalStoreStateSlotContributions": ContributionMatcherSpec(
+        name="LocalStoreStateSlotContributions",
+        inputs=(
+            AssemblyInputSpec(
+                name="field", collection_name="LocalStoreFields", collection=None
+            ),
+        ),
+        default_contribution_name="LocalStoreStateSlot",
+        rules=(),
+    ),
+    "LocalStoreInitAssignmentContributions": ContributionMatcherSpec(
+        name="LocalStoreInitAssignmentContributions",
+        inputs=(
+            AssemblyInputSpec(
+                name="field", collection_name="LocalStoreFields", collection=None
+            ),
+        ),
+        default_contribution_name="LocalStoreNoneInitAssignment",
+        rules=(
+            ContributionRuleSpec(
+                name="default_factory",
+                condition=EqConditionSpec(
+                    left=ValueRef("HasDefaultFactory"), right=LiteralValueRef(True)
+                ),
+                contribution_name="LocalStoreDefaultFactoryInitAssignment",
+                weight=1.0,
+            ),
+            ContributionRuleSpec(
+                name="default_value",
+                condition=EqConditionSpec(
+                    left=ValueRef("HasDefault"), right=LiteralValueRef(True)
+                ),
+                contribution_name="LocalStoreDefaultInitAssignment",
+                weight=1.0,
+            ),
+        ),
+    ),
+    "LocalStorePropertyContributions": ContributionMatcherSpec(
+        name="LocalStorePropertyContributions",
+        inputs=(
+            AssemblyInputSpec(
+                name="field", collection_name="LocalStoreFields", collection=None
+            ),
+        ),
+        default_contribution_name="LocalStoreProperty",
+        rules=(),
+    ),
 }
 ASSEMBLY_EDGES = {
     "CoreModuleProduction.lifecycle_definition_params": AssemblyEdgeSpec(
@@ -19029,6 +19627,57 @@ ASSEMBLY_EDGES = {
         ),
         matcher_name="StaticDefaultFactoryArgContributions",
     ),
+    "CoreClassProduction.local_store_state_slots": AssemblyEdgeSpec(
+        name="CoreClassProduction.local_store_state_slots",
+        context_inputs=(
+            AssemblyInputSpec(
+                name="lifecycle_class", collection_name="Classes", collection=None
+            ),
+        ),
+        from_inputs=(
+            AssemblyInputSpec(
+                name="field", collection_name="LocalStoreFields", collection=None
+            ),
+        ),
+        condition=EqConditionSpec(
+            left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
+        ),
+        matcher_name="LocalStoreStateSlotContributions",
+    ),
+    "CoreClassProduction.local_store_init_assignments": AssemblyEdgeSpec(
+        name="CoreClassProduction.local_store_init_assignments",
+        context_inputs=(
+            AssemblyInputSpec(
+                name="lifecycle_class", collection_name="Classes", collection=None
+            ),
+        ),
+        from_inputs=(
+            AssemblyInputSpec(
+                name="field", collection_name="LocalStoreFields", collection=None
+            ),
+        ),
+        condition=EqConditionSpec(
+            left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
+        ),
+        matcher_name="LocalStoreInitAssignmentContributions",
+    ),
+    "CoreClassProduction.local_store_properties": AssemblyEdgeSpec(
+        name="CoreClassProduction.local_store_properties",
+        context_inputs=(
+            AssemblyInputSpec(
+                name="lifecycle_class", collection_name="Classes", collection=None
+            ),
+        ),
+        from_inputs=(
+            AssemblyInputSpec(
+                name="field", collection_name="LocalStoreFields", collection=None
+            ),
+        ),
+        condition=EqConditionSpec(
+            left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
+        ),
+        matcher_name="LocalStorePropertyContributions",
+    ),
 }
 ASSEMBLY_PRODUCTIONS = {
     "CoreModuleProduction": ComposableProductionSpec(
@@ -19366,6 +20015,29 @@ ASSEMBLY_PRODUCTIONS = {
                         left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
                     ),
                     matcher_name="StaticStateSlotContributions",
+                )
+            ),
+            InlineApplySpec(
+                edge=AssemblyEdgeSpec(
+                    name="CoreClassProduction.local_store_state_slots",
+                    context_inputs=(
+                        AssemblyInputSpec(
+                            name="lifecycle_class",
+                            collection_name="Classes",
+                            collection=None,
+                        ),
+                    ),
+                    from_inputs=(
+                        AssemblyInputSpec(
+                            name="field",
+                            collection_name="LocalStoreFields",
+                            collection=None,
+                        ),
+                    ),
+                    condition=EqConditionSpec(
+                        left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
+                    ),
+                    matcher_name="LocalStoreStateSlotContributions",
                 )
             ),
             InlineApplySpec(
@@ -20423,6 +21095,29 @@ ASSEMBLY_PRODUCTIONS = {
             ),
             InlineApplySpec(
                 edge=AssemblyEdgeSpec(
+                    name="CoreClassProduction.local_store_init_assignments",
+                    context_inputs=(
+                        AssemblyInputSpec(
+                            name="lifecycle_class",
+                            collection_name="Classes",
+                            collection=None,
+                        ),
+                    ),
+                    from_inputs=(
+                        AssemblyInputSpec(
+                            name="field",
+                            collection_name="LocalStoreFields",
+                            collection=None,
+                        ),
+                    ),
+                    condition=EqConditionSpec(
+                        left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
+                    ),
+                    matcher_name="LocalStoreInitAssignmentContributions",
+                )
+            ),
+            InlineApplySpec(
+                edge=AssemblyEdgeSpec(
                     name="CoreClassProduction.binding_init_assignments",
                     context_inputs=(
                         AssemblyInputSpec(
@@ -20777,6 +21472,29 @@ ASSEMBLY_PRODUCTIONS = {
                         left=ValueRef("DependencyOwner"), right=ValueRef("ClassId")
                     ),
                     matcher_name="StaticDefaultFactoryArgContributions",
+                )
+            ),
+            InlineApplySpec(
+                edge=AssemblyEdgeSpec(
+                    name="CoreClassProduction.local_store_properties",
+                    context_inputs=(
+                        AssemblyInputSpec(
+                            name="lifecycle_class",
+                            collection_name="Classes",
+                            collection=None,
+                        ),
+                    ),
+                    from_inputs=(
+                        AssemblyInputSpec(
+                            name="field",
+                            collection_name="LocalStoreFields",
+                            collection=None,
+                        ),
+                    ),
+                    condition=EqConditionSpec(
+                        left=ValueRef("FieldOwner"), right=ValueRef("ClassId")
+                    ),
+                    matcher_name="LocalStorePropertyContributions",
                 )
             ),
             InlineApplySpec(

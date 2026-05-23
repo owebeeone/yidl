@@ -20,6 +20,7 @@ from yidl.runtime.lifecycle_markers import commit_order_key
 from yidl.runtime.lifecycle_markers import const
 from yidl.runtime.lifecycle_markers import field
 from yidl.runtime.lifecycle_markers import initvar
+from yidl.runtime.lifecycle_markers import local_store
 from yidl.runtime.lifecycle_markers import managed
 from yidl.runtime.lifecycle_markers import normalize_marker
 from yidl.runtime.lifecycle_markers import owned
@@ -131,6 +132,8 @@ def _field_record_type(generated: ModuleType, kind: str) -> type[object]:
         return _required_record_type(generated, "BindingField", kind)
     if kind == "transient":
         return _required_record_type(generated, "TransientField", kind)
+    if kind == "local_store":
+        return _required_record_type(generated, "LocalStoreField", kind)
     raise LifecycleDefinitionError(f"unsupported lifecycle field kind: {kind!r}")
 
 

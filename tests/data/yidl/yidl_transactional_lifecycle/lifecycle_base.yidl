@@ -1,10 +1,10 @@
 module tests.lifecycle_base
 
-import "lifecycle_const_static.yidl" as const_static
+import "lifecycle_local_store.yidl" as local_store
 
 export concept LifecycleBase
 
-concept LifecycleBase extends const_static.LifecycleConstStatic {
+concept LifecycleBase extends local_store.LifecycleLocalStore {
 
     # -------------------------------------------------------------------------
     # Final lifecycle assembly.

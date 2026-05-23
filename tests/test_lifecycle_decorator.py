@@ -24,6 +24,7 @@ from yidl.runtime.lifecycle import const
 from yidl.runtime.lifecycle import harvest_lifecycle_definition
 from yidl.runtime.lifecycle import initvar
 from yidl.runtime.lifecycle import lifecycle
+from yidl.runtime.lifecycle import local_store
 from yidl.runtime.lifecycle import managed
 from yidl.runtime.lifecycle import owned
 from yidl.runtime.lifecycle import static
@@ -278,6 +279,38 @@ def test_lifecycle_decorator_transient_working_overlay_materializes_in_transacti
 
     assert item.audit_buffer is None
     assert item.current.audit_buffer is None
+
+
+def test_lifecycle_decorator_local_store_is_shared_non_transactional() -> None:
+    class Scratch:
+        cache: dict[str, int] = local_store(default_factory=dict)
+        count: int = managed(default=1)
+
+    generated = lifecycle(Scratch)
+    item = generated()
+
+    assert item.cache is item.current.cache
+    assert item.cache is item.working.cache
+    item.cache["a"] = 1
+    assert item.current.cache == {"a": 1}
+    assert item._y_state._y_working_tx_ids[0] is None
+
+    with item.begin(DEFAULT_TRANSACTION):
+        item.cache["b"] = 2
+        assert item._y_state._y_working_tx_ids[0] is None
+        item.count = 5
+
+    assert item.cache == {"a": 1, "b": 2}
+    assert item.count == 5
+
+    with pytest.raises(RuntimeError):
+        with item.begin(DEFAULT_TRANSACTION):
+            item.cache["c"] = 3
+            item.count = 7
+            raise RuntimeError("rollback")
+
+    assert item.cache == {"a": 1, "b": 2, "c": 3}
+    assert item.count == 5
 
 
 def test_lifecycle_decorator_const_fields_are_read_only_everywhere() -> None:

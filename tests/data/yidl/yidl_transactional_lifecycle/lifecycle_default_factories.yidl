@@ -106,7 +106,7 @@ concept LifecycleDefaultFactories extends managed.LifecycleManaged {
             by_id = {field.field_id: field for field in class_fields}
             factory_fields = [
                 field for field in class_fields
-                if field.has_default_factory
+                if field.has_default_factory and field.field_kind != "local_store"
             ]
             factory_fields.sort(
                 key=lambda field: (

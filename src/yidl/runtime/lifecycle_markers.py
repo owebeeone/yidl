@@ -223,6 +223,28 @@ def binding(
     )
 
 
+def local_store(
+    *,
+    default: object = MISSING,
+    default_factory: object = MISSING,
+    **unsupported: object,
+) -> LifecycleMarker:
+    """Declare non-transactional lifecycle-owned scratch storage."""
+
+    if unsupported:
+        name = next(iter(unsupported))
+        raise LifecycleDefinitionError(f"local_store does not support {name}")
+    return _marker(
+        kind="local_store",
+        default=default,
+        default_factory=default_factory,
+        working_default_factory=MISSING,
+        allow_self_factory=False,
+        init=False,
+        tx_key=MISSING,
+    )
+
+
 def transient(
     tx_key: object = DEFAULT_TRANSACTION,
     *,
