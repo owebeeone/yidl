@@ -144,6 +144,15 @@ concept LifecycleConstStatic extends owned.LifecycleOwned {
         )
     ]$
 
+    resource StaticDefaultFactorySelfArg = template $[
+        astichi_funcargs(
+            param_name__astichi_arg__=astichi_pass(
+                self,
+                outer_bind=True,
+            )
+        )
+    ]$
+
     resource StaticDefaultFactoryEmptyArg = template $[
         astichi_funcargs()
     ]$
@@ -379,6 +388,18 @@ concept LifecycleConstStatic extends owned.LifecycleOwned {
         ident param_name = ParamName
     }
 
+    contribution StaticDefaultFactorySelfArgContribution = StaticDefaultFactorySelfArg {
+        as StaticDefaultFactoryArg
+        index (ConsumerFieldOrder, ParamOrder)
+        order ParamOrder
+
+        target static_default_factory_args {
+            build /ClassDef/StaticFieldProperty[ConsumerFieldOrder]
+        }
+
+        ident param_name = ParamName
+    }
+
     contribution StaticDefaultFactoryEmptyArgContribution = StaticDefaultFactoryEmptyArg {
         as StaticDefaultFactoryArg
         index (ConsumerFieldOrder, ParamOrder)
@@ -463,6 +484,9 @@ concept LifecycleConstStatic extends owned.LifecycleOwned {
         rule static_cls when ConsumerFieldKind == "static"
                         and ProviderFieldKind == "cls"
                         -> StaticDefaultFactoryClsArgContribution
+        rule static_self when ConsumerFieldKind == "static"
+                         and ProviderFieldKind == "self"
+                         -> StaticDefaultFactorySelfArgContribution
         rule static_field when ConsumerFieldKind == "static"
                           and ProviderFieldKind == "field"
                           -> StaticDefaultFactoryStoredArgContribution

@@ -431,6 +431,29 @@ def test_yidl_transactional_default_factory_self_diagnostic() -> None:
     ]
 
 
+def test_yidl_transactional_default_factory_self_dependency_when_allowed() -> None:
+    container = _default_factory_diagnostic_container(
+        ("self", "v3"),
+        (),
+        v2_allow_self=True,
+    )
+
+    assert list(container.DefaultFactoryDiagnostics.sequence()) == []
+    assert [
+        (
+            record.consumer_field_name,
+            record.param_name,
+            record.provider_name,
+            record.provider_field_kind,
+            record.param_order,
+        )
+        for record in container.DefaultFactoryDependencies.sequence()
+    ] == [
+        ("v2", "self", "self", "self", 0),
+        ("v2", "v3", "v3", "managed", 1),
+    ]
+
+
 def test_yidl_transactional_default_factory_cycle_diagnostic() -> None:
     container = _default_factory_diagnostic_container(("v3",), ("v2",))
 
@@ -462,6 +485,8 @@ def _lifecycle_base_namespace() -> dict[str, object]:
 def _default_factory_diagnostic_container(
     v2_params: tuple[str, ...],
     v3_params: tuple[str, ...],
+    *,
+    v2_allow_self: bool = False,
 ) -> object:
     namespace = _lifecycle_base_namespace()
     builder = namespace["new_builder"]()
@@ -494,6 +519,7 @@ def _default_factory_diagnostic_container(
             field_order=20,
             field_kind="managed",
             has_default_factory=True,
+            allow_self_factory=v2_allow_self,
             default_factory_param_name="_Example_v2_default_factory",
             default_factory_param_names=v2_params,
         ),

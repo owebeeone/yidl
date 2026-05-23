@@ -143,10 +143,20 @@ def test_lifecycle_decorator_evaluates_parameterized_default_factories() -> None
     class Example:
         SCALE: int = classvar(default=10)
         v1: int
+        owner: str = const(default="owner")
+        owner_tag: str = const(
+            default_factory=lambda self: self.owner + "-tag",
+            allow_self_factory=True,
+        )
         seed: int = initvar(init=False, default=4)
         class_name_size: int = initvar(
             init=False,
             default_factory=lambda cls: len(cls.__name__),
+        )
+        self_tag_size: int = initvar(
+            init=False,
+            default_factory=lambda self: len(self.owner),
+            allow_self_factory=True,
         )
         temp: int = initvar(
             init=False,
@@ -157,28 +167,31 @@ def test_lifecycle_decorator_evaluates_parameterized_default_factories() -> None
         v4: int = managed(init=False, default_factory=lambda v3: v3 * 2)
         v5: int = managed(
             init=False,
-            default_factory=lambda class_name_size, SCALE, v4: (
-                class_name_size + SCALE + v4
+            default_factory=lambda class_name_size, self_tag_size, SCALE, v4: (
+                class_name_size + self_tag_size + SCALE + v4
             ),
         )
 
     generated = lifecycle(Example)
     item = generated(v1=1)
 
+    assert item.owner == "owner"
+    assert item.owner_tag == "owner-tag"
     assert item.v1 == 1
     assert item.v2 == 3
     assert item.v3 == 6
     assert item.v4 == 12
-    assert item.v5 == 29
+    assert item.v5 == 34
     assert not hasattr(item._y_state, "_y_seed_value")
     assert not hasattr(item._y_state, "_y_class_name_size_value")
+    assert not hasattr(item._y_state, "_y_self_tag_size_value")
     assert not hasattr(item._y_state, "_y_temp_value")
 
     explicit = generated(v1=1, v2=20, v3=30)
     assert explicit.v2 == 20
     assert explicit.v3 == 30
     assert explicit.v4 == 60
-    assert explicit.v5 == 77
+    assert explicit.v5 == 82
 
 
 def test_lifecycle_decorator_initializes_transient_current_defaults() -> None:

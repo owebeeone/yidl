@@ -200,6 +200,23 @@ def test_harvester_collects_default_factory_parameter_names() -> None:
     ]
 
 
+def test_harvester_carries_allow_self_factory() -> None:
+    def make_value(self: object) -> int:
+        del self
+        return 1
+
+    class Counter:
+        value: int = field(
+            default_factory=make_value,
+            allow_self_factory=True,
+        )
+
+    harvested = harvest_lifecycle_definition(Counter)
+
+    assert harvested.field_facts[0]["allow_self_factory"] is True
+    assert harvested.field_facts[0]["default_factory_param_names"] == ("self",)
+
+
 def test_harvester_warns_for_unintrospectable_default_factory(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

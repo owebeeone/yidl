@@ -222,6 +222,7 @@ def _field_fact(
         ),
         "has_default_factory": decl.has_default_factory,
         "default_factory": decl.default_factory,
+        "allow_self_factory": decl.allow_self_factory,
         "default_factory_param_names": _default_factory_param_names(
             class_name,
             decl,
@@ -291,6 +292,7 @@ def _remap_inherited_field_fact(
     has_default_factory = bool(inherited["has_default_factory"])
     fact = dict(inherited)
     fact.setdefault("default_factory_param_names", ())
+    fact.setdefault("allow_self_factory", False)
     fact.setdefault("binding_shape", _binding_shape(fact.get("annotation")))
     fact.setdefault("has_freeze", False)
     fact.setdefault("freeze", MISSING)

@@ -12,6 +12,7 @@ from yidl.generation.data_def_sys import emit_concept_runtime_source
 from yidl.runtime.lifecycle import _build_lifecycle_container
 from yidl.runtime.lifecycle import _strip_redundant_pass_statements
 from yidl.runtime.lifecycle import classvar
+from yidl.runtime.lifecycle import const
 from yidl.runtime.lifecycle import harvest_lifecycle_definition
 from yidl.runtime.lifecycle import initvar
 from yidl.runtime.lifecycle import lifecycle
@@ -107,10 +108,20 @@ def _fixture_class() -> type[object]:
     class Example:
         SCALE: int = classvar(default=10)
         v1: int
+        owner: str = const(default="owner")
+        owner_tag: str = const(
+            default_factory=lambda self: self.owner + "-tag",
+            allow_self_factory=True,
+        )
         seed: int = initvar(init=False, default=4)
         class_name_size: int = initvar(
             init=False,
             default_factory=lambda cls: len(cls.__name__),
+        )
+        self_tag_size: int = initvar(
+            init=False,
+            default_factory=lambda self: len(self.owner),
+            allow_self_factory=True,
         )
         temp: int = initvar(
             init=False,
@@ -121,8 +132,8 @@ def _fixture_class() -> type[object]:
         v4: int = managed(init=False, default_factory=lambda v3: v3 * 2)
         v5: int = managed(
             init=False,
-            default_factory=lambda class_name_size, SCALE, v4: (
-                class_name_size + SCALE + v4
+            default_factory=lambda class_name_size, self_tag_size, SCALE, v4: (
+                class_name_size + self_tag_size + SCALE + v4
             ),
         )
 
@@ -159,19 +170,22 @@ def _assert_example_class(generated: type[object]) -> None:
     item = generated(v1=1)
     assert generated.SCALE == 10
     assert item.v1 == 1
+    assert item.owner == "owner"
+    assert item.owner_tag == "owner-tag"
     assert item.v2 == 3
     assert item.v3 == 6
     assert item.v4 == 12
-    assert item.v5 == 29
+    assert item.v5 == 34
     assert not hasattr(item._y_state, "_y_seed_value")
     assert not hasattr(item._y_state, "_y_class_name_size_value")
+    assert not hasattr(item._y_state, "_y_self_tag_size_value")
     assert not hasattr(item._y_state, "_y_temp_value")
 
     explicit = generated(v1=1, v2=20, v3=30)
     assert explicit.v2 == 20
     assert explicit.v3 == 30
     assert explicit.v4 == 60
-    assert explicit.v5 == 77
+    assert explicit.v5 == 82
 
 
 def _assert_inherited_generated_class(namespace: Mapping[str, object]) -> None:
@@ -209,13 +223,16 @@ def _assert_source_shape(sources: Mapping[str, str]) -> None:
     assert "default_factories[" not in combined
 
     source = sources["generated_output.py"]
+    assert "_Example_owner_tag_default_factory(self=self)" in source
     assert "_Example_v2_default_factory(v1=self.v1)" in source
     assert "_Example_v3_default_factory(v2=self.v2, v1=self.v1)" in source
     assert "_Example_v4_default_factory(v3=self.v3)" in source
     assert "_Example_class_name_size_default_factory(cls=decorated_cls)" in source
+    assert "_Example_self_tag_size_default_factory(self=self)" in source
     assert (
         "_Example_v5_default_factory("
-        "class_name_size=class_name_size, SCALE=self.SCALE, v4=self.v4)"
+        "class_name_size=class_name_size, self_tag_size=self_tag_size, "
+        "SCALE=self.SCALE, v4=self.v4)"
     ) in source
 
     inherited_source = sources["generated_inherited_output.py"]

@@ -11,8 +11,10 @@ field kind gains new behavior.
 Normal `default_factory` callables may request provider names by parameter name.
 Slice 3 also allows the special `cls` parameter, which receives the original
 decorated user class for the current lifecycle layer. The `self`, `current`,
-and `working` names remain unavailable to normal factories until an explicit
-later policy enables them.
+and `working` names remain unavailable to normal factories by default. Slice 4
+allows `self` only when the field marker explicitly sets
+`allow_self_factory=True`; `self` receives the generated default facade under
+construction and creates no dependency edge.
 
 ## Field Kinds
 

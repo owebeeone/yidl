@@ -26,6 +26,7 @@ class LifecycleMarker:
     default: object = MISSING
     default_factory: object = MISSING
     working_default_factory: object = MISSING
+    allow_self_factory: bool = False
     init: bool = True
     tx_key: object = MISSING
     freeze: object = MISSING
@@ -44,6 +45,7 @@ class FieldDecl:
     default: object
     has_default_factory: bool
     default_factory: object
+    allow_self_factory: bool
     has_working_default_factory: bool
     working_default_factory: object
     tx_key: object
@@ -65,6 +67,7 @@ def field(
     *,
     default: object = MISSING,
     default_factory: object = MISSING,
+    allow_self_factory: bool = False,
     init: bool = True,
 ) -> LifecycleMarker:
     """Declare a plain lifecycle field."""
@@ -74,6 +77,7 @@ def field(
         default=default,
         default_factory=default_factory,
         working_default_factory=MISSING,
+        allow_self_factory=allow_self_factory,
         init=init,
         tx_key=MISSING,
     )
@@ -83,6 +87,7 @@ def initvar(
     *,
     default: object = MISSING,
     default_factory: object = MISSING,
+    allow_self_factory: bool = False,
     init: bool = True,
 ) -> LifecycleMarker:
     """Declare a constructor-only lifecycle value."""
@@ -92,6 +97,7 @@ def initvar(
         default=default,
         default_factory=default_factory,
         working_default_factory=MISSING,
+        allow_self_factory=allow_self_factory,
         init=init,
         tx_key=MISSING,
     )
@@ -105,6 +111,7 @@ def classvar(*, default: object = MISSING) -> LifecycleMarker:
         default=default,
         default_factory=MISSING,
         working_default_factory=MISSING,
+        allow_self_factory=False,
         init=False,
         tx_key=MISSING,
     )
@@ -114,6 +121,7 @@ def const(
     *,
     default: object = MISSING,
     default_factory: object = MISSING,
+    allow_self_factory: bool = False,
     init: bool = True,
 ) -> LifecycleMarker:
     """Declare an immutable per-instance lifecycle value."""
@@ -123,6 +131,7 @@ def const(
         default=default,
         default_factory=default_factory,
         working_default_factory=MISSING,
+        allow_self_factory=allow_self_factory,
         init=init,
         tx_key=MISSING,
     )
@@ -132,6 +141,7 @@ def static(
     *,
     default: object = MISSING,
     default_factory: object = MISSING,
+    allow_self_factory: bool = False,
     init: bool = True,
 ) -> LifecycleMarker:
     """Declare a write-once per-instance lifecycle value."""
@@ -141,6 +151,7 @@ def static(
         default=default,
         default_factory=default_factory,
         working_default_factory=MISSING,
+        allow_self_factory=allow_self_factory,
         init=init,
         tx_key=MISSING,
     )
@@ -151,6 +162,7 @@ def managed(
     *,
     default: object = MISSING,
     default_factory: object = MISSING,
+    allow_self_factory: bool = False,
     init: bool = True,
     freeze: object = MISSING,
     thaw: object = MISSING,
@@ -162,6 +174,7 @@ def managed(
         default=default,
         default_factory=default_factory,
         working_default_factory=MISSING,
+        allow_self_factory=allow_self_factory,
         init=init,
         tx_key=tx_key,
         freeze=freeze,
@@ -174,6 +187,7 @@ def owned(
     *,
     default: object = MISSING,
     default_factory: object = MISSING,
+    allow_self_factory: bool = False,
     init: bool = True,
 ) -> LifecycleMarker:
     """Declare an owned retained BindingBase resource field."""
@@ -183,6 +197,7 @@ def owned(
         default=default,
         default_factory=default_factory,
         working_default_factory=MISSING,
+        allow_self_factory=allow_self_factory,
         init=init,
         tx_key=tx_key,
     )
@@ -192,6 +207,7 @@ def binding(
     *,
     default: object = MISSING,
     default_factory: object = MISSING,
+    allow_self_factory: bool = False,
     init: bool = True,
 ) -> LifecycleMarker:
     """Declare a plain stored BindingBase resource field."""
@@ -201,6 +217,7 @@ def binding(
         default=default,
         default_factory=default_factory,
         working_default_factory=MISSING,
+        allow_self_factory=allow_self_factory,
         init=init,
         tx_key=MISSING,
     )
@@ -211,6 +228,7 @@ def transient(
     *,
     default: object = MISSING,
     default_factory: object = MISSING,
+    allow_self_factory: bool = False,
     working_default_factory: object = MISSING,
     init: bool = True,
 ) -> LifecycleMarker:
@@ -221,6 +239,7 @@ def transient(
         default=default,
         default_factory=default_factory,
         working_default_factory=working_default_factory,
+        allow_self_factory=allow_self_factory,
         init=init,
         tx_key=tx_key,
     )
@@ -310,6 +329,7 @@ def normalize_marker(
         default=marker.default,
         has_default_factory=marker.default_factory is not MISSING,
         default_factory=marker.default_factory,
+        allow_self_factory=marker.allow_self_factory,
         has_working_default_factory=marker.working_default_factory is not MISSING,
         working_default_factory=marker.working_default_factory,
         tx_key=(
@@ -331,6 +351,7 @@ def _marker(
     default: object,
     default_factory: object,
     working_default_factory: object,
+    allow_self_factory: bool,
     init: bool,
     tx_key: object,
     freeze: object = MISSING,
@@ -342,6 +363,8 @@ def _marker(
         )
     if not isinstance(init, bool):
         raise LifecycleDefinitionError("init must be a bool")
+    if not isinstance(allow_self_factory, bool):
+        raise LifecycleDefinitionError("allow_self_factory must be a bool")
     if default_factory is not MISSING and not callable(default_factory):
         raise LifecycleDefinitionError("default_factory must be callable")
     if working_default_factory is not MISSING and not callable(working_default_factory):
@@ -363,6 +386,7 @@ def _marker(
         default=default,
         default_factory=default_factory,
         working_default_factory=working_default_factory,
+        allow_self_factory=allow_self_factory,
         init=init,
         tx_key=tx_key,
         freeze=freeze,

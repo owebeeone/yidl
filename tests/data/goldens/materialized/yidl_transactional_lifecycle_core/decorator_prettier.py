@@ -97,6 +97,9 @@ _HasDefaultFactoryProperty = RuntimeProperty(
 _DefaultFactoryProperty = RuntimeProperty(
     "DefaultFactory", object, default=None, storage_name="default_factory"
 )
+_AllowSelfFactoryProperty = RuntimeProperty(
+    "AllowSelfFactory", bool, default=False, storage_name="allow_self_factory"
+)
 _DefaultFactoryParamNameProperty = RuntimeProperty(
     "DefaultFactoryParamName",
     str,
@@ -364,6 +367,7 @@ _PlainFieldSpec = RuntimeRecord(
         _DefaultValueParamNameProperty,
         _HasDefaultFactoryProperty,
         _DefaultFactoryProperty,
+        _AllowSelfFactoryProperty,
         _DefaultFactoryParamNameProperty,
         _DefaultFactoryParamNamesProperty,
         _HasWorkingDefaultFactoryProperty,
@@ -400,6 +404,7 @@ _InitVarFieldSpec = RuntimeRecord(
         _DefaultValueParamNameProperty,
         _HasDefaultFactoryProperty,
         _DefaultFactoryProperty,
+        _AllowSelfFactoryProperty,
         _DefaultFactoryParamNameProperty,
         _DefaultFactoryParamNamesProperty,
         _HasWorkingDefaultFactoryProperty,
@@ -436,6 +441,7 @@ _ClassVarFieldSpec = RuntimeRecord(
         _DefaultValueParamNameProperty,
         _HasDefaultFactoryProperty,
         _DefaultFactoryProperty,
+        _AllowSelfFactoryProperty,
         _DefaultFactoryParamNameProperty,
         _DefaultFactoryParamNamesProperty,
         _HasWorkingDefaultFactoryProperty,
@@ -1103,6 +1109,7 @@ class PlainField:
         "default_value_param_name",
         "has_default_factory",
         "default_factory",
+        "allow_self_factory",
         "default_factory_param_name",
         "default_factory_param_names",
         "has_working_default_factory",
@@ -1136,6 +1143,7 @@ class PlainField:
     default_value_param_name: str
     has_default_factory: bool
     default_factory: object
+    allow_self_factory: bool
     default_factory_param_name: str
     default_factory_param_names: object
     has_working_default_factory: bool
@@ -1171,6 +1179,7 @@ class PlainField:
         default_value_param_name: str = "",
         has_default_factory: bool = False,
         default_factory: object = None,
+        allow_self_factory: bool = False,
         default_factory_param_name: str = "",
         default_factory_param_names: object = (),
         has_working_default_factory: bool = False,
@@ -1233,6 +1242,12 @@ class PlainField:
             )
         object.__setattr__(self, "has_default_factory", has_default_factory)
         object.__setattr__(self, "default_factory", default_factory)
+        if not isinstance(allow_self_factory, bool):
+            raise TypeError(
+                "AllowSelfFactory must be bool, got "
+                + type(allow_self_factory).__name__
+            )
+        object.__setattr__(self, "allow_self_factory", allow_self_factory)
         if not isinstance(default_factory_param_name, str):
             raise TypeError(
                 "DefaultFactoryParamName must be str, got "
@@ -1328,6 +1343,7 @@ class PlainField:
             "default_value_param_name",
             "has_default_factory",
             "default_factory",
+            "allow_self_factory",
             "default_factory_param_name",
             "default_factory_param_names",
             "has_working_default_factory",
@@ -1365,6 +1381,7 @@ class PlainField:
         pieces.append("default_value_param_name=" + repr(self.default_value_param_name))
         pieces.append("has_default_factory=" + repr(self.has_default_factory))
         pieces.append("default_factory=" + repr(self.default_factory))
+        pieces.append("allow_self_factory=" + repr(self.allow_self_factory))
         pieces.append(
             "default_factory_param_name=" + repr(self.default_factory_param_name)
         )
@@ -1416,6 +1433,7 @@ class InitVarField:
         "default_value_param_name",
         "has_default_factory",
         "default_factory",
+        "allow_self_factory",
         "default_factory_param_name",
         "default_factory_param_names",
         "has_working_default_factory",
@@ -1449,6 +1467,7 @@ class InitVarField:
     default_value_param_name: str
     has_default_factory: bool
     default_factory: object
+    allow_self_factory: bool
     default_factory_param_name: str
     default_factory_param_names: object
     has_working_default_factory: bool
@@ -1484,6 +1503,7 @@ class InitVarField:
         default_value_param_name: str = "",
         has_default_factory: bool = False,
         default_factory: object = None,
+        allow_self_factory: bool = False,
         default_factory_param_name: str = "",
         default_factory_param_names: object = (),
         has_working_default_factory: bool = False,
@@ -1546,6 +1566,12 @@ class InitVarField:
             )
         object.__setattr__(self, "has_default_factory", has_default_factory)
         object.__setattr__(self, "default_factory", default_factory)
+        if not isinstance(allow_self_factory, bool):
+            raise TypeError(
+                "AllowSelfFactory must be bool, got "
+                + type(allow_self_factory).__name__
+            )
+        object.__setattr__(self, "allow_self_factory", allow_self_factory)
         if not isinstance(default_factory_param_name, str):
             raise TypeError(
                 "DefaultFactoryParamName must be str, got "
@@ -1641,6 +1667,7 @@ class InitVarField:
             "default_value_param_name",
             "has_default_factory",
             "default_factory",
+            "allow_self_factory",
             "default_factory_param_name",
             "default_factory_param_names",
             "has_working_default_factory",
@@ -1678,6 +1705,7 @@ class InitVarField:
         pieces.append("default_value_param_name=" + repr(self.default_value_param_name))
         pieces.append("has_default_factory=" + repr(self.has_default_factory))
         pieces.append("default_factory=" + repr(self.default_factory))
+        pieces.append("allow_self_factory=" + repr(self.allow_self_factory))
         pieces.append(
             "default_factory_param_name=" + repr(self.default_factory_param_name)
         )
@@ -1729,6 +1757,7 @@ class ClassVarField:
         "default_value_param_name",
         "has_default_factory",
         "default_factory",
+        "allow_self_factory",
         "default_factory_param_name",
         "default_factory_param_names",
         "has_working_default_factory",
@@ -1762,6 +1791,7 @@ class ClassVarField:
     default_value_param_name: str
     has_default_factory: bool
     default_factory: object
+    allow_self_factory: bool
     default_factory_param_name: str
     default_factory_param_names: object
     has_working_default_factory: bool
@@ -1797,6 +1827,7 @@ class ClassVarField:
         default_value_param_name: str = "",
         has_default_factory: bool = False,
         default_factory: object = None,
+        allow_self_factory: bool = False,
         default_factory_param_name: str = "",
         default_factory_param_names: object = (),
         has_working_default_factory: bool = False,
@@ -1859,6 +1890,12 @@ class ClassVarField:
             )
         object.__setattr__(self, "has_default_factory", has_default_factory)
         object.__setattr__(self, "default_factory", default_factory)
+        if not isinstance(allow_self_factory, bool):
+            raise TypeError(
+                "AllowSelfFactory must be bool, got "
+                + type(allow_self_factory).__name__
+            )
+        object.__setattr__(self, "allow_self_factory", allow_self_factory)
         if not isinstance(default_factory_param_name, str):
             raise TypeError(
                 "DefaultFactoryParamName must be str, got "
@@ -1954,6 +1991,7 @@ class ClassVarField:
             "default_value_param_name",
             "has_default_factory",
             "default_factory",
+            "allow_self_factory",
             "default_factory_param_name",
             "default_factory_param_names",
             "has_working_default_factory",
@@ -1991,6 +2029,7 @@ class ClassVarField:
         pieces.append("default_value_param_name=" + repr(self.default_value_param_name))
         pieces.append("has_default_factory=" + repr(self.has_default_factory))
         pieces.append("default_factory=" + repr(self.default_factory))
+        pieces.append("allow_self_factory=" + repr(self.allow_self_factory))
         pieces.append(
             "default_factory_param_name=" + repr(self.default_factory_param_name)
         )
@@ -2253,6 +2292,9 @@ ASSEMBLY_PROPERTIES = {
     "DefaultFactory": _YidlSimpleNamespace(
         name="DefaultFactory", storage_name="default_factory"
     ),
+    "AllowSelfFactory": _YidlSimpleNamespace(
+        name="AllowSelfFactory", storage_name="allow_self_factory"
+    ),
     "DefaultFactoryParamName": _YidlSimpleNamespace(
         name="DefaultFactoryParamName", storage_name="default_factory_param_name"
     ),
@@ -2395,7 +2437,7 @@ def build_lifecycle_class(decorated_cls, builder_params__astichi_param_hole__):
     astichi_hole(function_body)
     astichi_hole(return_statement)""",
         file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-        line_number=213,
+        line_number=215,
     ),
     "BuilderParam": astichi_template(
         from_astichi_code(
@@ -2403,7 +2445,7 @@ def build_lifecycle_class(decorated_cls, builder_params__astichi_param_hole__):
 def astichi_params(*, value_name__astichi_arg__):
     pass""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=231,
+            line_number=233,
         )
     ),
     "TransactionManagerParam": astichi_template(
@@ -2412,14 +2454,14 @@ def astichi_params(*, value_name__astichi_arg__):
 def astichi_params(*, transaction_manager=None):
     pass""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=236,
+            line_number=238,
         )
     ),
     "StateSlotEntry": astichi_template(
         from_astichi_code(
             "astichi_bind_external(slot_name)",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=241,
+            line_number=243,
         )
     ),
     "InitParamRequired": astichi_template(
@@ -2428,7 +2470,7 @@ def astichi_params(*, transaction_manager=None):
 def astichi_params(param_name__astichi_arg__: astichi_bind_external(annotation)):
     pass""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=245,
+            line_number=247,
         )
     ),
     "InitParamDefault": astichi_template(
@@ -2440,7 +2482,7 @@ def astichi_params(
 ):
     pass""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=250,
+            line_number=252,
         )
     ),
     "PlainStateAssignment": astichi_template(
@@ -2451,7 +2493,7 @@ astichi_pass(state, outer_bind=True).astichi_ref(external=state_slot)._ = astich
     outer_bind=True,
 )""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=258,
+            line_number=260,
         )
     ),
     "InitVarLocalDefaultAssignment": astichi_template(
@@ -2462,7 +2504,7 @@ init_value_name__astichi_arg__ = astichi_pass(
     outer_bind=True,
 )""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=265,
+            line_number=267,
         )
     ),
     "PlainProperty": astichi_template(
@@ -2476,7 +2518,7 @@ def property_getter_name__astichi_arg__(self):
 def property_setter_name__astichi_arg__(self, value):
     self._y_state.astichi_ref(external=state_slot)._ = value""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=272,
+            line_number=274,
         )
     ),
     "ClassVarDefaultAssignment": astichi_template(
@@ -2487,7 +2529,7 @@ classvar_name__astichi_arg__ = astichi_pass(
     outer_bind=True,
 )""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=282,
+            line_number=284,
         )
     ),
     "CommitOrderKeyBranch": astichi_template(
@@ -2500,7 +2542,7 @@ def astichi_elif():
     if tx_index == astichi_bind_external(tx_index_value):
         return self._y_get_default_facade().astichi_ref(external=method_name)()""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=289,
+            line_number=291,
         )
     ),
     "RequiresValidationBranch": astichi_template(
@@ -2512,7 +2554,7 @@ def astichi_elif():
     if tx_index == astichi_bind_external(tx_index_value):
         return True""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=298,
+            line_number=300,
         )
     ),
     "ValidateCommitBranch": astichi_template(
@@ -2527,7 +2569,7 @@ def astichi_elif():
         if result is False:
             return False""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=306,
+            line_number=308,
         )
     ),
     "TransactionHookCall": astichi_template(
@@ -2540,7 +2582,7 @@ def astichi_elif():
     if tx_index == astichi_bind_external(tx_index_value):
         self._y_get_default_facade().astichi_ref(external=method_name)()""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=317,
+            line_number=319,
         )
     ),
     "CommitOrderKeyFallbackBranch": astichi_template(
@@ -2550,7 +2592,7 @@ def astichi_elif():
     if True:
         return ()""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=326,
+            line_number=328,
         )
     ),
     "RequiresValidationFallbackBranch": astichi_template(
@@ -2560,7 +2602,7 @@ def astichi_elif():
     if True:
         return False""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=332,
+            line_number=334,
         )
     ),
     "ValidateCommitFallbackBranch": astichi_template(
@@ -2570,7 +2612,7 @@ def astichi_elif():
     if True:
         return True""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=338,
+            line_number=340,
         )
     ),
     "PassFallbackBranch": astichi_template(
@@ -2580,7 +2622,7 @@ def astichi_elif():
     if True:
         pass""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=344,
+            line_number=346,
         )
     ),
     "ClassBundle": astichi_template(
@@ -2906,7 +2948,7 @@ class working_facade_class_decl_name__astichi_arg__(
     with astichi_hole(working_facade_properties) as astichi_fallback:
         pass""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=350,
+            line_number=352,
             keep_names=(
                 "DEFAULT_TRANSACTION",
                 "TransactionManager",
@@ -2933,7 +2975,7 @@ return_class_module_ref__astichi_arg__.__module__ = astichi_pass(
 ).__module__
 return return_class_result_ref__astichi_arg__""",
             file_name="tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl",
-            line_number=675,
+            line_number=677,
         )
     ),
 }

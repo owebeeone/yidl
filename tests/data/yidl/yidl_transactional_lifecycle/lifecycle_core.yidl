@@ -33,6 +33,7 @@ concept LifecycleCore {
     property DefaultValueParamName: str = ""
     property HasDefaultFactory: bool = False
     property DefaultFactory: object = None
+    property AllowSelfFactory: bool = False
     property DefaultFactoryParamName: str = ""
     property DefaultFactoryParamNames: object = ()
     property HasWorkingDefaultFactory: bool = False
@@ -78,7 +79,8 @@ concept LifecycleCore {
         common FieldId, FieldOwner, FieldName, FieldOrder, FieldKind, BindingShape
         common Annotation
         common Init, HasDefault, DefaultValue, DefaultValueParamName
-        common HasDefaultFactory, DefaultFactory, DefaultFactoryParamName
+        common HasDefaultFactory, DefaultFactory, AllowSelfFactory
+        common DefaultFactoryParamName
         common DefaultFactoryParamNames
         common HasWorkingDefaultFactory, WorkingDefaultFactory
         common WorkingDefaultFactoryParamName, WorkingDefaultFactoryParamNames

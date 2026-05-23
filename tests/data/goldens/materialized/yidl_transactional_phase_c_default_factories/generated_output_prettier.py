@@ -16,8 +16,11 @@ def build_lifecycle_class(
     _Example_annotations,
     _Example_tx_keys,
     _Example_SCALE_default,
+    _Example_owner_default,
+    _Example_owner_tag_default_factory,
     _Example_seed_default,
     _Example_class_name_size_default_factory,
+    _Example_self_tag_size_default_factory,
     _Example_temp_default_factory,
     _Example_v2_default_factory,
     _Example_v3_default_factory,
@@ -59,6 +62,8 @@ def build_lifecycle_class(
             "_y_current_ref",
             "_y_working_ref",
             "_y_v1_value",
+            "_y_owner_value",
+            "_y_owner_tag_value",
             "_y_v2_current",
             "_y_v2_working",
             "_y_v2_staged",
@@ -306,7 +311,9 @@ def build_lifecycle_class(
             if hasattr(decorated_cls, "__weakref__")
             else ("_y_state", "__weakref__")
         )
-        _y_lifecycle_field_names = frozenset(("v1", "v2", "v3", "v4", "v5"))
+        _y_lifecycle_field_names = frozenset(
+            ("v1", "owner", "owner_tag", "v2", "v3", "v4", "v5")
+        )
 
         def __setattr__(self, name, value):
             if name in self._y_lifecycle_field_names:
@@ -366,6 +373,24 @@ def build_lifecycle_class(
         @v1.setter
         def v1(self, value):
             self._y_state._y_v1_value = value
+
+        @property
+        def owner(self):
+            return self._y_state._y_owner_value
+
+        @owner.setter
+        def owner(self, value):
+            del value
+            raise AttributeError(f"const field {'owner'!r} is read-only")
+
+        @property
+        def owner_tag(self):
+            return self._y_state._y_owner_tag_value
+
+        @owner_tag.setter
+        def owner_tag(self, value):
+            del value
+            raise AttributeError(f"const field {'owner_tag'!r} is read-only")
 
     class Example(Example_FacadeBase):
         __slots__ = ("_y_current_facade", "_y_working_facade")
@@ -433,6 +458,8 @@ def build_lifecycle_class(
         def __init__(
             self,
             v1: "int",
+            owner: "str" = _Example_owner_default,
+            owner_tag: "str" = _HAS_DEFAULT_FACTORY,
             v2: "int" = _HAS_DEFAULT_FACTORY,
             v3: "int" = _HAS_DEFAULT_FACTORY,
             *,
@@ -455,6 +482,7 @@ def build_lifecycle_class(
             state._y_current_ref = None
             state._y_working_ref = None
             state._y_v1_value = v1
+            state._y_owner_value = owner
             seed = _Example_seed_default
             state._y_v2_working = VOID
             state._y_v2_staged = VOID
@@ -476,10 +504,17 @@ def build_lifecycle_class(
             state._y_v3_current = v3
             v4 = _Example_v4_default_factory(v3=self.v3)
             state._y_v4_current = v4
+            self_tag_size = _Example_self_tag_size_default_factory(self=self)
             v5 = _Example_v5_default_factory(
-                class_name_size=class_name_size, SCALE=self.SCALE, v4=self.v4
+                class_name_size=class_name_size,
+                self_tag_size=self_tag_size,
+                SCALE=self.SCALE,
+                v4=self.v4,
             )
             state._y_v5_current = v5
+            if owner_tag is _HAS_DEFAULT_FACTORY:
+                owner_tag = _Example_owner_tag_default_factory(self=self)
+            state._y_owner_tag_value = owner_tag
             state._y_working_tx_ids = [None for _group in _Example_tx_keys]
 
     class Example_Current(Example_FacadeBase):

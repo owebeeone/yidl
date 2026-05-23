@@ -108,6 +108,12 @@ concept LifecycleDefaultFactories extends managed.LifecycleManaged {
                 field for field in class_fields
                 if field.has_default_factory
             ]
+            factory_fields.sort(
+                key=lambda field: (
+                    1 if field.allow_self_factory else 0,
+                    field.field_order,
+                )
+            )
             graph = {field.field_id: set() for field in factory_fields}
             deps = []
             diagnostic_count = 0
@@ -141,6 +147,9 @@ concept LifecycleDefaultFactories extends managed.LifecycleManaged {
                         deps.append((consumer, None, param_name, param_order))
                         continue
                     if param_name == "self":
+                        if consumer.allow_self_factory:
+                            deps.append((consumer, None, param_name, param_order))
+                            continue
                         add_diagnostic(
                             consumer,
                             "self",
@@ -258,7 +267,7 @@ concept LifecycleDefaultFactories extends managed.LifecycleManaged {
             for consumer, provider, param_name, param_order in deps:
                 provider_name = param_name
                 provider_field_id = ""
-                provider_field_kind = "cls"
+                provider_field_kind = param_name
                 provider_init = True
                 provider_has_default = False
                 provider_has_default_factory = False
@@ -453,6 +462,15 @@ concept LifecycleDefaultFactories extends managed.LifecycleManaged {
         )
     ]$
 
+    resource DefaultFactorySelfArg = template $[
+        astichi_funcargs(
+            param_name__astichi_arg__=astichi_pass(
+                self,
+                outer_bind=True,
+            )
+        )
+    ]$
+
     resource DefaultFactoryEmptyArg = template $[
         astichi_funcargs()
     ]$
@@ -600,6 +618,18 @@ concept LifecycleDefaultFactories extends managed.LifecycleManaged {
         ident param_name = ParamName
     }
 
+    contribution DefaultFactorySelfArgContribution = DefaultFactorySelfArg {
+        as DefaultFactoryArg
+        index (ConsumerEvalOrder, ParamOrder)
+        order ParamOrder
+
+        target default_factory_args {
+            build /ClassDef/DefaultFactoryEval[ConsumerEvalOrder]
+        }
+
+        ident param_name = ParamName
+    }
+
     contribution DefaultFactoryEmptyArgContribution = DefaultFactoryEmptyArg {
         as DefaultFactoryArg
         index (ConsumerEvalOrder, ParamOrder)
@@ -658,6 +688,8 @@ concept LifecycleDefaultFactories extends managed.LifecycleManaged {
         rule empty_provider when ParamName == "" -> DefaultFactoryEmptyArgContribution
         rule cls_provider when ProviderFieldKind == "cls"
                           -> DefaultFactoryClsArgContribution
+        rule self_provider when ProviderFieldKind == "self"
+                           -> DefaultFactorySelfArgContribution
         rule local_provider when ProviderFieldKind == "initvar"
                             -> DefaultFactoryLocalArgContribution
     }
