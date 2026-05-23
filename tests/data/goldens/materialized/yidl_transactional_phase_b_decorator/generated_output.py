@@ -296,20 +296,23 @@ def build_lifecycle_class(decorated_cls, *, _Counter_lifecycle_definition, _Coun
         def working(self):
             return self._y_state._y_get_working_facade()
 
+        def _y_get_transaction_manager(self):
+            return self._y_state._y_transaction_manager
+
         def begin(self, *tx_keys):
-            return self._y_state._y_transaction_manager.begin(*tx_keys)
+            return self._y_get_transaction_manager().begin(*tx_keys)
 
         def validate(self, *tx_keys):
-            return self._y_state._y_transaction_manager.validate(*tx_keys)
+            return self._y_get_transaction_manager().validate(*tx_keys)
 
         def commit_only(self, *tx_keys):
-            return self._y_state._y_transaction_manager.commit_only(*tx_keys)
+            return self._y_get_transaction_manager().commit_only(*tx_keys)
 
         def commit(self, *tx_keys):
-            return self._y_state._y_transaction_manager.commit(*tx_keys)
+            return self._y_get_transaction_manager().commit(*tx_keys)
 
         def rollback(self, *tx_keys):
-            return self._y_state._y_transaction_manager.rollback(*tx_keys)
+            return self._y_get_transaction_manager().rollback(*tx_keys)
         KIND = _Counter_KIND_default
 
         @property

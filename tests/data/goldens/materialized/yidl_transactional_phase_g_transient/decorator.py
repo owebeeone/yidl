@@ -3283,20 +3283,23 @@ class facade_base_decl_name__astichi_arg__(
     def working(self):
         return self._y_state._y_get_working_facade()
 
+    def _y_get_transaction_manager(self):
+        return self._y_state._y_transaction_manager
+
     def begin(self, *tx_keys):
-        return self._y_state._y_transaction_manager.begin(*tx_keys)
+        return self._y_get_transaction_manager().begin(*tx_keys)
 
     def validate(self, *tx_keys):
-        return self._y_state._y_transaction_manager.validate(*tx_keys)
+        return self._y_get_transaction_manager().validate(*tx_keys)
 
     def commit_only(self, *tx_keys):
-        return self._y_state._y_transaction_manager.commit_only(*tx_keys)
+        return self._y_get_transaction_manager().commit_only(*tx_keys)
 
     def commit(self, *tx_keys):
-        return self._y_state._y_transaction_manager.commit(*tx_keys)
+        return self._y_get_transaction_manager().commit(*tx_keys)
 
     def rollback(self, *tx_keys):
-        return self._y_state._y_transaction_manager.rollback(*tx_keys)
+        return self._y_get_transaction_manager().rollback(*tx_keys)
 
     with astichi_hole(facade_base_body) as astichi_fallback:
         pass
@@ -3391,7 +3394,7 @@ return_class_module_ref__astichi_arg__.__module__ = astichi_pass(
     decorated_cls,
     outer_bind=True,
 ).__module__
-return return_class_result_ref__astichi_arg__""", file_name='tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl', line_number=677)), 'BuildTransactionFactsBody': from_astichi_code("""\
+return return_class_result_ref__astichi_arg__""", file_name='tests/data/yidl/yidl_transactional_lifecycle/lifecycle_core.yidl', line_number=680)), 'BuildTransactionFactsBody': from_astichi_code("""\
 from yidl.runtime.transaction_yidl import DEFAULT_TRANSACTION
 
 classes = sorted(

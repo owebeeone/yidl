@@ -38,6 +38,8 @@ plan.
 
 - The generated constructor accepts `transaction_manager=None`.
 - The generated state object stores `_y_transaction_manager`.
+- Facades expose `_y_get_transaction_manager()` as the deliberate generated
+  access surface for user methods that need the manager.
 - Generated facade methods delegate `begin`, commit, rollback, validation, and
   hook dispatch to that manager-facing state machinery.
 - Transaction keys are supplied as the generated `_Class_tx_keys` tuple, with

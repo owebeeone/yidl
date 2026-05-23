@@ -12,6 +12,7 @@ from yidl.runtime.lifecycle import lifecycle
 from yidl.runtime.lifecycle import local_store
 from yidl.runtime.lifecycle import managed
 from yidl.runtime.transaction_yidl import DEFAULT_TRANSACTION
+from yidl.runtime.transaction_yidl import TransactionManager
 
 DECORATOR_PATH = Path("src/yidl/runtime/_generated_lifecycle_base.py")
 
@@ -52,17 +53,21 @@ def _fixture_class() -> type[object]:
         marker: list[str] = local_store(default=["ready"])
         count: int = managed(default=1)
 
+        def manager(self) -> object:
+            return self._y_get_transaction_manager()
+
     return Scratch
 
 
 def _assert_generated_class(namespace: Mapping[str, object]) -> None:
     scratch_cls = _fixture_class()
     harvested = harvest_lifecycle_definition(scratch_cls)
+    transaction_manager = TransactionManager()
     generated = namespace["build_lifecycle_class"](
         scratch_cls,
         **dict(harvested.build_kwargs),
     )
-    _assert_scratch_class(generated)
+    _assert_scratch_class(generated, transaction_manager=transaction_manager)
 
 
 def _assert_decorator_frontend() -> None:
@@ -70,8 +75,21 @@ def _assert_decorator_frontend() -> None:
     _assert_scratch_class(generated)
 
 
-def _assert_scratch_class(generated: type[object]) -> None:
-    scratch = generated()
+def _assert_scratch_class(
+    generated: type[object],
+    *,
+    transaction_manager: TransactionManager | None = None,
+) -> None:
+    scratch = (
+        generated(transaction_manager=transaction_manager)
+        if transaction_manager is not None
+        else generated()
+    )
+    expected_manager = transaction_manager or scratch._y_state._y_transaction_manager
+    assert scratch._y_get_transaction_manager() is expected_manager
+    assert scratch.manager() is expected_manager
+    assert scratch.current.manager() is expected_manager
+    assert scratch.working.manager() is expected_manager
     assert scratch.cache is scratch.current.cache
     assert scratch.cache is scratch.working.cache
     assert scratch.marker == ["ready"]
@@ -107,6 +125,7 @@ def _assert_source_shape(sources: Mapping[str, str]) -> None:
     assert "_y_cache_working" not in source
     assert "_y_cache_staged" not in source
     assert "_Scratch_cache_default_factory()" in source
+    assert "def _y_get_transaction_manager(self):" in source
 
 
 def _prettier_source(source: str) -> str:

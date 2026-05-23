@@ -332,6 +332,18 @@ def test_harvester_rejects_reserved_class_body_names() -> None:
         harvest_lifecycle_definition(Counter)
 
 
+def test_harvester_rejects_transaction_manager_helper_collision() -> None:
+    class Counter:
+        def _y_get_transaction_manager(self) -> object:
+            return None
+
+    with pytest.raises(
+        LifecycleDefinitionError,
+        match="Counter._y_get_transaction_manager",
+    ):
+        harvest_lifecycle_definition(Counter)
+
+
 def test_harvester_preserves_first_transaction_group_order() -> None:
     class Counter:
         audit: int = managed("audit", default=1)

@@ -31,6 +31,7 @@ from yidl.runtime.lifecycle import static
 from yidl.runtime.lifecycle import transient
 from yidl.runtime.lifecycle import validate_commit
 from yidl.runtime.transaction_yidl import DEFAULT_TRANSACTION
+from yidl.runtime.transaction_yidl import TransactionManager
 
 _PERF_CONSTRUCTION_TIME_LIMIT = 5.0
 _PERF_FIELD_GROUP_SIZES = (5, 10, 15)
@@ -311,6 +312,22 @@ def test_lifecycle_decorator_local_store_is_shared_non_transactional() -> None:
 
     assert item.cache == {"a": 1, "b": 2, "c": 3}
     assert item.count == 5
+
+
+def test_lifecycle_decorator_exposes_transaction_manager_helper() -> None:
+    class Counter:
+        value: int = managed(default=1)
+
+        def manager(self) -> object:
+            return self._y_get_transaction_manager()
+
+    transaction_manager = TransactionManager()
+    item = lifecycle(Counter)(transaction_manager=transaction_manager)
+
+    assert item._y_get_transaction_manager() is transaction_manager
+    assert item.manager() is transaction_manager
+    assert item.current.manager() is transaction_manager
+    assert item.working.manager() is transaction_manager
 
 
 def test_lifecycle_decorator_const_fields_are_read_only_everywhere() -> None:
