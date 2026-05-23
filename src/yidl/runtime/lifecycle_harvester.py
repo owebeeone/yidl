@@ -473,10 +473,12 @@ def _factory_param_names(
 ) -> tuple[str, ...]:
     if not has_factory:
         return ()
+    factory_is_class = isinstance(factory, type)
     try:
         signature = inspect.signature(factory)
     except (TypeError, ValueError):
-        _warn_unintrospectable_factory(class_name, decl, role=role)
+        if not factory_is_class:
+            _warn_unintrospectable_factory(class_name, decl, role=role)
         return ()
     names: list[str] = []
     for parameter in signature.parameters.values():
@@ -488,6 +490,8 @@ def _factory_param_names(
         if parameter.kind is inspect.Parameter.POSITIONAL_ONLY:
             if parameter.default is inspect.Parameter.empty:
                 _raise_unbindable_factory_param(class_name, decl, role=role)
+            continue
+        if factory_is_class and parameter.default is not inspect.Parameter.empty:
             continue
         names.append(parameter.name)
     return tuple(names)

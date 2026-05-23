@@ -201,6 +201,19 @@ def test_harvester_collects_default_factory_parameter_names() -> None:
     ]
 
 
+def test_harvester_ignores_optional_factory_class_parameters() -> None:
+    class Value:
+        def __init__(self, runtime_func: object | None = None) -> None:
+            self.runtime_func = runtime_func
+
+    class Counter:
+        value: Value = field(default_factory=Value)
+
+    harvested = harvest_lifecycle_definition(Counter)
+
+    assert harvested.field_facts[0]["default_factory_param_names"] == ()
+
+
 def test_harvester_carries_allow_self_factory() -> None:
     def make_value(self: object) -> int:
         del self

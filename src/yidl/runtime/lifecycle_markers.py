@@ -29,6 +29,7 @@ class LifecycleMarker:
     allow_self_factory: bool = False
     init: bool = True
     tx_key: object = MISSING
+    compare: str = "value"
     freeze: object = MISSING
     thaw: object = MISSING
 
@@ -160,6 +161,7 @@ def static(
 def managed(
     tx_key: object = DEFAULT_TRANSACTION,
     *,
+    compare: str = "value",
     default: object = MISSING,
     default_factory: object = MISSING,
     allow_self_factory: bool = False,
@@ -177,6 +179,7 @@ def managed(
         allow_self_factory=allow_self_factory,
         init=init,
         tx_key=tx_key,
+        compare=compare,
         freeze=freeze,
         thaw=thaw,
     )
@@ -185,6 +188,7 @@ def managed(
 def owned(
     tx_key: object = DEFAULT_TRANSACTION,
     *,
+    compare: str = "value",
     default: object = MISSING,
     default_factory: object = MISSING,
     allow_self_factory: bool = False,
@@ -200,6 +204,7 @@ def owned(
         allow_self_factory=allow_self_factory,
         init=init,
         tx_key=tx_key,
+        compare=compare,
     )
 
 
@@ -248,6 +253,7 @@ def local_store(
 def transient(
     tx_key: object = DEFAULT_TRANSACTION,
     *,
+    compare: str = "value",
     default: object = MISSING,
     default_factory: object = MISSING,
     allow_self_factory: bool = False,
@@ -264,6 +270,7 @@ def transient(
         allow_self_factory=allow_self_factory,
         init=init,
         tx_key=tx_key,
+        compare=compare,
     )
 
 
@@ -376,6 +383,7 @@ def _marker(
     allow_self_factory: bool,
     init: bool,
     tx_key: object,
+    compare: str = "value",
     freeze: object = MISSING,
     thaw: object = MISSING,
 ) -> LifecycleMarker:
@@ -387,6 +395,8 @@ def _marker(
         raise LifecycleDefinitionError("init must be a bool")
     if not isinstance(allow_self_factory, bool):
         raise LifecycleDefinitionError("allow_self_factory must be a bool")
+    if compare not in {"value", "identity"}:
+        raise LifecycleDefinitionError("compare must be 'value' or 'identity'")
     if default_factory is not MISSING and not callable(default_factory):
         raise LifecycleDefinitionError("default_factory must be callable")
     if working_default_factory is not MISSING and not callable(working_default_factory):
@@ -411,6 +421,7 @@ def _marker(
         allow_self_factory=allow_self_factory,
         init=init,
         tx_key=tx_key,
+        compare=compare,
         freeze=freeze,
         thaw=thaw,
     )
