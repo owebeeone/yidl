@@ -11,6 +11,12 @@ The goal is not to change lifecycle behavior. The goal is to let feature YIDL
 files add their own lowering into a shared production skeleton, and then reduce
 the repeated boilerplate that appears once that layering is clean.
 
+Contribution-level boilerplate reduction is now specified in
+`dev-docs/YidlContributionBoilerplateReductionPlan.md`. This proposal document
+keeps the high-level motivation; the dedicated plan owns grammar details,
+validation, and rollout slices for `at`, bind groups, contribution presets, and
+deferred contribution families.
+
 ## Current Baseline
 
 Current transactional lifecycle YIDL source size:
