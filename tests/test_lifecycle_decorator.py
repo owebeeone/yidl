@@ -196,6 +196,35 @@ def test_lifecycle_decorator_evaluates_parameterized_default_factories() -> None
     assert explicit.v5 == 82
 
 
+def test_lifecycle_decorator_self_factory_no_edge_order_is_declaration_order() -> None:
+    calls: list[str] = []
+
+    def first_factory(self: object) -> str:
+        calls.append("first")
+        return "first"
+
+    def second_factory(self: object) -> str:
+        calls.append("second")
+        return "second"
+
+    class Example:
+        first: str = const(
+            default_factory=first_factory,
+            allow_self_factory=True,
+        )
+        second: str = const(
+            default_factory=second_factory,
+            allow_self_factory=True,
+        )
+
+    generated = lifecycle(Example)
+    item = generated()
+
+    assert calls == ["first", "second"]
+    assert item.first == "first"
+    assert item.second == "second"
+
+
 def test_lifecycle_decorator_initializes_transient_current_defaults() -> None:
     class Scratch:
         seed: int = initvar(default=3)

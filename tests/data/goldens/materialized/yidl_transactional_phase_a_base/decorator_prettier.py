@@ -2606,7 +2606,7 @@ def run_build_default_factory_facts(builder):
                     add_diagnostic(
                         consumer,
                         "self",
-                        f"{lifecycle_class.class_name}.{consumer.field_name}: default_factory parameter 'self' requires Slice 4 explicit self factory policy",
+                        f"{lifecycle_class.class_name}.{consumer.field_name}: default_factory parameter 'self' requires allow_self_factory=True",
                     )
                     continue
                 if param_name in {"current", "working"}:
@@ -3185,8 +3185,8 @@ for lifecycle_class in classes:
                     (
                         f"{lifecycle_class.class_name}."
                         f"{consumer.field_name}: default_factory "
-                        "parameter 'self' requires Slice 4 explicit "
-                        "self factory policy"
+                        "parameter 'self' requires "
+                        "allow_self_factory=True"
                     ),
                 )
                 continue

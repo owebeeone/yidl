@@ -479,7 +479,10 @@ def _factory_param_names(
     try:
         signature = inspect.signature(factory)
     except (TypeError, ValueError):
-        if not factory_is_class:
+        if not (
+            factory_is_class
+            and getattr(factory, "__module__", "") == "builtins"
+        ):
             _warn_unintrospectable_factory(class_name, decl, role=role)
         return ()
     names: list[str] = []

@@ -433,8 +433,8 @@ concept LifecycleBase {
                             (
                                 f"{lifecycle_class.class_name}."
                                 f"{consumer.field_name}: default_factory "
-                                "parameter 'self' requires Slice 4 explicit "
-                                "self factory policy"
+                                "parameter 'self' requires "
+                                "allow_self_factory=True"
                             ),
                         )
                         continue

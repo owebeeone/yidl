@@ -426,8 +426,23 @@ def test_yidl_transactional_default_factory_self_diagnostic() -> None:
         record.diagnostic_message
         for record in container.DefaultFactoryDiagnostics.sequence()
     ] == [
-        "Example.v2: default_factory parameter 'self' requires Slice 4 "
-        "explicit self factory policy",
+        "Example.v2: default_factory parameter 'self' requires "
+        "allow_self_factory=True",
+    ]
+
+
+@pytest.mark.parametrize("special_name", ("current", "working"))
+def test_yidl_transactional_default_factory_special_facade_diagnostic(
+    special_name: str,
+) -> None:
+    container = _default_factory_diagnostic_container((special_name,), ())
+
+    assert [
+        record.diagnostic_message
+        for record in container.DefaultFactoryDiagnostics.sequence()
+    ] == [
+        f"Example.v2: default_factory cannot use special injection "
+        f"{special_name!r} in this slice",
     ]
 
 

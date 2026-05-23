@@ -234,6 +234,7 @@ def test_harvester_carries_allow_self_factory() -> None:
 def test_harvester_collects_local_store_field() -> None:
     class Scratch:
         cache: dict[str, int] = local_store(default_factory=dict)
+        token: str = local_store(default="ready")
 
     harvested = harvest_lifecycle_definition(Scratch)
 
@@ -242,6 +243,9 @@ def test_harvester_collects_local_store_field() -> None:
     assert harvested.field_facts[0]["value_slot_name"] == "_y_cache_value"
     assert harvested.field_facts[0]["default_factory_param_names"] == ()
     assert harvested.build_kwargs["_Scratch_cache_default_factory"] is dict
+    assert harvested.field_facts[1]["field_kind"] == "local_store"
+    assert harvested.field_facts[1]["has_default"] is True
+    assert harvested.build_kwargs["_Scratch_token_default"] == "ready"
 
 
 def test_harvester_rejects_local_store_default_factory_parameters() -> None:
@@ -265,6 +269,12 @@ def test_local_store_marker_rejects_transaction_options() -> None:
     ):
         local_store(default_factory=dict, tx_key=DEFAULT_TRANSACTION)
 
+    with pytest.raises(
+        LifecycleDefinitionError,
+        match="local_store does not support working_default_factory",
+    ):
+        local_store(default_factory=dict, working_default_factory=list)
+
 
 def test_harvester_warns_for_unintrospectable_default_factory(
     monkeypatch: pytest.MonkeyPatch,
@@ -282,6 +292,32 @@ def test_harvester_warns_for_unintrospectable_default_factory(
 
     class Counter:
         value: int = field(default_factory=make_value)
+
+    with pytest.warns(
+        LifecycleDefinitionWarning,
+        match="default_factory signature could not be introspected",
+    ):
+        harvested = harvest_lifecycle_definition(Counter)
+
+    assert harvested.field_facts[0]["default_factory_param_names"] == ()
+
+
+def test_harvester_warns_for_unintrospectable_class_default_factory(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class Factory:
+        pass
+
+    def raise_for_callable(value: object) -> object:
+        if value is Factory:
+            raise ValueError("no signature")
+        return original_signature(value)
+
+    original_signature = inspect.signature
+    monkeypatch.setattr(inspect, "signature", raise_for_callable)
+
+    class Counter:
+        value: object = field(default_factory=Factory)
 
     with pytest.warns(
         LifecycleDefinitionWarning,
