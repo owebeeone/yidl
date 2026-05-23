@@ -7,7 +7,7 @@ Draft detailed plan.
 This document defines the first YIDL-generated transactional lifecycle base
 slice. It intentionally favors a direct base decorator proof over a fully
 layered feature-YIDL split. The goal is to prove the generated object model,
-transaction group indexing, managed field read/write semantics, facade weakref
+transaction key indexing, managed field read/write semantics, facade weakref
 management, and generated decorator/source shape before expanding into the
 full lifecycle helper surface.
 
@@ -84,7 +84,7 @@ model before considering any post-init style hook.
 
 Do not implement a special single-transaction-group model.
 
-The Phase A fixture should contain at least two transaction groups:
+The Phase A fixture should contain at least two transaction keys:
 
 ```text
 DEFAULT_TRANSACTION -> tx_index 0
@@ -122,8 +122,8 @@ decorator name:
 @lifecycle
 class Counter:
     plain: int = field(default=3)
-    count: int = managed(tx_group=DEFAULT_TRANSACTION, default=1)
-    audit_count: int = managed(tx_group="audit", default=10)
+    count: int = managed(tx_key=DEFAULT_TRANSACTION, default=1)
+    audit_count: int = managed(tx_key="audit", default=10)
 ```
 
 the generated source should have this broad shape:
@@ -134,7 +134,7 @@ def build_lifecycle_class(
     *,
     _Counter_lifecycle_definition,
     _Counter_annotations,
-    _Counter_tx_groups,
+    _Counter_tx_keys,
     _Counter_plain_default,
     _Counter_count_default,
     _Counter_audit_count_default,
@@ -168,20 +168,20 @@ def build_lifecycle_class(
         def working(self):
             return self._y_state._y_get_working_facade()
 
-        def begin(self, *tx_groups):
-            return self._y_state._y_transaction_manager.begin(*tx_groups)
+        def begin(self, *tx_keys):
+            return self._y_state._y_transaction_manager.begin(*tx_keys)
 
-        def validate(self, *tx_groups):
-            return self._y_state._y_transaction_manager.validate(*tx_groups)
+        def validate(self, *tx_keys):
+            return self._y_state._y_transaction_manager.validate(*tx_keys)
 
-        def commit_only(self, *tx_groups):
-            return self._y_state._y_transaction_manager.commit_only(*tx_groups)
+        def commit_only(self, *tx_keys):
+            return self._y_state._y_transaction_manager.commit_only(*tx_keys)
 
-        def commit(self, *tx_groups):
-            return self._y_state._y_transaction_manager.commit(*tx_groups)
+        def commit(self, *tx_keys):
+            return self._y_state._y_transaction_manager.commit(*tx_keys)
 
-        def rollback(self, *tx_groups):
-            return self._y_state._y_transaction_manager.rollback(*tx_groups)
+        def rollback(self, *tx_keys):
+            return self._y_state._y_transaction_manager.rollback(*tx_keys)
 
     class Counter(Counter_FacadeBase):
         __slots__ = ()
@@ -197,7 +197,7 @@ def build_lifecycle_class(
             state = object.__new__(Counter_State)
             object.__setattr__(self, "_y_state", state)
             state._y_transaction_manager = transaction_manager or TransactionManager(
-                tx_groups=("audit",)
+                tx_keys=("audit",)
             )
             state._y_default_ref = weakref.ref(self)
             state._y_current_ref = None
@@ -274,7 +274,7 @@ Normal user construction calls generated `Counter.__init__`, which:
 The state class does not need a normal public constructor.
 
 The `_y_working_tx_ids` slot is a mutable list with length equal to the number
-of transaction groups. It is indexed by `tx_index`.
+of transaction keys. It is indexed by `tx_index`.
 
 ### Secondary Facade Construction
 
@@ -384,7 +384,7 @@ Phase A behavior:
 
 Phase A behavior:
 
-- each managed field belongs to exactly one transaction group
+- each managed field belongs to exactly one transaction key
 - each managed field receives a resolved `tx_index`
 - state stores a current value
 - state stores a working value
@@ -398,8 +398,8 @@ Phase A behavior:
   - working value if the working slot is not `VOID`
   - otherwise current value
 - default/main write:
-  - requires an active transaction for the field's tx group
-  - promotes/marks the state as dirty for that tx group
+  - requires an active transaction for the field's tx key
+  - promotes/marks the state as dirty for that tx key
   - writes the working value
 - current write:
   - raises for managed fields in Phase A
@@ -459,12 +459,12 @@ HasDefault
 Default
 HasDefaultFactory
 DefaultFactory
-TxGroupKey
+TxKeyKey
 ```
 
-For non-transactional fields, `TxGroupKey` is absent or `None`.
+For non-transactional fields, `TxKeyKey` is absent or `None`.
 
-For managed fields, omitted `TxGroupKey` resolves to `DEFAULT_TRANSACTION`.
+For managed fields, omitted `TxKeyKey` resolves to `DEFAULT_TRANSACTION`.
 
 ### Derived Collections
 
@@ -472,7 +472,7 @@ Use a computed fact operation to derive transaction metadata:
 
 ```text
 TransactionalFields
-TxGroups
+TxKeys
 IndexedTransactionalFields
 TxRuntimeSlots
 ```
@@ -484,28 +484,28 @@ record TransactionalField {
     FieldId
     FieldOwner
     FieldName
-    TxGroupKey
+    TxKeyKey
     FieldOrder
 }
 
-record TxGroup {
+record TxKey {
     ClassId
-    TxGroupKey
+    TxKeyKey
     TxIndex
-    TxGroupOrder
+    TxKeyOrder
 }
 
 record IndexedTransactionalField {
     FieldId
     FieldOwner
     FieldName
-    TxGroupKey
+    TxKeyKey
     TxIndex
     FieldOrder
 }
 ```
 
-`TxGroups` should always include `DEFAULT_TRANSACTION` at index `0`.
+`TxKeys` should always include `DEFAULT_TRANSACTION` at index `0`.
 Additional groups are assigned stable indexes by first field declaration order.
 For inheritance, parent groups keep their existing indexes and child-only groups
 are appended in child declaration order.
@@ -520,20 +520,20 @@ Generated state or facade classes should expose immutable class metadata:
 
 ```python
 __yidl_tx_index_to_group__ = (DEFAULT_TRANSACTION, "audit")
-__yidl_tx_group_to_index__ = {DEFAULT_TRANSACTION: 0, "audit": 1}
+__yidl_tx_key_to_index__ = {DEFAULT_TRANSACTION: 0, "audit": 1}
 ```
 
 The `TransactionManager` constructor expects non-default groups in
-`tx_groups`. Therefore generated construction should pass:
+`tx_keys`. Therefore generated construction should pass:
 
 ```python
-TransactionManager(tx_groups=("audit",))
+TransactionManager(tx_keys=("audit",))
 ```
 
 when it auto-creates a manager. For more non-default groups, the generated
 constructor passes the deduplicated non-default groups in `tx_index` order. If
 a caller supplies a manager, Phase A should use it directly and let the runtime
-diagnose unknown transaction groups.
+diagnose unknown transaction keys.
 
 ## Transaction Runtime Protocol
 
@@ -543,19 +543,19 @@ manager.
 The state must implement:
 
 ```python
-def commit_order_key_for(self, tx_group=DEFAULT_TRANSACTION):
+def commit_order_key_for(self, tx_key=DEFAULT_TRANSACTION):
     return ()
 
-def requires_validation_for(self, tx_group=DEFAULT_TRANSACTION):
+def requires_validation_for(self, tx_key=DEFAULT_TRANSACTION):
     return False
 
-def validate_commit_for(self, tx_group=DEFAULT_TRANSACTION):
+def validate_commit_for(self, tx_key=DEFAULT_TRANSACTION):
     return True
 
-def _commit_transaction(self, tx_id, tx_group=DEFAULT_TRANSACTION):
+def _commit_transaction(self, tx_id, tx_key=DEFAULT_TRANSACTION):
     ...
 
-def _rollback_transaction(self, tx_id, tx_group=DEFAULT_TRANSACTION):
+def _rollback_transaction(self, tx_id, tx_key=DEFAULT_TRANSACTION):
     ...
 ```
 
@@ -566,7 +566,7 @@ fixed stubs.
 
 On the first working write for a tx index:
 
-1. find the active transaction for the field's tx group
+1. find the active transaction for the field's tx key
 2. reject if no active transaction exists
 3. reject if the state already has a working record for that tx index owned by
    a different tx id
@@ -578,7 +578,7 @@ The generated state should not enlist the public facade.
 
 ### Commit
 
-`_commit_transaction(tx_id, tx_group)` should:
+`_commit_transaction(tx_id, tx_key)` should:
 
 1. resolve `tx_index`
 2. no-op if the stored working tx id for that index differs from `tx_id`
@@ -590,7 +590,7 @@ The generated state should not enlist the public facade.
 
 ### Rollback
 
-`_rollback_transaction(tx_id, tx_group)` should:
+`_rollback_transaction(tx_id, tx_key)` should:
 
 1. resolve `tx_index`
 2. no-op if the stored working tx id for that index differs from `tx_id`
@@ -657,8 +657,8 @@ For Phase A, `__yidl_lifecycle_definition__` should at least contain:
   - init flag
   - literal default state
   - default-factory state
-  - transaction group key for managed fields
-- resolved transaction groups as `(tx_group, tx_index)` pairs
+  - transaction key key for managed fields
+- resolved transaction keys as `(tx_key, tx_index)` pairs
 - facade exposure facts if they have been customized
 
 The main generated facade class is the canonical home for this metadata.
@@ -682,7 +682,7 @@ def build_lifecycle_class(
     *,
     _Counter_lifecycle_definition,
     _Counter_annotations,
-    _Counter_tx_groups,
+    _Counter_tx_keys,
     _Counter_plain_default,
     _Counter_count_default,
     _Counter_audit_count_default,
@@ -704,7 +704,7 @@ runtime unnecessarily large and slow. Examples of static structure include:
 - lifecycle definition metadata
 - field/facade/transaction fact tables
 - annotations and match/class metadata
-- transaction group indexes
+- transaction key indexes
 - pre-resolved property/resource names
 - literal defaults and default factories
 
@@ -722,7 +722,7 @@ Counter = build_lifecycle_class(
     decorated_cls,
     _Counter_lifecycle_definition=Counter_lifecycle_definition,
     _Counter_annotations=Counter_annotations,
-    _Counter_tx_groups=Counter_tx_groups,
+    _Counter_tx_keys=Counter_tx_keys,
     _Counter_plain_default=plain_default,
     _Counter_count_default=count_default,
     _Counter_audit_count_default=audit_count_default,
@@ -813,14 +813,14 @@ Outputs:
 
 ```text
 TransactionalFields
-TxGroups
+TxKeys
 IndexedTransactionalFields
 ```
 
 Responsibilities:
 
 - select managed fields as transactional
-- resolve omitted managed `TxGroupKey` to `DEFAULT_TRANSACTION`
+- resolve omitted managed `TxKeyKey` to `DEFAULT_TRANSACTION`
 - assign stable tx indexes
 - write per-field tx indexes
 - diagnose invalid transaction metadata
@@ -915,8 +915,8 @@ Fact data should represent:
 
 ```text
 field plain: int = 3
-managed count: int = 1, tx_group=DEFAULT_TRANSACTION
-managed audit_count: int = 10, tx_group="audit"
+managed count: int = 1, tx_key=DEFAULT_TRANSACTION
+managed audit_count: int = 10, tx_key="audit"
 initvar seed: int = 2
 classvar KIND = "counter"
 ```
@@ -984,7 +984,7 @@ base slice:
 
 1. duplicate facade exposure name on one owner facade
 2. unknown target facade in a facade exposure
-3. managed field with invalid/missing transaction group metadata after
+3. managed field with invalid/missing transaction key metadata after
    defaulting
 4. duplicate field name within one class
 5. constructor parameter name collision
@@ -1041,7 +1041,7 @@ class Counter_State:
     )
 
     __yidl_tx_index_to_group__ = (DEFAULT_TRANSACTION, "audit")
-    __yidl_tx_group_to_index__ = {DEFAULT_TRANSACTION: 0, "audit": 1}
+    __yidl_tx_key_to_index__ = {DEFAULT_TRANSACTION: 0, "audit": 1}
 ```
 
 State construction is performed by the main facade `__init__`, not by a public
@@ -1059,7 +1059,7 @@ def __init__(
     state = object.__new__(Counter_State)
     object.__setattr__(self, "_y_state", state)
     state._y_transaction_manager = transaction_manager or TransactionManager(
-        tx_groups=("audit",)
+        tx_keys=("audit",)
     )
     state._y_default_ref = weakref.ref(self)
     state._y_current_ref = None
@@ -1133,20 +1133,20 @@ class Counter_FacadeBase(decorated_cls):
     def working(self):
         return self._y_state._y_get_working_facade()
 
-    def begin(self, *tx_groups):
-        return self._y_state._y_transaction_manager.begin(*tx_groups)
+    def begin(self, *tx_keys):
+        return self._y_state._y_transaction_manager.begin(*tx_keys)
 
-    def validate(self, *tx_groups):
-        return self._y_state._y_transaction_manager.validate(*tx_groups)
+    def validate(self, *tx_keys):
+        return self._y_state._y_transaction_manager.validate(*tx_keys)
 
-    def commit_only(self, *tx_groups):
-        return self._y_state._y_transaction_manager.commit_only(*tx_groups)
+    def commit_only(self, *tx_keys):
+        return self._y_state._y_transaction_manager.commit_only(*tx_keys)
 
-    def commit(self, *tx_groups):
-        return self._y_state._y_transaction_manager.commit(*tx_groups)
+    def commit(self, *tx_keys):
+        return self._y_state._y_transaction_manager.commit(*tx_keys)
 
-    def rollback(self, *tx_groups):
-        return self._y_state._y_transaction_manager.rollback(*tx_groups)
+    def rollback(self, *tx_keys):
+        return self._y_state._y_transaction_manager.rollback(*tx_keys)
 ```
 
 ### Plain Field Properties
@@ -1175,8 +1175,8 @@ equivalent to:
 
 ```python
 def _y_require_active_transaction(self, tx_index):
-    tx_group = self.__yidl_tx_index_to_group__[tx_index]
-    transaction = self._y_transaction_manager.active_transaction_for(tx_group)
+    tx_key = self.__yidl_tx_index_to_group__[tx_index]
+    transaction = self._y_transaction_manager.active_transaction_for(tx_key)
     if transaction is None:
         if self._y_working_tx_ids[tx_index] is not None:
             raise RuntimeError(
@@ -1192,9 +1192,9 @@ def _y_require_active_transaction(self, tx_index):
 def _y_ensure_working_transaction(self, tx_index):
     transaction = self._y_require_active_transaction(tx_index)
     if self._y_working_tx_ids[tx_index] is None:
-        tx_group = self.__yidl_tx_index_to_group__[tx_index]
+        tx_key = self.__yidl_tx_index_to_group__[tx_index]
         self._y_working_tx_ids[tx_index] = self._y_transaction_manager.enlist(
-            self, tx_group
+            self, tx_key
         )
     return transaction
 ```
@@ -1252,23 +1252,23 @@ With no validators or commit-order fields, the state protocol methods should
 be direct stubs plus generated commit/rollback logic:
 
 ```python
-def commit_order_key_for(self, tx_group=DEFAULT_TRANSACTION):
-    del tx_group
+def commit_order_key_for(self, tx_key=DEFAULT_TRANSACTION):
+    del tx_key
     return ()
 
 
-def requires_validation_for(self, tx_group=DEFAULT_TRANSACTION):
-    del tx_group
+def requires_validation_for(self, tx_key=DEFAULT_TRANSACTION):
+    del tx_key
     return False
 
 
-def validate_commit_for(self, tx_group=DEFAULT_TRANSACTION):
-    del tx_group
+def validate_commit_for(self, tx_key=DEFAULT_TRANSACTION):
+    del tx_key
     return True
 
 
-def _commit_transaction(self, tx_id, tx_group=DEFAULT_TRANSACTION):
-    tx_index = self.__yidl_tx_group_to_index__[tx_group]
+def _commit_transaction(self, tx_id, tx_key=DEFAULT_TRANSACTION):
+    tx_index = self.__yidl_tx_key_to_index__[tx_key]
     if self._y_working_tx_ids[tx_index] != tx_id:
         return self._y_get_default_facade()
     if tx_index == 0:
@@ -1283,8 +1283,8 @@ def _commit_transaction(self, tx_id, tx_group=DEFAULT_TRANSACTION):
     return self._y_get_default_facade()
 
 
-def _rollback_transaction(self, tx_id, tx_group=DEFAULT_TRANSACTION):
-    tx_index = self.__yidl_tx_group_to_index__[tx_group]
+def _rollback_transaction(self, tx_id, tx_key=DEFAULT_TRANSACTION):
+    tx_index = self.__yidl_tx_key_to_index__[tx_key]
     if self._y_working_tx_ids[tx_index] != tx_id:
         return self._y_get_default_facade()
     if tx_index == 0:
@@ -1323,7 +1323,7 @@ Verification:
 Deliverables:
 
 - `BuildTransactionFacts` operation
-- `TxGroups` and `IndexedTransactionalFields`
+- `TxKeys` and `IndexedTransactionalFields`
 - diagnostics for invalid tx metadata
 
 Verification:

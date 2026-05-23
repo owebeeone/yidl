@@ -27,7 +27,7 @@ def render_case() -> str:
             defaulted=True,
             default_value=0,
             order=0,
-            tx_group="default",
+            tx_key="default",
         ),
     )
     builder.add(

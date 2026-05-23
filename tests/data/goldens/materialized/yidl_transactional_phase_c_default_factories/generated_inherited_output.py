@@ -7,7 +7,7 @@ from yidl.runtime.transaction_yidl import DEFAULT_TRANSACTION
 from yidl.runtime.transaction_yidl import TransactionManager
 VOID = object()
 
-def build_lifecycle_class(decorated_cls, *, _Derived_lifecycle_definition, _Derived_annotations, _Derived_tx_groups, _Derived_v1_default, _Derived_v2_default_factory):
+def build_lifecycle_class(decorated_cls, *, _Derived_lifecycle_definition, _Derived_annotations, _Derived_tx_keys, _Derived_v1_default, _Derived_v2_default_factory):
 
     def _y_validate_binding_value(field_name, value):
         if value is not None and (not isinstance(value, BindingBase)):
@@ -27,8 +27,8 @@ def build_lifecycle_class(decorated_cls, *, _Derived_lifecycle_definition, _Deri
 
     class Derived_State:
         __slots__ = ('_y_transaction_manager', '_y_default_ref', '_y_current_ref', '_y_working_ref', '_y_v1_current', '_y_v1_working', '_y_v1_staged', '_y_v2_current', '_y_v2_working', '_y_v2_staged', '_y_working_tx_ids')
-        __yidl_tx_index_to_key__ = _Derived_tx_groups
-        __yidl_tx_key_to_index__ = {key: index for index, key in enumerate(_Derived_tx_groups)}
+        __yidl_tx_index_to_key__ = _Derived_tx_keys
+        __yidl_tx_key_to_index__ = {key: index for index, key in enumerate(_Derived_tx_keys)}
 
         def _y_get_default_facade(self):
             ref = self._y_default_ref
@@ -275,8 +275,8 @@ def build_lifecycle_class(decorated_cls, *, _Derived_lifecycle_definition, _Deri
         __yidl_lifecycle_generated__ = True
         __yidl_lifecycle_user_class__ = decorated_cls
         __yidl_lifecycle_definition__ = _Derived_lifecycle_definition
-        __yidl_tx_index_to_key__ = _Derived_tx_groups
-        __yidl_tx_key_to_index__ = {key: index for index, key in enumerate(_Derived_tx_groups)}
+        __yidl_tx_index_to_key__ = _Derived_tx_keys
+        __yidl_tx_key_to_index__ = {key: index for index, key in enumerate(_Derived_tx_keys)}
 
         @property
         def v1(self):
@@ -309,7 +309,7 @@ def build_lifecycle_class(decorated_cls, *, _Derived_lifecycle_definition, _Deri
             object.__setattr__(self, '_y_state', state)
             object.__setattr__(self, '_y_current_facade', None)
             object.__setattr__(self, '_y_working_facade', None)
-            state._y_transaction_manager = transaction_manager or TransactionManager(tx_groups=tuple((group for group in _Derived_tx_groups if group != DEFAULT_TRANSACTION)))
+            state._y_transaction_manager = transaction_manager or TransactionManager(tx_keys=tuple((group for group in _Derived_tx_keys if group != DEFAULT_TRANSACTION)))
             state._y_default_ref = weakref.ref(self)
             state._y_current_ref = None
             state._y_working_ref = None
@@ -321,7 +321,7 @@ def build_lifecycle_class(decorated_cls, *, _Derived_lifecycle_definition, _Deri
             if v2 is _HAS_DEFAULT_FACTORY:
                 v2 = _Derived_v2_default_factory(v1=self.v1)
             state._y_v2_current = v2
-            state._y_working_tx_ids = [None for _group in _Derived_tx_groups]
+            state._y_working_tx_ids = [None for _group in _Derived_tx_keys]
 
     class Derived_Current(Derived_FacadeBase):
         __slots__ = ()

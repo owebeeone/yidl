@@ -14,7 +14,7 @@ def build_lifecycle_class(
     *,
     _Owner_lifecycle_definition,
     _Owner_annotations,
-    _Owner_tx_groups,
+    _Owner_tx_keys,
     _Owner_child_default,
     _Owner_children_default_factory,
     _Owner_handle_default,
@@ -64,9 +64,9 @@ def build_lifecycle_class(
             "_y_handles_value",
             "_y_working_tx_ids",
         )
-        __yidl_tx_index_to_key__ = _Owner_tx_groups
+        __yidl_tx_index_to_key__ = _Owner_tx_keys
         __yidl_tx_key_to_index__ = {
-            key: index for index, key in enumerate(_Owner_tx_groups)
+            key: index for index, key in enumerate(_Owner_tx_keys)
         }
 
         def _y_get_default_facade(self):
@@ -363,9 +363,9 @@ def build_lifecycle_class(
         __yidl_lifecycle_generated__ = True
         __yidl_lifecycle_user_class__ = decorated_cls
         __yidl_lifecycle_definition__ = _Owner_lifecycle_definition
-        __yidl_tx_index_to_key__ = _Owner_tx_groups
+        __yidl_tx_index_to_key__ = _Owner_tx_keys
         __yidl_tx_key_to_index__ = {
-            key: index for index, key in enumerate(_Owner_tx_groups)
+            key: index for index, key in enumerate(_Owner_tx_keys)
         }
 
         @property
@@ -408,12 +408,8 @@ def build_lifecycle_class(
             object.__setattr__(self, "_y_current_facade", None)
             object.__setattr__(self, "_y_working_facade", None)
             state._y_transaction_manager = transaction_manager or TransactionManager(
-                tx_groups=tuple(
-                    (
-                        group
-                        for group in _Owner_tx_groups
-                        if group != DEFAULT_TRANSACTION
-                    )
+                tx_keys=tuple(
+                    (group for group in _Owner_tx_keys if group != DEFAULT_TRANSACTION)
                 )
             )
             state._y_default_ref = weakref.ref(self)
@@ -436,7 +432,7 @@ def build_lifecycle_class(
             if handles is _HAS_DEFAULT_FACTORY:
                 handles = _Owner_handles_default_factory()
             self.handles = handles
-            state._y_working_tx_ids = [None for _group in _Owner_tx_groups]
+            state._y_working_tx_ids = [None for _group in _Owner_tx_keys]
 
     class Owner_Current(Owner_FacadeBase):
         __slots__ = ()

@@ -58,7 +58,7 @@ def build_lifecycle_class(
         }
 ```
 
-`tx_group` should not be a YIDL lifecycle model term. It is the old runtime
+`tx_key` should not be a YIDL lifecycle model term. It is the old runtime
 name for what this plan calls `tx_key`. A "multi-group" scope in the current
 runtime is more precisely a multi-key transaction scope.
 
@@ -775,20 +775,20 @@ state internals toward the new vocabulary:
 
 ```text
 __yidl_tx_index_to_group__ -> __yidl_tx_index_to_key__
-__yidl_tx_group_to_index__ -> __yidl_tx_key_to_index__
-TxGroupsParamName          -> TxKeysParamName
+__yidl_tx_key_to_index__ -> __yidl_tx_key_to_index__
+TxKeysParamName          -> TxKeysParamName
 _y_working_tx_ids          -> _y_working_tx_tokens
 ```
 
 The low-level runtime can keep transitional aliases if needed, but new YIDL
-lowering should not introduce new `tx_group` names.
+lowering should not introduce new `tx_key` names.
 
 Phase F-1 introduces the new names as canonical and keeps the old generated
 metadata aliases in emitted classes:
 
 ```python
 __yidl_tx_index_to_group__ = __yidl_tx_index_to_key__
-__yidl_tx_group_to_index__ = __yidl_tx_key_to_index__
+__yidl_tx_key_to_index__ = __yidl_tx_key_to_index__
 ```
 
 The aliases are silent compatibility aliases, not new authored vocabulary.
@@ -804,7 +804,7 @@ protocol switches to key-addressed commit/rollback calls.
 
 ## YIDL Fact Changes
 
-The current Phase F method facts contain `TxGroupKey`. Under the new vocabulary
+The current Phase F method facts contain `TxKeyKey`. Under the new vocabulary
 this should become `TxKey`. That is enough for harvest diagnostics but not for
 robust generated branching. The lowering layer needs indexed method facts.
 
@@ -992,7 +992,7 @@ goldens so the generated prettier output proves:
 - the golden YIDL fixture includes at least two managed fields in the same
   generated class: one with `freeze`/`thaw` and one without either conversion
   function
-- no generated branch compares `tx_group` or `tx_key` to `"default_transaction"`
+- no generated branch compares `tx_key` or `tx_key` to `"default_transaction"`
 - no generated branch compares against `"audit"` or any other concrete key
   literal
 - generated source accepts transaction keys through an unpacked builder

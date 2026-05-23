@@ -20,7 +20,7 @@ Items = dds.collection("Items", ItemRecord, identity=Name)
 SpecialDeclarations = dds.collection(
     "SpecialDeclarations",
     SpecialDeclaration,
-    identity=(SpecialKind, TxGroup),
+    identity=(SpecialKind, TxKey),
 )
 ```
 
@@ -28,7 +28,7 @@ Runtime behavior:
 
 ```python
 identity = record.name
-identity = (record.special_kind, record.tx_group)
+identity = (record.special_kind, record.tx_key)
 ```
 
 Required support:
@@ -47,13 +47,13 @@ property from the matched record.
 API:
 
 ```python
-lookup(TxGroups, key=source.prop(TxGroup), value=TxIndex)
+lookup(TxKeys, key=source.prop(TxKey), value=TxIndex)
 ```
 
 Optional default:
 
 ```python
-lookup(TxGroups, key=source.prop(TxGroup), value=TxIndex, default=-1)
+lookup(TxKeys, key=source.prop(TxKey), value=TxIndex, default=-1)
 ```
 
 Default should be rare. Missing lookup is usually a design error.
@@ -163,7 +163,7 @@ API:
 ```python
 fields = concept.schema_family("FieldSpecs")
 fields.common(Name, Annotation, SourceOrder, SourceLabel)
-fields.variant("ManagedField", Kind, TxGroup, Default)
+fields.variant("ManagedField", Kind, TxKey, Default)
 fields.variant("InitVarField", Default, DefaultFactory)
 ```
 
@@ -178,7 +178,7 @@ ManagedField = FieldSpecs.variant(
     SourceOrder,
     SourceLabel,
     Kind,
-    TxGroup,
+    TxKey,
     Default,
 )
 ```
@@ -195,7 +195,7 @@ Core = builder.extends(LifecycleCoreConcept)
 
 Name = Core.props.Name
 FieldSpecs = Core.unions.FieldSpecs
-ManagedField = FieldSpecs.variant("ManagedField", Core.props.TxGroup)
+ManagedField = FieldSpecs.variant("ManagedField", Core.props.TxKey)
 ```
 
 Rules:

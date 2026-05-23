@@ -17,7 +17,7 @@ concept LifecycleBase {
     property WorkingFacadeClassName: str
     property LifecycleDefinitionParamName: str = ""
     property AnnotationsParamName: str = ""
-    property TxGroupsParamName: str = ""
+    property TxKeysParamName: str = ""
 
     property FieldId: str
     property FieldOwner: str
@@ -33,7 +33,7 @@ concept LifecycleBase {
     property DefaultFactory: object = None
     property DefaultFactoryParamName: str = ""
     property DefaultFactoryParamNames: object = ()
-    property TxGroupKey: object = None
+    property TxKeyKey: object = None
     property ValueSlotName: str = ""
     property CurrentSlotName: str = ""
     property WorkingSlotName: str = ""
@@ -49,7 +49,7 @@ concept LifecycleBase {
         WorkingFacadeClassName
         LifecycleDefinitionParamName
         AnnotationsParamName
-        TxGroupsParamName
+        TxKeysParamName
     }
 
     family LifecycleFieldSpec {
@@ -57,7 +57,7 @@ concept LifecycleBase {
         common Init, HasDefault, DefaultValue, DefaultValueParamName
         common HasDefaultFactory, DefaultFactory, DefaultFactoryParamName
         common DefaultFactoryParamNames
-        common TxGroupKey, ValueSlotName, CurrentSlotName, WorkingSlotName
+        common TxKeyKey, ValueSlotName, CurrentSlotName, WorkingSlotName
 
         variant PlainField {
         }
@@ -118,7 +118,7 @@ concept LifecycleBase {
     # Transaction facts.
     # -------------------------------------------------------------------------
 
-    property TxGroupOrder: int = 0
+    property TxKeyOrder: int = 0
     property TxIndex: int = 0
 
     record TransactionalField {
@@ -126,14 +126,14 @@ concept LifecycleBase {
         FieldOwner
         FieldName
         FieldOrder
-        TxGroupKey
+        TxKeyKey
     }
 
-    record TxGroup {
+    record TxKey {
         ClassId
-        TxGroupKey
+        TxKeyKey
         TxIndex
-        TxGroupOrder
+        TxKeyOrder
     }
 
     record IndexedTransactionalField {
@@ -141,14 +141,14 @@ concept LifecycleBase {
         FieldOwner
         FieldName
         FieldOrder
-        TxGroupKey
+        TxKeyKey
         TxIndex
         CurrentSlotName
         WorkingSlotName
     }
 
     collection TransactionalFields: TransactionalField identity FieldId many
-    collection TxGroups: TxGroup identity (ClassId, TxGroupKey) many
+    collection TxKeys: TxKey identity (ClassId, TxKeyKey) many
     collection IndexedTransactionalFields: IndexedTransactionalField identity FieldId many
 
     resource BuildTransactionFactsBody = code $[
@@ -166,12 +166,12 @@ concept LifecycleBase {
         for lifecycle_class in classes:
             seen = {DEFAULT_TRANSACTION: 0}
             ctx.write(
-                TxGroupsCollection,
-                TxGroup(
+                TxKeysCollection,
+                TxKey(
                     class_id=lifecycle_class.class_id,
-                    tx_group_key=DEFAULT_TRANSACTION,
+                    tx_key_key=DEFAULT_TRANSACTION,
                     tx_index=0,
-                    tx_group_order=0,
+                    tx_key_order=0,
                 ),
                 policy=RejectDuplicate,
             )
@@ -182,23 +182,23 @@ concept LifecycleBase {
                 if field.field_kind != "managed":
                     continue
 
-                tx_group = field.tx_group_key
-                if tx_group is None:
-                    tx_group = DEFAULT_TRANSACTION
-                if tx_group not in seen:
-                    seen[tx_group] = len(seen)
+                tx_key = field.tx_key_key
+                if tx_key is None:
+                    tx_key = DEFAULT_TRANSACTION
+                if tx_key not in seen:
+                    seen[tx_key] = len(seen)
                     ctx.write(
-                        TxGroupsCollection,
-                        TxGroup(
+                        TxKeysCollection,
+                        TxKey(
                             class_id=lifecycle_class.class_id,
-                            tx_group_key=tx_group,
-                            tx_index=seen[tx_group],
-                            tx_group_order=field.field_order,
+                            tx_key_key=tx_key,
+                            tx_index=seen[tx_key],
+                            tx_key_order=field.field_order,
                         ),
                         policy=RejectDuplicate,
                     )
 
-                tx_index = seen[tx_group]
+                tx_index = seen[tx_key]
                 ctx.write(
                     TransactionalFieldsCollection,
                     TransactionalField(
@@ -206,7 +206,7 @@ concept LifecycleBase {
                         field_owner=field.field_owner,
                         field_name=field.field_name,
                         field_order=field.field_order,
-                        tx_group_key=tx_group,
+                        tx_key_key=tx_key,
                     ),
                     policy=RejectDuplicate,
                 )
@@ -217,7 +217,7 @@ concept LifecycleBase {
                         field_owner=field.field_owner,
                         field_name=field.field_name,
                         field_order=field.field_order,
-                        tx_group_key=tx_group,
+                        tx_key_key=tx_key,
                         tx_index=tx_index,
                         current_slot_name=field.current_slot_name,
                         working_slot_name=field.working_slot_name,
@@ -226,15 +226,15 @@ concept LifecycleBase {
                 )
     ]$ {
         keep ctx, ClassesCollection, FieldsCollection
-        keep TxGroupsCollection, TransactionalFieldsCollection
+        keep TxKeysCollection, TransactionalFieldsCollection
         keep IndexedTransactionalFieldsCollection
-        keep TxGroup, TransactionalField, IndexedTransactionalField
+        keep TxKey, TransactionalField, IndexedTransactionalField
         keep RejectDuplicate
     }
 
     operation BuildTransactionFacts
         inputs(Classes, Fields)
-        outputs(TransactionalFields, TxGroups, IndexedTransactionalFields)
+        outputs(TransactionalFields, TxKeys, IndexedTransactionalFields)
         using BuildTransactionFactsBody
 
     # -------------------------------------------------------------------------
@@ -799,12 +799,12 @@ concept LifecycleBase {
                 "_y_working_tx_ids",
             )
             __yidl_tx_index_to_group__ = astichi_pass(
-                tx_groups_for_index_name__astichi_arg__,
+                tx_keys_for_index_name__astichi_arg__,
                 outer_bind=True,
             )
-            __yidl_tx_group_to_index__ = {
+            __yidl_tx_key_to_index__ = {
                 group: index for index, group in enumerate(
-                    astichi_pass(tx_groups_for_map_name__astichi_arg__, outer_bind=True)
+                    astichi_pass(tx_keys_for_map_name__astichi_arg__, outer_bind=True)
                 )
             }
 
@@ -836,8 +836,8 @@ concept LifecycleBase {
                 return facade
 
             def _y_require_active_transaction(self, tx_index):
-                tx_group = self.__yidl_tx_index_to_group__[tx_index]
-                transaction = self._y_transaction_manager.active_transaction_for(tx_group)
+                tx_key = self.__yidl_tx_index_to_group__[tx_index]
+                transaction = self._y_transaction_manager.active_transaction_for(tx_key)
                 if transaction is None:
                     if self._y_working_tx_ids[tx_index] is not None:
                         raise RuntimeError(
@@ -854,34 +854,34 @@ concept LifecycleBase {
             def _y_ensure_working_transaction(self, tx_index):
                 transaction = self._y_require_active_transaction(tx_index)
                 if self._y_working_tx_ids[tx_index] is None:
-                    tx_group = self.__yidl_tx_index_to_group__[tx_index]
+                    tx_key = self.__yidl_tx_index_to_group__[tx_index]
                     self._y_working_tx_ids[tx_index] = (
-                        self._y_transaction_manager.enlist(self, tx_group)
+                        self._y_transaction_manager.enlist(self, tx_key)
                     )
                 return transaction
 
-            def commit_order_key_for(self, tx_group=DEFAULT_TRANSACTION):
-                del tx_group
+            def commit_order_key_for(self, tx_key=DEFAULT_TRANSACTION):
+                del tx_key
                 return ()
 
-            def requires_validation_for(self, tx_group=DEFAULT_TRANSACTION):
-                del tx_group
+            def requires_validation_for(self, tx_key=DEFAULT_TRANSACTION):
+                del tx_key
                 return False
 
-            def validate_commit_for(self, tx_group=DEFAULT_TRANSACTION):
-                del tx_group
+            def validate_commit_for(self, tx_key=DEFAULT_TRANSACTION):
+                del tx_key
                 return True
 
-            def _commit_transaction(self, tx_id, tx_group=DEFAULT_TRANSACTION):
-                tx_index = self.__yidl_tx_group_to_index__[tx_group]
+            def _commit_transaction(self, tx_id, tx_key=DEFAULT_TRANSACTION):
+                tx_index = self.__yidl_tx_key_to_index__[tx_key]
                 if self._y_working_tx_ids[tx_index] != tx_id:
                     return self._y_get_default_facade()
                 astichi_hole(commit_transaction_body)
                 self._y_working_tx_ids[tx_index] = None
                 return self._y_get_default_facade()
 
-            def _rollback_transaction(self, tx_id, tx_group=DEFAULT_TRANSACTION):
-                tx_index = self.__yidl_tx_group_to_index__[tx_group]
+            def _rollback_transaction(self, tx_id, tx_key=DEFAULT_TRANSACTION):
+                tx_index = self.__yidl_tx_key_to_index__[tx_key]
                 if self._y_working_tx_ids[tx_index] != tx_id:
                     return self._y_get_default_facade()
                 astichi_hole(rollback_transaction_body)
@@ -906,20 +906,20 @@ concept LifecycleBase {
             def working(self):
                 return self._y_state._y_get_working_facade()
 
-            def begin(self, *tx_groups):
-                return self._y_state._y_transaction_manager.begin(*tx_groups)
+            def begin(self, *tx_keys):
+                return self._y_state._y_transaction_manager.begin(*tx_keys)
 
-            def validate(self, *tx_groups):
-                return self._y_state._y_transaction_manager.validate(*tx_groups)
+            def validate(self, *tx_keys):
+                return self._y_state._y_transaction_manager.validate(*tx_keys)
 
-            def commit_only(self, *tx_groups):
-                return self._y_state._y_transaction_manager.commit_only(*tx_groups)
+            def commit_only(self, *tx_keys):
+                return self._y_state._y_transaction_manager.commit_only(*tx_keys)
 
-            def commit(self, *tx_groups):
-                return self._y_state._y_transaction_manager.commit(*tx_groups)
+            def commit(self, *tx_keys):
+                return self._y_state._y_transaction_manager.commit(*tx_keys)
 
-            def rollback(self, *tx_groups):
-                return self._y_state._y_transaction_manager.rollback(*tx_groups)
+            def rollback(self, *tx_keys):
+                return self._y_state._y_transaction_manager.rollback(*tx_keys)
 
             astichi_hole(facade_base_body)
             astichi_hole(facade_properties)
@@ -943,13 +943,13 @@ concept LifecycleBase {
                 outer_bind=True,
             )
             __yidl_tx_index_to_group__ = astichi_pass(
-                tx_groups_for_class_index_name__astichi_arg__,
+                tx_keys_for_class_index_name__astichi_arg__,
                 outer_bind=True,
             )
-            __yidl_tx_group_to_index__ = {
+            __yidl_tx_key_to_index__ = {
                 group: index for index, group in enumerate(
                     astichi_pass(
-                        tx_groups_for_class_map_name__astichi_arg__,
+                        tx_keys_for_class_map_name__astichi_arg__,
                         outer_bind=True,
                     )
                 )
@@ -961,9 +961,9 @@ concept LifecycleBase {
                 state = object.__new__(state_class_ref__astichi_arg__)
                 object.__setattr__(self, "_y_state", state)
                 state._y_transaction_manager = transaction_manager or TransactionManager(
-                    tx_groups=tuple(
+                    tx_keys=tuple(
                         group for group in astichi_pass(
-                            tx_groups_for_manager_name__astichi_arg__,
+                            tx_keys_for_manager_name__astichi_arg__,
                             outer_bind=True,
                         )
                         if group != DEFAULT_TRANSACTION
@@ -976,7 +976,7 @@ concept LifecycleBase {
                 state._y_working_tx_ids = [
                     None
                     for _group in astichi_pass(
-                        tx_groups_for_slots_name__astichi_arg__,
+                        tx_keys_for_slots_name__astichi_arg__,
                         outer_bind=True,
                     )
                 ]
@@ -1043,8 +1043,8 @@ concept LifecycleBase {
         ident value_name = AnnotationsParamName
     }
 
-    contribution TxGroupsBuilderParam = BuilderParam {
-        as TxGroupsBuilderParam
+    contribution TxKeysBuilderParam = BuilderParam {
+        as TxKeysBuilderParam
         index ClassOrder
         order ClassOrder
 
@@ -1052,7 +1052,7 @@ concept LifecycleBase {
             build /Root
         }
 
-        ident value_name = TxGroupsParamName
+        ident value_name = TxKeysParamName
     }
 
     contribution FieldDefaultBuilderParam = BuilderParam {
@@ -1620,8 +1620,8 @@ concept LifecycleBase {
         default -> AnnotationsBuilderParam
     }
 
-    matcher TxGroupsBuilderParamContributions(lifecycle_class: Classes) -> contribution {
-        default -> TxGroupsBuilderParam
+    matcher TxKeysBuilderParamContributions(lifecycle_class: Classes) -> contribution {
+        default -> TxKeysBuilderParam
     }
 
     matcher FieldDefaultBuilderParamContributions(field: Fields) -> contribution {
@@ -1824,9 +1824,9 @@ concept LifecycleBase {
             from lifecycle_class: Classes
             using AnnotationsBuilderParamContributions
 
-        apply tx_groups_params
+        apply tx_keys_params
             from lifecycle_class: Classes
-            using TxGroupsBuilderParamContributions
+            using TxKeysBuilderParamContributions
 
         apply field_default_params
             from field: Fields
@@ -1855,12 +1855,12 @@ concept LifecycleBase {
             ident current_facade_class_ref = CurrentFacadeClassName
             ident working_facade_class_decl_name = WorkingFacadeClassName
             ident working_facade_class_ref = WorkingFacadeClassName
-            ident tx_groups_for_index_name = TxGroupsParamName
-            ident tx_groups_for_map_name = TxGroupsParamName
-            ident tx_groups_for_class_index_name = TxGroupsParamName
-            ident tx_groups_for_class_map_name = TxGroupsParamName
-            ident tx_groups_for_manager_name = TxGroupsParamName
-            ident tx_groups_for_slots_name = TxGroupsParamName
+            ident tx_keys_for_index_name = TxKeysParamName
+            ident tx_keys_for_map_name = TxKeysParamName
+            ident tx_keys_for_class_index_name = TxKeysParamName
+            ident tx_keys_for_class_map_name = TxKeysParamName
+            ident tx_keys_for_manager_name = TxKeysParamName
+            ident tx_keys_for_slots_name = TxKeysParamName
             ident lifecycle_definition_name = LifecycleDefinitionParamName
             ident annotations_name = AnnotationsParamName
         }

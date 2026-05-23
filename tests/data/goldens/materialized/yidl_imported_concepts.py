@@ -2,9 +2,9 @@ from yidl.generation.data_def_sys import AddIfAbsent, DDSContainerBuilder, NOT_P
 _NameProperty = RuntimeProperty('Name', str, default=REQUIRED, storage_name='name')
 _KindProperty = RuntimeProperty('Kind', object, default=REQUIRED, storage_name='kind')
 _SourceOrderProperty = RuntimeProperty('SourceOrder', int, default=0, storage_name='source_order')
-_TxGroupProperty = RuntimeProperty('TxGroup', str, default='default', storage_name='tx_group')
+_TxKeyProperty = RuntimeProperty('TxKey', str, default='default', storage_name='tx_key')
 _PlainFieldSpec = RuntimeRecord('PlainField', (_NameProperty, _KindProperty, _SourceOrderProperty))
-_ManagedFieldSpec = RuntimeRecord('ManagedField', (_NameProperty, _KindProperty, _SourceOrderProperty, _TxGroupProperty))
+_ManagedFieldSpec = RuntimeRecord('ManagedField', (_NameProperty, _KindProperty, _SourceOrderProperty, _TxKeyProperty))
 _FieldSpecsUnion = RuntimeUnion('FieldSpecs', (_PlainFieldSpec, _ManagedFieldSpec))
 
 class PlainField:
@@ -37,14 +37,14 @@ class PlainField:
 _PlainFieldSpec.bind_record_class(PlainField)
 
 class ManagedField:
-    __slots__ = ('name', 'kind', 'source_order', 'tx_group')
+    __slots__ = ('name', 'kind', 'source_order', 'tx_key')
     __dds_record_spec__ = _ManagedFieldSpec
     name: str
     kind: object
     source_order: int
-    tx_group: str
+    tx_key: str
 
-    def __init__(self, *, name: str, kind: object, source_order: int=0, tx_group: str='default'):
+    def __init__(self, *, name: str, kind: object, source_order: int=0, tx_key: str='default'):
         if not isinstance(name, str):
             raise TypeError('Name must be str, got ' + type(name).__name__)
         object.__setattr__(self, 'name', name)
@@ -52,12 +52,12 @@ class ManagedField:
         if not isinstance(source_order, int):
             raise TypeError('SourceOrder must be int, got ' + type(source_order).__name__)
         object.__setattr__(self, 'source_order', source_order)
-        if not isinstance(tx_group, str):
-            raise TypeError('TxGroup must be str, got ' + type(tx_group).__name__)
-        object.__setattr__(self, 'tx_group', tx_group)
+        if not isinstance(tx_key, str):
+            raise TypeError('TxKey must be str, got ' + type(tx_key).__name__)
+        object.__setattr__(self, 'tx_key', tx_key)
 
     def __setattr__(self, name, value):
-        if name in ('name', 'kind', 'source_order', 'tx_group'):
+        if name in ('name', 'kind', 'source_order', 'tx_key'):
             raise AttributeError('ManagedField records are immutable')
         object.__setattr__(self, name, value)
 
@@ -66,7 +66,7 @@ class ManagedField:
         pieces.append('name=' + repr(self.name))
         pieces.append('kind=' + repr(self.kind))
         pieces.append('source_order=' + repr(self.source_order))
-        pieces.append('tx_group=' + repr(self.tx_group))
+        pieces.append('tx_key=' + repr(self.tx_key))
         return 'ManagedField' + '(' + ', '.join(pieces) + ')'
 _ManagedFieldSpec.bind_record_class(ManagedField)
 FieldsCollection = RuntimeCollection('Fields', _FieldSpecsUnion, allows_multiple=True, identity=_NameProperty)

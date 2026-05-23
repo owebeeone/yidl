@@ -12,20 +12,20 @@ from yidl.generation.data_def_sys import read
 def _build_dds() -> DataDefinitionSystem:
     dds = DataDefinitionSystem()
     name = dds.property("Name", str, default=REQUIRED, storage_name="name")
-    tx_group = dds.property("TxGroup", str, default=REQUIRED, storage_name="tx_group")
+    tx_key = dds.property("TxKey", str, default=REQUIRED, storage_name="tx_key")
     phase = dds.property("Phase", str, default=REQUIRED, storage_name="phase")
     tx_index = dds.property("TxIndex", int, default=REQUIRED, storage_name="tx_index")
     order = dds.property("Order", int, default=0, storage_name="order")
 
-    tx_group_record = dds.record("TxGroupRecord", tx_group, phase, tx_index)
-    field = dds.record("Field", name, tx_group, phase, order)
+    tx_key_record = dds.record("TxKeyRecord", tx_key, phase, tx_index)
+    field = dds.record("Field", name, tx_key, phase, order)
     contribution = dds.record("Contribution", tx_index, name, order)
 
-    tx_groups = dds.collection(
-        "TxGroups",
-        tx_group_record,
+    tx_keys = dds.collection(
+        "TxKeys",
+        tx_key_record,
         cardinality=dds.many,
-        identity=(tx_group, phase),
+        identity=(tx_key, phase),
     )
     fields = dds.collection("Fields", field, cardinality=dds.many, identity=name)
     contributions = dds.collection(
@@ -40,8 +40,8 @@ def _build_dds() -> DataDefinitionSystem:
         target=contributions,
         values={
             tx_index: lookup(
-                tx_groups,
-                key=(read(tx_group), read(phase)),
+                tx_keys,
+                key=(read(tx_key), read(phase)),
                 value=tx_index,
             ),
             name: read(name),
@@ -62,30 +62,30 @@ def validate_case(source: str) -> None:
     exec(source, namespace)
 
     builder = namespace["new_builder"]()
-    tx_group_record = namespace["TxGroupRecord"]
+    tx_key_record = namespace["TxKeyRecord"]
     field = namespace["Field"]
-    tx_groups = namespace["TxGroupsCollection"]
+    tx_keys = namespace["TxKeysCollection"]
     fields = namespace["FieldsCollection"]
     contributions = namespace["ContributionsCollection"]
 
-    builder.add(tx_groups, tx_group_record(tx_group="main", phase="commit", tx_index=0))
-    builder.add(tx_groups, tx_group_record(tx_group="aux", phase="commit", tx_index=1))
-    builder.add(fields, field(name="owner", tx_group="main", phase="commit", order=2))
-    builder.add(fields, field(name="memo", tx_group="aux", phase="commit", order=1))
+    builder.add(tx_keys, tx_key_record(tx_key="main", phase="commit", tx_index=0))
+    builder.add(tx_keys, tx_key_record(tx_key="aux", phase="commit", tx_index=1))
+    builder.add(fields, field(name="owner", tx_key="main", phase="commit", order=2))
+    builder.add(fields, field(name="memo", tx_key="aux", phase="commit", order=1))
     container = namespace["build_container"](builder)
 
-    assert container.TxGroups.by_identity(("main", "commit")).tx_index == 0
-    assert container.TxGroups.by_identity(("aux", "commit")).tx_index == 1
+    assert container.TxKeys.by_identity(("main", "commit")).tx_index == 0
+    assert container.TxKeys.by_identity(("aux", "commit")).tx_index == 1
     assert container.Contributions.by_identity((0, "owner")).order == 2
     assert container.Contributions.by_identity((1, "memo")).order == 1
     assert [record.name for record in container.Contributions.sequence()] == [
         "owner",
         "memo",
     ]
-    assert "identity=(_TxGroupProperty, _PhaseProperty)" in source
+    assert "identity=(_TxKeyProperty, _PhaseProperty)" in source
     assert "identity=(_TxIndexProperty, _NameProperty)" in source
-    assert "lookup_0_key = (source.tx_group, source.phase)" in source
-    assert "builder.by_identity(TxGroupsCollection, lookup_0_key)" in source
+    assert "lookup_0_key = (source.tx_key, source.phase)" in source
+    assert "builder.by_identity(TxKeysCollection, lookup_0_key)" in source
     assert "dds.collection(" not in source
     assert "dds.production(" not in source
 

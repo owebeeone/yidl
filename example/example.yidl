@@ -37,7 +37,7 @@ transducer ManagedField: fieldhelper=managed
         default: ?@object(Any) = None
         default_factory: ?@lambda[@self] = None
         initial_working: ?@object(Any) = None
-        tx_group: @str = "DEFAULT_TRANSACTION"
+        tx_key: @str = "DEFAULT_TRANSACTION"
         freeze: ?@lambda[@working] = None
         thaw: ?@lambda[@published] = None
 
@@ -76,12 +76,12 @@ transducer ManagedField: fieldhelper=managed
         
         set(val, old_val): %%
             store.write(val)
-            txm.mark_dirty(tx_group)
+            txm.mark_dirty(tx_key)
 
     behavior Proxy:
-        get: %% return getattr(Working, name) if tx_active(tx_group) else getattr(Current, name)
+        get: %% return getattr(Working, name) if tx_active(tx_key) else getattr(Current, name)
         set(val): %%
-            assert tx_active(tx_group), "Must be in transaction"
+            assert tx_active(tx_key), "Must be in transaction"
             setattr(Working, name, val)
 
     behavior Commit:
@@ -108,7 +108,7 @@ transducer BindingField: fieldhelper=binding, owned
         name: @id
         annotation: @type
         default: ?@object(Any) = None
-        tx_group: @str = "DEFAULT_TRANSACTION"
+        tx_key: @str = "DEFAULT_TRANSACTION"
 
     behavior Init:
         store = PublishedStore
@@ -134,15 +134,15 @@ transducer BindingField: fieldhelper=binding, owned
                 val.inc_ref()
                 
             store.write(val)
-            txm.mark_dirty(tx_group)
+            txm.mark_dirty(tx_key)
             
             if old_val:
                 old_val.dec_ref()
 
     behavior Proxy:
-        get: %% return getattr(Working, name) if tx_active(tx_group) else getattr(Current, name)
+        get: %% return getattr(Working, name) if tx_active(tx_key) else getattr(Current, name)
         set(val): %%
-            assert tx_active(tx_group), "Must be in transaction"
+            assert tx_active(tx_key), "Must be in transaction"
             setattr(Working, name, val)
 
     behavior Commit:
@@ -207,7 +207,7 @@ transducer TransientField: fieldhelper=transient
         default: ?@object(Any) = None
         default_factory: ?@lambda[@self] = None
         working_default_factory: ?@lambda[@self, @current, @working] = None
-        tx_group: @str = "DEFAULT_TRANSACTION"
+        tx_key: @str = "DEFAULT_TRANSACTION"
 
     compile_assert:
         default NAND default_factory
@@ -241,9 +241,9 @@ transducer TransientField: fieldhelper=transient
             store.write(val)
 
     behavior Proxy:
-        get: %% return getattr(Working, name) if tx_active(tx_group) else getattr(Current, name)
+        get: %% return getattr(Working, name) if tx_active(tx_key) else getattr(Current, name)
         set(val): %%
-            assert tx_active(tx_group), "Must be in transaction"
+            assert tx_active(tx_key), "Must be in transaction"
             setattr(Working, name, val)
 
     behavior Commit, Rollback:
@@ -352,15 +352,15 @@ transducer StaticField: fieldhelper=static
 transducer CommitValidatorMeta: classhelper=commit_validator
     inputs:
         default: @lambda[@self]
-        tx_group: @str = "DEFAULT_TRANSACTION"
+        tx_key: @str = "DEFAULT_TRANSACTION"
 
     behavior ClassMeta:
-        map_insert: __lc_validators__[{tx_group}] = {default}
+        map_insert: __lc_validators__[{tx_key}] = {default}
 
 transducer CommitOrderKeyMeta: classhelper=commit_order_key
     inputs:
         default: @object(tuple)
-        tx_group: @str = "DEFAULT_TRANSACTION"
+        tx_key: @str = "DEFAULT_TRANSACTION"
 
     behavior ClassMeta:
-        map_insert: __lc_order_keys__[{tx_group}] = {default}
+        map_insert: __lc_order_keys__[{tx_key}] = {default}

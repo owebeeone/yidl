@@ -113,13 +113,13 @@ def test_production_rejects_unemittable_call_without_source_name() -> None:
 def test_keyed_lookup_rejects_missing_target_record_without_default() -> None:
     dds = DataDefinitionSystem()
     name = dds.property("Name", str, default=REQUIRED, storage_name="name")
-    tx_group = dds.property("TxGroup", str, default=REQUIRED, storage_name="tx_group")
+    tx_key = dds.property("TxKey", str, default=REQUIRED, storage_name="tx_key")
     tx_index = dds.property("TxIndex", int, default=REQUIRED, storage_name="tx_index")
-    source_record = dds.record("Source", name, tx_group)
-    target_record = dds.record("Target", tx_group, tx_index)
+    source_record = dds.record("Source", name, tx_key)
+    target_record = dds.record("Target", tx_key, tx_index)
     output_record = dds.record("Output", name, tx_index)
     sources = dds.collection("Sources", source_record, cardinality=dds.many, identity=name)
-    targets = dds.collection("Targets", target_record, cardinality=dds.many, identity=tx_group)
+    targets = dds.collection("Targets", target_record, cardinality=dds.many, identity=tx_key)
     outputs = dds.collection("Outputs", output_record, cardinality=dds.many, identity=name)
     production = dds.production(
         "SourceProvidesOutput",
@@ -127,10 +127,10 @@ def test_keyed_lookup_rejects_missing_target_record_without_default() -> None:
         target=outputs,
         values={
             name: read(name),
-            tx_index: lookup(targets, key=read(tx_group), value=tx_index),
+            tx_index: lookup(targets, key=read(tx_key), value=tx_index),
         },
     )
-    source = sources.record(name="owner", tx_group="missing")
+    source = sources.record(name="owner", tx_key="missing")
     builder = dds.container_builder()
     builder.add(sources, source)
 
@@ -141,13 +141,13 @@ def test_keyed_lookup_rejects_missing_target_record_without_default() -> None:
 def test_keyed_lookup_uses_explicit_default_for_missing_target_record() -> None:
     dds = DataDefinitionSystem()
     name = dds.property("Name", str, default=REQUIRED, storage_name="name")
-    tx_group = dds.property("TxGroup", str, default=REQUIRED, storage_name="tx_group")
+    tx_key = dds.property("TxKey", str, default=REQUIRED, storage_name="tx_key")
     tx_index = dds.property("TxIndex", int, default=REQUIRED, storage_name="tx_index")
-    source_record = dds.record("Source", name, tx_group)
-    target_record = dds.record("Target", tx_group, tx_index)
+    source_record = dds.record("Source", name, tx_key)
+    target_record = dds.record("Target", tx_key, tx_index)
     output_record = dds.record("Output", name, tx_index)
     sources = dds.collection("Sources", source_record, cardinality=dds.many, identity=name)
-    targets = dds.collection("Targets", target_record, cardinality=dds.many, identity=tx_group)
+    targets = dds.collection("Targets", target_record, cardinality=dds.many, identity=tx_key)
     outputs = dds.collection("Outputs", output_record, cardinality=dds.many, identity=name)
     production = dds.production(
         "SourceProvidesOutput",
@@ -155,12 +155,12 @@ def test_keyed_lookup_uses_explicit_default_for_missing_target_record() -> None:
         target=outputs,
         values={
             name: read(name),
-            tx_index: lookup(targets, key=read(tx_group), value=tx_index, default=-1),
+            tx_index: lookup(targets, key=read(tx_key), value=tx_index, default=-1),
         },
     )
 
     record = production.make_record(
-        sources.record(name="owner", tx_group="missing"),
+        sources.record(name="owner", tx_key="missing"),
         container=dds.container_builder()._snapshot(),
     )
 

@@ -13,46 +13,46 @@ DEFAULT_TRANSACTION: Hashable = "default_transaction"
 
 
 class TransactionContext(Protocol):
-    def commit_order_key_for(self, tx_group: Hashable = DEFAULT_TRANSACTION) -> tuple[object, ...]:
+    def commit_order_key_for(self, tx_key: Hashable = DEFAULT_TRANSACTION) -> tuple[object, ...]:
         ...
 
-    def requires_validation_for(self, tx_group: Hashable = DEFAULT_TRANSACTION) -> bool:
+    def requires_validation_for(self, tx_key: Hashable = DEFAULT_TRANSACTION) -> bool:
         ...
 
-    def validate_commit_for(self, tx_group: Hashable = DEFAULT_TRANSACTION) -> bool:
+    def validate_commit_for(self, tx_key: Hashable = DEFAULT_TRANSACTION) -> bool:
         ...
 
     def _prepare_commit_tx_by_key(
         self,
-        tx_group: Hashable = DEFAULT_TRANSACTION,
+        tx_key: Hashable = DEFAULT_TRANSACTION,
         tx_token: int | None = None,
     ) -> object:
         ...
 
     def _apply_prepared_commit_tx_by_key(
         self,
-        tx_group: Hashable = DEFAULT_TRANSACTION,
+        tx_key: Hashable = DEFAULT_TRANSACTION,
         tx_token: int | None = None,
     ) -> object:
         ...
 
     def _after_commit_tx_by_key(
         self,
-        tx_group: Hashable = DEFAULT_TRANSACTION,
+        tx_key: Hashable = DEFAULT_TRANSACTION,
         tx_token: int | None = None,
     ) -> object:
         ...
 
     def _rollback_tx_by_key(
         self,
-        tx_group: Hashable = DEFAULT_TRANSACTION,
+        tx_key: Hashable = DEFAULT_TRANSACTION,
         tx_token: int | None = None,
     ) -> object:
         ...
 
     def _after_rollback_tx_by_key(
         self,
-        tx_group: Hashable = DEFAULT_TRANSACTION,
+        tx_key: Hashable = DEFAULT_TRANSACTION,
         tx_token: int | None = None,
     ) -> object:
         ...
@@ -71,7 +71,7 @@ class YidlValidatorReturnedFalse(RuntimeError):
 @dataclass(slots=True)
 class LifecycleTransaction:
     tx_id: int
-    tx_group: Hashable = DEFAULT_TRANSACTION
+    tx_key: Hashable = DEFAULT_TRANSACTION
     dirty_contexts: dict[int, TransactionContext] = field(default_factory=dict)
     validator_contexts: dict[int, TransactionContext] = field(default_factory=dict)
     _scope_commit: Callable[[], object] | None = field(default=None, init=False, repr=False, compare=False)
@@ -79,18 +79,18 @@ class LifecycleTransaction:
 
     def commit_order(self) -> tuple[TransactionContext, ...]:
         contexts = list(self.dirty_contexts.values())
-        contexts.sort(key=lambda context: context.commit_order_key_for(self.tx_group), reverse=True)
+        contexts.sort(key=lambda context: context.commit_order_key_for(self.tx_key), reverse=True)
         return tuple(contexts)
 
     def rollback_dirty(self) -> None:
         for context in list(self.dirty_contexts.values()):
             rollback = getattr(context, "_rollback_tx_by_key", None)
             if rollback is not None:
-                rollback(self.tx_group, self.tx_id)
+                rollback(self.tx_key, self.tx_id)
                 continue
             legacy_rollback = getattr(context, "_rollback_transaction", None)
             if legacy_rollback is not None:
-                legacy_rollback(self.tx_id, self.tx_group)
+                legacy_rollback(self.tx_id, self.tx_key)
                 continue
             raise AttributeError(
                 f"{type(context).__qualname__!r} has no yidl rollback callback",
@@ -100,13 +100,13 @@ class LifecycleTransaction:
         for context in list(self.dirty_contexts.values()):
             after_rollback = getattr(context, "_after_rollback_tx_by_key", None)
             if after_rollback is not None:
-                after_rollback(self.tx_group, self.tx_id)
+                after_rollback(self.tx_key, self.tx_id)
 
     def validate_commit(self) -> None:
         failures: list[BaseException] = []
         for context in self.validator_contexts.values():
             try:
-                ok = context.validate_commit_for(self.tx_group)
+                ok = context.validate_commit_for(self.tx_key)
             except BaseException as exc:
                 failures.append(exc)
                 continue
@@ -119,17 +119,17 @@ class LifecycleTransaction:
         for context in self.commit_order():
             prepare = getattr(context, "_prepare_commit_tx_by_key", None)
             if prepare is not None:
-                prepare(self.tx_group, self.tx_id)
+                prepare(self.tx_key, self.tx_id)
 
     def apply_prepared_commits(self) -> None:
         for context in self.commit_order():
             apply_prepared = getattr(context, "_apply_prepared_commit_tx_by_key", None)
             if apply_prepared is not None:
-                apply_prepared(self.tx_group, self.tx_id)
+                apply_prepared(self.tx_key, self.tx_id)
                 continue
             legacy_commit = getattr(context, "_commit_transaction", None)
             if legacy_commit is not None:
-                legacy_commit(self.tx_id, self.tx_group)
+                legacy_commit(self.tx_id, self.tx_key)
                 continue
             raise AttributeError(
                 f"{type(context).__qualname__!r} has no yidl commit callback",
@@ -139,7 +139,7 @@ class LifecycleTransaction:
         for context in self.commit_order():
             after_commit = getattr(context, "_after_commit_tx_by_key", None)
             if after_commit is not None:
-                after_commit(self.tx_group, self.tx_id)
+                after_commit(self.tx_key, self.tx_id)
 
     def bind_scope(
         self,
@@ -172,35 +172,35 @@ class LifecycleTransaction:
 
 @dataclass(slots=True)
 class GroupTransactionManager:
-    tx_group: Hashable = DEFAULT_TRANSACTION
+    tx_key: Hashable = DEFAULT_TRANSACTION
     _next_tx_id: int = field(default=1, init=False, repr=False)
     active_transaction: LifecycleTransaction | None = field(default=None, init=False, repr=False)
     begin_count: int = field(default=0, init=False, repr=False)
 
-    def active_transaction_for(self, tx_group: Hashable = DEFAULT_TRANSACTION) -> LifecycleTransaction | None:
-        if tx_group != self.tx_group:
-            raise RuntimeError(f"unknown yidl transaction group {tx_group!r}")
+    def active_transaction_for(self, tx_key: Hashable = DEFAULT_TRANSACTION) -> LifecycleTransaction | None:
+        if tx_key != self.tx_key:
+            raise RuntimeError(f"unknown yidl transaction key {tx_key!r}")
         return self.active_transaction
 
-    def begin(self, tx_group: Hashable = DEFAULT_TRANSACTION) -> LifecycleTransaction:
-        if tx_group != self.tx_group:
-            raise RuntimeError(f"unknown yidl transaction group {tx_group!r}")
+    def begin(self, tx_key: Hashable = DEFAULT_TRANSACTION) -> LifecycleTransaction:
+        if tx_key != self.tx_key:
+            raise RuntimeError(f"unknown yidl transaction key {tx_key!r}")
         if self.begin_count == 0:
             if self.active_transaction is not None:
                 raise RuntimeError("yidl transaction manager state is corrupted")
-            self.active_transaction = LifecycleTransaction(tx_id=self._next_tx_id, tx_group=self.tx_group)
+            self.active_transaction = LifecycleTransaction(tx_id=self._next_tx_id, tx_key=self.tx_key)
             self._next_tx_id += 1
         self.begin_count += 1
         transaction = self.active_transaction
         assert transaction is not None
         return transaction.bind_scope(
-            commit=lambda: self.commit(self.tx_group),
-            rollback=lambda: self.rollback(self.tx_group),
+            commit=lambda: self.commit(self.tx_key),
+            rollback=lambda: self.rollback(self.tx_key),
         )
 
-    def validate(self, tx_group: Hashable = DEFAULT_TRANSACTION) -> None:
-        if tx_group != self.tx_group:
-            raise RuntimeError(f"unknown yidl transaction group {tx_group!r}")
+    def validate(self, tx_key: Hashable = DEFAULT_TRANSACTION) -> None:
+        if tx_key != self.tx_key:
+            raise RuntimeError(f"unknown yidl transaction key {tx_key!r}")
         if self.begin_count <= 0:
             raise RuntimeError("no active yidl transaction")
         transaction = self.active_transaction
@@ -208,9 +208,9 @@ class GroupTransactionManager:
             raise RuntimeError("yidl transaction manager state is corrupted")
         transaction.validate_commit()
 
-    def commit_only(self, tx_group: Hashable = DEFAULT_TRANSACTION) -> int | None:
-        if tx_group != self.tx_group:
-            raise RuntimeError(f"unknown yidl transaction group {tx_group!r}")
+    def commit_only(self, tx_key: Hashable = DEFAULT_TRANSACTION) -> int | None:
+        if tx_key != self.tx_key:
+            raise RuntimeError(f"unknown yidl transaction key {tx_key!r}")
         if self.begin_count <= 0:
             raise RuntimeError("no active yidl transaction")
         if self.begin_count > 1:
@@ -234,24 +234,24 @@ class GroupTransactionManager:
             self.begin_count = 0
         return tx_id
 
-    def commit(self, tx_group: Hashable = DEFAULT_TRANSACTION) -> int | None:
-        if tx_group != self.tx_group:
-            raise RuntimeError(f"unknown yidl transaction group {tx_group!r}")
+    def commit(self, tx_key: Hashable = DEFAULT_TRANSACTION) -> int | None:
+        if tx_key != self.tx_key:
+            raise RuntimeError(f"unknown yidl transaction key {tx_key!r}")
         if self.begin_count <= 0:
             raise RuntimeError("no active yidl transaction")
         if self.begin_count > 1:
             self.begin_count -= 1
             return None
         try:
-            self.validate(tx_group)
+            self.validate(tx_key)
         except BaseException:
-            self.rollback(tx_group)
+            self.rollback(tx_key)
             raise
-        return self.commit_only(tx_group)
+        return self.commit_only(tx_key)
 
-    def rollback(self, tx_group: Hashable = DEFAULT_TRANSACTION) -> int | None:
-        if tx_group != self.tx_group:
-            raise RuntimeError(f"unknown yidl transaction group {tx_group!r}")
+    def rollback(self, tx_key: Hashable = DEFAULT_TRANSACTION) -> int | None:
+        if tx_key != self.tx_key:
+            raise RuntimeError(f"unknown yidl transaction key {tx_key!r}")
         if self.begin_count <= 0 or self.active_transaction is None:
             raise RuntimeError("no active yidl transaction")
         transaction = self.active_transaction
@@ -264,15 +264,15 @@ class GroupTransactionManager:
             self.begin_count = 0
         return tx_id
 
-    def enlist(self, context: TransactionContext, tx_group: Hashable = DEFAULT_TRANSACTION) -> int:
-        if tx_group != self.tx_group:
-            raise RuntimeError(f"unknown yidl transaction group {tx_group!r}")
+    def enlist(self, context: TransactionContext, tx_key: Hashable = DEFAULT_TRANSACTION) -> int:
+        if tx_key != self.tx_key:
+            raise RuntimeError(f"unknown yidl transaction key {tx_key!r}")
         transaction = self.active_transaction
         if transaction is None:
             raise RuntimeError("no active yidl transaction")
         context_id = id(context)
         transaction.dirty_contexts[context_id] = context
-        if context.requires_validation_for(tx_group):
+        if context.requires_validation_for(tx_key):
             transaction.validator_contexts[context_id] = context
         return transaction.tx_id
 
@@ -280,10 +280,10 @@ class GroupTransactionManager:
         self,
         context: TransactionContext,
         tx_id: int | None = None,
-        tx_group: Hashable = DEFAULT_TRANSACTION,
+        tx_key: Hashable = DEFAULT_TRANSACTION,
     ) -> None:
-        if tx_group != self.tx_group:
-            raise RuntimeError(f"unknown yidl transaction group {tx_group!r}")
+        if tx_key != self.tx_key:
+            raise RuntimeError(f"unknown yidl transaction key {tx_key!r}")
         transaction = self.active_transaction
         if transaction is None:
             return
@@ -320,23 +320,23 @@ CommitResult: TypeAlias = int | tuple[int | None, ...] | None
 
 
 class TransactionManager:
-    __slots__ = ("_tx_groups", "_tx_group_set", "_group_managers")
+    __slots__ = ("_tx_keys", "_tx_key_set", "_group_managers")
 
-    def __init__(self, *, tx_groups: Iterable[Hashable] = ()) -> None:
+    def __init__(self, *, tx_keys: Iterable[Hashable] = ()) -> None:
         normalized_groups: list[Hashable] = []
         seen = {DEFAULT_TRANSACTION}
-        for group in tx_groups:
+        for group in tx_keys:
             if group in seen:
                 continue
             seen.add(group)
             normalized_groups.append(group)
-        self._tx_groups = tuple(normalized_groups)
-        self._tx_group_set = frozenset((DEFAULT_TRANSACTION, *self._tx_groups))
+        self._tx_keys = tuple(normalized_groups)
+        self._tx_key_set = frozenset((DEFAULT_TRANSACTION, *self._tx_keys))
         self._group_managers: dict[Hashable, GroupTransactionManager] = {}
 
     @property
-    def tx_groups(self) -> tuple[Hashable, ...]:
-        return self._tx_groups
+    def tx_keys(self) -> tuple[Hashable, ...]:
+        return self._tx_keys
 
     @property
     def active_transaction(self) -> LifecycleTransaction | None:
@@ -350,12 +350,12 @@ class TransactionManager:
     def begin_count(self) -> int:
         return self._get_group_manager(DEFAULT_TRANSACTION).begin_count
 
-    def active_transaction_for(self, tx_group: Hashable = DEFAULT_TRANSACTION) -> LifecycleTransaction | None:
-        return self._get_group_manager(tx_group).active_transaction
+    def active_transaction_for(self, tx_key: Hashable = DEFAULT_TRANSACTION) -> LifecycleTransaction | None:
+        return self._get_group_manager(tx_key).active_transaction
 
     def _normalize_groups(self, groups: tuple[Hashable, ...]) -> tuple[Hashable, ...]:
         if not groups:
-            return (DEFAULT_TRANSACTION, *self._tx_groups)
+            return (DEFAULT_TRANSACTION, *self._tx_keys)
         normalized: list[Hashable] = []
         seen: set[Hashable] = set()
         for group in groups:
@@ -367,14 +367,14 @@ class TransactionManager:
         return tuple(normalized)
 
     def _require_known_group(self, group: Hashable) -> None:
-        if group not in self._tx_group_set:
-            raise RuntimeError(f"unknown yidl transaction group {group!r}")
+        if group not in self._tx_key_set:
+            raise RuntimeError(f"unknown yidl transaction key {group!r}")
 
     def _get_group_manager(self, group: Hashable) -> GroupTransactionManager:
         self._require_known_group(group)
         manager = self._group_managers.get(group)
         if manager is None:
-            manager = GroupTransactionManager(tx_group=group)
+            manager = GroupTransactionManager(tx_key=group)
             self._group_managers[group] = manager
         return manager
 
@@ -398,7 +398,7 @@ class TransactionManager:
             return
         if len(failures) == 1:
             raise failures[0]
-        raise ExceptionGroup("yidl transaction group validation failed", failures)
+        raise ExceptionGroup("yidl transaction key validation failed", failures)
 
     def commit_only(self, *groups: Hashable) -> CommitResult:
         normalized_groups = self._normalize_groups(groups)
@@ -414,7 +414,7 @@ class TransactionManager:
         if failures:
             if len(failures) == 1:
                 raise failures[0]
-            raise ExceptionGroup("yidl transaction group commit_only failed", failures)
+            raise ExceptionGroup("yidl transaction key commit_only failed", failures)
         return tuple(results)
 
     def commit(self, *groups: Hashable) -> CommitResult:
@@ -431,7 +431,7 @@ class TransactionManager:
         if failures:
             if len(failures) == 1:
                 raise failures[0]
-            raise ExceptionGroup("yidl transaction group commit failed", failures)
+            raise ExceptionGroup("yidl transaction key commit failed", failures)
         return tuple(results)
 
     def rollback(self, *groups: Hashable) -> CommitResult:
@@ -448,16 +448,16 @@ class TransactionManager:
         if failures:
             if len(failures) == 1:
                 raise failures[0]
-            raise ExceptionGroup("yidl transaction group rollback failed", failures)
+            raise ExceptionGroup("yidl transaction key rollback failed", failures)
         return tuple(results)
 
-    def enlist(self, context: TransactionContext, tx_group: Hashable = DEFAULT_TRANSACTION) -> int:
-        return self._get_group_manager(tx_group).enlist(context, tx_group)
+    def enlist(self, context: TransactionContext, tx_key: Hashable = DEFAULT_TRANSACTION) -> int:
+        return self._get_group_manager(tx_key).enlist(context, tx_key)
 
     def drop(
         self,
         context: TransactionContext,
         tx_id: int | None = None,
-        tx_group: Hashable = DEFAULT_TRANSACTION,
+        tx_key: Hashable = DEFAULT_TRANSACTION,
     ) -> None:
-        self._get_group_manager(tx_group).drop(context, tx_id, tx_group)
+        self._get_group_manager(tx_key).drop(context, tx_id, tx_key)

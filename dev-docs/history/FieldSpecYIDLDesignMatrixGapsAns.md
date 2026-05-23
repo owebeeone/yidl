@@ -16,14 +16,14 @@ Format:
 
 ## GAP-TG — transaction-group semantics still need completion details
 
-**Summary:** `tx_group` is now explicitly owned in the split design, but
+**Summary:** `tx_key` is now explicitly owned in the split design, but
 visibility and cross-group interaction rules still need completion.
 
 **Options**
 
 - `RUNTIME+FRONTEND:` add a transaction-groups section to the runtime/class
-  model and a small frontend/spec note for harvested `tx_group`
-- `SCATTER:` leave `tx_group` implicit across commit-related sections
+  model and a small frontend/spec note for harvested `tx_key`
+- `SCATTER:` leave `tx_key` implicit across commit-related sections
 
 **Direction:** `RUNTIME+FRONTEND`
 

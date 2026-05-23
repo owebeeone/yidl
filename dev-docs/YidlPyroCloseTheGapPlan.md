@@ -20,7 +20,7 @@ verification, and a stop condition.
 During this plan, edits under `pyrolyze/` are allowed only for the canonical
 transaction naming cleanup:
 
-- remove `tx_group`
+- remove `tx_key`
 - replace it with `tx_key`
 - update related plural and derived names
 
@@ -29,7 +29,7 @@ This includes the Slice 1 rename inside the legacy
 other Pyro behavior change.
 
 If any later slice appears to require a `pyrolyze/` source change that is not
-part of the `tx_group` to `tx_key` cleanup, the rollout must stop and discuss
+part of the `tx_key` to `tx_key` cleanup, the rollout must stop and discuss
 that change explicitly before proceeding.
 
 YIDL files, YIDL tests, YIDL generated goldens, and YIDL dev docs may change as
@@ -69,27 +69,27 @@ and the user explicitly expands the scope:
 
 ## Naming Decision: `tx_key`
 
-`tx_group` is a bad name for the concept. The value is a hashable transaction
+`tx_key` is a bad name for the concept. The value is a hashable transaction
 key. This checkout and its submodules can be migrated directly.
 
-There should be no long-term compatibility alias for `tx_group`.
+There should be no long-term compatibility alias for `tx_key`.
 
 Canonical names:
 
 | Old | New |
 | --- | --- |
-| `tx_group` | `tx_key` |
-| `tx_groups` | `tx_keys` |
-| `tx_group_key` | `tx_key` |
-| `tx_group_set` | `tx_key_set` |
-| `__yidl_tx_group_to_index__` | `__yidl_tx_key_to_index__` |
-| `TxGroups` | `TxKeys` |
-| `TxGroupKey` | `TxKey` |
+| `tx_key` | `tx_key` |
+| `tx_keys` | `tx_keys` |
+| `tx_key_key` | `tx_key` |
+| `tx_key_set` | `tx_key_set` |
+| `__yidl_tx_key_to_index__` | `__yidl_tx_key_to_index__` |
+| `TxKeys` | `TxKeys` |
+| `TxKeyKey` | `TxKey` |
 
 Do not blindly rename unrelated English uses of "group" unless they are part of
 the transaction-key surface. For example, a class name such as
 `GroupTransactionManager` can be evaluated during the rename, but the key goal
-is to remove `tx_group` terminology. If leaving a non-`tx_group` "group" name
+is to remove `tx_key` terminology. If leaving a non-`tx_key` "group" name
 makes generated code read incorrectly, rename it in the same slice and document
 the reason in the commit message.
 
@@ -159,7 +159,7 @@ fixtures.
 
 ### Goal
 
-Remove `tx_group` terminology across YIDL, Pyro, tests, docs, generated
+Remove `tx_key` terminology across YIDL, Pyro, tests, docs, generated
 goldens, and fixtures. `tx_key` becomes the only accepted spelling.
 
 This is the only slice that may edit `pyrolyze/`.
@@ -168,29 +168,29 @@ This is the only slice that may edit `pyrolyze/`.
 
 YIDL runtime:
 
-- rename marker fields and function parameters from `tx_group` to `tx_key`
-- rename transaction manager method parameters from `tx_group` to `tx_key`
+- rename marker fields and function parameters from `tx_key` to `tx_key`
+- rename transaction manager method parameters from `tx_key` to `tx_key`
 - rename internal variables and class metadata:
-  - `tx_groups` to `tx_keys`
-  - `tx_group_set` to `tx_key_set`
-  - `__yidl_tx_group_to_index__` to `__yidl_tx_key_to_index__`
+  - `tx_keys` to `tx_keys`
+  - `tx_key_set` to `tx_key_set`
+  - `__yidl_tx_key_to_index__` to `__yidl_tx_key_to_index__`
 - update generated code templates in lifecycle YIDL sources
 - update generated materialized goldens
 
 Pyrolyze source:
 
 - rename lifecycle marker kwargs and runtime transaction names from
-  `tx_group` to `tx_key`
+  `tx_key` to `tx_key`
 - include the legacy implementation module `pyrolyze/src/pyrolyze/lifecycle.py`
-  in the rename; there is no surviving `tx_group=` compatibility alias in this
+  in the rename; there is no surviving `tx_key=` compatibility alias in this
   checkout
-- update `PASS_TX_GROUP` style constants if they are transaction-key constants,
+- update `PASS_TX_KEY` style constants if they are transaction-key constants,
   for example `PASS_TX_KEY`
 - preserve transaction-key values such as `"context_pass"`; only the identifier
   spelling changes unless a value is demonstrably wrong
 - update lifecycle WIP declarations such as:
-  - `managed(..., tx_group=PASS_TX_GROUP)`
-  - `transient(..., tx_group=PASS_TX_GROUP)`
+  - `managed(..., tx_key=PASS_TX_KEY)`
+  - `transient(..., tx_key=PASS_TX_KEY)`
 - do not remove `compare="identity"` from Pyro WIP declarations in this slice;
   YIDL representability handles that keyword as compatibility metadata later in
   this plan
@@ -208,22 +208,22 @@ After the slice, these searches should either produce no results or only
 explicitly accepted historical references:
 
 ```bash
-rg -n "tx_group|tx_groups|TxGroup|TxGroups|tx group|tx groups" .
+rg -n "tx_key|tx_keys|TxKey|TxKeys|tx key|tx keys" .
 ```
 
-The target is no active source, fixture, or golden use of `tx_group`.
+The target is no active source, fixture, or golden use of `tx_key`.
 
 Expected high-signal rename targets include:
 
-- `tx_group_to_index` and `__yidl_tx_group_to_index__`
-- generated operation names such as `tx_groups_params`
-- generated records/resources such as `TxGroupsBuilderParamContributions`
+- `tx_key_to_index` and `__yidl_tx_key_to_index__`
+- generated operation names such as `tx_keys_params`
+- generated records/resources such as `TxKeysBuilderParamContributions`
 - transaction hook marker kwargs:
-  - `commit_order_key(..., tx_group=...)`
-  - `validate_commit(..., tx_group=...)`
-  - `before_commit(..., tx_group=...)`
-  - `after_commit(..., tx_group=...)`
-  - `after_rollback(..., tx_group=...)`
+  - `commit_order_key(..., tx_key=...)`
+  - `validate_commit(..., tx_key=...)`
+  - `before_commit(..., tx_key=...)`
+  - `after_commit(..., tx_key=...)`
+  - `after_rollback(..., tx_key=...)`
 
 Regenerate affected YIDL goldens and the generated lifecycle base module from
 source after the rename. Do not patch generated artifacts by hand.
@@ -253,7 +253,7 @@ Stop if:
 - a non-rename Pyro behavior change appears necessary
 - the rename exposes ambiguity between transaction key and another "group"
   concept
-- generated output still accepts `tx_group=` as a public compatibility alias
+- generated output still accepts `tx_key=` as a public compatibility alias
 
 ## Slice 2: Field-Kind Matrix And Transaction Infrastructure Clarification
 
@@ -730,7 +730,7 @@ side-effect hook.
 
 After the roll-build completes through Slice 7:
 
-- `tx_group` is gone from active code and generated output
+- `tx_key` is gone from active code and generated output
 - `tx_key` is the only transaction-key spelling
 - lifecycle field-kind semantics are documented in a matrix
 - normal factories support safe `cls` injection

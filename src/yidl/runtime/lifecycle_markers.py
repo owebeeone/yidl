@@ -27,7 +27,7 @@ class LifecycleMarker:
     default_factory: object = MISSING
     working_default_factory: object = MISSING
     init: bool = True
-    tx_group: object = MISSING
+    tx_key: object = MISSING
     freeze: object = MISSING
     thaw: object = MISSING
 
@@ -46,7 +46,7 @@ class FieldDecl:
     default_factory: object
     has_working_default_factory: bool
     working_default_factory: object
-    tx_group: object
+    tx_key: object
     has_freeze: bool = False
     freeze: object = MISSING
     has_thaw: bool = False
@@ -58,7 +58,7 @@ class TransactionMethodMarker:
     """Marker attached to transaction hook/validator methods."""
 
     kind: str
-    tx_group: object = DEFAULT_TRANSACTION
+    tx_key: object = DEFAULT_TRANSACTION
 
 
 def field(
@@ -75,7 +75,7 @@ def field(
         default_factory=default_factory,
         working_default_factory=MISSING,
         init=init,
-        tx_group=MISSING,
+        tx_key=MISSING,
     )
 
 
@@ -93,7 +93,7 @@ def initvar(
         default_factory=default_factory,
         working_default_factory=MISSING,
         init=init,
-        tx_group=MISSING,
+        tx_key=MISSING,
     )
 
 
@@ -106,7 +106,7 @@ def classvar(*, default: object = MISSING) -> LifecycleMarker:
         default_factory=MISSING,
         working_default_factory=MISSING,
         init=False,
-        tx_group=MISSING,
+        tx_key=MISSING,
     )
 
 
@@ -124,7 +124,7 @@ def const(
         default_factory=default_factory,
         working_default_factory=MISSING,
         init=init,
-        tx_group=MISSING,
+        tx_key=MISSING,
     )
 
 
@@ -142,12 +142,12 @@ def static(
         default_factory=default_factory,
         working_default_factory=MISSING,
         init=init,
-        tx_group=MISSING,
+        tx_key=MISSING,
     )
 
 
 def managed(
-    tx_group: object = DEFAULT_TRANSACTION,
+    tx_key: object = DEFAULT_TRANSACTION,
     *,
     default: object = MISSING,
     default_factory: object = MISSING,
@@ -163,7 +163,7 @@ def managed(
         default_factory=default_factory,
         working_default_factory=MISSING,
         init=init,
-        tx_group=tx_group,
+        tx_key=tx_key,
         freeze=freeze,
         thaw=thaw,
     )
@@ -184,7 +184,7 @@ def owned(
         default_factory=default_factory,
         working_default_factory=MISSING,
         init=init,
-        tx_group=tx_key,
+        tx_key=tx_key,
     )
 
 
@@ -202,7 +202,7 @@ def binding(
         default_factory=default_factory,
         working_default_factory=MISSING,
         init=init,
-        tx_group=MISSING,
+        tx_key=MISSING,
     )
 
 
@@ -222,53 +222,53 @@ def transient(
         default_factory=default_factory,
         working_default_factory=working_default_factory,
         init=init,
-        tx_group=tx_key,
+        tx_key=tx_key,
     )
 
 
 def commit_order_key(
     *args: object,
-    tx_group: object = MISSING,
+    tx_key: object = MISSING,
 ) -> object:
-    """Mark a method as the commit-order key provider for a transaction group."""
+    """Mark a method as the commit-order key provider for a transaction key."""
 
-    return _transaction_method_marker("commit_order_key", *args, tx_group=tx_group)
+    return _transaction_method_marker("commit_order_key", *args, tx_key=tx_key)
 
 
 def validate_commit(
     *args: object,
-    tx_group: object = MISSING,
+    tx_key: object = MISSING,
 ) -> object:
-    """Mark a method as a commit validator for a transaction group."""
+    """Mark a method as a commit validator for a transaction key."""
 
-    return _transaction_method_marker("validate_commit", *args, tx_group=tx_group)
+    return _transaction_method_marker("validate_commit", *args, tx_key=tx_key)
 
 
 def before_commit(
     *args: object,
-    tx_group: object = MISSING,
+    tx_key: object = MISSING,
 ) -> object:
-    """Mark a method as a before-commit hook for a transaction group."""
+    """Mark a method as a before-commit hook for a transaction key."""
 
-    return _transaction_method_marker("before_commit", *args, tx_group=tx_group)
+    return _transaction_method_marker("before_commit", *args, tx_key=tx_key)
 
 
 def after_commit(
     *args: object,
-    tx_group: object = MISSING,
+    tx_key: object = MISSING,
 ) -> object:
-    """Mark a method as an after-commit hook for a transaction group."""
+    """Mark a method as an after-commit hook for a transaction key."""
 
-    return _transaction_method_marker("after_commit", *args, tx_group=tx_group)
+    return _transaction_method_marker("after_commit", *args, tx_key=tx_key)
 
 
 def after_rollback(
     *args: object,
-    tx_group: object = MISSING,
+    tx_key: object = MISSING,
 ) -> object:
-    """Mark a method as an after-rollback hook for a transaction group."""
+    """Mark a method as an after-rollback hook for a transaction key."""
 
-    return _transaction_method_marker("after_rollback", *args, tx_group=tx_group)
+    return _transaction_method_marker("after_rollback", *args, tx_key=tx_key)
 
 
 def transaction_method_markers(value: object) -> tuple[TransactionMethodMarker, ...]:
@@ -312,11 +312,11 @@ def normalize_marker(
         default_factory=marker.default_factory,
         has_working_default_factory=marker.working_default_factory is not MISSING,
         working_default_factory=marker.working_default_factory,
-        tx_group=(
+        tx_key=(
             DEFAULT_TRANSACTION
             if marker.kind in {"managed", "owned", "transient"}
-            and marker.tx_group is MISSING
-            else marker.tx_group
+            and marker.tx_key is MISSING
+            else marker.tx_key
         ),
         has_freeze=marker.freeze is not MISSING,
         freeze=marker.freeze,
@@ -332,7 +332,7 @@ def _marker(
     default_factory: object,
     working_default_factory: object,
     init: bool,
-    tx_group: object,
+    tx_key: object,
     freeze: object = MISSING,
     thaw: object = MISSING,
 ) -> LifecycleMarker:
@@ -364,7 +364,7 @@ def _marker(
         default_factory=default_factory,
         working_default_factory=working_default_factory,
         init=init,
-        tx_group=tx_group,
+        tx_key=tx_key,
         freeze=freeze,
         thaw=thaw,
     )
@@ -373,20 +373,20 @@ def _marker(
 def _transaction_method_marker(
     kind: str,
     *args: object,
-    tx_group: object,
+    tx_key: object,
 ) -> object:
     if len(args) > 1:
         raise LifecycleDefinitionError("unsupported transaction marker call shape")
-    if args and tx_group is not MISSING:
+    if args and tx_key is not MISSING:
         raise LifecycleDefinitionError("unsupported transaction marker call shape")
     if args:
-        selected_tx_group = args[0]
-        if callable(selected_tx_group):
+        selected_tx_key = args[0]
+        if callable(selected_tx_key):
             raise LifecycleDefinitionError(
-                "transaction method marker requires an explicit transaction group",
+                "transaction method marker requires an explicit transaction key",
             )
     else:
-        selected_tx_group = DEFAULT_TRANSACTION if tx_group is MISSING else tx_group
+        selected_tx_key = DEFAULT_TRANSACTION if tx_key is MISSING else tx_key
 
     def decorate(target: object) -> object:
         if not callable(target):
@@ -397,7 +397,7 @@ def _transaction_method_marker(
         setattr(
             target,
             _TRANSACTION_METHOD_MARKERS_ATTR,
-            (*existing, TransactionMethodMarker(kind, selected_tx_group)),
+            (*existing, TransactionMethodMarker(kind, selected_tx_key)),
         )
         return target
 

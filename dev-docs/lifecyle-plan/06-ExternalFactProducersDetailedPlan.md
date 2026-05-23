@@ -295,6 +295,6 @@ Goldens:
 The golden should include:
 
 - callable accepting `current`
-- callable accepting `working` and `tx_group`
+- callable accepting `working` and `tx_key`
 - default factory accepting an initvar
 - generated matcher selecting a runner template based on produced facts

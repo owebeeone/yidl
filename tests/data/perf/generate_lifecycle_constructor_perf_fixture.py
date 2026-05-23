@@ -64,7 +64,7 @@ def build_kwargs_source(size: int) -> str:
     lines.extend(
         [
             "        },",
-            f"        '_{class_name}_tx_groups': (DEFAULT_TRANSACTION,),",
+            f"        '_{class_name}_tx_keys': (DEFAULT_TRANSACTION,),",
         ]
     )
     for index in range(size):

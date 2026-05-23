@@ -452,7 +452,7 @@ enough, shape families may be unnecessary.
 ## Proposal 8: Operation Fact Refinement Helpers
 
 Feature files currently add small Python snippets to compute indexed records,
-for example owned fields indexed by transaction group. Those snippets are
+for example owned fields indexed by transaction key. Those snippets are
 reasonable, but their boilerplate is repeated:
 
 - load records
@@ -465,10 +465,10 @@ Add a small declarative helper for common "join and project" computed facts:
 ```yidl
 computed record IndexedOwnedFields
     from field: OwnedFields
-    join tx_group: TxGroups
-        where TxOwner == FieldOwner and TxGroupKey == field.TxGroupKey
+    join tx_key: TxKeys
+        where TxOwner == FieldOwner and TxKeyKey == field.TxKeyKey
     identity FieldId
-    set TxIndex = tx_group.TxIndex
+    set TxIndex = tx_key.TxIndex
     set CurrentSlotName = field.CurrentSlotName
     set WorkingSlotName = field.WorkingSlotName
     set StagedSlotName = field.StagedSlotName

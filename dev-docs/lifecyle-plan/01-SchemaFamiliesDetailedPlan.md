@@ -36,11 +36,11 @@ Lifecycle declarations share common facts:
 
 They also have variant facts:
 
-- managed fields have transaction group, compare mode, defaults, freeze/thaw
+- managed fields have transaction key, compare mode, defaults, freeze/thaw
 - initvars have constructor-only defaults/factories
 - classvars have class materialization behavior
 - hooks have phase and callable
-- validators/order keys have transaction group and callable
+- validators/order keys have transaction key and callable
 - binding/owned fields have resource-policy facts
 
 Today DDS can define a union and variants, but common property repetition is
@@ -64,7 +64,7 @@ SourceLabel = concept.props.SourceLabel(str, "")
 Kind = concept.props.Kind(object, REQUIRED)
 DeclarationSpace = concept.props.DeclarationSpace(object, REQUIRED)
 
-TxGroup = concept.props.TxGroup(object, "default_transaction")
+TxKey = concept.props.TxKey(object, "default_transaction")
 Default = concept.props.Default(object, REQUIRED)
 DefaultFactory = concept.props.DefaultFactory(object, None)
 InitialWorking = concept.props.InitialWorking(object, None)
@@ -77,7 +77,7 @@ FieldSpecs.common(Name, Annotation, SourceOrder, SourceLabel, Kind, DeclarationS
 
 ManagedField = FieldSpecs.variant(
     "ManagedField",
-    TxGroup,
+    TxKey,
     Default,
     DefaultFactory,
     InitialWorking,
@@ -105,7 +105,7 @@ ClassVarField = FieldSpecs.variant(
 
 HookField = FieldSpecs.variant(
     "HookField",
-    TxGroup,
+    TxKey,
     HookPhase,
     Default,
 )
@@ -123,7 +123,7 @@ ManagedField = FieldSpecs.variant(
     SourceLabel,
     Kind,
     DeclarationSpace,
-    TxGroup,
+    TxKey,
     Default,
     DefaultFactory,
     InitialWorking,
@@ -146,13 +146,13 @@ This:
 
 ```python
 FieldSpecs.common(Name, SourceOrder)
-ManagedField = FieldSpecs.variant("ManagedField", TxGroup)
+ManagedField = FieldSpecs.variant("ManagedField", TxKey)
 ```
 
 is equivalent to:
 
 ```python
-ManagedField = FieldSpecs.variant("ManagedField", Name, SourceOrder, TxGroup)
+ManagedField = FieldSpecs.variant("ManagedField", Name, SourceOrder, TxKey)
 ```
 
 but the common list is checked consistently.
@@ -203,7 +203,7 @@ builder.add(
         source_label="Example.count",
         kind=MANAGED_KIND,
         declaration_space=INSTANCE_FIELD,
-        tx_group="default_transaction",
+        tx_key="default_transaction",
         default=0,
         default_factory=None,
         initial_working=None,
@@ -261,7 +261,7 @@ class ManagedField:
         "source_label",
         "kind",
         "declaration_space",
-        "tx_group",
+        "tx_key",
         "default",
         "default_factory",
         "initial_working",
@@ -276,7 +276,7 @@ class ManagedField:
         "source_label": str,
         "kind": object,
         "declaration_space": object,
-        "tx_group": object,
+        "tx_key": object,
         "default": object,
         "default_factory": object,
         "initial_working": object,
@@ -293,7 +293,7 @@ class ManagedField:
         source_label: str = "",
         kind: object,
         declaration_space: object,
-        tx_group: object = "default_transaction",
+        tx_key: object = "default_transaction",
         default: object = REQUIRED,
         default_factory: object = None,
         initial_working: object = None,
@@ -306,7 +306,7 @@ class ManagedField:
         object.__setattr__(self, "source_label", source_label)
         object.__setattr__(self, "kind", kind)
         object.__setattr__(self, "declaration_space", declaration_space)
-        object.__setattr__(self, "tx_group", tx_group)
+        object.__setattr__(self, "tx_key", tx_key)
         object.__setattr__(self, "default", default)
         object.__setattr__(self, "default_factory", default_factory)
         object.__setattr__(self, "initial_working", initial_working)

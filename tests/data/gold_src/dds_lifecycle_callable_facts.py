@@ -4,7 +4,7 @@ from support.golden_case import run_case
 from yidl.capsule.lifecycle_concepts import LifecycleCallableFactsConcept
 from yidl.generation.lifecycle_facts import CURRENT_FACADE
 from yidl.generation.lifecycle_facts import INITVAR
-from yidl.generation.lifecycle_facts import TX_GROUP
+from yidl.generation.lifecycle_facts import TX_KEY
 from yidl.generation.lifecycle_facts import WORKING_FACADE
 
 
@@ -16,8 +16,8 @@ def validate_current(current):
     return current is not None
 
 
-def validate_working(working, tx_group):
-    return working is not None and bool(tx_group)
+def validate_working(working, tx_key):
+    return working is not None and bool(tx_key)
 
 
 def make_default(seed="fallback"):
@@ -76,7 +76,7 @@ def validate_case(source: str) -> None:
     ] == [
         ("validate_current", "current", "POSITIONAL_OR_KEYWORD", 0),
         ("validate_working", "working", "POSITIONAL_OR_KEYWORD", 0),
-        ("validate_working", "tx_group", "POSITIONAL_OR_KEYWORD", 1),
+        ("validate_working", "tx_key", "POSITIONAL_OR_KEYWORD", 1),
         ("make_default", "seed", "POSITIONAL_OR_KEYWORD", 0),
     ]
     assert [
@@ -90,7 +90,7 @@ def validate_case(source: str) -> None:
     ] == [
         ("validate_current", "current", CURRENT_FACADE, True),
         ("validate_working", "working", WORKING_FACADE, True),
-        ("validate_working", "tx_group", TX_GROUP, True),
+        ("validate_working", "tx_key", TX_KEY, True),
         ("make_default", "seed", INITVAR, False),
     ]
 

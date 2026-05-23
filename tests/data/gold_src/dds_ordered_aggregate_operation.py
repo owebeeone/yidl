@@ -7,18 +7,18 @@ from yidl.generation.data_def_sys import emit_container_runtime_source
 from yidl.generation.data_def_sys import from_astichi_code
 
 
-BuildTxGroupsOperation = from_astichi_code(
+BuildTxKeysOperation = from_astichi_code(
     """
     seen = set()
     next_index = 0
     for field in ctx.records(TransactionalFieldsCollection):
-        tx_group = field.tx_group
-        if tx_group in seen:
+        tx_key = field.tx_key
+        if tx_key in seen:
             continue
-        seen.add(tx_group)
+        seen.add(tx_key)
         ctx.write(
-            TxGroupsCollection,
-            TxGroupRecord(tx_group=tx_group, tx_index=next_index),
+            TxKeysCollection,
+            TxKeyRecord(tx_key=tx_key, tx_index=next_index),
             policy=AddIfAbsent,
         )
         next_index += 1
@@ -26,8 +26,8 @@ BuildTxGroupsOperation = from_astichi_code(
     keep_names=(
         "AddIfAbsent",
         "TransactionalFieldsCollection",
-        "TxGroupRecord",
-        "TxGroupsCollection",
+        "TxKeyRecord",
+        "TxKeysCollection",
         "ctx",
     ),
 )
@@ -42,29 +42,29 @@ def _build_dds() -> DataDefinitionSystem:
         default=0,
         storage_name="source_order",
     )
-    tx_group = dds.property("TxGroup", str, default=REQUIRED, storage_name="tx_group")
+    tx_key = dds.property("TxKey", str, default=REQUIRED, storage_name="tx_key")
     tx_index = dds.property("TxIndex", int, default=REQUIRED, storage_name="tx_index")
 
-    field = dds.record("TransactionalField", name, tx_group, source_order)
-    tx_group_record = dds.record("TxGroupRecord", tx_group, tx_index)
+    field = dds.record("TransactionalField", name, tx_key, source_order)
+    tx_key_record = dds.record("TxKeyRecord", tx_key, tx_index)
     transactional_fields = dds.collection(
         "TransactionalFields",
         field,
         cardinality=dds.many,
         identity=name,
     )
-    tx_groups = dds.collection(
-        "TxGroups",
-        tx_group_record,
+    tx_keys = dds.collection(
+        "TxKeys",
+        tx_key_record,
         cardinality=dds.many,
-        identity=tx_group,
+        identity=tx_key,
     )
     operation = dds.operation(
-        "BuildTxGroups",
+        "BuildTxKeys",
         inputs=(transactional_fields,),
-        outputs=(tx_groups,),
+        outputs=(tx_keys,),
         order_by=(source_order,),
-        resource=BuildTxGroupsOperation,
+        resource=BuildTxKeysOperation,
     )
     dds.production_group("Aggregate", operation)
     return dds
@@ -84,25 +84,25 @@ def validate_case(source: str) -> None:
 
     builder.add(
         transactional_fields,
-        field(name="session", tx_group="session", source_order=30),
+        field(name="session", tx_key="session", source_order=30),
     )
     builder.add(
         transactional_fields,
-        field(name="count", tx_group="default", source_order=10),
+        field(name="count", tx_key="default", source_order=10),
     )
     builder.add(
         transactional_fields,
-        field(name="owner", tx_group="resource", source_order=20),
+        field(name="owner", tx_key="resource", source_order=20),
     )
     builder.add(
         transactional_fields,
-        field(name="label", tx_group="default", source_order=40),
+        field(name="label", tx_key="default", source_order=40),
     )
     container = namespace["build_container"](builder)
 
-    groups = tuple(container.TxGroups.sequence())
+    groups = tuple(container.TxKeys.sequence())
 
-    assert [(group.tx_group, group.tx_index) for group in groups] == [
+    assert [(group.tx_key, group.tx_index) for group in groups] == [
         ("default", 0),
         ("resource", 1),
         ("session", 2),

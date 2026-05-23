@@ -44,7 +44,7 @@ working design note, not yet the canonical P1 plan.
    helper kind such as `managed`, `transient`, or `owned`. It is not wrapped in
    a required outer behavior class.
 2. **State class**. Restricted Python class in the control source that
-   declares slots needed by a field, transaction group, record, facade cache,
+   declares slots needed by a field, transaction key, record, facade cache,
    or class surface.
 3. **State field**. Annotated member of a state class. It becomes a generated
    flat slot unless explicitly marked as class-level metadata.
@@ -91,7 +91,7 @@ working design note, not yet the canonical P1 plan.
 | `record` | one per generated instance | shared store/control state |
 | `field` | one per logical field | field value and sidecar state |
 | `field_tx` | one per transaction-aware field | transaction-window state for that field |
-| `tx` | one per transaction group | group control state |
+| `tx` | one per transaction key | group control state |
 | `facade` | one per generated facade kind | facade cache and view-specific helpers |
 | `cls` | one per generated class | generated constants and metadata |
 | `compile` | one per field/helper expansion | compile-time constants used during lowering |
@@ -119,7 +119,7 @@ working design note, not yet the canonical P1 plan.
    4. `ValueParameter[T]` for a literal/object default value.
    5. `CallableRunner[T]` for lowered callables such as default factories,
       freeze/thaw functions, validators, and hooks.
-   6. `TxNameParameter` for user transaction group names.
+   6. `TxNameParameter` for user transaction key names.
    7. `InitialValuePlan[T]` for normalized construction behavior derived from
       init exposure, default value, and default factory parameters.
 5. `None` is a legal value when the field type permits it. `UNSPECIFIED` is
@@ -343,7 +343,7 @@ explicit Astichi snippets before final materialization.
 1. Parse the control source into a Python AST.
 2. Harvest state classes and build a semantic state schema.
 3. Harvest event methods and attach them to lifecycle event names.
-4. Build a target class field layout from author fields and transaction groups.
+4. Build a target class field layout from author fields and transaction keys.
 5. For each field/helper pair:
    1. Instantiate semantic refs for every required state member.
    2. Allocate physical slot names through `StateNaming`.

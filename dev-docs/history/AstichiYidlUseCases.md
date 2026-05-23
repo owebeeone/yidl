@@ -78,7 +78,7 @@ It should not know:
 - what a `managed` field is
 - what `binding` means
 - what “PublishedStore” means
-- what a transaction group means
+- what a transaction key means
 
 It should only know how to compose semantic fragments that YIDL provides.
 

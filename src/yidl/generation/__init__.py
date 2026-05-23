@@ -23,7 +23,7 @@ from yidl.generation.data_def_sys import from_literal
 from yidl.generation.data_def_sys import lookup
 from yidl.generation.lifecycle_facts import CURRENT_FACADE
 from yidl.generation.lifecycle_facts import INITVAR
-from yidl.generation.lifecycle_facts import TX_GROUP
+from yidl.generation.lifecycle_facts import TX_KEY
 from yidl.generation.lifecycle_facts import WORKING_FACADE
 from yidl.generation.lifecycle_facts import analyze_callable
 
@@ -45,7 +45,7 @@ __all__ = [
     "REQUIRED",
     "RejectDuplicate",
     "ReplaceExisting",
-    "TX_GROUP",
+    "TX_KEY",
     "WORKING_FACADE",
     "analyze_callable",
     "emit_container_runtime_source",

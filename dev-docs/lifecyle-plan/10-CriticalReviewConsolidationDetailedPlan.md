@@ -35,7 +35,7 @@ The underlying common pattern is:
 That pattern covers:
 
 - layered merge
-- transaction group indexing
+- transaction key indexing
 - callable fact production
 - annotation shape production
 - graph reachability
@@ -89,7 +89,7 @@ Replacement:
 ```python
 fields = concept.schema_family("FieldSpecs")
 fields.common(Name, Annotation, SourceOrder)
-fields.variant("ManagedField", Kind, TxGroup)
+fields.variant("ManagedField", Kind, TxKey)
 ```
 
 Lowering:
@@ -102,7 +102,7 @@ ManagedField = FieldSpecs.variant(
     Annotation,
     SourceOrder,
     Kind,
-    TxGroup,
+    TxKey,
 )
 ```
 
@@ -144,11 +144,11 @@ Replacement:
 
 ```python
 dds.operation(
-    "BuildTxGroups",
+    "BuildTxKeys",
     inputs=(TransactionalFields,),
-    outputs=(TxGroups,),
+    outputs=(TxKeys,),
     order_by=(SourceOrder,),
-    resource=BuildTxGroupsOperation,
+    resource=BuildTxKeysOperation,
 )
 ```
 
@@ -224,14 +224,14 @@ property:
 SpecialDeclarations = dds.collection(
     "SpecialDeclarations",
     SpecialDeclaration,
-    identity=(SpecialKind, TxGroup),
+    identity=(SpecialKind, TxKey),
 )
 ```
 
 Runtime identity:
 
 ```python
-key = (record.special_kind, record.tx_group)
+key = (record.special_kind, record.tx_key)
 ```
 
 This replaces multiple special uniqueness APIs.
@@ -241,7 +241,7 @@ This replaces multiple special uniqueness APIs.
 Productions and operations need a source-emittable lookup expression:
 
 ```python
-lookup(TxGroups, key=source.prop(TxGroup), value=TxIndex)
+lookup(TxKeys, key=source.prop(TxKey), value=TxIndex)
 ```
 
 This replaces ad hoc transaction-index binding logic.

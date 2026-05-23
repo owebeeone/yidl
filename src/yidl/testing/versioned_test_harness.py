@@ -41,6 +41,14 @@ def discover_golden_cases(project_root: Path) -> tuple[str, ...]:
     return tuple(sorted(path.name for path in source_dir.glob("*.py")))
 
 
+def materialized_output_name(source_path: Path) -> str:
+    """Return the checked-in output name for a golden source script."""
+    source = source_path.read_text(encoding="utf-8")
+    if "run_multi_source_case(" in source:
+        return source_path.name.removesuffix(".py")
+    return source_path.name
+
+
 def load_supported_runtime_specs(pyproject_path: Path) -> tuple[str, ...]:
     payload = tomllib.loads(pyproject_path.read_text(encoding="utf-8"))
     runtimes = payload.get("tool", {}).get("yidl", {}).get("test-matrix", {}).get("python", [])
@@ -93,9 +101,7 @@ def write_golden_outputs(project_root: Path) -> None:
             stale.unlink()
 
     for case_name in discover_golden_cases(project_root):
-        output_name = case_name
-        if case_name == "yidl_lark_v2_vertical.py":
-            output_name = case_name.removesuffix(".py")
+        output_name = materialized_output_name(source_dir / case_name)
         run_golden_case(
             source_dir / case_name,
             golden_dir / output_name,

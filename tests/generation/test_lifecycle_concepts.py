@@ -31,7 +31,7 @@ def test_lifecycle_operation_contribution_identity_is_stable() -> None:
             name="count",
             kind=MANAGED_KIND,
             order=0,
-            tx_group="default",
+            tx_key="default",
         ),
     )
     container = runtime.build_container(builder)

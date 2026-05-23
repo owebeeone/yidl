@@ -48,7 +48,7 @@ Relevant current sources:
 
 ## F-1 Constraints
 
-Phase G must not reintroduce `tx_group` as the YIDL lifecycle model term. Use:
+Phase G must not reintroduce `tx_key` as the YIDL lifecycle model term. Use:
 
 - `tx_key` for the user-facing hashable transaction identity.
 - `tx_index` for generated class-local dispatch and storage indexes.
@@ -168,7 +168,7 @@ The user-facing marker should live beside `field`, `managed`, and `classvar` in
 `yidl.runtime.lifecycle`.
 
 YIDL should use the Phase F-1 term `tx_key`. If a compatibility wrapper later
-accepts pyrolyze's `tx_group` name, it should normalize that value into the same
+accepts pyrolyze's `tx_key` name, it should normalize that value into the same
 `tx_key` fact before lowering.
 
 ## Retained Initvar Providers
@@ -345,7 +345,7 @@ Deliverables:
 - harvester emits transient field facts and factory-callable facts.
 - unsupported signatures for `default_factory` and `working_default_factory`
   produce decorator-time diagnostics.
-- `tx_group` is not introduced into the YIDL fact model.
+- `tx_key` is not introduced into the YIDL fact model.
 
 Verification:
 

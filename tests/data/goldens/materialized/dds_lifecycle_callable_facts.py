@@ -6,7 +6,7 @@ _AnnotationPathProperty = RuntimeProperty('AnnotationPath', str, default='', sto
 _DefaultedProperty = RuntimeProperty('Defaulted', bool, default=False, storage_name='defaulted')
 _DefaultValueProperty = RuntimeProperty('DefaultValue', object, default=None, storage_name='default_value')
 _OrderProperty = RuntimeProperty('Order', int, default=0, storage_name='order')
-_TxGroupProperty = RuntimeProperty('TxGroup', str, default='', storage_name='tx_group')
+_TxKeyProperty = RuntimeProperty('TxKey', str, default='', storage_name='tx_key')
 _SourceLabelProperty = RuntimeProperty('SourceLabel', str, default='', storage_name='source_label')
 _CallableObjectProperty = RuntimeProperty('CallableObject', object, default=REQUIRED, storage_name='callable_object')
 _CallableRoleProperty = RuntimeProperty('CallableRole', str, default=REQUIRED, storage_name='callable_role')
@@ -19,8 +19,8 @@ _ParamKindProperty = RuntimeProperty('ParamKind', str, default=REQUIRED, storage
 _ParamOrderProperty = RuntimeProperty('ParamOrder', int, default=0, storage_name='param_order')
 _InjectionKindProperty = RuntimeProperty('InjectionKind', str, default=REQUIRED, storage_name='injection_kind')
 _RequiredProperty = RuntimeProperty('Required', bool, default=True, storage_name='required')
-_ManagedFieldSpec = RuntimeRecord('ManagedField', (_NameProperty, _KindProperty, _AnnotationPathProperty, _DefaultedProperty, _DefaultValueProperty, _OrderProperty, _TxGroupProperty))
-_ConstFieldSpec = RuntimeRecord('ConstField', (_NameProperty, _KindProperty, _AnnotationPathProperty, _DefaultedProperty, _DefaultValueProperty, _OrderProperty, _TxGroupProperty))
+_ManagedFieldSpec = RuntimeRecord('ManagedField', (_NameProperty, _KindProperty, _AnnotationPathProperty, _DefaultedProperty, _DefaultValueProperty, _OrderProperty, _TxKeyProperty))
+_ConstFieldSpec = RuntimeRecord('ConstField', (_NameProperty, _KindProperty, _AnnotationPathProperty, _DefaultedProperty, _DefaultValueProperty, _OrderProperty, _TxKeyProperty))
 _CallableDeclarationSpec = RuntimeRecord('CallableDeclaration', (_NameProperty, _SourceLabelProperty, _CallableObjectProperty, _CallableRoleProperty, _AllowedInjectionsProperty))
 _CallableSpecSpec = RuntimeRecord('CallableSpec', (_NameProperty, _SourceLabelProperty, _CallableRoleProperty, _AcceptsVarArgsProperty, _AcceptsVarKwargsProperty))
 _CallableParamSpec = RuntimeRecord('CallableParam', (_CallableNameProperty, _ParamNameProperty, _ParamKindProperty, _ParamOrderProperty))
@@ -28,7 +28,7 @@ _CallableInjectionSpec = RuntimeRecord('CallableInjection', (_CallableNameProper
 _FieldSpecsUnion = RuntimeUnion('FieldSpecs', (_ManagedFieldSpec, _ConstFieldSpec))
 
 class ManagedField:
-    __slots__ = ('name', 'kind', 'annotation_path', 'defaulted', 'default_value', 'order', 'tx_group')
+    __slots__ = ('name', 'kind', 'annotation_path', 'defaulted', 'default_value', 'order', 'tx_key')
     __dds_record_spec__ = _ManagedFieldSpec
     name: str
     kind: str
@@ -36,9 +36,9 @@ class ManagedField:
     defaulted: bool
     default_value: object
     order: int
-    tx_group: str
+    tx_key: str
 
-    def __init__(self, *, name: str, kind: str, annotation_path: str='', defaulted: bool=False, default_value: object=None, order: int=0, tx_group: str=''):
+    def __init__(self, *, name: str, kind: str, annotation_path: str='', defaulted: bool=False, default_value: object=None, order: int=0, tx_key: str=''):
         if not isinstance(name, str):
             raise TypeError('Name must be str, got ' + type(name).__name__)
         object.__setattr__(self, 'name', name)
@@ -55,12 +55,12 @@ class ManagedField:
         if not isinstance(order, int):
             raise TypeError('Order must be int, got ' + type(order).__name__)
         object.__setattr__(self, 'order', order)
-        if not isinstance(tx_group, str):
-            raise TypeError('TxGroup must be str, got ' + type(tx_group).__name__)
-        object.__setattr__(self, 'tx_group', tx_group)
+        if not isinstance(tx_key, str):
+            raise TypeError('TxKey must be str, got ' + type(tx_key).__name__)
+        object.__setattr__(self, 'tx_key', tx_key)
 
     def __setattr__(self, name, value):
-        if name in ('name', 'kind', 'annotation_path', 'defaulted', 'default_value', 'order', 'tx_group'):
+        if name in ('name', 'kind', 'annotation_path', 'defaulted', 'default_value', 'order', 'tx_key'):
             raise AttributeError('ManagedField records are immutable')
         object.__setattr__(self, name, value)
 
@@ -72,12 +72,12 @@ class ManagedField:
         pieces.append('defaulted=' + repr(self.defaulted))
         pieces.append('default_value=' + repr(self.default_value))
         pieces.append('order=' + repr(self.order))
-        pieces.append('tx_group=' + repr(self.tx_group))
+        pieces.append('tx_key=' + repr(self.tx_key))
         return 'ManagedField' + '(' + ', '.join(pieces) + ')'
 _ManagedFieldSpec.bind_record_class(ManagedField)
 
 class ConstField:
-    __slots__ = ('name', 'kind', 'annotation_path', 'defaulted', 'default_value', 'order', 'tx_group')
+    __slots__ = ('name', 'kind', 'annotation_path', 'defaulted', 'default_value', 'order', 'tx_key')
     __dds_record_spec__ = _ConstFieldSpec
     name: str
     kind: str
@@ -85,9 +85,9 @@ class ConstField:
     defaulted: bool
     default_value: object
     order: int
-    tx_group: str
+    tx_key: str
 
-    def __init__(self, *, name: str, kind: str, annotation_path: str='', defaulted: bool=False, default_value: object=None, order: int=0, tx_group: str=''):
+    def __init__(self, *, name: str, kind: str, annotation_path: str='', defaulted: bool=False, default_value: object=None, order: int=0, tx_key: str=''):
         if not isinstance(name, str):
             raise TypeError('Name must be str, got ' + type(name).__name__)
         object.__setattr__(self, 'name', name)
@@ -104,12 +104,12 @@ class ConstField:
         if not isinstance(order, int):
             raise TypeError('Order must be int, got ' + type(order).__name__)
         object.__setattr__(self, 'order', order)
-        if not isinstance(tx_group, str):
-            raise TypeError('TxGroup must be str, got ' + type(tx_group).__name__)
-        object.__setattr__(self, 'tx_group', tx_group)
+        if not isinstance(tx_key, str):
+            raise TypeError('TxKey must be str, got ' + type(tx_key).__name__)
+        object.__setattr__(self, 'tx_key', tx_key)
 
     def __setattr__(self, name, value):
-        if name in ('name', 'kind', 'annotation_path', 'defaulted', 'default_value', 'order', 'tx_group'):
+        if name in ('name', 'kind', 'annotation_path', 'defaulted', 'default_value', 'order', 'tx_key'):
             raise AttributeError('ConstField records are immutable')
         object.__setattr__(self, name, value)
 
@@ -121,7 +121,7 @@ class ConstField:
         pieces.append('defaulted=' + repr(self.defaulted))
         pieces.append('default_value=' + repr(self.default_value))
         pieces.append('order=' + repr(self.order))
-        pieces.append('tx_group=' + repr(self.tx_group))
+        pieces.append('tx_key=' + repr(self.tx_key))
         return 'ConstField' + '(' + ', '.join(pieces) + ')'
 _ConstFieldSpec.bind_record_class(ConstField)
 

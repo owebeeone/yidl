@@ -154,7 +154,7 @@ For inheritance merges:
 2. local facts are applied after inherited facts
 3. compatible local redeclarations override or refine inherited facts by
    field name
-4. child-only transaction groups are appended after inherited groups
+4. child-only transaction keys are appended after inherited groups
 
 This preserves parent tx indexes and slot names.
 
@@ -179,7 +179,7 @@ class Counter:
     seed: int = initvar(default=2)
     KIND: str = classvar(default="counter")
     count: int = managed(default=1)
-    audit_count: int = managed(tx_group="audit", default=10)
+    audit_count: int = managed(tx_key="audit", default=10)
     default_count: int = managed(DEFAULT_TRANSACTION, default=20)
 ```
 
@@ -190,7 +190,7 @@ express the fields already supported by the Phase A YIDL facts:
 field(default=..., default_factory=..., init=True)
 initvar(default=..., default_factory=..., init=True)
 classvar(default=...)
-managed(tx_group=DEFAULT_TRANSACTION, default=..., init=True)
+managed(tx_key=DEFAULT_TRANSACTION, default=..., init=True)
 ```
 
 The intended marker forms are:
@@ -208,7 +208,7 @@ classvar(default="counter")
 
 managed(default=1)
 managed("audit", default=10)
-managed(tx_group="audit", default=10)
+managed(tx_key="audit", default=10)
 managed(init=False, default=1)
 ```
 
@@ -236,7 +236,7 @@ FieldDecl(
     default=1,
     has_default_factory=False,
     default_factory=MISSING,
-    tx_group=DEFAULT_TRANSACTION,
+    tx_key=DEFAULT_TRANSACTION,
 )
 ```
 
@@ -264,7 +264,7 @@ At minimum:
             "working_facade_class_name": "Counter_Working",
             "lifecycle_definition_param_name": "_Counter_lifecycle_definition",
             "annotations_param_name": "_Counter_annotations",
-            "tx_groups_param_name": "_Counter_tx_groups",
+            "tx_keys_param_name": "_Counter_tx_keys",
         },
     ),
     "fields": (
@@ -278,12 +278,12 @@ At minimum:
             "init": True,
             "has_default": True,
             "default_value_param_name": "_Counter_count_default",
-            "tx_group_key": DEFAULT_TRANSACTION,
+            "tx_key_key": DEFAULT_TRANSACTION,
             "current_slot_name": "_y_count_current",
             "working_slot_name": "_y_count_working",
         },
     ),
-    "tx_groups": (DEFAULT_TRANSACTION, "audit"),
+    "tx_keys": (DEFAULT_TRANSACTION, "audit"),
 }
 ```
 
@@ -298,7 +298,7 @@ The top-level metadata should include a schema version:
     "version": 1,
     "class": {...},
     "fields": (...),
-    "tx_groups": (...),
+    "tx_keys": (...),
 }
 ```
 
@@ -338,7 +338,7 @@ build_lifecycle_class(
     decorated_cls,
     _Counter_lifecycle_definition=definition,
     _Counter_annotations=annotations,
-    _Counter_tx_groups=tx_groups,
+    _Counter_tx_keys=tx_keys,
     _Counter_plain_default=3,
     _Counter_count_default=1,
 )
@@ -414,18 +414,18 @@ need a richer compatibility relation such as union/subclass behavior.
 Rejected in Phase B:
 
 - inherited `managed` field becoming unmanaged
-- inherited `managed` field changing transaction group
+- inherited `managed` field changing transaction key
 - local field whose generated slot names would collide with another field
 - local field whose constructor parameter name collides with another parameter
-- inherited transaction group re-indexing
+- inherited transaction key re-indexing
 
-Parent transaction groups keep their indexes. Child-only groups append in
+Parent transaction keys keep their indexes. Child-only groups append in
 local declaration order. This should naturally fall out of reverse-MRO field
 discovery, but the generated metadata should still make it explicit.
 
-A child field that references a transaction group already present in an
+A child field that references a transaction key already present in an
 inherited definition reuses the inherited group's tx index. For multiple new
-transaction groups in one class body, indexes are assigned by first managed
+transaction keys in one class body, indexes are assigned by first managed
 field declaration that references each new group.
 
 ### Reserved Names
@@ -454,7 +454,7 @@ Phase B diagnostics should be specific and early. Suggested cases:
 3. duplicate generated parameter name
 4. reserved `_y_*` or `__yidl_*__` name declared by the decorated class
 5. inherited managed field is overridden by an unmanaged field
-6. inherited managed field would change tx group index
+6. inherited managed field would change tx key index
 7. default and default_factory both provided
 8. initvar with `init=False` is ignored in Phase B and should not be covered
    by Phase B tests
@@ -475,7 +475,7 @@ class LifecycleDefinitionError(ValueError):
 Prefer messages like:
 
 ```text
-Counter.count: managed field cannot change transaction group from 'audit' to 'default_transaction'
+Counter.count: managed field cannot change transaction key from 'audit' to 'default_transaction'
 ```
 
 over generic failures.
@@ -520,7 +520,7 @@ The golden should prove:
    for the common fixture
 2. generated class identity is preserved
 3. plain fields, classvars, initvars, and managed fields work
-4. two transaction groups work
+4. two transaction keys work
 5. inherited generated base works with all marker kinds in both base and
    derived classes, including colliding and non-colliding names:
 
@@ -618,8 +618,8 @@ Verification:
 Deliverables:
 
 - managed-to-unmanaged inherited overrides reject
-- managed tx group changes reject
-- tx group re-indexing rejects
+- managed tx key changes reject
+- tx key re-indexing rejects
 - reserved `_y_*` and `__yidl_*__` names reject
 - malformed lifecycle metadata rejects
 

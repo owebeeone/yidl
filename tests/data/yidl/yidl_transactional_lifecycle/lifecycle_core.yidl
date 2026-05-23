@@ -17,7 +17,7 @@ concept LifecycleCore {
     property WorkingFacadeClassName: str
     property LifecycleDefinitionParamName: str = ""
     property AnnotationsParamName: str = ""
-    property TxGroupsParamName: str = ""
+    property TxKeysParamName: str = ""
     property LifecycleFieldNames: object = ()
 
     property FieldId: str
@@ -39,7 +39,7 @@ concept LifecycleCore {
     property WorkingDefaultFactory: object = None
     property WorkingDefaultFactoryParamName: str = ""
     property WorkingDefaultFactoryParamNames: object = ()
-    property TxGroupKey: object = None
+    property TxKeyKey: object = None
     property ValueSlotName: str = ""
     property CurrentSlotName: str = ""
     property WorkingSlotName: str = ""
@@ -70,7 +70,7 @@ concept LifecycleCore {
         WorkingFacadeClassName
         LifecycleDefinitionParamName
         AnnotationsParamName
-        TxGroupsParamName
+        TxKeysParamName
         LifecycleFieldNames
     }
 
@@ -82,7 +82,7 @@ concept LifecycleCore {
         common DefaultFactoryParamNames
         common HasWorkingDefaultFactory, WorkingDefaultFactory
         common WorkingDefaultFactoryParamName, WorkingDefaultFactoryParamNames
-        common TxGroupKey, ValueSlotName, CurrentSlotName, WorkingSlotName
+        common TxKeyKey, ValueSlotName, CurrentSlotName, WorkingSlotName
         common StagedSlotName
         common HasFreeze, Freeze, FreezeParamName, HasThaw, Thaw, ThawParamName
         common HasOptionalNone
@@ -103,7 +103,7 @@ concept LifecycleCore {
         MethodOwner
         MethodName
         MethodKind
-        TxGroupKey
+        TxKeyKey
         TxIndex
         DeclarationOrder
     }
@@ -357,12 +357,12 @@ concept LifecycleCore {
                 "_y_working_tx_ids",
             )
             __yidl_tx_index_to_key__ = astichi_pass(
-                tx_groups_for_index_name__astichi_arg__,
+                tx_keys_for_index_name__astichi_arg__,
                 outer_bind=True,
             )
             __yidl_tx_key_to_index__ = {
                 key: index for index, key in enumerate(
-                    astichi_pass(tx_groups_for_map_name__astichi_arg__, outer_bind=True)
+                    astichi_pass(tx_keys_for_map_name__astichi_arg__, outer_bind=True)
                 )
             }
 
@@ -609,13 +609,13 @@ concept LifecycleCore {
                 outer_bind=True,
             )
             __yidl_tx_index_to_key__ = astichi_pass(
-                tx_groups_for_class_index_name__astichi_arg__,
+                tx_keys_for_class_index_name__astichi_arg__,
                 outer_bind=True,
             )
             __yidl_tx_key_to_index__ = {
                 key: index for index, key in enumerate(
                     astichi_pass(
-                        tx_groups_for_class_map_name__astichi_arg__,
+                        tx_keys_for_class_map_name__astichi_arg__,
                         outer_bind=True,
                     )
                 )
@@ -630,9 +630,9 @@ concept LifecycleCore {
                 object.__setattr__(self, "_y_current_facade", None)
                 object.__setattr__(self, "_y_working_facade", None)
                 state._y_transaction_manager = transaction_manager or TransactionManager(
-                    tx_groups=tuple(
+                    tx_keys=tuple(
                         group for group in astichi_pass(
-                            tx_groups_for_manager_name__astichi_arg__,
+                            tx_keys_for_manager_name__astichi_arg__,
                             outer_bind=True,
                         )
                         if group != DEFAULT_TRANSACTION
@@ -646,7 +646,7 @@ concept LifecycleCore {
                 state._y_working_tx_ids = [
                     None
                     for _group in astichi_pass(
-                        tx_groups_for_slots_name__astichi_arg__,
+                        tx_keys_for_slots_name__astichi_arg__,
                         outer_bind=True,
                     )
                 ]
@@ -711,8 +711,8 @@ concept LifecycleCore {
         ident value_name = AnnotationsParamName
     }
 
-    contribution TxGroupsBuilderParam = BuilderParam {
-        as TxGroupsBuilderParam
+    contribution TxKeysBuilderParam = BuilderParam {
+        as TxKeysBuilderParam
         index ClassOrder
         order ClassOrder
 
@@ -720,7 +720,7 @@ concept LifecycleCore {
             build /Root
         }
 
-        ident value_name = TxGroupsParamName
+        ident value_name = TxKeysParamName
     }
 
     contribution FieldDefaultBuilderParam = BuilderParam {
@@ -1078,8 +1078,8 @@ concept LifecycleCore {
         default -> AnnotationsBuilderParam
     }
 
-    matcher TxGroupsBuilderParamContributions(lifecycle_class: Classes) -> contribution {
-        default -> TxGroupsBuilderParam
+    matcher TxKeysBuilderParamContributions(lifecycle_class: Classes) -> contribution {
+        default -> TxKeysBuilderParam
     }
 
     matcher ReturnClassContributions(lifecycle_class: Classes) -> contribution {
@@ -1215,7 +1215,7 @@ concept LifecycleCore {
         phase module_params from lifecycle_class: Classes {
             apply lifecycle_definition_params using BuilderParamContributions
             apply annotations_params using AnnotationsBuilderParamContributions
-            apply tx_groups_params using TxGroupsBuilderParamContributions
+            apply tx_keys_params using TxKeysBuilderParamContributions
         }
 
         phase field_default_params from field: Fields {
@@ -1245,12 +1245,12 @@ concept LifecycleCore {
             ident current_facade_class_ref = CurrentFacadeClassName
             ident working_facade_class_decl_name = WorkingFacadeClassName
             ident working_facade_class_ref = WorkingFacadeClassName
-            ident tx_groups_for_index_name = TxGroupsParamName
-            ident tx_groups_for_map_name = TxGroupsParamName
-            ident tx_groups_for_class_index_name = TxGroupsParamName
-            ident tx_groups_for_class_map_name = TxGroupsParamName
-            ident tx_groups_for_manager_name = TxGroupsParamName
-            ident tx_groups_for_slots_name = TxGroupsParamName
+            ident tx_keys_for_index_name = TxKeysParamName
+            ident tx_keys_for_map_name = TxKeysParamName
+            ident tx_keys_for_class_index_name = TxKeysParamName
+            ident tx_keys_for_class_map_name = TxKeysParamName
+            ident tx_keys_for_manager_name = TxKeysParamName
+            ident tx_keys_for_slots_name = TxKeysParamName
             ident lifecycle_definition_name = LifecycleDefinitionParamName
             ident annotations_name = AnnotationsParamName
             external lifecycle_field_names = LifecycleFieldNames

@@ -34,7 +34,7 @@ and generated runtime source need it.
 Add keyed lookup value expressions:
 
 ```python
-lookup(TxGroups, key=source.prop(TxGroup), value=TxIndex)
+lookup(TxKeys, key=source.prop(TxKey), value=TxIndex)
 ```
 
 Goldens:
@@ -75,11 +75,11 @@ Add the generic operation surface:
 
 ```python
 dds.operation(
-    "BuildTxGroups",
+    "BuildTxKeys",
     inputs=(TransactionalFields,),
-    outputs=(TxGroups,),
+    outputs=(TxKeys,),
     order_by=(SourceOrder,),
-    resource=BuildTxGroupsOperation,
+    resource=BuildTxKeysOperation,
 )
 ```
 
@@ -98,7 +98,7 @@ helpers after multiple concepts prove the shape.
 Goldens:
 
 - `dds_ordered_aggregate_operation.py`
-- first scratch lifecycle data flow deriving transaction groups
+- first scratch lifecycle data flow deriving transaction keys
 
 Bespoke tests:
 

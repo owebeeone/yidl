@@ -261,16 +261,16 @@ or equivalent call-argument record consumed by a call site.
 Expected materialized excerpt:
 
 ```python
-def _run_validator(self, state, tx_group):
-    previous = self._previous_facade_for(tx_group)
-    current = self._current_facade_for(tx_group)
-    working = self._working_facade_for(tx_group)
+def _run_validator(self, state, tx_key):
+    previous = self._previous_facade_for(tx_key)
+    current = self._current_facade_for(tx_key)
+    working = self._working_facade_for(tx_key)
     validate_balance(
         self,
         current,
         working,
         previous,
-        tx_group,
+        tx_key,
         state._request_id_initvar,
     )
 ```
@@ -298,12 +298,12 @@ This slice proves the runtime model, not every hook phase.
 
 ### Fluent/DDS Shape
 
-Represent transaction groups and active transaction slots as state/method
+Represent transaction keys and active transaction slots as state/method
 contributions:
 
 ```python
 TransactionRuntime = concept.records.TransactionRuntime(
-    tx_group=TxGroup,
+    tx_key=TxKey,
     tx_index=TxIndex,
     active_slot=StateRef,
     current_store=StateRef,
@@ -329,12 +329,12 @@ Expected materialized excerpt:
 
 ```python
 class Example:
-    def begin_transaction(self, tx_group="default_transaction"):
-        tx_index = self.__yidl_tx_index_by_name__[tx_group]
+    def begin_transaction(self, tx_key="default_transaction"):
+        tx_index = self.__yidl_tx_index_by_name__[tx_key]
         self._state._active_transactions[tx_index] = True
 
-    def rollback(self, tx_group="default_transaction"):
-        tx_index = self.__yidl_tx_index_by_name__[tx_group]
+    def rollback(self, tx_key="default_transaction"):
+        tx_index = self.__yidl_tx_index_by_name__[tx_key]
         self._rollback_working_values(tx_index)
         self._state._active_transactions[tx_index] = False
 ```
@@ -342,15 +342,15 @@ class Example:
 ### Runtime Check
 
 - managed writes update working state while a transaction is active
-- rollback clears working state for the selected transaction group
+- rollback clears working state for the selected transaction key
 - no-active-transaction behavior matches the selected policy
-- unknown transaction group rejects
+- unknown transaction key rejects
 
 ### Bespoke Tests
 
 - nested transaction policy diagnostic
-- transaction group lookup diagnostic
-- active-state array length matches transaction group count
+- transaction key lookup diagnostic
+- active-state array length matches transaction key count
 
 ## Slice 19: Commit/Rollback Pipeline Parity
 
@@ -374,7 +374,7 @@ a monolithic commit method.
 ```python
 OperationContribution = concept.records.OperationContribution(
     phase=OperationPhase,
-    tx_group=TxGroup,
+    tx_key=TxKey,
     order=Order,
     resource=GeneratedResource,
     call_args=CallArguments,
@@ -397,8 +397,8 @@ over `dds.operation(...)`.
 Expected materialized excerpt:
 
 ```python
-def commit(self, tx_group="default_transaction"):
-    tx_index = self.__yidl_tx_index_by_name__[tx_group]
+def commit(self, tx_key="default_transaction"):
+    tx_index = self.__yidl_tx_index_by_name__[tx_key]
     ordered = sorted(
         self.__yidl_commit_items__[tx_index],
         key=lambda item: item.order_key(self),
@@ -598,7 +598,7 @@ def _replace_owner(self, value):
         release_owner(old)
     self._state._owner_current = retain_owner(value)
 
-def rollback(self, tx_group="default_transaction"):
+def rollback(self, tx_key="default_transaction"):
     pending = self._state._owner_working
     if pending is not _NO_WORKING_VALUE:
         close_owner(pending)
@@ -791,7 +791,7 @@ Scenarios:
 
 - managed field construction/get/set
 - const/static immutability
-- multiple transaction groups
+- multiple transaction keys
 - commit validator failure
 - commit order key ordering
 - hook order

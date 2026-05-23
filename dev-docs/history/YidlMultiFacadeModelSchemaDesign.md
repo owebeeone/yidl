@@ -148,7 +148,7 @@ This is where field state belongs, not in stores.
 
 Each field may need a runtime-state record that can express at least:
 
-- transaction group
+- transaction key
 - whether a working value exists
 - which transaction owns the working value
 - prior committed value snapshot when partial commit rollback needs it
@@ -356,7 +356,7 @@ That means:
   not in durable user-visible structures
 
 One tricky point is transaction tying. If transaction APIs later allow multiple
-transaction groups to be tied or coordinated, YIDL may need an additional
+transaction keys to be tied or coordinated, YIDL may need an additional
 transaction-manager-level release signal so deferred resource release is not
 forced too early.
 

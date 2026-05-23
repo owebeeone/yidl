@@ -7,7 +7,7 @@ from yidl.runtime.transaction_yidl import DEFAULT_TRANSACTION
 from yidl.runtime.transaction_yidl import TransactionManager
 VOID = object()
 
-def build_lifecycle_class(decorated_cls, *, _Example_lifecycle_definition, _Example_annotations, _Example_tx_groups, _Example_SCALE_default, _Example_seed_default, _Example_temp_default_factory, _Example_v2_default_factory, _Example_v3_default_factory, _Example_v4_default_factory, _Example_v5_default_factory):
+def build_lifecycle_class(decorated_cls, *, _Example_lifecycle_definition, _Example_annotations, _Example_tx_keys, _Example_SCALE_default, _Example_seed_default, _Example_temp_default_factory, _Example_v2_default_factory, _Example_v3_default_factory, _Example_v4_default_factory, _Example_v5_default_factory):
 
     def _y_validate_binding_value(field_name, value):
         if value is not None and (not isinstance(value, BindingBase)):
@@ -27,8 +27,8 @@ def build_lifecycle_class(decorated_cls, *, _Example_lifecycle_definition, _Exam
 
     class Example_State:
         __slots__ = ('_y_transaction_manager', '_y_default_ref', '_y_current_ref', '_y_working_ref', '_y_v1_value', '_y_v2_current', '_y_v2_working', '_y_v2_staged', '_y_v3_current', '_y_v3_working', '_y_v3_staged', '_y_v4_current', '_y_v4_working', '_y_v4_staged', '_y_v5_current', '_y_v5_working', '_y_v5_staged', '_y_working_tx_ids')
-        __yidl_tx_index_to_key__ = _Example_tx_groups
-        __yidl_tx_key_to_index__ = {key: index for index, key in enumerate(_Example_tx_groups)}
+        __yidl_tx_index_to_key__ = _Example_tx_keys
+        __yidl_tx_key_to_index__ = {key: index for index, key in enumerate(_Example_tx_keys)}
 
         def _y_get_default_facade(self):
             ref = self._y_default_ref
@@ -300,8 +300,8 @@ def build_lifecycle_class(decorated_cls, *, _Example_lifecycle_definition, _Exam
         __yidl_lifecycle_generated__ = True
         __yidl_lifecycle_user_class__ = decorated_cls
         __yidl_lifecycle_definition__ = _Example_lifecycle_definition
-        __yidl_tx_index_to_key__ = _Example_tx_groups
-        __yidl_tx_key_to_index__ = {key: index for index, key in enumerate(_Example_tx_groups)}
+        __yidl_tx_index_to_key__ = _Example_tx_keys
+        __yidl_tx_key_to_index__ = {key: index for index, key in enumerate(_Example_tx_keys)}
 
         @property
         def v2(self):
@@ -360,7 +360,7 @@ def build_lifecycle_class(decorated_cls, *, _Example_lifecycle_definition, _Exam
             object.__setattr__(self, '_y_state', state)
             object.__setattr__(self, '_y_current_facade', None)
             object.__setattr__(self, '_y_working_facade', None)
-            state._y_transaction_manager = transaction_manager or TransactionManager(tx_groups=tuple((group for group in _Example_tx_groups if group != DEFAULT_TRANSACTION)))
+            state._y_transaction_manager = transaction_manager or TransactionManager(tx_keys=tuple((group for group in _Example_tx_keys if group != DEFAULT_TRANSACTION)))
             state._y_default_ref = weakref.ref(self)
             state._y_current_ref = None
             state._y_working_ref = None
@@ -385,7 +385,7 @@ def build_lifecycle_class(decorated_cls, *, _Example_lifecycle_definition, _Exam
             state._y_v4_current = v4
             v5 = _Example_v5_default_factory(SCALE=self.SCALE, v4=self.v4)
             state._y_v5_current = v5
-            state._y_working_tx_ids = [None for _group in _Example_tx_groups]
+            state._y_working_tx_ids = [None for _group in _Example_tx_keys]
 
     class Example_Current(Example_FacadeBase):
         __slots__ = ()

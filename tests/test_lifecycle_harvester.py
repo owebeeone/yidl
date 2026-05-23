@@ -49,7 +49,7 @@ def test_harvests_phase_a_compatible_facts() -> None:
         "working_facade_class_name": "Counter_Working",
         "lifecycle_definition_param_name": "_Counter_lifecycle_definition",
         "annotations_param_name": "_Counter_annotations",
-        "tx_groups_param_name": "_Counter_tx_groups",
+        "tx_keys_param_name": "_Counter_tx_keys",
         "lifecycle_field_names": (
             "plain",
             "optional",
@@ -64,7 +64,7 @@ def test_harvests_phase_a_compatible_facts() -> None:
             fact["field_kind"],
             fact["field_order"],
             fact["default_value_param_name"],
-            fact["tx_group_key"],
+            fact["tx_key_key"],
         )
         for fact in harvested.field_facts
     ] == [
@@ -89,14 +89,14 @@ def test_harvests_phase_a_compatible_facts() -> None:
     assert harvested.field_facts[5]["has_optional_none"] is False
     assert harvested.field_facts[6]["has_freeze"] is False
     assert harvested.field_facts[6]["has_thaw"] is False
-    assert harvested.tx_groups == (DEFAULT_TRANSACTION, "audit")
+    assert harvested.tx_keys == (DEFAULT_TRANSACTION, "audit")
     assert harvested.lifecycle_definition["version"] == 1
     assert harvested.lifecycle_definition["fields"] == harvested.field_facts
     assert harvested.build_kwargs["_Counter_lifecycle_definition"] is (
         harvested.lifecycle_definition
     )
     assert harvested.build_kwargs["_Counter_annotations"] == Counter.__annotations__
-    assert harvested.build_kwargs["_Counter_tx_groups"] == (
+    assert harvested.build_kwargs["_Counter_tx_keys"] == (
         DEFAULT_TRANSACTION,
         "audit",
     )
@@ -287,7 +287,7 @@ def test_harvester_preserves_first_transaction_group_order() -> None:
 
     harvested = harvest_lifecycle_definition(Counter)
 
-    assert harvested.tx_groups == (DEFAULT_TRANSACTION, "audit", "other")
+    assert harvested.tx_keys == (DEFAULT_TRANSACTION, "audit", "other")
 
 
 def test_harvester_merges_inherited_generated_lifecycle_facts() -> None:
@@ -315,7 +315,7 @@ def test_harvester_merges_inherited_generated_lifecycle_facts() -> None:
             fact["field_owner"],
             fact["default_value"],
             fact["default_value_param_name"],
-            fact["tx_group_key"],
+            fact["tx_key_key"],
         )
         for fact in harvested.field_facts
     ] == [
@@ -347,7 +347,7 @@ def test_harvester_merges_inherited_generated_lifecycle_facts() -> None:
             "other",
         ),
     ]
-    assert harvested.tx_groups == (DEFAULT_TRANSACTION, "audit", "other")
+    assert harvested.tx_keys == (DEFAULT_TRANSACTION, "audit", "other")
     assert harvested.build_kwargs["_Derived_v1_default"] == 2
 
 
@@ -360,7 +360,7 @@ def test_harvester_sorts_inherited_facts_by_field_order() -> None:
     reversed_definition = {
         "version": 1,
         "fields": tuple(reversed(base_harvested.field_facts)),
-        "tx_groups": base_harvested.tx_groups,
+        "tx_keys": base_harvested.tx_keys,
     }
 
     class GeneratedBase:
@@ -414,7 +414,7 @@ def test_harvester_rejects_managed_transaction_group_change() -> None:
 
     with pytest.raises(
         LifecycleDefinitionError,
-        match="cannot change transaction group",
+        match="cannot change transaction key",
     ):
         harvest_lifecycle_definition(Derived)
 
@@ -425,7 +425,7 @@ def test_harvester_rejects_malformed_inherited_lifecycle_metadata() -> None:
         __yidl_lifecycle_definition__ = {
             "version": 1,
             "fields": (),
-            "tx_groups": ("audit", DEFAULT_TRANSACTION),
+            "tx_keys": ("audit", DEFAULT_TRANSACTION),
         }
 
     class Derived(GeneratedBase):
@@ -433,7 +433,7 @@ def test_harvester_rejects_malformed_inherited_lifecycle_metadata() -> None:
 
     with pytest.raises(
         LifecycleDefinitionError,
-        match="transaction group indexes are invalid",
+        match="transaction key indexes are invalid",
     ):
         harvest_lifecycle_definition(Derived)
 
@@ -469,7 +469,7 @@ def test_harvester_collects_transaction_method_markers() -> None:
         (
             fact["method_kind"],
             fact["method_name"],
-            fact["tx_group_key"],
+            fact["tx_key_key"],
             fact["declaration_order"],
         )
         for fact in harvested.transaction_method_facts

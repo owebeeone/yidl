@@ -3,9 +3,9 @@ _NameProperty = RuntimeProperty('Name', str, default=REQUIRED, storage_name='nam
 _SourceOrderProperty = RuntimeProperty('SourceOrder', int, default=0, storage_name='source_order')
 _KindProperty = RuntimeProperty('Kind', object, default=REQUIRED, storage_name='kind')
 _DefaultProperty = RuntimeProperty('Default', object, default=REQUIRED, storage_name='default')
-_TxGroupProperty = RuntimeProperty('TxGroup', str, default='default', storage_name='tx_group')
+_TxKeyProperty = RuntimeProperty('TxKey', str, default='default', storage_name='tx_key')
 _PlainFieldSpec = RuntimeRecord('PlainField', (_NameProperty, _SourceOrderProperty, _KindProperty, _DefaultProperty))
-_ManagedFieldSpec = RuntimeRecord('ManagedField', (_NameProperty, _SourceOrderProperty, _KindProperty, _TxGroupProperty, _DefaultProperty))
+_ManagedFieldSpec = RuntimeRecord('ManagedField', (_NameProperty, _SourceOrderProperty, _KindProperty, _TxKeyProperty, _DefaultProperty))
 _FieldSpecsUnion = RuntimeUnion('FieldSpecs', (_PlainFieldSpec, _ManagedFieldSpec))
 
 class PlainField:
@@ -41,15 +41,15 @@ class PlainField:
 _PlainFieldSpec.bind_record_class(PlainField)
 
 class ManagedField:
-    __slots__ = ('name', 'source_order', 'kind', 'tx_group', 'default')
+    __slots__ = ('name', 'source_order', 'kind', 'tx_key', 'default')
     __dds_record_spec__ = _ManagedFieldSpec
     name: str
     source_order: int
     kind: object
-    tx_group: str
+    tx_key: str
     default: object
 
-    def __init__(self, *, name: str, source_order: int=0, kind: object, tx_group: str='default', default: object):
+    def __init__(self, *, name: str, source_order: int=0, kind: object, tx_key: str='default', default: object):
         if not isinstance(name, str):
             raise TypeError('Name must be str, got ' + type(name).__name__)
         object.__setattr__(self, 'name', name)
@@ -57,13 +57,13 @@ class ManagedField:
             raise TypeError('SourceOrder must be int, got ' + type(source_order).__name__)
         object.__setattr__(self, 'source_order', source_order)
         object.__setattr__(self, 'kind', kind)
-        if not isinstance(tx_group, str):
-            raise TypeError('TxGroup must be str, got ' + type(tx_group).__name__)
-        object.__setattr__(self, 'tx_group', tx_group)
+        if not isinstance(tx_key, str):
+            raise TypeError('TxKey must be str, got ' + type(tx_key).__name__)
+        object.__setattr__(self, 'tx_key', tx_key)
         object.__setattr__(self, 'default', default)
 
     def __setattr__(self, name, value):
-        if name in ('name', 'source_order', 'kind', 'tx_group', 'default'):
+        if name in ('name', 'source_order', 'kind', 'tx_key', 'default'):
             raise AttributeError('ManagedField records are immutable')
         object.__setattr__(self, name, value)
 
@@ -72,7 +72,7 @@ class ManagedField:
         pieces.append('name=' + repr(self.name))
         pieces.append('source_order=' + repr(self.source_order))
         pieces.append('kind=' + repr(self.kind))
-        pieces.append('tx_group=' + repr(self.tx_group))
+        pieces.append('tx_key=' + repr(self.tx_key))
         pieces.append('default=' + repr(self.default))
         return 'ManagedField' + '(' + ', '.join(pieces) + ')'
 _ManagedFieldSpec.bind_record_class(ManagedField)

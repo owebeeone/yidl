@@ -28,7 +28,7 @@ def render_case() -> str:
             defaulted=True,
             default_value=0,
             order=0,
-            tx_group="default",
+            tx_key="default",
         ),
     )
     builder.add(
@@ -48,7 +48,7 @@ def render_case() -> str:
             source_label="Example.before_owner",
             callable_object=before_owner,
             callable_role=BEFORE_COMMIT_HOOK,
-            tx_group="default",
+            tx_key="default",
             phase=BEFORE_COMMIT_HOOK,
             order=0,
             allowed_injections=("owner",),

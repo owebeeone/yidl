@@ -12,7 +12,7 @@ def build_lifecycle_class(
     *,
     _Counter_lifecycle_definition,
     _Counter_annotations,
-    _Counter_tx_groups,
+    _Counter_tx_keys,
     _Counter_plain_default,
     _Counter_seed_default,
     _Counter_KIND_default,
@@ -33,9 +33,9 @@ def build_lifecycle_class(
             "_y_audit_count_working",
             "_y_working_tx_ids",
         )
-        __yidl_tx_index_to_group__ = _Counter_tx_groups
-        __yidl_tx_group_to_index__ = {
-            group: index for index, group in enumerate(_Counter_tx_groups)
+        __yidl_tx_index_to_group__ = _Counter_tx_keys
+        __yidl_tx_key_to_index__ = {
+            group: index for index, group in enumerate(_Counter_tx_keys)
         }
 
         def _y_get_default_facade(self):
@@ -66,8 +66,8 @@ def build_lifecycle_class(
             return facade
 
         def _y_require_active_transaction(self, tx_index):
-            tx_group = self.__yidl_tx_index_to_group__[tx_index]
-            transaction = self._y_transaction_manager.active_transaction_for(tx_group)
+            tx_key = self.__yidl_tx_index_to_group__[tx_index]
+            transaction = self._y_transaction_manager.active_transaction_for(tx_key)
             if transaction is None:
                 if self._y_working_tx_ids[tx_index] is not None:
                     raise RuntimeError(
@@ -84,26 +84,26 @@ def build_lifecycle_class(
         def _y_ensure_working_transaction(self, tx_index):
             transaction = self._y_require_active_transaction(tx_index)
             if self._y_working_tx_ids[tx_index] is None:
-                tx_group = self.__yidl_tx_index_to_group__[tx_index]
+                tx_key = self.__yidl_tx_index_to_group__[tx_index]
                 self._y_working_tx_ids[tx_index] = self._y_transaction_manager.enlist(
-                    self, tx_group
+                    self, tx_key
                 )
             return transaction
 
-        def commit_order_key_for(self, tx_group=DEFAULT_TRANSACTION):
-            del tx_group
+        def commit_order_key_for(self, tx_key=DEFAULT_TRANSACTION):
+            del tx_key
             return ()
 
-        def requires_validation_for(self, tx_group=DEFAULT_TRANSACTION):
-            del tx_group
+        def requires_validation_for(self, tx_key=DEFAULT_TRANSACTION):
+            del tx_key
             return False
 
-        def validate_commit_for(self, tx_group=DEFAULT_TRANSACTION):
-            del tx_group
+        def validate_commit_for(self, tx_key=DEFAULT_TRANSACTION):
+            del tx_key
             return True
 
-        def _commit_transaction(self, tx_id, tx_group=DEFAULT_TRANSACTION):
-            tx_index = self.__yidl_tx_group_to_index__[tx_group]
+        def _commit_transaction(self, tx_id, tx_key=DEFAULT_TRANSACTION):
+            tx_index = self.__yidl_tx_key_to_index__[tx_key]
             if self._y_working_tx_ids[tx_index] != tx_id:
                 return self._y_get_default_facade()
             pass
@@ -118,8 +118,8 @@ def build_lifecycle_class(
             self._y_working_tx_ids[tx_index] = None
             return self._y_get_default_facade()
 
-        def _rollback_transaction(self, tx_id, tx_group=DEFAULT_TRANSACTION):
-            tx_index = self.__yidl_tx_group_to_index__[tx_group]
+        def _rollback_transaction(self, tx_id, tx_key=DEFAULT_TRANSACTION):
+            tx_index = self.__yidl_tx_key_to_index__[tx_key]
             if self._y_working_tx_ids[tx_index] != tx_id:
                 return self._y_get_default_facade()
             pass
@@ -145,20 +145,20 @@ def build_lifecycle_class(
         def working(self):
             return self._y_state._y_get_working_facade()
 
-        def begin(self, *tx_groups):
-            return self._y_state._y_transaction_manager.begin(*tx_groups)
+        def begin(self, *tx_keys):
+            return self._y_state._y_transaction_manager.begin(*tx_keys)
 
-        def validate(self, *tx_groups):
-            return self._y_state._y_transaction_manager.validate(*tx_groups)
+        def validate(self, *tx_keys):
+            return self._y_state._y_transaction_manager.validate(*tx_keys)
 
-        def commit_only(self, *tx_groups):
-            return self._y_state._y_transaction_manager.commit_only(*tx_groups)
+        def commit_only(self, *tx_keys):
+            return self._y_state._y_transaction_manager.commit_only(*tx_keys)
 
-        def commit(self, *tx_groups):
-            return self._y_state._y_transaction_manager.commit(*tx_groups)
+        def commit(self, *tx_keys):
+            return self._y_state._y_transaction_manager.commit(*tx_keys)
 
-        def rollback(self, *tx_groups):
-            return self._y_state._y_transaction_manager.rollback(*tx_groups)
+        def rollback(self, *tx_keys):
+            return self._y_state._y_transaction_manager.rollback(*tx_keys)
 
         pass
         KIND = _Counter_KIND_default
@@ -178,9 +178,9 @@ def build_lifecycle_class(
         __yidl_lifecycle_generated__ = True
         __yidl_lifecycle_user_class__ = decorated_cls
         __yidl_lifecycle_definition__ = _Counter_lifecycle_definition
-        __yidl_tx_index_to_group__ = _Counter_tx_groups
-        __yidl_tx_group_to_index__ = {
-            group: index for index, group in enumerate(_Counter_tx_groups)
+        __yidl_tx_index_to_group__ = _Counter_tx_keys
+        __yidl_tx_key_to_index__ = {
+            group: index for index, group in enumerate(_Counter_tx_keys)
         }
         pass
 
@@ -222,10 +222,10 @@ def build_lifecycle_class(
             state = object.__new__(Counter_State)
             object.__setattr__(self, "_y_state", state)
             state._y_transaction_manager = transaction_manager or TransactionManager(
-                tx_groups=tuple(
+                tx_keys=tuple(
                     (
                         group
-                        for group in _Counter_tx_groups
+                        for group in _Counter_tx_keys
                         if group != DEFAULT_TRANSACTION
                     )
                 )
@@ -239,7 +239,7 @@ def build_lifecycle_class(
             state._y_count_working = VOID
             state._y_audit_count_current = audit_count
             state._y_audit_count_working = VOID
-            state._y_working_tx_ids = [None for _group in _Counter_tx_groups]
+            state._y_working_tx_ids = [None for _group in _Counter_tx_keys]
 
     class Counter_Current(Counter_FacadeBase):
         __slots__ = ()

@@ -74,7 +74,7 @@ def test_managed_marker_defaults_to_default_transaction() -> None:
     decl = normalize_marker("count", int, managed(default=1))
 
     assert decl.kind == "managed"
-    assert decl.tx_group == DEFAULT_TRANSACTION
+    assert decl.tx_key == DEFAULT_TRANSACTION
     assert decl.default == 1
 
 
@@ -82,7 +82,7 @@ def test_managed_marker_accepts_positional_transaction_group() -> None:
     decl = normalize_marker("audit_count", int, managed("audit", default=10))
 
     assert decl.kind == "managed"
-    assert decl.tx_group == "audit"
+    assert decl.tx_key == "audit"
     assert decl.default == 10
 
 
@@ -90,10 +90,10 @@ def test_managed_marker_accepts_keyword_transaction_group() -> None:
     decl = normalize_marker(
         "audit_count",
         int,
-        managed(tx_group="audit", default=10),
+        managed(tx_key="audit", default=10),
     )
 
-    assert decl.tx_group == "audit"
+    assert decl.tx_key == "audit"
 
 
 def test_managed_marker_preserves_freeze_and_thaw_callables() -> None:
@@ -119,7 +119,7 @@ def test_transient_marker_defaults_to_default_transaction_key() -> None:
     decl = normalize_marker("scratch", list[int], transient(default_factory=list))
 
     assert decl.kind == "transient"
-    assert decl.tx_group == DEFAULT_TRANSACTION
+    assert decl.tx_key == DEFAULT_TRANSACTION
     assert decl.has_default_factory is True
     assert decl.default_factory is list
     assert decl.has_working_default_factory is False
@@ -139,7 +139,7 @@ def test_transient_marker_accepts_transaction_key_and_working_factory() -> None:
     )
 
     assert decl.kind == "transient"
-    assert decl.tx_group == "audit"
+    assert decl.tx_key == "audit"
     assert decl.has_default is True
     assert decl.default is None
     assert decl.has_working_default_factory is True
@@ -150,7 +150,7 @@ def test_owned_marker_defaults_to_default_transaction_key() -> None:
     decl = normalize_marker("child", object, owned(default=None))
 
     assert decl.kind == "owned"
-    assert decl.tx_group == DEFAULT_TRANSACTION
+    assert decl.tx_key == DEFAULT_TRANSACTION
     assert decl.has_default is True
     assert decl.default is None
 
@@ -162,7 +162,7 @@ def test_owned_marker_accepts_transaction_key_and_factory() -> None:
     decl = normalize_marker("child", object, owned("audit", default_factory=factory))
 
     assert decl.kind == "owned"
-    assert decl.tx_group == "audit"
+    assert decl.tx_key == "audit"
     assert decl.has_default is False
     assert decl.has_default_factory is True
     assert decl.default_factory is factory
@@ -172,7 +172,7 @@ def test_binding_marker_normalizes_as_plain_binding_resource() -> None:
     decl = normalize_marker("handle", object, binding(default=None))
 
     assert decl.kind == "binding"
-    assert decl.tx_group is MISSING
+    assert decl.tx_key is MISSING
     assert decl.has_default is True
     assert decl.default is None
 
@@ -189,12 +189,12 @@ def test_harvester_emits_owned_and_binding_field_facts() -> None:
     )
 
     assert child["field_kind"] == "owned"
-    assert child["tx_group_key"] == "audit"
+    assert child["tx_key_key"] == "audit"
     assert child["current_slot_name"] == "_y_child_current"
     assert child["working_slot_name"] == "_y_child_working"
     assert handle["field_kind"] == "binding"
     assert handle["value_slot_name"] == "_y_handle_value"
-    assert harvested.tx_groups == (DEFAULT_TRANSACTION, "audit")
+    assert harvested.tx_keys == (DEFAULT_TRANSACTION, "audit")
     assert harvested.class_fact["lifecycle_field_names"] == ("child", "handle")
 
 
@@ -216,7 +216,7 @@ def test_harvester_emits_transient_field_facts() -> None:
     )
 
     assert scratch["field_kind"] == "transient"
-    assert scratch["tx_group_key"] == "audit"
+    assert scratch["tx_key_key"] == "audit"
     assert scratch["current_slot_name"] == "_y_scratch_current"
     assert scratch["working_slot_name"] == "_y_scratch_working"
     assert scratch["has_working_default_factory"] is True
@@ -226,7 +226,7 @@ def test_harvester_emits_transient_field_facts() -> None:
         harvested.build_kwargs["_Example_scratch_working_default_factory"]
         is working_factory
     )
-    assert harvested.tx_groups == (DEFAULT_TRANSACTION, "audit")
+    assert harvested.tx_keys == (DEFAULT_TRANSACTION, "audit")
 
 
 def test_marker_rejects_default_and_default_factory() -> None:

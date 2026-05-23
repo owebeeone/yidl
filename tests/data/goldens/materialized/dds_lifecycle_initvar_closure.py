@@ -7,7 +7,7 @@ _AnnotationPathProperty = RuntimeProperty('AnnotationPath', str, default='', sto
 _DefaultedProperty = RuntimeProperty('Defaulted', bool, default=False, storage_name='defaulted')
 _DefaultValueProperty = RuntimeProperty('DefaultValue', object, default=None, storage_name='default_value')
 _OrderProperty = RuntimeProperty('Order', int, default=0, storage_name='order')
-_TxGroupProperty = RuntimeProperty('TxGroup', str, default='', storage_name='tx_group')
+_TxKeyProperty = RuntimeProperty('TxKey', str, default='', storage_name='tx_key')
 _TxIndexProperty = RuntimeProperty('TxIndex', int, default=REQUIRED, storage_name='tx_index')
 _ClassRoleProperty = RuntimeProperty('ClassRole', str, default=REQUIRED, storage_name='class_role')
 _ClassNameProperty = RuntimeProperty('ClassName', str, default=REQUIRED, storage_name='class_name')
@@ -41,9 +41,9 @@ _InjectionKindProperty = RuntimeProperty('InjectionKind', str, default=REQUIRED,
 _RequiredProperty = RuntimeProperty('Required', bool, default=True, storage_name='required')
 _ConsumerProperty = RuntimeProperty('Consumer', str, default=REQUIRED, storage_name='consumer')
 _InitVarNameProperty = RuntimeProperty('InitVarName', str, default=REQUIRED, storage_name='initvar_name')
-_ManagedFieldSpec = RuntimeRecord('ManagedField', (_NameProperty, _KindProperty, _AnnotationPathProperty, _DefaultedProperty, _DefaultValueProperty, _OrderProperty, _TxGroupProperty))
-_ConstFieldSpec = RuntimeRecord('ConstField', (_NameProperty, _KindProperty, _AnnotationPathProperty, _DefaultedProperty, _DefaultValueProperty, _OrderProperty, _TxGroupProperty))
-_TxGroupRecordSpec = RuntimeRecord('TxGroupRecord', (_TxGroupProperty, _TxIndexProperty))
+_ManagedFieldSpec = RuntimeRecord('ManagedField', (_NameProperty, _KindProperty, _AnnotationPathProperty, _DefaultedProperty, _DefaultValueProperty, _OrderProperty, _TxKeyProperty))
+_ConstFieldSpec = RuntimeRecord('ConstField', (_NameProperty, _KindProperty, _AnnotationPathProperty, _DefaultedProperty, _DefaultValueProperty, _OrderProperty, _TxKeyProperty))
+_TxKeyRecordSpec = RuntimeRecord('TxKeyRecord', (_TxKeyProperty, _TxIndexProperty))
 _ClassInputSpec = RuntimeRecord('ClassInput', (_ClassNameProperty, _StateClassNameProperty))
 _ClassNameContributionSpec = RuntimeRecord('ClassNameContribution', (_ClassRoleProperty, _TargetPortProperty, _OrderProperty, _RuntimeValueProperty))
 _ClassComponentSpec = RuntimeRecord('ClassComponent', (_ClassRoleProperty, _NameProperty, _TargetPortProperty, _OrderProperty, _TemplateProperty, _FieldNameProperty, _CurrentSlotProperty, _WorkingSlotProperty, _PublishedSlotProperty, _SourceNameProperty, _TargetNameProperty, _StateClassNameProperty))
@@ -57,23 +57,23 @@ _CallableDeclarationSpec = RuntimeRecord('CallableDeclaration', (_NameProperty, 
 _CallableSpecSpec = RuntimeRecord('CallableSpec', (_NameProperty, _SourceLabelProperty, _CallableRoleProperty, _AcceptsVarArgsProperty, _AcceptsVarKwargsProperty))
 _CallableParamSpec = RuntimeRecord('CallableParam', (_CallableNameProperty, _ParamNameProperty, _ParamKindProperty, _ParamOrderProperty))
 _CallableInjectionSpec = RuntimeRecord('CallableInjection', (_CallableNameProperty, _ParamNameProperty, _InjectionKindProperty, _RequiredProperty))
-_CommitValidatorSpec = RuntimeRecord('CommitValidator', (_NameProperty, _SourceLabelProperty, _CallableObjectProperty, _CallableRoleProperty, _TxGroupProperty, _OrderProperty, _AllowedInjectionsProperty, _CallablePathProperty))
-_CommitOrderKeySpec = RuntimeRecord('CommitOrderKey', (_NameProperty, _SourceLabelProperty, _CallableObjectProperty, _CallableRoleProperty, _TxGroupProperty, _OrderProperty, _AllowedInjectionsProperty, _CallablePathProperty))
-_HookDeclarationSpec = RuntimeRecord('HookDeclaration', (_NameProperty, _SourceLabelProperty, _CallableObjectProperty, _CallableRoleProperty, _TxGroupProperty, _PhaseProperty, _OrderProperty, _AllowedInjectionsProperty, _CallablePathProperty))
+_CommitValidatorSpec = RuntimeRecord('CommitValidator', (_NameProperty, _SourceLabelProperty, _CallableObjectProperty, _CallableRoleProperty, _TxKeyProperty, _OrderProperty, _AllowedInjectionsProperty, _CallablePathProperty))
+_CommitOrderKeySpec = RuntimeRecord('CommitOrderKey', (_NameProperty, _SourceLabelProperty, _CallableObjectProperty, _CallableRoleProperty, _TxKeyProperty, _OrderProperty, _AllowedInjectionsProperty, _CallablePathProperty))
+_HookDeclarationSpec = RuntimeRecord('HookDeclaration', (_NameProperty, _SourceLabelProperty, _CallableObjectProperty, _CallableRoleProperty, _TxKeyProperty, _PhaseProperty, _OrderProperty, _AllowedInjectionsProperty, _CallablePathProperty))
 _HookMethodStatementSpec = RuntimeRecord('HookMethodStatement', (_ClassRoleProperty, _NameProperty, _TargetPortProperty, _OrderProperty, _TemplateProperty, _CallableNameProperty, _CallablePathProperty))
 _MethodCallArgumentSpec = RuntimeRecord('MethodCallArgument', (_ClassRoleProperty, _NameProperty, _TargetPortProperty, _OrderProperty, _TemplateProperty, _CallableNameProperty, _ParamNameProperty, _InjectionKindProperty, _TargetNameProperty))
 _ResourceCleanupStatementSpec = RuntimeRecord('ResourceCleanupStatement', (_ClassRoleProperty, _NameProperty, _TargetPortProperty, _OrderProperty, _TemplateProperty, _ReleasePathProperty, _PublishedSlotProperty))
-_OwnedFieldSpec = RuntimeRecord('OwnedField', (_NameProperty, _KindProperty, _AnnotationPathProperty, _DefaultedProperty, _DefaultValueProperty, _OrderProperty, _TxGroupProperty, _ReleasePathProperty, _ResourcePolicyProperty))
-_BindingFieldSpec = RuntimeRecord('BindingField', (_NameProperty, _KindProperty, _AnnotationPathProperty, _DefaultedProperty, _DefaultValueProperty, _OrderProperty, _TxGroupProperty, _ReleasePathProperty, _ResourcePolicyProperty))
+_OwnedFieldSpec = RuntimeRecord('OwnedField', (_NameProperty, _KindProperty, _AnnotationPathProperty, _DefaultedProperty, _DefaultValueProperty, _OrderProperty, _TxKeyProperty, _ReleasePathProperty, _ResourcePolicyProperty))
+_BindingFieldSpec = RuntimeRecord('BindingField', (_NameProperty, _KindProperty, _AnnotationPathProperty, _DefaultedProperty, _DefaultValueProperty, _OrderProperty, _TxKeyProperty, _ReleasePathProperty, _ResourcePolicyProperty))
 _InitvarEdgeSpec = RuntimeRecord('InitvarEdge', (_ConsumerProperty, _InitVarNameProperty, _SourceLabelProperty))
 _LateInitvarConsumerSpec = RuntimeRecord('LateInitvarConsumer', (_ConsumerProperty, _SourceLabelProperty))
 _RetainedInitVarSpec = RuntimeRecord('RetainedInitVar', (_NameProperty, _SourceLabelProperty))
 _ConstructorOnlyInitVarSpec = RuntimeRecord('ConstructorOnlyInitVar', (_NameProperty, _SourceLabelProperty))
-_InitVarFieldSpec = RuntimeRecord('InitVarField', (_NameProperty, _KindProperty, _AnnotationPathProperty, _DefaultedProperty, _DefaultValueProperty, _OrderProperty, _TxGroupProperty, _SourceLabelProperty))
+_InitVarFieldSpec = RuntimeRecord('InitVarField', (_NameProperty, _KindProperty, _AnnotationPathProperty, _DefaultedProperty, _DefaultValueProperty, _OrderProperty, _TxKeyProperty, _SourceLabelProperty))
 _FieldSpecsUnion = RuntimeUnion('FieldSpecs', (_ManagedFieldSpec, _ConstFieldSpec, _OwnedFieldSpec, _BindingFieldSpec, _InitVarFieldSpec))
 
 class ManagedField:
-    __slots__ = ('name', 'kind', 'annotation_path', 'defaulted', 'default_value', 'order', 'tx_group')
+    __slots__ = ('name', 'kind', 'annotation_path', 'defaulted', 'default_value', 'order', 'tx_key')
     __dds_record_spec__ = _ManagedFieldSpec
     name: str
     kind: str
@@ -81,9 +81,9 @@ class ManagedField:
     defaulted: bool
     default_value: object
     order: int
-    tx_group: str
+    tx_key: str
 
-    def __init__(self, *, name: str, kind: str, annotation_path: str='', defaulted: bool=False, default_value: object=None, order: int=0, tx_group: str=''):
+    def __init__(self, *, name: str, kind: str, annotation_path: str='', defaulted: bool=False, default_value: object=None, order: int=0, tx_key: str=''):
         if not isinstance(name, str):
             raise TypeError('Name must be str, got ' + type(name).__name__)
         object.__setattr__(self, 'name', name)
@@ -100,12 +100,12 @@ class ManagedField:
         if not isinstance(order, int):
             raise TypeError('Order must be int, got ' + type(order).__name__)
         object.__setattr__(self, 'order', order)
-        if not isinstance(tx_group, str):
-            raise TypeError('TxGroup must be str, got ' + type(tx_group).__name__)
-        object.__setattr__(self, 'tx_group', tx_group)
+        if not isinstance(tx_key, str):
+            raise TypeError('TxKey must be str, got ' + type(tx_key).__name__)
+        object.__setattr__(self, 'tx_key', tx_key)
 
     def __setattr__(self, name, value):
-        if name in ('name', 'kind', 'annotation_path', 'defaulted', 'default_value', 'order', 'tx_group'):
+        if name in ('name', 'kind', 'annotation_path', 'defaulted', 'default_value', 'order', 'tx_key'):
             raise AttributeError('ManagedField records are immutable')
         object.__setattr__(self, name, value)
 
@@ -117,12 +117,12 @@ class ManagedField:
         pieces.append('defaulted=' + repr(self.defaulted))
         pieces.append('default_value=' + repr(self.default_value))
         pieces.append('order=' + repr(self.order))
-        pieces.append('tx_group=' + repr(self.tx_group))
+        pieces.append('tx_key=' + repr(self.tx_key))
         return 'ManagedField' + '(' + ', '.join(pieces) + ')'
 _ManagedFieldSpec.bind_record_class(ManagedField)
 
 class ConstField:
-    __slots__ = ('name', 'kind', 'annotation_path', 'defaulted', 'default_value', 'order', 'tx_group')
+    __slots__ = ('name', 'kind', 'annotation_path', 'defaulted', 'default_value', 'order', 'tx_key')
     __dds_record_spec__ = _ConstFieldSpec
     name: str
     kind: str
@@ -130,9 +130,9 @@ class ConstField:
     defaulted: bool
     default_value: object
     order: int
-    tx_group: str
+    tx_key: str
 
-    def __init__(self, *, name: str, kind: str, annotation_path: str='', defaulted: bool=False, default_value: object=None, order: int=0, tx_group: str=''):
+    def __init__(self, *, name: str, kind: str, annotation_path: str='', defaulted: bool=False, default_value: object=None, order: int=0, tx_key: str=''):
         if not isinstance(name, str):
             raise TypeError('Name must be str, got ' + type(name).__name__)
         object.__setattr__(self, 'name', name)
@@ -149,12 +149,12 @@ class ConstField:
         if not isinstance(order, int):
             raise TypeError('Order must be int, got ' + type(order).__name__)
         object.__setattr__(self, 'order', order)
-        if not isinstance(tx_group, str):
-            raise TypeError('TxGroup must be str, got ' + type(tx_group).__name__)
-        object.__setattr__(self, 'tx_group', tx_group)
+        if not isinstance(tx_key, str):
+            raise TypeError('TxKey must be str, got ' + type(tx_key).__name__)
+        object.__setattr__(self, 'tx_key', tx_key)
 
     def __setattr__(self, name, value):
-        if name in ('name', 'kind', 'annotation_path', 'defaulted', 'default_value', 'order', 'tx_group'):
+        if name in ('name', 'kind', 'annotation_path', 'defaulted', 'default_value', 'order', 'tx_key'):
             raise AttributeError('ConstField records are immutable')
         object.__setattr__(self, name, value)
 
@@ -166,35 +166,35 @@ class ConstField:
         pieces.append('defaulted=' + repr(self.defaulted))
         pieces.append('default_value=' + repr(self.default_value))
         pieces.append('order=' + repr(self.order))
-        pieces.append('tx_group=' + repr(self.tx_group))
+        pieces.append('tx_key=' + repr(self.tx_key))
         return 'ConstField' + '(' + ', '.join(pieces) + ')'
 _ConstFieldSpec.bind_record_class(ConstField)
 
-class TxGroupRecord:
-    __slots__ = ('tx_group', 'tx_index')
-    __dds_record_spec__ = _TxGroupRecordSpec
-    tx_group: str
+class TxKeyRecord:
+    __slots__ = ('tx_key', 'tx_index')
+    __dds_record_spec__ = _TxKeyRecordSpec
+    tx_key: str
     tx_index: int
 
-    def __init__(self, *, tx_group: str='', tx_index: int):
-        if not isinstance(tx_group, str):
-            raise TypeError('TxGroup must be str, got ' + type(tx_group).__name__)
-        object.__setattr__(self, 'tx_group', tx_group)
+    def __init__(self, *, tx_key: str='', tx_index: int):
+        if not isinstance(tx_key, str):
+            raise TypeError('TxKey must be str, got ' + type(tx_key).__name__)
+        object.__setattr__(self, 'tx_key', tx_key)
         if not isinstance(tx_index, int):
             raise TypeError('TxIndex must be int, got ' + type(tx_index).__name__)
         object.__setattr__(self, 'tx_index', tx_index)
 
     def __setattr__(self, name, value):
-        if name in ('tx_group', 'tx_index'):
-            raise AttributeError('TxGroupRecord records are immutable')
+        if name in ('tx_key', 'tx_index'):
+            raise AttributeError('TxKeyRecord records are immutable')
         object.__setattr__(self, name, value)
 
     def __repr__(self):
         pieces = []
-        pieces.append('tx_group=' + repr(self.tx_group))
+        pieces.append('tx_key=' + repr(self.tx_key))
         pieces.append('tx_index=' + repr(self.tx_index))
-        return 'TxGroupRecord' + '(' + ', '.join(pieces) + ')'
-_TxGroupRecordSpec.bind_record_class(TxGroupRecord)
+        return 'TxKeyRecord' + '(' + ', '.join(pieces) + ')'
+_TxKeyRecordSpec.bind_record_class(TxKeyRecord)
 
 class ClassInput:
     __slots__ = ('class_name', 'state_class_name')
@@ -754,18 +754,18 @@ class CallableInjection:
 _CallableInjectionSpec.bind_record_class(CallableInjection)
 
 class CommitValidator:
-    __slots__ = ('name', 'source_label', 'callable_object', 'callable_role', 'tx_group', 'order', 'allowed_injections', 'callable_path')
+    __slots__ = ('name', 'source_label', 'callable_object', 'callable_role', 'tx_key', 'order', 'allowed_injections', 'callable_path')
     __dds_record_spec__ = _CommitValidatorSpec
     name: str
     source_label: str
     callable_object: object
     callable_role: str
-    tx_group: str
+    tx_key: str
     order: int
     allowed_injections: tuple
     callable_path: str
 
-    def __init__(self, *, name: str, source_label: str='', callable_object: object, callable_role: str, tx_group: str='', order: int=0, allowed_injections: tuple=(), callable_path: str):
+    def __init__(self, *, name: str, source_label: str='', callable_object: object, callable_role: str, tx_key: str='', order: int=0, allowed_injections: tuple=(), callable_path: str):
         if not isinstance(name, str):
             raise TypeError('Name must be str, got ' + type(name).__name__)
         object.__setattr__(self, 'name', name)
@@ -776,9 +776,9 @@ class CommitValidator:
         if not isinstance(callable_role, str):
             raise TypeError('CallableRole must be str, got ' + type(callable_role).__name__)
         object.__setattr__(self, 'callable_role', callable_role)
-        if not isinstance(tx_group, str):
-            raise TypeError('TxGroup must be str, got ' + type(tx_group).__name__)
-        object.__setattr__(self, 'tx_group', tx_group)
+        if not isinstance(tx_key, str):
+            raise TypeError('TxKey must be str, got ' + type(tx_key).__name__)
+        object.__setattr__(self, 'tx_key', tx_key)
         if not isinstance(order, int):
             raise TypeError('Order must be int, got ' + type(order).__name__)
         object.__setattr__(self, 'order', order)
@@ -790,7 +790,7 @@ class CommitValidator:
         object.__setattr__(self, 'callable_path', callable_path)
 
     def __setattr__(self, name, value):
-        if name in ('name', 'source_label', 'callable_object', 'callable_role', 'tx_group', 'order', 'allowed_injections', 'callable_path'):
+        if name in ('name', 'source_label', 'callable_object', 'callable_role', 'tx_key', 'order', 'allowed_injections', 'callable_path'):
             raise AttributeError('CommitValidator records are immutable')
         object.__setattr__(self, name, value)
 
@@ -800,7 +800,7 @@ class CommitValidator:
         pieces.append('source_label=' + repr(self.source_label))
         pieces.append('callable_object=' + repr(self.callable_object))
         pieces.append('callable_role=' + repr(self.callable_role))
-        pieces.append('tx_group=' + repr(self.tx_group))
+        pieces.append('tx_key=' + repr(self.tx_key))
         pieces.append('order=' + repr(self.order))
         pieces.append('allowed_injections=' + repr(self.allowed_injections))
         pieces.append('callable_path=' + repr(self.callable_path))
@@ -808,18 +808,18 @@ class CommitValidator:
 _CommitValidatorSpec.bind_record_class(CommitValidator)
 
 class CommitOrderKey:
-    __slots__ = ('name', 'source_label', 'callable_object', 'callable_role', 'tx_group', 'order', 'allowed_injections', 'callable_path')
+    __slots__ = ('name', 'source_label', 'callable_object', 'callable_role', 'tx_key', 'order', 'allowed_injections', 'callable_path')
     __dds_record_spec__ = _CommitOrderKeySpec
     name: str
     source_label: str
     callable_object: object
     callable_role: str
-    tx_group: str
+    tx_key: str
     order: int
     allowed_injections: tuple
     callable_path: str
 
-    def __init__(self, *, name: str, source_label: str='', callable_object: object, callable_role: str, tx_group: str='', order: int=0, allowed_injections: tuple=(), callable_path: str):
+    def __init__(self, *, name: str, source_label: str='', callable_object: object, callable_role: str, tx_key: str='', order: int=0, allowed_injections: tuple=(), callable_path: str):
         if not isinstance(name, str):
             raise TypeError('Name must be str, got ' + type(name).__name__)
         object.__setattr__(self, 'name', name)
@@ -830,9 +830,9 @@ class CommitOrderKey:
         if not isinstance(callable_role, str):
             raise TypeError('CallableRole must be str, got ' + type(callable_role).__name__)
         object.__setattr__(self, 'callable_role', callable_role)
-        if not isinstance(tx_group, str):
-            raise TypeError('TxGroup must be str, got ' + type(tx_group).__name__)
-        object.__setattr__(self, 'tx_group', tx_group)
+        if not isinstance(tx_key, str):
+            raise TypeError('TxKey must be str, got ' + type(tx_key).__name__)
+        object.__setattr__(self, 'tx_key', tx_key)
         if not isinstance(order, int):
             raise TypeError('Order must be int, got ' + type(order).__name__)
         object.__setattr__(self, 'order', order)
@@ -844,7 +844,7 @@ class CommitOrderKey:
         object.__setattr__(self, 'callable_path', callable_path)
 
     def __setattr__(self, name, value):
-        if name in ('name', 'source_label', 'callable_object', 'callable_role', 'tx_group', 'order', 'allowed_injections', 'callable_path'):
+        if name in ('name', 'source_label', 'callable_object', 'callable_role', 'tx_key', 'order', 'allowed_injections', 'callable_path'):
             raise AttributeError('CommitOrderKey records are immutable')
         object.__setattr__(self, name, value)
 
@@ -854,7 +854,7 @@ class CommitOrderKey:
         pieces.append('source_label=' + repr(self.source_label))
         pieces.append('callable_object=' + repr(self.callable_object))
         pieces.append('callable_role=' + repr(self.callable_role))
-        pieces.append('tx_group=' + repr(self.tx_group))
+        pieces.append('tx_key=' + repr(self.tx_key))
         pieces.append('order=' + repr(self.order))
         pieces.append('allowed_injections=' + repr(self.allowed_injections))
         pieces.append('callable_path=' + repr(self.callable_path))
@@ -862,19 +862,19 @@ class CommitOrderKey:
 _CommitOrderKeySpec.bind_record_class(CommitOrderKey)
 
 class HookDeclaration:
-    __slots__ = ('name', 'source_label', 'callable_object', 'callable_role', 'tx_group', 'phase', 'order', 'allowed_injections', 'callable_path')
+    __slots__ = ('name', 'source_label', 'callable_object', 'callable_role', 'tx_key', 'phase', 'order', 'allowed_injections', 'callable_path')
     __dds_record_spec__ = _HookDeclarationSpec
     name: str
     source_label: str
     callable_object: object
     callable_role: str
-    tx_group: str
+    tx_key: str
     phase: str
     order: int
     allowed_injections: tuple
     callable_path: str
 
-    def __init__(self, *, name: str, source_label: str='', callable_object: object, callable_role: str, tx_group: str='', phase: str='', order: int=0, allowed_injections: tuple=(), callable_path: str):
+    def __init__(self, *, name: str, source_label: str='', callable_object: object, callable_role: str, tx_key: str='', phase: str='', order: int=0, allowed_injections: tuple=(), callable_path: str):
         if not isinstance(name, str):
             raise TypeError('Name must be str, got ' + type(name).__name__)
         object.__setattr__(self, 'name', name)
@@ -885,9 +885,9 @@ class HookDeclaration:
         if not isinstance(callable_role, str):
             raise TypeError('CallableRole must be str, got ' + type(callable_role).__name__)
         object.__setattr__(self, 'callable_role', callable_role)
-        if not isinstance(tx_group, str):
-            raise TypeError('TxGroup must be str, got ' + type(tx_group).__name__)
-        object.__setattr__(self, 'tx_group', tx_group)
+        if not isinstance(tx_key, str):
+            raise TypeError('TxKey must be str, got ' + type(tx_key).__name__)
+        object.__setattr__(self, 'tx_key', tx_key)
         if not isinstance(phase, str):
             raise TypeError('Phase must be str, got ' + type(phase).__name__)
         object.__setattr__(self, 'phase', phase)
@@ -902,7 +902,7 @@ class HookDeclaration:
         object.__setattr__(self, 'callable_path', callable_path)
 
     def __setattr__(self, name, value):
-        if name in ('name', 'source_label', 'callable_object', 'callable_role', 'tx_group', 'phase', 'order', 'allowed_injections', 'callable_path'):
+        if name in ('name', 'source_label', 'callable_object', 'callable_role', 'tx_key', 'phase', 'order', 'allowed_injections', 'callable_path'):
             raise AttributeError('HookDeclaration records are immutable')
         object.__setattr__(self, name, value)
 
@@ -912,7 +912,7 @@ class HookDeclaration:
         pieces.append('source_label=' + repr(self.source_label))
         pieces.append('callable_object=' + repr(self.callable_object))
         pieces.append('callable_role=' + repr(self.callable_role))
-        pieces.append('tx_group=' + repr(self.tx_group))
+        pieces.append('tx_key=' + repr(self.tx_key))
         pieces.append('phase=' + repr(self.phase))
         pieces.append('order=' + repr(self.order))
         pieces.append('allowed_injections=' + repr(self.allowed_injections))
@@ -1072,7 +1072,7 @@ class ResourceCleanupStatement:
 _ResourceCleanupStatementSpec.bind_record_class(ResourceCleanupStatement)
 
 class OwnedField:
-    __slots__ = ('name', 'kind', 'annotation_path', 'defaulted', 'default_value', 'order', 'tx_group', 'release_path', 'resource_policy')
+    __slots__ = ('name', 'kind', 'annotation_path', 'defaulted', 'default_value', 'order', 'tx_key', 'release_path', 'resource_policy')
     __dds_record_spec__ = _OwnedFieldSpec
     name: str
     kind: str
@@ -1080,11 +1080,11 @@ class OwnedField:
     defaulted: bool
     default_value: object
     order: int
-    tx_group: str
+    tx_key: str
     release_path: str
     resource_policy: str
 
-    def __init__(self, *, name: str, kind: str, annotation_path: str='', defaulted: bool=False, default_value: object=None, order: int=0, tx_group: str='', release_path: str='', resource_policy: str=''):
+    def __init__(self, *, name: str, kind: str, annotation_path: str='', defaulted: bool=False, default_value: object=None, order: int=0, tx_key: str='', release_path: str='', resource_policy: str=''):
         if not isinstance(name, str):
             raise TypeError('Name must be str, got ' + type(name).__name__)
         object.__setattr__(self, 'name', name)
@@ -1101,9 +1101,9 @@ class OwnedField:
         if not isinstance(order, int):
             raise TypeError('Order must be int, got ' + type(order).__name__)
         object.__setattr__(self, 'order', order)
-        if not isinstance(tx_group, str):
-            raise TypeError('TxGroup must be str, got ' + type(tx_group).__name__)
-        object.__setattr__(self, 'tx_group', tx_group)
+        if not isinstance(tx_key, str):
+            raise TypeError('TxKey must be str, got ' + type(tx_key).__name__)
+        object.__setattr__(self, 'tx_key', tx_key)
         if not isinstance(release_path, str):
             raise TypeError('ReleasePath must be str, got ' + type(release_path).__name__)
         object.__setattr__(self, 'release_path', release_path)
@@ -1112,7 +1112,7 @@ class OwnedField:
         object.__setattr__(self, 'resource_policy', resource_policy)
 
     def __setattr__(self, name, value):
-        if name in ('name', 'kind', 'annotation_path', 'defaulted', 'default_value', 'order', 'tx_group', 'release_path', 'resource_policy'):
+        if name in ('name', 'kind', 'annotation_path', 'defaulted', 'default_value', 'order', 'tx_key', 'release_path', 'resource_policy'):
             raise AttributeError('OwnedField records are immutable')
         object.__setattr__(self, name, value)
 
@@ -1124,14 +1124,14 @@ class OwnedField:
         pieces.append('defaulted=' + repr(self.defaulted))
         pieces.append('default_value=' + repr(self.default_value))
         pieces.append('order=' + repr(self.order))
-        pieces.append('tx_group=' + repr(self.tx_group))
+        pieces.append('tx_key=' + repr(self.tx_key))
         pieces.append('release_path=' + repr(self.release_path))
         pieces.append('resource_policy=' + repr(self.resource_policy))
         return 'OwnedField' + '(' + ', '.join(pieces) + ')'
 _OwnedFieldSpec.bind_record_class(OwnedField)
 
 class BindingField:
-    __slots__ = ('name', 'kind', 'annotation_path', 'defaulted', 'default_value', 'order', 'tx_group', 'release_path', 'resource_policy')
+    __slots__ = ('name', 'kind', 'annotation_path', 'defaulted', 'default_value', 'order', 'tx_key', 'release_path', 'resource_policy')
     __dds_record_spec__ = _BindingFieldSpec
     name: str
     kind: str
@@ -1139,11 +1139,11 @@ class BindingField:
     defaulted: bool
     default_value: object
     order: int
-    tx_group: str
+    tx_key: str
     release_path: str
     resource_policy: str
 
-    def __init__(self, *, name: str, kind: str, annotation_path: str='', defaulted: bool=False, default_value: object=None, order: int=0, tx_group: str='', release_path: str='', resource_policy: str=''):
+    def __init__(self, *, name: str, kind: str, annotation_path: str='', defaulted: bool=False, default_value: object=None, order: int=0, tx_key: str='', release_path: str='', resource_policy: str=''):
         if not isinstance(name, str):
             raise TypeError('Name must be str, got ' + type(name).__name__)
         object.__setattr__(self, 'name', name)
@@ -1160,9 +1160,9 @@ class BindingField:
         if not isinstance(order, int):
             raise TypeError('Order must be int, got ' + type(order).__name__)
         object.__setattr__(self, 'order', order)
-        if not isinstance(tx_group, str):
-            raise TypeError('TxGroup must be str, got ' + type(tx_group).__name__)
-        object.__setattr__(self, 'tx_group', tx_group)
+        if not isinstance(tx_key, str):
+            raise TypeError('TxKey must be str, got ' + type(tx_key).__name__)
+        object.__setattr__(self, 'tx_key', tx_key)
         if not isinstance(release_path, str):
             raise TypeError('ReleasePath must be str, got ' + type(release_path).__name__)
         object.__setattr__(self, 'release_path', release_path)
@@ -1171,7 +1171,7 @@ class BindingField:
         object.__setattr__(self, 'resource_policy', resource_policy)
 
     def __setattr__(self, name, value):
-        if name in ('name', 'kind', 'annotation_path', 'defaulted', 'default_value', 'order', 'tx_group', 'release_path', 'resource_policy'):
+        if name in ('name', 'kind', 'annotation_path', 'defaulted', 'default_value', 'order', 'tx_key', 'release_path', 'resource_policy'):
             raise AttributeError('BindingField records are immutable')
         object.__setattr__(self, name, value)
 
@@ -1183,7 +1183,7 @@ class BindingField:
         pieces.append('defaulted=' + repr(self.defaulted))
         pieces.append('default_value=' + repr(self.default_value))
         pieces.append('order=' + repr(self.order))
-        pieces.append('tx_group=' + repr(self.tx_group))
+        pieces.append('tx_key=' + repr(self.tx_key))
         pieces.append('release_path=' + repr(self.release_path))
         pieces.append('resource_policy=' + repr(self.resource_policy))
         return 'BindingField' + '(' + ', '.join(pieces) + ')'
@@ -1299,7 +1299,7 @@ class ConstructorOnlyInitVar:
 _ConstructorOnlyInitVarSpec.bind_record_class(ConstructorOnlyInitVar)
 
 class InitVarField:
-    __slots__ = ('name', 'kind', 'annotation_path', 'defaulted', 'default_value', 'order', 'tx_group', 'source_label')
+    __slots__ = ('name', 'kind', 'annotation_path', 'defaulted', 'default_value', 'order', 'tx_key', 'source_label')
     __dds_record_spec__ = _InitVarFieldSpec
     name: str
     kind: str
@@ -1307,10 +1307,10 @@ class InitVarField:
     defaulted: bool
     default_value: object
     order: int
-    tx_group: str
+    tx_key: str
     source_label: str
 
-    def __init__(self, *, name: str, kind: str, annotation_path: str='', defaulted: bool=False, default_value: object=None, order: int=0, tx_group: str='', source_label: str=''):
+    def __init__(self, *, name: str, kind: str, annotation_path: str='', defaulted: bool=False, default_value: object=None, order: int=0, tx_key: str='', source_label: str=''):
         if not isinstance(name, str):
             raise TypeError('Name must be str, got ' + type(name).__name__)
         object.__setattr__(self, 'name', name)
@@ -1327,15 +1327,15 @@ class InitVarField:
         if not isinstance(order, int):
             raise TypeError('Order must be int, got ' + type(order).__name__)
         object.__setattr__(self, 'order', order)
-        if not isinstance(tx_group, str):
-            raise TypeError('TxGroup must be str, got ' + type(tx_group).__name__)
-        object.__setattr__(self, 'tx_group', tx_group)
+        if not isinstance(tx_key, str):
+            raise TypeError('TxKey must be str, got ' + type(tx_key).__name__)
+        object.__setattr__(self, 'tx_key', tx_key)
         if not isinstance(source_label, str):
             raise TypeError('SourceLabel must be str, got ' + type(source_label).__name__)
         object.__setattr__(self, 'source_label', source_label)
 
     def __setattr__(self, name, value):
-        if name in ('name', 'kind', 'annotation_path', 'defaulted', 'default_value', 'order', 'tx_group', 'source_label'):
+        if name in ('name', 'kind', 'annotation_path', 'defaulted', 'default_value', 'order', 'tx_key', 'source_label'):
             raise AttributeError('InitVarField records are immutable')
         object.__setattr__(self, name, value)
 
@@ -1347,12 +1347,12 @@ class InitVarField:
         pieces.append('defaulted=' + repr(self.defaulted))
         pieces.append('default_value=' + repr(self.default_value))
         pieces.append('order=' + repr(self.order))
-        pieces.append('tx_group=' + repr(self.tx_group))
+        pieces.append('tx_key=' + repr(self.tx_key))
         pieces.append('source_label=' + repr(self.source_label))
         return 'InitVarField' + '(' + ', '.join(pieces) + ')'
 _InitVarFieldSpec.bind_record_class(InitVarField)
 FieldsCollection = RuntimeCollection('Fields', _FieldSpecsUnion, allows_multiple=True, identity=_NameProperty)
-TxGroupsCollection = RuntimeCollection('TxGroups', _TxGroupRecordSpec, allows_multiple=True, identity=_TxGroupProperty)
+TxKeysCollection = RuntimeCollection('TxKeys', _TxKeyRecordSpec, allows_multiple=True, identity=_TxKeyProperty)
 ClassInputsCollection = RuntimeCollection('ClassInputs', _ClassInputSpec, allows_multiple=False, identity=_ClassNameProperty)
 ClassNamesCollection = RuntimeCollection('ClassNames', _ClassNameContributionSpec, allows_multiple=True, identity=_ClassRoleProperty)
 ClassComponentsCollection = RuntimeCollection('ClassComponents', _ClassComponentSpec, allows_multiple=True, identity=(_ClassRoleProperty, _NameProperty))
@@ -1366,9 +1366,9 @@ CallableDeclarationsCollection = RuntimeCollection('CallableDeclarations', _Call
 CallableSpecsCollection = RuntimeCollection('CallableSpecs', _CallableSpecSpec, allows_multiple=True, identity=_NameProperty)
 CallableParamsCollection = RuntimeCollection('CallableParams', _CallableParamSpec, allows_multiple=True, identity=(_CallableNameProperty, _ParamNameProperty))
 CallableInjectionsCollection = RuntimeCollection('CallableInjections', _CallableInjectionSpec, allows_multiple=True, identity=(_CallableNameProperty, _ParamNameProperty))
-CommitValidatorsCollection = RuntimeCollection('CommitValidators', _CommitValidatorSpec, allows_multiple=True, identity=_TxGroupProperty)
-CommitOrderKeysCollection = RuntimeCollection('CommitOrderKeys', _CommitOrderKeySpec, allows_multiple=True, identity=_TxGroupProperty)
-HookDeclarationsCollection = RuntimeCollection('HookDeclarations', _HookDeclarationSpec, allows_multiple=True, identity=(_PhaseProperty, _TxGroupProperty, _NameProperty))
+CommitValidatorsCollection = RuntimeCollection('CommitValidators', _CommitValidatorSpec, allows_multiple=True, identity=_TxKeyProperty)
+CommitOrderKeysCollection = RuntimeCollection('CommitOrderKeys', _CommitOrderKeySpec, allows_multiple=True, identity=_TxKeyProperty)
+HookDeclarationsCollection = RuntimeCollection('HookDeclarations', _HookDeclarationSpec, allows_multiple=True, identity=(_PhaseProperty, _TxKeyProperty, _NameProperty))
 HookMethodStatementsCollection = RuntimeCollection('HookMethodStatements', _HookMethodStatementSpec, allows_multiple=True, identity=(_ClassRoleProperty, _NameProperty))
 MethodCallArgumentsCollection = RuntimeCollection('MethodCallArguments', _MethodCallArgumentSpec, allows_multiple=True, identity=(_ClassRoleProperty, _NameProperty, _ParamNameProperty))
 ResourceCleanupStatementsCollection = RuntimeCollection('ResourceCleanupStatements', _ResourceCleanupStatementSpec, allows_multiple=True, identity=(_ClassRoleProperty, _NameProperty))
@@ -1385,7 +1385,7 @@ InitBodyPort = RuntimePort('Init.body', allows_multiple=True)
 StateCtorArgsPort = RuntimePort('StateCtor.args', allows_multiple=True)
 MethodBodyPort = RuntimePort('Method.body', allows_multiple=True)
 CallArgsPort = RuntimePort('Call.args', allows_multiple=True)
-_RUNTIME_SPEC = RuntimeContainerSpec(collections=(FieldsCollection, TxGroupsCollection, ClassInputsCollection, ClassNamesCollection, ClassComponentsCollection, ModuleComponentsCollection, SlotItemsCollection, InitParamsCollection, StateCtorArgsCollection, OperationContributionsCollection, MethodStatementsCollection, CallableDeclarationsCollection, CallableSpecsCollection, CallableParamsCollection, CallableInjectionsCollection, CommitValidatorsCollection, CommitOrderKeysCollection, HookDeclarationsCollection, HookMethodStatementsCollection, MethodCallArgumentsCollection, ResourceCleanupStatementsCollection, InitvarEdgesCollection, LateInitvarConsumersCollection, RetainedInitVarsCollection, ConstructorOnlyInitVarsCollection), computed_collections=(), ports=(ModuleBodyPort, ClassNamePort, ClassBodyPort, SlotsItemsPort, InitParamsPort, InitBodyPort, StateCtorArgsPort, MethodBodyPort, CallArgsPort), port_index=RuntimePortIndex(target=_TargetPortProperty, order=_OrderProperty))
+_RUNTIME_SPEC = RuntimeContainerSpec(collections=(FieldsCollection, TxKeysCollection, ClassInputsCollection, ClassNamesCollection, ClassComponentsCollection, ModuleComponentsCollection, SlotItemsCollection, InitParamsCollection, StateCtorArgsCollection, OperationContributionsCollection, MethodStatementsCollection, CallableDeclarationsCollection, CallableSpecsCollection, CallableParamsCollection, CallableInjectionsCollection, CommitValidatorsCollection, CommitOrderKeysCollection, HookDeclarationsCollection, HookMethodStatementsCollection, MethodCallArgumentsCollection, ResourceCleanupStatementsCollection, InitvarEdgesCollection, LateInitvarConsumersCollection, RetainedInitVarsCollection, ConstructorOnlyInitVarsCollection), computed_collections=(), ports=(ModuleBodyPort, ClassNamePort, ClassBodyPort, SlotsItemsPort, InitParamsPort, InitBodyPort, StateCtorArgsPort, MethodBodyPort, CallArgsPort), port_index=RuntimePortIndex(target=_TargetPortProperty, order=_OrderProperty))
 
 class PropertyTemplateMatcher:
 
@@ -1437,17 +1437,17 @@ def run_property_contribution(builder):
         record = OperationContribution(class_role='main_facade', name=source.records[0].name, phase='property', operation_kind='get', target_port=ClassBodyPort.of('main_facade'), order=property_order_for(source), template=source.resource, field_name=source.records[0].name, current_slot=current_slot_for_result(source), working_slot=working_slot_for_result(source), published_slot=published_slot_for_result(source))
         builder.write(OperationContributionsCollection, record, policy=AddIfAbsent)
 
-def run_build_tx_groups(builder):
-    ctx = DDSOperationContext(builder, 'BuildTxGroups', ordered_inputs={})
+def run_build_tx_keys(builder):
+    ctx = DDSOperationContext(builder, 'BuildTxKeys', ordered_inputs={})
     seen = set()
     next_index = 0
     for field in sorted(ctx.records(FieldsCollection), key=lambda record: (record.order, ctx.write_order(record))):
         if field.kind != 'managed':
             continue
-        if field.tx_group in seen:
+        if field.tx_key in seen:
             continue
-        seen.add(field.tx_group)
-        ctx.write(TxGroupsCollection, TxGroupRecord(tx_group=field.tx_group, tx_index=next_index), policy=AddIfAbsent)
+        seen.add(field.tx_key)
+        ctx.write(TxKeysCollection, TxKeyRecord(tx_key=field.tx_key, tx_index=next_index), policy=AddIfAbsent)
         next_index += 1
 
 def run_build_lifecycle_scaffold(builder):
@@ -1563,7 +1563,7 @@ def run_build_hook_method_statements(builder):
                 continue
             ctx.write(MethodCallArgumentsCollection, MethodCallArgument(class_role='main_facade', name=statement_name, target_port=target_port, order=params_by_callable.get(callable_name, {}).get(injection.param_name, write_order), template=current_arg_template, callable_name=callable_name, param_name=injection.param_name, injection_kind=injection.injection_kind), policy=AddIfAbsent)
     for validator in ctx.records(CommitValidatorsCollection):
-        statement_name = f'validate_{validator.tx_group}'
+        statement_name = f'validate_{validator.tx_key}'
         target_port = MethodBodyPort.of(('main_facade', 'commit'))
         ctx.write(HookMethodStatementsCollection, HookMethodStatement(class_role='main_facade', name=statement_name, target_port=target_port, order=-500 + validator.order, template=template_for(validator.name), callable_name=validator.name, callable_path=validator.callable_path), policy=AddIfAbsent)
         add_current_arguments(statement_name, validator.name, CallArgsPort.of(('main_facade', statement_name)))
@@ -1705,7 +1705,7 @@ def run_build_initvar_call_arguments(builder):
             ctx.write(MethodCallArgumentsCollection, MethodCallArgument(class_role=statement.class_role, name=statement.name, target_port=CallArgsPort.of((statement.class_role, statement.name)), order=params_by_callable.get(injection.callable_name, {}).get(injection.param_name, write_order), template=initvar_arg_template, callable_name=injection.callable_name, param_name=injection.param_name, injection_kind=injection.injection_kind, target_name=retained_slot), policy=AddIfAbsent)
 
 def run_operations(builder):
-    run_build_tx_groups(builder)
+    run_build_tx_keys(builder)
     run_build_lifecycle_scaffold(builder)
     run_operation_contribution_component(builder)
     run_property_contribution(builder)

@@ -46,7 +46,7 @@ choosing how authors spell it.
 
 | Entity | Owns | Notes |
 |---|---|---|
-| `TargetClassModel` | class name, base-class policy, facade models, fields, tx groups | One per generated user class. |
+| `TargetClassModel` | class name, base-class policy, facade models, fields, tx keys | One per generated user class. |
 | `FacadeModel` | facade name and facade capability objects | A facade can have multiple capabilities. |
 | `FieldModel` | field name, annotation, helper assembly, parameters, declaration order | Field name is the stable identity. |
 | `HelperModel` | author-facing helper API and composed behavior components | Example: `managed` assembles init/default/storage/tx/freeze-thaw pieces. |
@@ -211,7 +211,7 @@ The model must be able to emit contributions for these surfaces:
 6. Verify `None` as a literal default differs from `UNSPECIFIED`.
 7. Verify initvar capture and factory injection by name.
 8. Verify duplicate constructor parameter names fail before materialization.
-9. Verify transaction-aware fields carry one tx group without changing field
+9. Verify transaction-aware fields carry one tx key without changing field
    identity.
 10. Verify binding is lifetime-aware but not transaction-aware.
 

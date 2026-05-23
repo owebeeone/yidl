@@ -32,7 +32,7 @@ Current P1 grammar-to-model mapping.
 |---|---|
 | Field helper declaration | Field descriptor / FieldSpec |
 | Transducer declaration | Helper factory / class-generation function |
-| Transaction group | `tx_group_to_index` / `tx_index_to_group` metadata |
+| Transaction group | `tx_key_to_index` / `tx_index_to_group` metadata |
 | Callable body/reference | Callable injection lowerer input |
 | Behavior snippet | Astichi `Composable` fragment |
 | Virtual state reference | `StateRef` |

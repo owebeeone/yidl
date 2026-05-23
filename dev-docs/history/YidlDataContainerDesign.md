@@ -98,7 +98,7 @@ DDS models this as a union:
 FieldSpecs = dds.union("FieldSpecs")
 
 PlainField = FieldSpecs.variant("PlainField", Name, Annotation, Default, Init)
-ManagedField = FieldSpecs.variant("ManagedField", Name, Annotation, TxGroup)
+ManagedField = FieldSpecs.variant("ManagedField", Name, Annotation, TxKey)
 ClassVarField = FieldSpecs.variant("ClassVarField", Name, Annotation, Default)
 
 Fields = dds.collection("Fields", FieldSpecs, cardinality=dds.many, identity=Name)
@@ -487,7 +487,7 @@ Rule matching should return a first-class match tuple:
 ResolvedProvider(
     rule_point=PropertyGetter,
     provider=ManagedGetter,
-    match=(field, facade, tx_group),
+    match=(field, facade, tx_key),
 )
 ```
 

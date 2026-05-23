@@ -15,9 +15,9 @@ Current P1 callable-wrapper and injection design.
 |---|---|
 | `default_factory` | `self`, `current`, `working`, initvar names |
 | transient `working_default_factory` | `self`, `current`, `working`, initvar names |
-| `on_before_commit` | `self`, `current`, `working`, `tx_group`, initvar names |
-| `on_after_commit` | `self`, `previous`, `current`, `tx_group`, initvar names |
-| `on_after_rollback` | `self`, `current`, `tx_group`, initvar names |
+| `on_before_commit` | `self`, `current`, `working`, `tx_key`, initvar names |
+| `on_after_commit` | `self`, `previous`, `current`, `tx_key`, initvar names |
+| `on_after_rollback` | `self`, `current`, `tx_key`, initvar names |
 | `commit_validator` | `self`, initvar names |
 | `commit_order_key` default factory | `self`, `current`, `working`, initvar names |
 

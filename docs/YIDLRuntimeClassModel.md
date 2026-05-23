@@ -81,13 +81,13 @@ The intended model includes:
 
 ## 5a. Transaction groups
 
-YIDL supports named transaction groups as part of the generated runtime/class
-model where helpers or hooks declare a `tx_group`.
+YIDL supports named transaction keys as part of the generated runtime/class
+model where helpers or hooks declare a `tx_key`.
 
 The intended model is:
 
 - each field, validator, order key, or hook belongs either to the default
-  transaction group or to an explicitly named group
+  transaction key or to an explicitly named group
 - begin/commit/rollback behavior is isolated per active group
 - commit-sensitive features such as validators, order keys, and hooks execute
   within the semantics of their own group
@@ -100,19 +100,19 @@ The intended model is:
   design should not assume implicit cross-group synchronization
 
 The exact interaction between groups and cross-group reads remains an open
-runtime-class-model issue, but `tx_group` itself is no longer an unowned design
+runtime-class-model issue, but `tx_key` itself is no longer an unowned design
 concept.
 
 ### 5a.1 Transaction-group requirements
 
 | Requirement area | Requirement |
 |------------------|-------------|
-| **Membership** | Fields, validators, order keys, and hooks may belong either to the default transaction group or to an explicitly named group. |
+| **Membership** | Fields, validators, order keys, and hooks may belong either to the default transaction key or to an explicitly named group. |
 | **Activation** | Beginning a transaction for a named group activates transactional behavior for that group only; default-group behavior remains distinct unless explicitly included. |
-| **Isolation** | Dirty tracking, validation, commit ordering, and rollback are defined per active transaction group. |
+| **Isolation** | Dirty tracking, validation, commit ordering, and rollback are defined per active transaction key. |
 | **Default policy** | Transaction groups are separate by default; the design does not invent implicit coupling semantics across groups. |
 | **Explicit tying** | If coordinated cross-group behavior is required, runtime tools may expose explicit mechanisms for application code to tie groups together rather than guessing that model automatically. |
-| **Commit-sensitive execution** | Validators, order keys, and hooks execute within the semantics of their own transaction group rather than through one undifferentiated global pipeline. |
+| **Commit-sensitive execution** | Validators, order keys, and hooks execute within the semantics of their own transaction key rather than through one undifferentiated global pipeline. |
 | **Visibility** | Cross-group visibility must be explicit. The design must not assume implicit synchronization or coherent reads across groups until that rule is written down. |
 | **Rollback** | Rollback semantics are defined per group and must mirror the group’s own dirty/commit participation rather than acting as a global catch-all. |
 | **Generated structure impact** | Generated classes/runtime support must carry enough group metadata to route writes, commit/rollback, validators, and hooks to the correct group. |

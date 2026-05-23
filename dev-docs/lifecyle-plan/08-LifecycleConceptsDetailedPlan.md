@@ -68,13 +68,13 @@ Core = builder.extends(LifecycleCoreConcept)
 FieldSpecs = Core.unions.FieldSpecs
 Name = Core.props.Name
 Kind = Core.props.Kind
-TxGroup = Core.props.TxGroup
+TxKey = Core.props.TxKey
 Default = Core.props.Default
 DefaultFactory = Core.props.DefaultFactory
 
 ManagedField = FieldSpecs.variant(
     "ManagedField",
-    TxGroup,
+    TxKey,
     Default,
     DefaultFactory,
     Core.props.InitialWorking,
@@ -308,7 +308,7 @@ from_astichi_template(
     def managed(
         name,
         default=REQUIRED,
-        tx_group=DEFAULT_TRANSACTION,
+        tx_key=DEFAULT_TRANSACTION,
         *field_params__astichi_param_hole__,
     ):
         astichi_hole(body)

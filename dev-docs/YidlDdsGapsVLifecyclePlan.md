@@ -7,7 +7,7 @@ the smallest useful set of DDS extensions.
 
 The objective is not to add one feature per lifecycle helper. The objective is
 to build enough generic DDS capability that lifecycle helpers, facades, stores,
-transaction groups, callable injection, and operation methods can be described
+transaction keys, callable injection, and operation methods can be described
 as data, matchers, productions, ports, and generated resources.
 
 This plan treats `pyrolyze/src/pyrolyze/lifecycle.py` as behavioral reference
@@ -114,7 +114,7 @@ FieldSpecs.common(Name, Annotation, DeclarationOrder, SourceLabel)
 ManagedField = FieldSpecs.variant(
     "ManagedField",
     Kind,
-    TxGroup,
+    TxKey,
     Default,
     DefaultFactory,
     InitialWorking,
@@ -233,10 +233,10 @@ Golden:
 
 Lifecycle needs stable derived keys:
 
-- transaction group name to transaction index
+- transaction key name to transaction index
 - field to transaction index
-- at-most-one validator per transaction group
-- at-most-one order key per transaction group
+- at-most-one validator per transaction key
+- at-most-one order key per transaction key
 - grouped hook lists
 - later: grouped state slots and facade-specific target addresses
 
@@ -250,11 +250,11 @@ generated operations. Do not add a public distinct-index DSL in V1:
 
 ```python
 dds.operation(
-    "BuildTxGroups",
+    "BuildTxKeys",
     inputs=(TransactionalFields,),
-    outputs=(TxGroups,),
+    outputs=(TxKeys,),
     order_by=(SourceOrder,),
-    resource=BuildTxGroupsOperation,
+    resource=BuildTxKeysOperation,
 )
 ```
 
@@ -262,8 +262,8 @@ Add keyed lookup value expressions:
 
 ```python
 tx_index = lookup(
-    TxGroups,
-    key=source.prop(TxGroup),
+    TxKeys,
+    key=source.prop(TxKey),
     value=TxIndex,
 )
 ```
@@ -274,7 +274,7 @@ Add tuple-key support using existing property values:
 SpecialDecls = dds.collection(
     "SpecialDecls",
     SpecialDecl,
-    identity=(SpecialKind, TxGroup),
+    identity=(SpecialKind, TxKey),
 )
 ```
 
@@ -283,7 +283,7 @@ collection identity rather than a lifecycle-only uniqueness check.
 
 #### What This Covers
 
-- Gap 5: transaction group indexing.
+- Gap 5: transaction key indexing.
 - Gap 17: special per-transaction declaration uniqueness.
 - Gap 13: managed/transient templates can bind integer transaction indices.
 - Gap 23: direct hot paths can use generated indices rather than table lookup.
@@ -304,9 +304,9 @@ Bespoke:
 
 Golden:
 
-- Fields with three transaction groups generate `TxGroups` and field records
+- Fields with three transaction keys generate `TxKeys` and field records
   containing bound `tx_index`.
-- Validators/order keys keyed by transaction group reject duplicates while hooks
+- Validators/order keys keyed by transaction key reject duplicates while hooks
   remain ordered many-record declarations.
 
 ### Feature 4: Graph And Closure Derivations
@@ -457,7 +457,7 @@ Lifecycle has many invalid states:
 - invalid overrides
 - illegal callable signatures
 - unused initvars
-- missing transaction groups
+- missing transaction keys
 - invalid state transitions
 
 Current DDS raises some direct exceptions, but generated lifecycle needs a
@@ -707,7 +707,7 @@ illustrative; the implementation should follow current DDS naming conventions.
   validator, order key.
 - `MergedField`.
 - `TransactionalField`.
-- `TxGroup`.
+- `TxKey`.
 - `SpecialDeclaration`.
 
 ### Derived Fact Records

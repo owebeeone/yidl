@@ -11,12 +11,12 @@ def _build_concept():
     source_order = builder.props.SourceOrder(int, 0)
     kind = builder.props.Kind(object, REQUIRED)
     default = builder.props.Default(object, REQUIRED)
-    tx_group = builder.props.TxGroup(str, "default")
+    tx_key = builder.props.TxKey(str, "default")
 
     field_specs = builder.schema_family("FieldSpecs")
     field_specs.common(name, source_order, kind)
     field_specs.variant("PlainField", default)
-    field_specs.variant("ManagedField", tx_group, default)
+    field_specs.variant("ManagedField", tx_key, default)
 
     fields = builder.collections.Fields(
         field_specs.handle,
@@ -55,7 +55,7 @@ def validate_case(source: str) -> None:
             name="owner",
             source_order=1,
             kind="managed",
-            tx_group="tx",
+            tx_key="tx",
             default=None,
         ),
     )

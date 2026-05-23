@@ -69,7 +69,7 @@ B harvester:
 
 - `lifecycle_core.yidl`: classes, facade exposure, plain fields, initvars,
   classvars, constructor shape, common facade base, and core lifecycle metadata
-- `lifecycle_managed.yidl`: transaction groups, managed fields, current and
+- `lifecycle_managed.yidl`: transaction keys, managed fields, current and
   working facades, transaction-state slots, begin/validate/commit/rollback
   behavior, and managed property contributions
 - `lifecycle_default_factories.yidl`: Phase C computed default-factory

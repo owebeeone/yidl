@@ -74,7 +74,7 @@ Practical derivation rule:
 | **EL** | **Evict-last** staging (refcount / binding teardown order) | `YIDLRuntimeClassModel.md` §6 |
 | **CL** | **Closure capture** — `exec` factory, `LOAD_DEREF`, spec locals | `YIDLCodegenDesign.md` §5 |
 | **TR** | **AST transform** — behavior snippets → physical store access | `YIDLCodegenDesign.md` §2 |
-| **TG** | **Named transaction groups** — multi-group begin/commit isolation | `YIDLRuntimeClassModel.md` §5a, `YIDLFrontendDesign.md` §2.1 (visibility details still open) |
+| **TG** | **Named transaction keys** — multi-group begin/commit isolation | `YIDLRuntimeClassModel.md` §5a, `YIDLFrontendDesign.md` §2.1 (visibility details still open) |
 
 ---
 
@@ -108,7 +108,7 @@ Each **keyword parameter** that appears on one or more helpers (`FIELD_HELPERS` 
 | Parameter | H | S5 | PS | WS | IS | HD | CV | WV | PX | I3 | CM | EL | CL | TR | TG | Cov | Notes |
 |-----------|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|-------|
 | **compare** | ◐ | ● | ◐ | ◐ | — | — | — | — | — | — | ● | — | — | ● | — | P | Affects commit equality / dirty detection; annotation/tuple forms in lifecycle are **ambient** (see table below). |
-| **tx_group** | ◐ | ◐ | — | — | — | — | — | — | ◐ | — | ● | — | — | ◐ | ● | G | multi-group semantics gap; [GAP-TG](./FieldSpecYIDLDesignMatrixGaps.md#gap-tg). |
+| **tx_key** | ◐ | ◐ | — | — | — | — | — | — | ◐ | — | ● | — | — | ◐ | ● | G | multi-group semantics gap; [GAP-TG](./FieldSpecYIDLDesignMatrixGaps.md#gap-tg). |
 | **default** | ◐ | ● | ◐ | ◐ | ◐ | ◐ | — | — | — | ● | ◐ | — | ● | ● | — | P | Static default vs factory; participates in **I3** ordering with other fields. |
 | **default_factory** | ◐ | ● | ◐ | ◐ | ◐ | ◐ | — | — | — | ● | ◐ | — | ● | ● | — | P | Injectable names (`self`, `current`, `working`, initvars)—**TR** + harvester contract; `init=True` on **initvar** changes who runs first (**I3** / **HD**). |
 | **initial_working** | ◐ | ● | — | ● | — | — | — | ◐ | ◐ | ● | ◐ | — | ● | ● | — | P | Seeds **WS** before user code; interaction with **transient** / **derived** order **?**. |
@@ -123,7 +123,7 @@ Each **keyword parameter** that appears on one or more helpers (`FIELD_HELPERS` 
 
 | Concern | H | S5 | PS | WS | IS | HD | CV | WV | PX | I3 | CM | EL | CL | TR | TG | Cov | Notes |
 |---------|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|-------|
-| **Factory/hook params** (`self`, `current`, `working`, `tx_group`, `previous`, initvar names per `COMMON_PARAM_NOTES` in catalog) | ◐ | ◐ | — | — | — | ◐ | — | — | — | ● | ● | — | ◐ | ◐ | ◐ | G | injectable registry gap; [GAP-INJECTABLE-REGISTRY](./FieldSpecYIDLDesignMatrixGaps.md#gap-injectable-registry). |
+| **Factory/hook params** (`self`, `current`, `working`, `tx_key`, `previous`, initvar names per `COMMON_PARAM_NOTES` in catalog) | ◐ | ◐ | — | — | — | ◐ | — | — | — | ● | ● | — | ◐ | ◐ | ◐ | G | injectable registry gap; [GAP-INJECTABLE-REGISTRY](./FieldSpecYIDLDesignMatrixGaps.md#gap-injectable-registry). |
 
 ---
 
@@ -164,7 +164,7 @@ independent snippets.
 | **derived** reads **managed** / **transient** / **local_store** while those fields still in **I3** | Wrong default visible; wrong store | Fix **global declaration order** in spec; **I3** unrolling order = total order over all fields; derived slots after dependencies (explicit `depends_on` or topo-sort). |
 | **binding** + **owned** (or multiple bindings) on overlapping value graph | Double free / refcount / **EL** order | **§4.2** evict-last must be **global** per commit step, not per-field in isolation; may need graph merge in IR. |
 | **commit_order_key** + **commit_validator** + **on_before_commit** | Relative order undefined | Single **commit pipeline** table in design: order keys → validators → hooks → store writes → **EL**. |
-| **multi-group `tx_group`** + field A in group G1 reading field B in G2 mid-transaction | Stale / inconsistent reads | **TG** § must define visibility rules (or forbid); may require composable “read barrier” transducer. |
+| **multi-group `tx_key`** + field A in group G1 reading field B in G2 mid-transaction | Stale / inconsistent reads | **TG** § must define visibility rules (or forbid); may require composable “read barrier” transducer. |
 | **local_store** + **derived** reading peer field | Routing: instance vs facade | **IS** + **PX** interaction; view delegation rules must be composed, not per-kind ad hoc. |
 | **initvar** + **default_factory** on another field referencing initvar | Injection and **I3** phase boundaries | **HD** teardown vs **I3** phase 3: lifecycle rules must become explicit **phases × field kind** matrix. |
 | **transient** `working_default_factory` + **initial_working** + **managed** default | Multiple writers to **WS** at init | Precedence: which factory wins and when—**?** until specified. |

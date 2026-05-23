@@ -18,7 +18,7 @@ from typing import Final
 COMMON_PARAM_NOTES: Final[str] = (
     "Factory/hook injectable names (when allowed): self, current, working; "
     "plus initvar names after initvar support lands. "
-    "Hooks also: tx_group, previous (after_commit only). "
+    "Hooks also: tx_key, previous (after_commit only). "
     "See lifecycle._SUPPORTED_FACTORY_PARAMS and _BEFORE_COMMIT_PARAMS / etc."
 )
 
@@ -26,7 +26,7 @@ COMMON_PARAM_NOTES: Final[str] = (
 FIELD_HELPERS: Final[dict[str, tuple[str, ...]]] = {
     "managed": (
         "compare",
-        "tx_group",
+        "tx_key",
         "default",
         "default_factory",
         "initial_working",
@@ -37,26 +37,26 @@ FIELD_HELPERS: Final[dict[str, tuple[str, ...]]] = {
     ),
     "const": ("compare", "default", "default_factory"),
     "static": ("compare", "default", "default_factory"),
-    "binding": ("tx_group", "default", "default_factory"),
-    "owned": ("tx_group", "default", "default_factory"),
+    "binding": ("tx_key", "default", "default_factory"),
+    "owned": ("tx_key", "default", "default_factory"),
     "transient": (
         "compare",
         "default",
         "default_factory",
         "working_default_factory",
-        "tx_group",
+        "tx_key",
     ),
     "local_store": ("compare", "default", "default_factory"),
     "derived": ("compare", "default", "default_factory"),
     "initvar": ("init", "default", "default_factory"),
     "classvar": ("default", "default_factory"),
     # compare fixed to "value" at helper level; not a caller keyword.
-    "commit_order_key": ("tx_group", "default", "default_factory"),
+    "commit_order_key": ("tx_key", "default", "default_factory"),
     # compare fixed "identity", init fixed False; not caller keywords.
-    "commit_validator": ("tx_group", "default"),
-    "on_before_commit": ("tx_group", "default"),
-    "on_after_commit": ("tx_group", "default"),
-    "on_after_rollback": ("tx_group", "default"),
+    "commit_validator": ("tx_key", "default"),
+    "on_before_commit": ("tx_key", "default"),
+    "on_after_commit": ("tx_key", "default"),
+    "on_after_rollback": ("tx_key", "default"),
 }
 
 # Order: implement / gain parity tests from top to bottom, prioritizing the

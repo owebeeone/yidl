@@ -73,7 +73,7 @@ def _build_field_family_concept() -> CapsuleConceptPlan:
     defaulted = builder.props.Defaulted(bool, False)
     default_value = builder.props.DefaultValue(object, None)
     order = builder.props.Order(int, 0)
-    tx_group = builder.props.TxGroup(str, "")
+    tx_key = builder.props.TxKey(str, "")
 
     fields = builder.schema_family("FieldSpecs")
     fields.common(
@@ -83,7 +83,7 @@ def _build_field_family_concept() -> CapsuleConceptPlan:
         defaulted,
         default_value,
         order,
-        tx_group,
+        tx_key,
     )
     fields.variant("ManagedField")
     fields.variant("ConstField")
@@ -104,18 +104,18 @@ def _build_transaction_index_concept() -> CapsuleConceptPlan:
         extends=(LifecycleFieldFamilyConcept,),
     )
     fields = builder.use(LifecycleFieldFamilyConcept)
-    tx_group = fields.props.TxGroup
+    tx_key = fields.props.TxKey
     tx_index = builder.props.TxIndex(int, REQUIRED)
 
-    tx_group_record = builder.records.TxGroupRecord(tx_group, tx_index)
-    tx_groups = builder.collections.TxGroups(
-        tx_group_record,
+    tx_key_record = builder.records.TxKeyRecord(tx_key, tx_index)
+    tx_keys = builder.collections.TxKeys(
+        tx_key_record,
         cardinality=builder.many,
-        identity=tx_group,
+        identity=tx_key,
     )
-    builder.operations.BuildTxGroups(
+    builder.operations.BuildTxKeys(
         inputs=(fields.collections.Fields,),
-        outputs=(tx_groups,),
+        outputs=(tx_keys,),
         resource=from_astichi_code(
             """
             seen = set()
@@ -126,13 +126,13 @@ def _build_transaction_index_concept() -> CapsuleConceptPlan:
             ):
                 if field.kind != "managed":
                     continue
-                if field.tx_group in seen:
+                if field.tx_key in seen:
                     continue
-                seen.add(field.tx_group)
+                seen.add(field.tx_key)
                 ctx.write(
-                    TxGroupsCollection,
-                    TxGroupRecord(
-                        tx_group=field.tx_group,
+                    TxKeysCollection,
+                    TxKeyRecord(
+                        tx_key=field.tx_key,
                         tx_index=next_index,
                     ),
                     policy=AddIfAbsent,
@@ -142,8 +142,8 @@ def _build_transaction_index_concept() -> CapsuleConceptPlan:
             keep_names=(
                 "AddIfAbsent",
                 "FieldsCollection",
-                "TxGroupRecord",
-                "TxGroupsCollection",
+                "TxKeyRecord",
+                "TxKeysCollection",
                 "ctx",
                 "sorted",
             ),
@@ -1116,7 +1116,7 @@ def _build_resource_hooks_concept() -> CapsuleConceptPlan:
 
     name = fields.props.Name
     kind = fields.props.Kind
-    tx_group = fields.props.TxGroup
+    tx_key = fields.props.TxKey
     order = fields.props.Order
     target_port = classes.props.TargetPort
     template = classes.props.Template
@@ -1162,7 +1162,7 @@ def _build_resource_hooks_concept() -> CapsuleConceptPlan:
         source_label,
         callable_object,
         callable_role,
-        tx_group,
+        tx_key,
         order,
         allowed_injections,
         callable_path,
@@ -1172,7 +1172,7 @@ def _build_resource_hooks_concept() -> CapsuleConceptPlan:
         source_label,
         callable_object,
         callable_role,
-        tx_group,
+        tx_key,
         order,
         allowed_injections,
         callable_path,
@@ -1182,7 +1182,7 @@ def _build_resource_hooks_concept() -> CapsuleConceptPlan:
         source_label,
         callable_object,
         callable_role,
-        tx_group,
+        tx_key,
         phase,
         order,
         allowed_injections,
@@ -1221,17 +1221,17 @@ def _build_resource_hooks_concept() -> CapsuleConceptPlan:
     validators = builder.collections.CommitValidators(
         commit_validator,
         cardinality=builder.many,
-        identity=tx_group,
+        identity=tx_key,
     )
     order_keys = builder.collections.CommitOrderKeys(
         commit_order_key,
         cardinality=builder.many,
-        identity=tx_group,
+        identity=tx_key,
     )
     hooks = builder.collections.HookDeclarations(
         hook_declaration,
         cardinality=builder.many,
-        identity=(phase, tx_group, name),
+        identity=(phase, tx_key, name),
     )
     hook_statements = builder.collections.HookMethodStatements(
         hook_statement,
@@ -1357,7 +1357,7 @@ def _build_resource_hooks_concept() -> CapsuleConceptPlan:
                     )
 
             for validator in ctx.records(CommitValidatorsCollection):
-                statement_name = f"validate_{validator.tx_group}"
+                statement_name = f"validate_{validator.tx_key}"
                 target_port = MethodBodyPort.of(("main_facade", "commit"))
                 ctx.write(
                     HookMethodStatementsCollection,

@@ -31,7 +31,7 @@ import "./core.yidl" as core
 from "./diagnostics.yidl" import concept Diagnostics
 
 concept ManagedFields extends core.LifecycleCore, Diagnostics {
-    property TxGroup: object = DEFAULT_TRANSACTION storage tx_group
+    property TxKey: object = DEFAULT_TRANSACTION storage tx_key
     property Default: object = REQUIRED storage default
     property DefaultFactory: object = None storage default_factory
 
@@ -39,7 +39,7 @@ concept ManagedFields extends core.LifecycleCore, Diagnostics {
         common core.Name, core.Annotation, core.SourceOrder, core.SourceLabel
         variant ManagedField {
             core.Kind
-            TxGroup
+            TxKey
             Default
             DefaultFactory
         }
@@ -106,7 +106,7 @@ from "./core.yidl" import concept LifecycleCore as Core
 
 ```text
 export concept ManagedFields
-export property TxGroup
+export property TxKey
 ```
 
 Only exported symbols are visible to importing files unless the build is in
@@ -267,8 +267,8 @@ declarations do not redeclare storage names.
 Example:
 
 ```text
-record TxGroup {
-    TxGroupName
+record TxKey {
+    TxKeyName
     TxIndex
 }
 ```
@@ -290,7 +290,7 @@ union FieldSpecs {
     variant ManagedField {
         Name
         Annotation
-        TxGroup
+        TxKey
     }
 }
 ```
@@ -315,7 +315,7 @@ family FieldSpecs {
     common Name, Annotation, SourceOrder, SourceLabel
     variant ManagedField {
         Kind
-        TxGroup
+        TxKey
         Default
     }
     variant InitVarField {
@@ -336,7 +336,7 @@ ManagedField = FieldSpecs.variant(
     SourceOrder,
     SourceLabel,
     Kind,
-    TxGroup,
+    TxKey,
     Default,
 )
 ```
@@ -362,7 +362,7 @@ Example:
 
 ```text
 collection MergedFields: FieldSpecs identity Name
-collection SpecialDeclarations: SpecialDeclaration identity (SpecialKind, TxGroup)
+collection SpecialDeclarations: SpecialDeclaration identity (SpecialKind, TxKey)
 ```
 
 ## Computed Collection Grammar
@@ -547,10 +547,10 @@ operation_option
 Example:
 
 ```text
-operation BuildTxGroups
+operation BuildTxKeys
 inputs (TransactionalFields)
-outputs (TxGroups)
-using BuildTxGroupsOperation {
+outputs (TxKeys)
+using BuildTxKeysOperation {
     ordered(SourceOrder)
 }
 ```
@@ -662,12 +662,12 @@ import "./core.yidl" as core
 export concept ManagedFields
 
 concept ManagedFields extends core.LifecycleCore {
-    property TxGroup: object = DEFAULT_TRANSACTION storage tx_group
+    property TxKey: object = DEFAULT_TRANSACTION storage tx_key
     property Default: object = REQUIRED storage default
 
     family core.FieldSpecs {
         variant ManagedField {
-            TxGroup
+            TxKey
             Default
         }
     }

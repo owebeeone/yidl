@@ -16,9 +16,9 @@ Conventions used here:
 - "home" means a runtime location that actually stores a field value
 - class runner tables are not counted as value homes
 - names below are normalized design labels, not fixed emitted identifiers
-- `tx_index` means the integer in `0..num_tx_groups-1`
+- `tx_index` means the integer in `0..num_tx_keys-1`
 - each field participates in exactly one `tx_index`
-- transaction groups remain independent; YIDL does not combine their state
+- transaction keys remain independent; YIDL does not combine their state
 
 ## 1. Field Helper Classification
 
@@ -34,8 +34,8 @@ Conventions used here:
 | `derived` | cached instance home | 1 | `DerivedCache.<field>` | `derived_values` | No | Reset on commit, rollback, and close. Likely emitted on instance-owned storage. |
 | `initvar` | hidden constructor-only | 1-2 | `HiddenStore.construction.<name>`, optional `HiddenStore.retained.<name>` | `_construction_initvars`, optional `_retained_initvars` | Conditional | Needs the retained home only if late consumers still need the value after `__init__`. |
 | `classvar` | class-only | 1 | class attribute | managed class attribute | No | Materialized on the managed/generated class, not on instances. |
-| `commit_order_key` | shared current-backed metadata | 1 | `PublishedStore.<field>` | `current_record.values` | No | Per-instance value, plus class metadata mapping `tx_group -> field`. |
-| `commit_validator` | shared current-backed metadata | 1 | `PublishedStore.<field>` | `current_record.values` | No | Per-instance callable value, plus class metadata mapping `tx_group -> field`. |
+| `commit_order_key` | shared current-backed metadata | 1 | `PublishedStore.<field>` | `current_record.values` | No | Per-instance value, plus class metadata mapping `tx_key -> field`. |
+| `commit_validator` | shared current-backed metadata | 1 | `PublishedStore.<field>` | `current_record.values` | No | Per-instance callable value, plus class metadata mapping `tx_key -> field`. |
 | `on_before_commit` | declaration-only | 0 | class runner metadata only | class runner tables | No | No instance value home. |
 | `on_after_commit` | declaration-only | 0 | class runner metadata only | class runner tables | No | No instance value home. |
 | `on_after_rollback` | declaration-only | 0 | class runner metadata only | class runner tables | No | No instance value home. |
@@ -61,18 +61,18 @@ YIDL flattens stores rather than emitting generic `Record` objects.
 | per instance | `closed` | 1 flag | Close-state guard | Matches lifecycle close semantics. |
 | per instance | `ever_committed` | 1 flag | Tracks whether a commit has succeeded | Useful for lifecycle parity and hook behavior. |
 | per class | `tx_index_to_group` | 1 tuple | Stable tx-id to tx-name mapping | Defines the `0..N-1` index space. Best emitted as immutable class metadata. |
-| per class | `tx_group_to_index` | 1 map | Stable tx-name to tx-id mapping | Intended for utilities, reflection, and external helpers. Best emitted as immutable class metadata such as a frozen mapping. |
-| per field | `field_tx_index[<field>]` | 1 per field | Declares the one tx group/index that owns the field | YIDL should keep the one-field-one-tx-index rule explicit. |
+| per class | `tx_key_to_index` | 1 map | Stable tx-name to tx-id mapping | Intended for utilities, reflection, and external helpers. Best emitted as immutable class metadata such as a frozen mapping. |
+| per field | `field_tx_index[<field>]` | 1 per field | Declares the one tx key/index that owns the field | YIDL should keep the one-field-one-tx-index rule explicit. |
 | per tx index | `working_present[tx_index]` or equivalent | 1 per tx | Whether this record currently participates in that transaction | This may be an explicit bit or derived from working-store allocation. |
 | per tx index | `working_tx_id[tx_index]` | 1 per tx | The active tx id that owns the working overlay | Required for stale-working detection and commit/rollback routing. |
-| per tx index | `WorkingStore[tx_index]` or flattened working slots | 1 namespace per tx | Holds speculative values for fields in that tx group | This is the main replacement for lifecycle's `working_record`. |
+| per tx index | `WorkingStore[tx_index]` or flattened working slots | 1 namespace per tx | Holds speculative values for fields in that tx key | This is the main replacement for lifecycle's `working_record`. |
 | per field, per tx index | `WorkingFieldState[tx_index].<field>` | optional | Holds copied runtime field state for fields that use `state_factory` / `state_copy` | Only exists for stateful fields. |
 | per field | `CurrentFieldState.<field>` | optional | Holds current runtime field state | Only exists for stateful fields. |
 | per instance | `HiddenStore.construction` | optional | Constructor-phase initvar storage | Cleared after construction completes. |
 | per instance | `HiddenStore.retained` | optional | Retained initvar storage for late consumers | Needed only when post-init consumers still reference initvars. |
-| per class | `commit_order_key_field_by_group` | 0-1 per tx group | Locate the field that provides commit ordering | Mirrors lifecycle's per-group special-field table. |
-| per class | `commit_validator_field_by_group` | 0-1 per tx group | Locate the field that provides the validator callable | Mirrors lifecycle's per-group special-field table. |
-| per class | `before_commit_runners[group]`, `after_commit_runners[group]`, `after_rollback_runners[group]` | 0..N per tx group | Hook dispatch metadata or generated function lists | If fully unrolled, these may become direct generated call sites instead of generic tables. |
+| per class | `commit_order_key_field_by_group` | 0-1 per tx key | Locate the field that provides commit ordering | Mirrors lifecycle's per-group special-field table. |
+| per class | `commit_validator_field_by_group` | 0-1 per tx key | Locate the field that provides the validator callable | Mirrors lifecycle's per-group special-field table. |
+| per class | `before_commit_runners[group]`, `after_commit_runners[group]`, `after_rollback_runners[group]` | 0..N per tx key | Hook dispatch metadata or generated function lists | If fully unrolled, these may become direct generated call sites instead of generic tables. |
 | per field | `default_factory_runner[<field>]` | optional | Default-factory dispatch metadata | Can disappear if YIDL fully unrolls factory calls. |
 | per field | `working_default_factory_runner[<field>]` | optional | Working-default-factory dispatch metadata | Same: can disappear if YIDL fully unrolls factory calls. |
 
@@ -130,7 +130,7 @@ YIDL does not need one combined cross-group transaction state object.
 Generated field-specific code should normally carry its own tx identity
 directly:
 
-- a field already knows its `tx_group` / `tx_index`
+- a field already knows its `tx_key` / `tx_index`
 - direct generated code should not need to consult the class mapping for normal
   field reads/writes
 - the class-level tx-name `<->` tx-id mapping exists primarily for non-generated
@@ -145,7 +145,7 @@ runtime scratch/control structures still need to be accounted for:
 - factory-resolution stack or sentinel for default-factory cycle detection
 - rollback / cleanup error aggregation list if YIDL preserves aggregated-close
   behavior
-- transaction-manager-side active transaction state per tx group, including
+- transaction-manager-side active transaction state per tx key, including
   dirty-context tracking and validator-context tracking
 
 These are important for full lifecycle parity, but they do not change the core

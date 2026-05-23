@@ -24,7 +24,7 @@ The first staircase supports:
 - `managed` fields
 - `const` fields
 - constructor defaults
-- one or more transaction groups
+- one or more transaction keys
 - state class
 - direct main facade class
 - current and working value slots
@@ -68,7 +68,7 @@ count = ManagedField(
     source_label="Example.count",
     kind=MANAGED_KIND,
     declaration_space=INSTANCE_FIELD,
-    tx_group="default_transaction",
+    tx_key="default_transaction",
     default=0,
     default_factory=None,
     initial_working=None,
@@ -101,14 +101,14 @@ ConstFields: label
 Add:
 
 ```python
-TxGroups
+TxKeys
 IndexedFields
 ```
 
 Expected result:
 
 ```text
-TxGroups: default_transaction=0
+TxKeys: default_transaction=0
 IndexedFields: count(tx_index=0)
 ```
 
@@ -241,7 +241,7 @@ contribution assembly.
 FieldSpecs
 MergedFields
 IndexedFields
-TxGroups
+TxKeys
 ```
 
 ### Generated Class Records
@@ -424,7 +424,7 @@ def build():
         name="count",
         annotation=int,
         default=0,
-        tx_group="default_transaction",
+        tx_key="default_transaction",
     )
     builder.add_const_field(
         name="label",
@@ -445,7 +445,7 @@ Required failure modes:
 
 - duplicate field name in one layer
 - const field with setter contribution
-- managed field without transaction group
+- managed field without transaction key
 - missing state slot for property template binding
 - template binding missing required slot path
 - unsupported annotation/default source value

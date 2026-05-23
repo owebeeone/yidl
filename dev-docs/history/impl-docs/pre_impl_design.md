@@ -83,7 +83,7 @@ Design (written artifact):
   - *needs design change*
   - *unclear → empirical probe*
 - **Corner cases** — map PRE_IMPL corner-case pressure
-  (views, init/default/default_factory ordering, initvar injection, tx groups,
+  (views, init/default/default_factory ordering, initvar injection, tx keys,
   binding/owned sequencing, hooks/validators, local_store / homed fields) to
   YIDL constructs or an explicit “not in v1” decision.
 

@@ -4,7 +4,7 @@ This realises the generated code shape locked in by
 ``yidl/dev-docs/history/InitStudyResults.md`` (§TL;DR — VOID sentinel) for the
 minimal lifecycle scenario exercised by ``scenarios.py``
 (``scenario_default_tx_increment``: one managed ``int`` field, one
-transaction group, one commit).
+transaction key, one commit).
 
 The shape deliberately mirrors the split used by
 ``pyrolyze.lifecycle``: one **facade** class (public surface) bijective
@@ -35,7 +35,7 @@ Deferred to later revisions (will force new v1/v2 backends):
   `InitStudyResults.md` §Phase 3 remains available once a real workload
   justifies a second look),
 - ``derived`` / ``local_store`` / ``owned`` / ``binding`` kinds,
-- non-default transaction groups, multi-group commit,
+- non-default transaction keys, multi-group commit,
 - close / on_before_commit / on_after_commit hooks.
 """
 
@@ -127,27 +127,27 @@ class Counter:
         s.working_value = value
 
     def commit_order_key_for(
-        self, tx_group: Hashable = DEFAULT_TRANSACTION
+        self, tx_key: Hashable = DEFAULT_TRANSACTION
     ) -> tuple[object, ...]:
-        del tx_group
+        del tx_key
         return ()
 
     def requires_validation_for(
-        self, tx_group: Hashable = DEFAULT_TRANSACTION
+        self, tx_key: Hashable = DEFAULT_TRANSACTION
     ) -> bool:
-        del tx_group
+        del tx_key
         return False
 
     def validate_commit_for(
-        self, tx_group: Hashable = DEFAULT_TRANSACTION
+        self, tx_key: Hashable = DEFAULT_TRANSACTION
     ) -> bool:
-        del tx_group
+        del tx_key
         return True
 
     def _commit_transaction(
-        self, tx_id: int, tx_group: Hashable = DEFAULT_TRANSACTION
+        self, tx_id: int, tx_key: Hashable = DEFAULT_TRANSACTION
     ) -> "Counter":
-        del tx_group
+        del tx_key
         s = self._state
         if s.working_tx_id != tx_id:
             return self
@@ -158,9 +158,9 @@ class Counter:
         return self
 
     def _rollback_transaction(
-        self, tx_id: int, tx_group: Hashable = DEFAULT_TRANSACTION
+        self, tx_id: int, tx_key: Hashable = DEFAULT_TRANSACTION
     ) -> "Counter":
-        del tx_group
+        del tx_key
         s = self._state
         if s.working_tx_id != tx_id:
             return self

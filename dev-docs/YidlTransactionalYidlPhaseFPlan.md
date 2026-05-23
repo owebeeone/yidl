@@ -87,11 +87,11 @@ class Counter:
 Decorator call shape:
 
 ```python
-@validate_commit(tx_group=DEFAULT_TRANSACTION)
+@validate_commit(tx_key=DEFAULT_TRANSACTION)
 def method(self) -> bool | None: ...
 ```
 
-Each marker should also accept the transaction group as the first positional
+Each marker should also accept the transaction key as the first positional
 argument for consistency with `managed("audit", ...)`.
 
 `validate_commit` methods may return `True`/`None` for success or `False` for
@@ -113,7 +113,7 @@ Minimum fact columns:
 ```text
 HookOwner / ValidatorOwner / ProviderOwner
 HookMethodName / ValidatorMethodName / ProviderMethodName
-TxGroupKey
+TxKeyKey
 DeclarationOrder
 ```
 
@@ -124,11 +124,11 @@ introduced, but only if the generated YIDL stays readable.
 Generated internal protocol methods:
 
 ```python
-commit_order_key_for(tx_group=DEFAULT_TRANSACTION)
-requires_validation_for(tx_group=DEFAULT_TRANSACTION)
-validate_commit_for(tx_group=DEFAULT_TRANSACTION)
-_commit_transaction(tx_id, tx_group=DEFAULT_TRANSACTION)
-_rollback_transaction(tx_id, tx_group=DEFAULT_TRANSACTION)
+commit_order_key_for(tx_key=DEFAULT_TRANSACTION)
+requires_validation_for(tx_key=DEFAULT_TRANSACTION)
+validate_commit_for(tx_key=DEFAULT_TRANSACTION)
+_commit_transaction(tx_id, tx_key=DEFAULT_TRANSACTION)
+_rollback_transaction(tx_id, tx_key=DEFAULT_TRANSACTION)
 ```
 
 These methods are the internal `TransactionManager` context protocol. They are
@@ -136,26 +136,26 @@ not new public facade APIs.
 
 ## Runtime Contract
 
-`requires_validation_for(tx_group)` returns `True` when at least one
-`validate_commit` method exists for `tx_group`. The existing
+`requires_validation_for(tx_key)` returns `True` when at least one
+`validate_commit` method exists for `tx_key`. The existing
 `TransactionManager.enlist(...)` path uses this to decide whether the state
 object is added to the transaction's validator set.
 
-`validate_commit_for(tx_group)` runs validators for the group in deterministic
+`validate_commit_for(tx_key)` runs validators for the group in deterministic
 order. If any validator raises, the exception is collected by
 `LifecycleTransaction.validate_commit()`. If a validator returns `False`, the
 existing `YidlValidatorReturnedFalse` path is used. `None` and `True` are
 success.
 
-`commit_order_key_for(tx_group)` returns:
+`commit_order_key_for(tx_key)` returns:
 
 - the first declared key provider result for the group, when one exists
 - `()` otherwise
 
-Phase F allows at most one commit order key provider per transaction group.
+Phase F allows at most one commit order key provider per transaction key.
 Multiple providers for the same group are rejected by the harvester.
 
-`_commit_transaction(tx_id, tx_group)` remains the internal method that applies
+`_commit_transaction(tx_id, tx_key)` remains the internal method that applies
 working values to current values. Phase F extends its generated body:
 
 1. validate the `tx_id` still owns the group's working values
@@ -165,7 +165,7 @@ working values to current values. Phase F extends its generated body:
 5. run `after_commit` hooks for the group
 6. return the default facade
 
-`_rollback_transaction(tx_id, tx_group)` remains the internal method that
+`_rollback_transaction(tx_id, tx_key)` remains the internal method that
 clears working values. Phase F extends its generated body:
 
 1. validate the `tx_id` still owns the group's working values
@@ -205,8 +205,8 @@ Phase F does not support explicit `order=` keyword arguments. Therefore
 ## Diagnostics
 
 - hook/validator/commit-order marker applied to a non-callable class member
-- marker references an unknown transaction group
-- multiple commit order key providers for one transaction group
+- marker references an unknown transaction key
+- multiple commit order key providers for one transaction key
 - method marker inherited metadata is malformed
 - method marker name collides with a generated lifecycle helper/reserved name
 - unsupported decorator call shape

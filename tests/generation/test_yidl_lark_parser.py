@@ -90,11 +90,11 @@ def test_yidl_extended_family_resolves_local_then_owner_properties() -> None:
     export concept Managed
 
     concept Managed extends core.Core {
-        property TxGroup: str = "default" storage tx_group
+        property TxKey: str = "default" storage tx_key
 
         family core.FieldSpecs {
             variant ManagedField {
-                TxGroup
+                TxKey
                 Kind
             }
         }
@@ -112,7 +112,7 @@ def test_yidl_extended_family_resolves_local_then_owner_properties() -> None:
     assert [prop.name for prop in managed_field.properties] == [
         "Name",
         "Kind",
-        "TxGroup",
+        "TxKey",
     ]
 
 
@@ -175,7 +175,7 @@ def test_yidl_transactional_phase_a_schema_compiles() -> None:
         "FacadeClasses",
         "FacadeExposures",
         "TransactionalFields",
-        "TxGroups",
+        "TxKeys",
         "IndexedTransactionalFields",
         "InitParameters",
         "InitAssignments",
@@ -189,7 +189,7 @@ def test_yidl_transactional_phase_a_schema_compiles() -> None:
         "FacadeClass",
         "FacadeExposure",
         "TransactionalField",
-        "TxGroup",
+        "TxKey",
         "IndexedTransactionalField",
         "InitParameter",
         "InitAssignment",
@@ -235,7 +235,7 @@ def test_yidl_transactional_phase_a_tx_facts_are_computed() -> None:
             working_facade_class_name="Counter_Working",
             lifecycle_definition_param_name="_Counter_lifecycle_definition",
             annotations_param_name="_Counter_annotations",
-            tx_groups_param_name="_Counter_tx_groups",
+            tx_keys_param_name="_Counter_tx_keys",
         ),
     )
     builder.add(
@@ -266,21 +266,21 @@ def test_yidl_transactional_phase_a_tx_facts_are_computed() -> None:
             field_name="audit_count",
             field_order=30,
             field_kind="managed",
-            tx_group_key="audit",
+            tx_key_key="audit",
         ),
     )
 
     container = namespace["build_container"](builder)
 
     assert [
-        (record.class_id, record.tx_group_key, record.tx_index, record.tx_group_order)
-        for record in container.TxGroups.sequence()
+        (record.class_id, record.tx_key_key, record.tx_index, record.tx_key_order)
+        for record in container.TxKeys.sequence()
     ] == [
         ("Counter", DEFAULT_TRANSACTION, 0, 0),
         ("Counter", "audit", 1, 30),
     ]
     assert [
-        (record.field_id, record.tx_group_key, record.tx_index)
+        (record.field_id, record.tx_key_key, record.tx_index)
         for record in container.IndexedTransactionalFields.sequence()
     ] == [
         ("Counter.count", DEFAULT_TRANSACTION, 0),
@@ -310,7 +310,7 @@ def test_yidl_transactional_default_factory_facts_are_computed() -> None:
             working_facade_class_name="Example_Working",
             lifecycle_definition_param_name="_Example_lifecycle_definition",
             annotations_param_name="_Example_annotations",
-            tx_groups_param_name="_Example_tx_groups",
+            tx_keys_param_name="_Example_tx_keys",
         ),
     )
     builder.add(
@@ -469,7 +469,7 @@ def _default_factory_diagnostic_container(
             working_facade_class_name="Example_Working",
             lifecycle_definition_param_name="_Example_lifecycle_definition",
             annotations_param_name="_Example_annotations",
-            tx_groups_param_name="_Example_tx_groups",
+            tx_keys_param_name="_Example_tx_keys",
         ),
     )
     builder.add(

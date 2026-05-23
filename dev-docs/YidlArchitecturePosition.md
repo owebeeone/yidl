@@ -60,7 +60,7 @@ The generated lifecycle classes should use direct specialized code:
 - direct constructor paths
 - direct property bodies
 - direct commit/rollback/cleanup paths
-- precomputed transaction group metadata
+- precomputed transaction key metadata
 - no reflection or generic field interpretation in hot construction paths
 
 The current lifecycle runtime proved the semantics. YIDL should make those
@@ -93,7 +93,7 @@ Generic mechanisms include:
 Lifecycle meaning includes:
 
 - managed/current/working field semantics
-- transaction groups
+- transaction keys
 - current and working facades
 - commit and rollback behavior
 - initvar behavior

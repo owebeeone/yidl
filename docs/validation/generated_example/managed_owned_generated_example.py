@@ -48,14 +48,14 @@ class OwnedSource:
 @dataclass(frozen=True)
 class YidlFieldMeta:
     public_name: str
-    tx_group: str
+    tx_key: str
     kind: str
     store_name: str
 
 
 @dataclass(slots=True)
 class _KildFieldRuntimeState:
-    tx_group: str
+    tx_key: str
     has_working_value: bool = False
     working_tx_id: int | None = None
     previous_committed_value: object | None = None
@@ -86,20 +86,20 @@ class YidlState:
         self.field_meta = {
             "child": YidlFieldMeta(
                 public_name="child",
-                tx_group=DEFAULT_TRANSACTION,
+                tx_key=DEFAULT_TRANSACTION,
                 kind="owned",
                 store_name="child",
             ),
             "child_list": YidlFieldMeta(
                 public_name="child_list",
-                tx_group=DEFAULT_TRANSACTION,
+                tx_key=DEFAULT_TRANSACTION,
                 kind="owned_list",
                 store_name="child_list",
             ),
         }
         self.field_state = {
-            "child": _KildFieldRuntimeState(tx_group=DEFAULT_TRANSACTION),
-            "child_list": _KildFieldRuntimeState(tx_group=DEFAULT_TRANSACTION),
+            "child": _KildFieldRuntimeState(tx_key=DEFAULT_TRANSACTION),
+            "child_list": _KildFieldRuntimeState(tx_key=DEFAULT_TRANSACTION),
         }
         self.rollback_errors: list[BaseException] = []
 
@@ -241,7 +241,7 @@ def build_generated_owned_context(source_cls: type = OwnedSource) -> type:
 
         def _kild_active_tx_id(self, name: str) -> int:
             meta = self._kild_field_meta(name)
-            tx = self.__kild_state.transaction_manager.active_transaction_for(meta.tx_group)
+            tx = self.__kild_state.transaction_manager.active_transaction_for(meta.tx_key)
             if tx is None:
                 raise YidlCantWriteWithoutActiveTransaction(meta.public_name)
             return tx.tx_id
@@ -250,7 +250,7 @@ def build_generated_owned_context(source_cls: type = OwnedSource) -> type:
             state = self._kild_field_state(name)
             if state.working_tx_id == tx_id:
                 return
-            self.__kild_state.transaction_manager.enlist(self, self._kild_field_meta(name).tx_group)
+            self.__kild_state.transaction_manager.enlist(self, self._kild_field_meta(name).tx_key)
             state.working_tx_id = tx_id
 
         def _kild_stage_child(self, value: SpyBinding | None) -> None:
@@ -302,32 +302,32 @@ def build_generated_owned_context(source_cls: type = OwnedSource) -> type:
         def child_list(self, value: BindingList | Iterable[SpyBinding] | None) -> None:
             self.working.child_list = value
 
-        def commit_order_key_for(self, tx_group: str = DEFAULT_TRANSACTION) -> tuple[object, ...]:
-            del tx_group
+        def commit_order_key_for(self, tx_key: str = DEFAULT_TRANSACTION) -> tuple[object, ...]:
+            del tx_key
             return ()
 
-        def requires_validation_for(self, tx_group: str = DEFAULT_TRANSACTION) -> bool:
-            del tx_group
+        def requires_validation_for(self, tx_key: str = DEFAULT_TRANSACTION) -> bool:
+            del tx_key
             return False
 
-        def validate_commit_for(self, tx_group: str = DEFAULT_TRANSACTION) -> bool:
-            del tx_group
+        def validate_commit_for(self, tx_key: str = DEFAULT_TRANSACTION) -> bool:
+            del tx_key
             return True
 
-        def _commit_transaction(self, tx_id: int, tx_group: str = DEFAULT_TRANSACTION) -> _CurrentView:
-            self._kild_commit_child(tx_id, tx_group)
-            self._kild_commit_child_list(tx_id, tx_group)
+        def _commit_transaction(self, tx_id: int, tx_key: str = DEFAULT_TRANSACTION) -> _CurrentView:
+            self._kild_commit_child(tx_id, tx_key)
+            self._kild_commit_child_list(tx_id, tx_key)
             return self.current
 
-        def _rollback_transaction(self, tx_id: int, tx_group: str = DEFAULT_TRANSACTION) -> _CurrentView:
-            self._kild_rollback_child(tx_id, tx_group)
-            self._kild_rollback_child_list(tx_id, tx_group)
+        def _rollback_transaction(self, tx_id: int, tx_key: str = DEFAULT_TRANSACTION) -> _CurrentView:
+            self._kild_rollback_child(tx_id, tx_key)
+            self._kild_rollback_child_list(tx_id, tx_key)
             return self.current
 
-        def _kild_commit_child(self, tx_id: int, tx_group: str) -> None:
+        def _kild_commit_child(self, tx_id: int, tx_key: str) -> None:
             meta = self._kild_field_meta("child")
             state = self._kild_field_state("child")
-            if tx_group != meta.tx_group or state.working_tx_id != tx_id or not state.has_working_value:
+            if tx_key != meta.tx_key or state.working_tx_id != tx_id or not state.has_working_value:
                 return
             current = self.__kild_current_store.child
             next_value = self.__kild_working_child
@@ -343,10 +343,10 @@ def build_generated_owned_context(source_cls: type = OwnedSource) -> type:
             self.__kild_commit_scratch_store.previous_child = None
             state.previous_committed_value = None
 
-        def _kild_commit_child_list(self, tx_id: int, tx_group: str) -> None:
+        def _kild_commit_child_list(self, tx_id: int, tx_key: str) -> None:
             meta = self._kild_field_meta("child_list")
             state = self._kild_field_state("child_list")
-            if tx_group != meta.tx_group or state.working_tx_id != tx_id or not state.has_working_value:
+            if tx_key != meta.tx_key or state.working_tx_id != tx_id or not state.has_working_value:
                 return
             current = self.__kild_current_store.child_list
             next_value = self.__kild_working_child_list
@@ -362,10 +362,10 @@ def build_generated_owned_context(source_cls: type = OwnedSource) -> type:
             self.__kild_commit_scratch_store.previous_child_list = None
             state.previous_committed_value = None
 
-        def _kild_rollback_child(self, tx_id: int, tx_group: str) -> None:
+        def _kild_rollback_child(self, tx_id: int, tx_key: str) -> None:
             meta = self._kild_field_meta("child")
             state = self._kild_field_state("child")
-            if tx_group != meta.tx_group or state.working_tx_id != tx_id or not state.has_working_value:
+            if tx_key != meta.tx_key or state.working_tx_id != tx_id or not state.has_working_value:
                 return
             if self.__kild_working_child is not None and self.__kild_working_child is not self.__kild_current_store.child:
                 _best_effort_close_owned_value(self.__kild_working_child, self.__kild_state.rollback_errors)
@@ -373,10 +373,10 @@ def build_generated_owned_context(source_cls: type = OwnedSource) -> type:
             state.working_tx_id = None
             self.__kild_working_child = None
 
-        def _kild_rollback_child_list(self, tx_id: int, tx_group: str) -> None:
+        def _kild_rollback_child_list(self, tx_id: int, tx_key: str) -> None:
             meta = self._kild_field_meta("child_list")
             state = self._kild_field_state("child_list")
-            if tx_group != meta.tx_group or state.working_tx_id != tx_id or not state.has_working_value:
+            if tx_key != meta.tx_key or state.working_tx_id != tx_id or not state.has_working_value:
                 return
             if self.__kild_working_child_list is not self.__kild_current_store.child_list:
                 _best_effort_clear_owned_list(self.__kild_working_child_list, self.__kild_state.rollback_errors)

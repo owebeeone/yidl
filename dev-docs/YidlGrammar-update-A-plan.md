@@ -1142,7 +1142,7 @@ seed Facades policy AddIfAbsent {
 Use cases:
 
 - default `Main` facade
-- default transaction group
+- default transaction key
 - default transaction manager record
 - standard helper/facade support records
 - overridable default contributions

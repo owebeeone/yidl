@@ -111,7 +111,7 @@ names include:
 - `current`
 - `working`
 - `previous`
-- `tx_group` / `tx_key` depending on final naming
+- `tx_key` / `tx_key` depending on final naming
 - retained initvars
 
 Current YIDL support is split:
@@ -411,7 +411,7 @@ Injected names:
 - `current`
 - `working`
 - `previous`
-- `tx_key` or `tx_group` after naming is pinned
+- `tx_key` or `tx_key` after naming is pinned
 - retained initvars
 - field/provider names already supported by default-factory dependency logic
 
@@ -425,14 +425,14 @@ Implementation shape:
 Recommended naming:
 
 - generated state and transaction internals should use `tx_key`
-- old API compatibility may still accept `tx_group` as a callable parameter name
+- old API compatibility may still accept `tx_key` as a callable parameter name
   if the old hook surface is preserved
 
 Verification:
 
 - default_factory receives field provider
 - working_default_factory receives `self`, `current`, `working`, initvar
-- before-commit hook receives `self`, `current`, `working`, `tx_group`
+- before-commit hook receives `self`, `current`, `working`, `tx_key`
 - commit validator receives supported injected names
 - unsupported callable signatures reject at decorator time
 
@@ -743,7 +743,7 @@ These should be resolved before their owning roll starts:
 1. `static` lazy factory timing and first-assignment behavior.
 2. Whether default/current/working facades all expose `const`, `static`, and
    future deferred field kinds.
-3. Whether hook injection accepts the old parameter name `tx_group`, the newer
+3. Whether hook injection accepts the old parameter name `tx_key`, the newer
    internal name `tx_key`, or both.
 4. Shape of the previous snapshot object.
 5. Whether full old binding refcount parity is needed.

@@ -73,7 +73,7 @@ Default = fieldspec_property("default", object)
 DefaultFactory = fieldspec_property("default_factory", object)
 FieldName = fieldspec_property("name", str)
 FieldAnno = fieldspec_property("annotation", object)
-TxGroup = fieldspec_property("tx_group", object)
+TxKey = fieldspec_property("tx_key", object)
 ```
 
 3. Properties are the input vocabulary for rules.

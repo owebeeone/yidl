@@ -41,68 +41,68 @@ class FakeContext:
         if self.validations is None:
             self.validations = []
 
-    def commit_order_key_for(self, tx_group: object = DEFAULT_TRANSACTION) -> tuple[object, ...]:
-        del tx_group
+    def commit_order_key_for(self, tx_key: object = DEFAULT_TRANSACTION) -> tuple[object, ...]:
+        del tx_key
         return self.rank
 
-    def requires_validation_for(self, tx_group: object = DEFAULT_TRANSACTION) -> bool:
-        del tx_group
+    def requires_validation_for(self, tx_key: object = DEFAULT_TRANSACTION) -> bool:
+        del tx_key
         return self.require_validation
 
-    def validate_commit_for(self, tx_group: object = DEFAULT_TRANSACTION) -> bool:
+    def validate_commit_for(self, tx_key: object = DEFAULT_TRANSACTION) -> bool:
         assert self.validations is not None
-        self.validations.append(tx_group)
+        self.validations.append(tx_key)
         return self.validate_ok
 
     def _prepare_commit_tx_by_key(
         self,
-        tx_group: object = DEFAULT_TRANSACTION,
+        tx_key: object = DEFAULT_TRANSACTION,
         tx_token: int | None = None,
     ) -> object:
         if self.commit_error is not None:
             raise self.commit_error
         assert self.prepared is not None
-        self.prepared.append((tx_token, tx_group))
+        self.prepared.append((tx_token, tx_key))
         return None
 
     def _apply_prepared_commit_tx_by_key(
         self,
-        tx_group: object = DEFAULT_TRANSACTION,
+        tx_key: object = DEFAULT_TRANSACTION,
         tx_token: int | None = None,
     ) -> object:
         assert self.committed is not None
         assert tx_token is not None
-        self.committed.append((tx_token, tx_group))
+        self.committed.append((tx_token, tx_key))
         return None
 
     def _after_commit_tx_by_key(
         self,
-        tx_group: object = DEFAULT_TRANSACTION,
+        tx_key: object = DEFAULT_TRANSACTION,
         tx_token: int | None = None,
     ) -> object:
         assert self.after_committed is not None
-        self.after_committed.append((tx_token, tx_group))
+        self.after_committed.append((tx_token, tx_key))
         return None
 
     def _rollback_tx_by_key(
         self,
-        tx_group: object = DEFAULT_TRANSACTION,
+        tx_key: object = DEFAULT_TRANSACTION,
         tx_token: int | None = None,
     ) -> object:
         if self.rollback_error is not None:
             raise self.rollback_error
         assert self.rolled_back is not None
         assert tx_token is not None
-        self.rolled_back.append((tx_token, tx_group))
+        self.rolled_back.append((tx_token, tx_key))
         return None
 
     def _after_rollback_tx_by_key(
         self,
-        tx_group: object = DEFAULT_TRANSACTION,
+        tx_key: object = DEFAULT_TRANSACTION,
         tx_token: int | None = None,
     ) -> object:
         assert self.after_rolled_back is not None
-        self.after_rolled_back.append((tx_token, tx_group))
+        self.after_rolled_back.append((tx_token, tx_key))
         return None
 
 
@@ -200,7 +200,7 @@ def test_transaction_manager_rollback_failure_resets_manager() -> None:
 
 
 def test_group_begin_counts_are_tracked_independently() -> None:
-    manager = TransactionManager(tx_groups={GROUP_ALPHA, GROUP_BETA})
+    manager = TransactionManager(tx_keys={GROUP_ALPHA, GROUP_BETA})
     left = FakeContext(name="left")
     right = FakeContext(name="right")
 
@@ -222,7 +222,7 @@ def test_group_begin_counts_are_tracked_independently() -> None:
 
 
 def test_multi_group_context_manager_commits_each_group() -> None:
-    manager = TransactionManager(tx_groups={GROUP_ALPHA, GROUP_BETA})
+    manager = TransactionManager(tx_keys={GROUP_ALPHA, GROUP_BETA})
     left = FakeContext(name="left")
     right = FakeContext(name="right")
 

@@ -171,7 +171,7 @@ Transducer-side pseudocode:
 transducer CompareWithOldValue: fieldhelper=managed
     inputs:
         name: @id
-        tx_group: @str
+        tx_key: @str
     behavior Working:
         source = WorkingStore
         fallback = PublishedStore
@@ -186,7 +186,7 @@ Here the important point is that the example names the roles explicitly:
 
 - `source` / `fallback` store roles
 - `old_value` control/scratch role
-- `tx_group` as a declared semantic input
+- `tx_key` as a declared semantic input
 
 These examples should be read as post-normalization semantic inputs, not as a
 claim that source-level omission/defaulting is already represented correctly in
@@ -225,16 +225,16 @@ Transducer-side pseudocode:
 transducer ReleaseOwnedList: fieldhelper=owned
     inputs:
         name: @id
-        tx_group: @str
+        tx_key: @str
     behavior Rollback:
         staged = WorkingStore
         errors = HiddenStore
-        scope = current_tx_field(name, tx_group)
+        scope = current_tx_field(name, tx_key)
         %%
             if not scope.has():
                 return
 
-            staged_items = staged_value(name, tx_group, consume=True)
+            staged_items = staged_value(name, tx_key, consume=True)
             rollback_each_owned(
                 staged_items,
                 on_error=collect(errors),
@@ -245,7 +245,7 @@ transducer ReleaseOwnedList: fieldhelper=owned
 This is closer to the real problem because it names:
 
 - field identity: `name`
-- transaction identity: `tx_group`
+- transaction identity: `tx_key`
 - field-local staged participation: `scope.has()`
 - staged-value role: `staged`
 - rollback failure collation and grouped rethrow
@@ -295,18 +295,18 @@ Transducer-side pseudocode:
 transducer GuardedCommit: fieldhelper=owned
     inputs:
         name: @id
-        tx_group: @str
+        tx_key: @str
     behavior Commit:
         target = PublishedStore
         source = WorkingStore
         scratch = HiddenStore
-        scope = current_tx_field(name, tx_group)
+        scope = current_tx_field(name, tx_key)
         %%
             if not scope.has():
                 return
 
             previous = committed_value(name)
-            next_value = staged_value(name, tx_group, consume=True)
+            next_value = staged_value(name, tx_key, consume=True)
             guarded_commit(
                 target=write_committed(name, next_value),
                 preserve_previous=stash(scratch, previous),

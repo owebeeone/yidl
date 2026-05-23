@@ -11,13 +11,13 @@ def test_schema_family_lowers_to_union_variants() -> None:
     name = builder.props.Name(str, REQUIRED)
     source_order = builder.props.SourceOrder(int, 0)
     kind = builder.props.Kind(object, REQUIRED)
-    tx_group = builder.props.TxGroup(str, "default")
+    tx_key = builder.props.TxKey(str, "default")
     default = builder.props.Default(object, REQUIRED)
 
     field_specs = builder.schema_family("FieldSpecs")
     field_specs.common(name, source_order, kind)
     plain = field_specs.variant("PlainField", default)
-    managed = field_specs.variant("ManagedField", tx_group, default)
+    managed = field_specs.variant("ManagedField", tx_key, default)
     builder.collections.Fields(field_specs.handle, cardinality=builder.many, identity=name)
 
     dds = builder.build().build_data_definition()
@@ -34,7 +34,7 @@ def test_schema_family_lowers_to_union_variants() -> None:
         "Name",
         "SourceOrder",
         "Kind",
-        "TxGroup",
+        "TxKey",
         "Default",
     ]
     assert dds.collections[0].record_shape is dds.unions[0]
@@ -88,10 +88,10 @@ def test_extending_concept_contributes_variant_to_schema_family() -> None:
 
     child_builder = capsule_concept("ManagedFamily", extends=(base,))
     base_refs = child_builder.use(base)
-    tx_group = child_builder.props.TxGroup(str, "default")
+    tx_key = child_builder.props.TxKey(str, "default")
     child_builder.extend_schema_family(base_refs.families.FieldSpecs).variant(
         "ManagedField",
-        tx_group,
+        tx_key,
     )
     child = child_builder.build()
 
@@ -104,7 +104,7 @@ def test_extending_concept_contributes_variant_to_schema_family() -> None:
     assert [prop.name for prop in dds.unions[0].variants[1].properties] == [
         "Name",
         "Kind",
-        "TxGroup",
+        "TxKey",
     ]
 
 

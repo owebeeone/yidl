@@ -84,7 +84,7 @@ if __name__ == "__main__":
 
         set(val, old_val): %%
             store.write(val)
-            txm.mark_dirty(tx_group)
+            txm.mark_dirty(tx_key)
 
     behavior Commit:
         store = PublishedStore

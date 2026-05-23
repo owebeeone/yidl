@@ -2,7 +2,7 @@
 
 ## Goal
 
-Provide stable derived keys for transaction groups, special per-transaction
+Provide stable derived keys for transaction keys, special per-transaction
 declarations, and other lifecycle grouping needs without introducing a general
 query engine.
 
@@ -13,24 +13,24 @@ records.
 
 This feature covers:
 
-- distinct ordered transaction groups
+- distinct ordered transaction keys
 - dense transaction indices
-- lookup of derived indices by field transaction group
+- lookup of derived indices by field transaction key
 - tuple identity for uniqueness checks
 - keyed lookup value expressions
 
 ## Problem
 
-Lifecycle runtime code should not repeatedly use hashable transaction group
-names in hot paths. It should map transaction group names to stable integer
+Lifecycle runtime code should not repeatedly use hashable transaction key
+names in hot paths. It should map transaction key names to stable integer
 indices during generation/decorator time and bind those indices into generated
 methods.
 
 The reference backend also requires uniqueness constraints such as:
 
-- at most one commit validator per transaction group
-- at most one commit order key per transaction group
-- many hooks per transaction group and phase
+- at most one commit validator per transaction key
+- at most one commit order key per transaction key
+- many hooks per transaction key and phase
 
 Current DDS supports collections and identities, but it does not provide a
 direct distinct-index derivation or tuple identity model.
@@ -41,19 +41,19 @@ direct distinct-index derivation or tuple identity model.
 
 ```python
 dds.operation(
-    "BuildTxGroups",
+    "BuildTxKeys",
     inputs=(TransactionalFields,),
-    outputs=(TxGroups,),
+    outputs=(TxKeys,),
     order_by=(SourceOrder,),
-    resource=BuildTxGroupsOperation,
+    resource=BuildTxKeysOperation,
 )
 ```
 
 This creates a computed/generated collection with records:
 
 ```python
-TxGroupRecord(
-    tx_group_name="default_transaction",
+TxKeyRecord(
+    tx_key_name="default_transaction",
     tx_index=0,
 )
 ```
@@ -62,11 +62,11 @@ Optional concept-layer sugar can wrap that operation shape:
 
 ```python
 concept.operations.distinct_index(
-    "TxGroups",
+    "TxKeys",
     source=TransactionalFields,
-    value=TxGroup,
+    value=TxKey,
     order_by=(SourceOrder,),
-    value_property=TxGroupName,
+    value_property=TxKeyName,
     index_property=TxIndex,
 )
 ```
@@ -83,8 +83,8 @@ dds.production(
     identity=source.prop(Name),
     values={
         Name: source.prop(Name),
-        TxGroup: source.prop(TxGroup),
-        TxIndex: lookup(TxGroups, key=source.prop(TxGroup), value=TxIndex),
+        TxKey: source.prop(TxKey),
+        TxIndex: lookup(TxKeys, key=source.prop(TxKey), value=TxIndex),
     },
     policy=ReplaceExisting,
 )
@@ -96,14 +96,14 @@ dds.production(
 SpecialDeclarations = dds.collection(
     "SpecialDeclarations",
     SpecialDeclaration,
-    identity=(SpecialKind, TxGroup),
+    identity=(SpecialKind, TxKey),
 )
 ```
 
 The identity expression for a record is:
 
 ```python
-(record.special_kind, record.tx_group)
+(record.special_kind, record.tx_key)
 ```
 
 Tuple identity should work anywhere a single-property identity works:
@@ -118,7 +118,7 @@ Tuple identity should work anywhere a single-property identity works:
 ### Keyed Lookup
 
 ```python
-lookup(TxGroups, key=source.prop(TxGroup), value=TxIndex)
+lookup(TxKeys, key=source.prop(TxKey), value=TxIndex)
 ```
 
 V1 lookup rules:
@@ -131,10 +131,10 @@ V1 lookup rules:
 Optional default:
 
 ```python
-lookup(TxGroups, key=source.prop(TxGroup), value=TxIndex, default=0)
+lookup(TxKeys, key=source.prop(TxKey), value=TxIndex, default=0)
 ```
 
-Defaults should be rare. Missing transaction group is usually a design error.
+Defaults should be rare. Missing transaction key is usually a design error.
 
 ## Exact Index Semantics
 
@@ -150,13 +150,13 @@ V1 distinct-index rules:
 This means if fields are declared:
 
 ```text
-count: tx_group="default"
-owner: tx_group="resource"
-label: tx_group="default"
-session: tx_group="session"
+count: tx_key="default"
+owner: tx_key="resource"
+label: tx_key="default"
+session: tx_key="session"
 ```
 
-the generated transaction groups are:
+the generated transaction keys are:
 
 ```text
 default -> 0
@@ -174,11 +174,11 @@ TransactionalFields = dds.computed_collection(
 )
 
 dds.operation(
-    "BuildTxGroups",
+    "BuildTxKeys",
     inputs=(TransactionalFields,),
-    outputs=(TxGroups,),
+    outputs=(TxKeys,),
     order_by=(SourceOrder,),
-    resource=BuildTxGroupsOperation,
+    resource=BuildTxKeysOperation,
 )
 
 IndexedFields = dds.collection(
@@ -194,8 +194,8 @@ dds.production(
     identity=source.prop(Name),
     values={
         Name: source.prop(Name),
-        TxGroup: source.prop(TxGroup),
-        TxIndex: lookup(TxGroups, key=source.prop(TxGroup), value=TxIndex),
+        TxKey: source.prop(TxKey),
+        TxIndex: lookup(TxKeys, key=source.prop(TxKey), value=TxIndex),
     },
     policy=ReplaceExisting,
 )
@@ -206,47 +206,47 @@ dds.production(
 Expected excerpt for `tests/data/goldens/materialized/dds_lifecycle_tx_index.py`:
 
 ```python
-def build_tx_groups(ctx):
+def build_tx_keys(ctx):
     seen = {}
     ordered = sorted(
         ctx.records(TransactionalFieldsCollection),
         key=lambda record: (record.source_order, ctx.write_order(record)),
     )
     for field in ordered:
-        tx_group = getattr(field, "tx_group", NOT_PROVIDED)
-        if tx_group is NOT_PROVIDED:
+        tx_key = getattr(field, "tx_key", NOT_PROVIDED)
+        if tx_key is NOT_PROVIDED:
             continue
-        if tx_group in seen:
+        if tx_key in seen:
             continue
         tx_index = len(seen)
-        seen[tx_group] = tx_index
+        seen[tx_key] = tx_index
         ctx.write(
-            TxGroupsCollection,
-            TxGroupRecord(tx_group_name=tx_group, tx_index=tx_index),
+            TxKeysCollection,
+            TxKeyRecord(tx_key_name=tx_key, tx_index=tx_index),
             policy=RejectDuplicate,
         )
 
 
 def add_tx_index_to_fields(ctx):
-    tx_groups_by_name = {
-        record.tx_group_name: record
-        for record in ctx.records(TxGroupsCollection)
+    tx_keys_by_name = {
+        record.tx_key_name: record
+        for record in ctx.records(TxKeysCollection)
     }
     for field in ctx.records(TransactionalFieldsCollection):
-        tx_group_record = tx_groups_by_name[field.tx_group]
+        tx_key_record = tx_keys_by_name[field.tx_key]
         ctx.write(
             IndexedFieldsCollection,
             IndexedField(
                 name=field.name,
-                tx_group=field.tx_group,
-                tx_index=tx_group_record.tx_index,
+                tx_key=field.tx_key,
+                tx_index=tx_key_record.tx_index,
             ),
             policy=ReplaceExisting,
         )
 
 
 def run_operations(ctx):
-    build_tx_groups(ctx)
+    build_tx_keys(ctx)
     add_tx_index_to_fields(ctx)
     return ctx.freeze()
 ```
@@ -254,7 +254,7 @@ def run_operations(ctx):
 Expected runtime result:
 
 ```text
-TxGroups: default_transaction=0, audit=1, resources=2
+TxKeys: default_transaction=0, audit=1, resources=2
 IndexedFields: count:0, label:0, owner:2, updated_at:1
 ```
 
@@ -267,7 +267,7 @@ ctx.write(
     SpecialDeclarationsCollection,
     SpecialDeclaration(
         special_kind=COMMIT_VALIDATOR,
-        tx_group="default_transaction",
+        tx_key="default_transaction",
         field_name="validate_default",
     ),
     policy=RejectDuplicate,
@@ -277,7 +277,7 @@ ctx.write(
 Generated duplicate check should use tuple key:
 
 ```python
-key = (record.special_kind, record.tx_group)
+key = (record.special_kind, record.tx_key)
 ```
 
 Expected duplicate diagnostic:
@@ -332,7 +332,7 @@ Goldens:
 The golden should include:
 
 - at least four fields
-- at least three transaction groups
-- repeated transaction group
+- at least three transaction keys
+- repeated transaction key
 - validator/order-key uniqueness using tuple identity
-- hook many-record declaration for the same transaction group
+- hook many-record declaration for the same transaction key

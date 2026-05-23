@@ -98,7 +98,7 @@ def _prepare_commit_for_index(self, tx_index):
 ```
 
 Astichi `elif` targets are mandatory. YIDL should use them where the input facts
-guarantee at least one branch, such as `TxGroups` for lifecycle classes. For
+guarantee at least one branch, such as `TxKeys` for lifecycle classes. For
 optional branch sets, use a defaulted block hole or keep an ordinary block hole
 until the fact model guarantees a branch.
 

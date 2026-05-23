@@ -5,12 +5,12 @@ from yidl.runtime.transaction_yidl import DEFAULT_TRANSACTION
 from yidl.runtime.transaction_yidl import TransactionManager
 VOID = object()
 
-def build_lifecycle_class(decorated_cls, *, _Counter_lifecycle_definition, _Counter_annotations, _Counter_tx_groups, _Counter_plain_default, _Counter_seed_default, _Counter_KIND_default):
+def build_lifecycle_class(decorated_cls, *, _Counter_lifecycle_definition, _Counter_annotations, _Counter_tx_keys, _Counter_plain_default, _Counter_seed_default, _Counter_KIND_default):
 
     class Counter_State:
         __slots__ = ('_y_transaction_manager', '_y_default_ref', '_y_current_ref', '_y_working_ref', '_y_plain_value', '_y_working_tx_ids')
-        __yidl_tx_index_to_key__ = _Counter_tx_groups
-        __yidl_tx_key_to_index__ = {key: index for index, key in enumerate(_Counter_tx_groups)}
+        __yidl_tx_index_to_key__ = _Counter_tx_keys
+        __yidl_tx_key_to_index__ = {key: index for index, key in enumerate(_Counter_tx_keys)}
 
         def _y_get_default_facade(self):
             ref = self._y_default_ref
@@ -212,8 +212,8 @@ def build_lifecycle_class(decorated_cls, *, _Counter_lifecycle_definition, _Coun
         __yidl_lifecycle_generated__ = True
         __yidl_lifecycle_user_class__ = decorated_cls
         __yidl_lifecycle_definition__ = _Counter_lifecycle_definition
-        __yidl_tx_index_to_key__ = _Counter_tx_groups
-        __yidl_tx_key_to_index__ = {key: index for index, key in enumerate(_Counter_tx_groups)}
+        __yidl_tx_index_to_key__ = _Counter_tx_keys
+        __yidl_tx_key_to_index__ = {key: index for index, key in enumerate(_Counter_tx_keys)}
         pass
 
         def __init__(self, plain: 'int'=_Counter_plain_default, seed: 'int'=_Counter_seed_default, *, transaction_manager=None):
@@ -221,12 +221,12 @@ def build_lifecycle_class(decorated_cls, *, _Counter_lifecycle_definition, _Coun
             object.__setattr__(self, '_y_state', state)
             object.__setattr__(self, '_y_current_facade', None)
             object.__setattr__(self, '_y_working_facade', None)
-            state._y_transaction_manager = transaction_manager or TransactionManager(tx_groups=tuple((group for group in _Counter_tx_groups if group != DEFAULT_TRANSACTION)))
+            state._y_transaction_manager = transaction_manager or TransactionManager(tx_keys=tuple((group for group in _Counter_tx_keys if group != DEFAULT_TRANSACTION)))
             state._y_default_ref = weakref.ref(self)
             state._y_current_ref = None
             state._y_working_ref = None
             state._y_plain_value = plain
-            state._y_working_tx_ids = [None for _group in _Counter_tx_groups]
+            state._y_working_tx_ids = [None for _group in _Counter_tx_keys]
 
     class Counter_Current(Counter_FacadeBase):
         __slots__ = ()

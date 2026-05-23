@@ -18,7 +18,7 @@ concept LifecycleTransient extends default_factories.LifecycleDefaultFactories {
         FieldOwner
         FieldName
         FieldOrder
-        TxGroupKey
+        TxKeyKey
         TxIndex
         CurrentSlotName
         WorkingSlotName
@@ -69,17 +69,17 @@ concept LifecycleTransient extends default_factories.LifecycleDefaultFactories {
             (field.field_owner, field.field_name): field
             for field in fields
         }
-        tx_groups = {
-            (tx_group.tx_owner, tx_group.tx_group_key): tx_group.tx_index
-            for tx_group in ctx.records(TxGroupsCollection)
+        tx_keys = {
+            (tx_key.tx_owner, tx_key.tx_key_key): tx_key.tx_index
+            for tx_key in ctx.records(TxKeysCollection)
         }
         for field in fields:
             if field.field_kind != "transient":
                 continue
-            tx_group = field.tx_group_key
-            if tx_group is None:
-                tx_group = DEFAULT_TRANSACTION
-            tx_index = tx_groups[(field.field_owner, tx_group)]
+            tx_key = field.tx_key_key
+            if tx_key is None:
+                tx_key = DEFAULT_TRANSACTION
+            tx_index = tx_keys[(field.field_owner, tx_key)]
             ctx.write(
                 IndexedTransientFieldsCollection,
                 IndexedTransientField(
@@ -87,7 +87,7 @@ concept LifecycleTransient extends default_factories.LifecycleDefaultFactories {
                     field_owner=field.field_owner,
                     field_name=field.field_name,
                     field_order=field.field_order,
-                    tx_group_key=tx_group,
+                    tx_key_key=tx_key,
                     tx_index=tx_index,
                     current_slot_name=field.current_slot_name,
                     working_slot_name=field.working_slot_name,
@@ -177,7 +177,7 @@ concept LifecycleTransient extends default_factories.LifecycleDefaultFactories {
                     policy=RejectDuplicate,
                 )
     ]$ {
-        keep ctx, FieldsCollection, TxGroupsCollection
+        keep ctx, FieldsCollection, TxKeysCollection
         keep IndexedTransientFieldsCollection, IndexedTransientField
         keep RetainedInitVarsCollection, RetainedInitVar
         keep TransientWorkingFactoryArgsCollection, TransientWorkingFactoryArg
@@ -185,7 +185,7 @@ concept LifecycleTransient extends default_factories.LifecycleDefaultFactories {
     }
 
     operation BuildTransientFacts
-        inputs(Fields, TxGroups)
+        inputs(Fields, TxKeys)
         outputs(IndexedTransientFields, RetainedInitVars, TransientWorkingFactoryArgs)
         using BuildTransientFactsBody
 

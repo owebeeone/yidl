@@ -111,7 +111,7 @@ def test_lifecycle_layers_have_distinct_surfaces() -> None:
     assert not hasattr(core, "build_LifecycleModule")
     assert not hasattr(core, "ManagedField")
     assert not hasattr(core, "ManagedFieldsCollection")
-    assert not hasattr(core, "TxGroup")
+    assert not hasattr(core, "TxKey")
     assert not hasattr(core, "DefaultFactoryDependency")
 
     managed = _compiled_namespace(
@@ -124,7 +124,7 @@ def test_lifecycle_layers_have_distinct_surfaces() -> None:
     )
     assert hasattr(managed, "ManagedField")
     assert hasattr(managed, "ManagedFieldsCollection")
-    assert hasattr(managed, "TxGroup")
+    assert hasattr(managed, "TxKey")
     assert not hasattr(managed, "DefaultFactoryDependency")
     assert not hasattr(managed, "build_LifecycleModule")
 

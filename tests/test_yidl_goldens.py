@@ -12,6 +12,7 @@ from yidl.testing.versioned_test_harness import (
     data_golden_dir,
     data_gold_src_dir,
     discover_golden_cases,
+    materialized_output_name,
     run_golden_case,
 )
 
@@ -28,10 +29,7 @@ _CASES = discover_golden_cases(_PROJECT_ROOT)
 
 
 def _materialized_name(case_name: str) -> str:
-    candidate = case_name.removesuffix(".py")
-    if (_MATERIALIZED_GOLDENS_DIR / candidate).is_dir():
-        return candidate
-    return case_name
+    return materialized_output_name(_GOLD_SRC_DIR / case_name)
 
 
 def test_golden_fixture_sets_match() -> None:

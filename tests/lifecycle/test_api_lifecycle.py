@@ -34,11 +34,11 @@ GROUP_BETA = "group_beta"
 
 _PYROLYZE_LIFECYCLE_TEST_NAMES = (
     "test_field_specs_bind_handler_matrix_at_decoration_time",
-    "test_tx_group_defaults_to_default_transaction",
+    "test_tx_key_defaults_to_default_transaction",
     "test_validator_and_order_key_default_to_default_transaction",
     "test_commit_hook_fields_compile_to_runner_tables_and_not_stored_values",
-    "test_tx_group_metadata_is_recorded_for_grouped_fields",
-    "test_same_name_override_may_keep_same_tx_group",
+    "test_tx_key_metadata_is_recorded_for_grouped_fields",
+    "test_same_name_override_may_keep_same_tx_key",
     "test_managed_context_wraps_plain_class_onto_internal_base",
     "test_view_navigation_is_closed_over_current_and_working_views",
     "test_const_fields_are_constructor_only_and_read_only_everywhere",
@@ -160,7 +160,7 @@ class SpyBinding(BindingBase):
 
 
 def _manager(groups: set[Hashable] | None = None) -> TransactionManager:
-    return TransactionManager(tx_groups=() if groups is None else groups)
+    return TransactionManager(tx_keys=() if groups is None else groups)
 
 
 def test_const_fields_are_constructor_only_and_read_only_everywhere() -> None:
@@ -646,7 +646,7 @@ def test_transaction_manager_context_manager_rolls_back_on_exception() -> None:
 def test_transaction_manager_rejects_unknown_group() -> None:
     manager = _manager({"known"})
 
-    with pytest.raises(RuntimeError, match="unknown yidl transaction group"):
+    with pytest.raises(RuntimeError, match="unknown yidl transaction key"):
         manager.begin("unknown")
 
 
@@ -1263,7 +1263,7 @@ def test_binding_map_reuses_current_bindings_without_premature_close() -> None:
     assert context.current.handles["shared"] is shared
 
 
-def test_tx_group_defaults_to_default_transaction() -> None:
+def test_tx_key_defaults_to_default_transaction() -> None:
     class Context:
         value: int = managed(default=0)
 
@@ -1288,7 +1288,7 @@ def test_validator_and_order_key_default_to_default_transaction() -> None:
     assert context._y_state.commit_order_key_for(DEFAULT_TRANSACTION) == (2,)
 
 
-def test_tx_group_metadata_is_recorded_for_grouped_fields() -> None:
+def test_tx_key_metadata_is_recorded_for_grouped_fields() -> None:
     class GroupedFieldContext:
         value: int = managed(GROUP_ALPHA, default=0)
         scratch: bool = transient(GROUP_BETA, default=False)

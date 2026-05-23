@@ -7,7 +7,7 @@ from yidl.runtime.transaction_yidl import DEFAULT_TRANSACTION
 from yidl.runtime.transaction_yidl import TransactionManager
 VOID = object()
 
-def build_lifecycle_class(decorated_cls, *, _Scratch_lifecycle_definition, _Scratch_annotations, _Scratch_tx_groups, _Scratch_seed_default, _Scratch_label_default, _Scratch_marker_default, _Scratch_items_default_factory, _Scratch_buffer_default, _Scratch_buffer_working_default_factory, _Scratch_audit_buffer_default, _Scratch_audit_buffer_working_default_factory):
+def build_lifecycle_class(decorated_cls, *, _Scratch_lifecycle_definition, _Scratch_annotations, _Scratch_tx_keys, _Scratch_seed_default, _Scratch_label_default, _Scratch_marker_default, _Scratch_items_default_factory, _Scratch_buffer_default, _Scratch_buffer_working_default_factory, _Scratch_audit_buffer_default, _Scratch_audit_buffer_working_default_factory):
 
     def _y_validate_binding_value(field_name, value):
         if value is not None and (not isinstance(value, BindingBase)):
@@ -27,8 +27,8 @@ def build_lifecycle_class(decorated_cls, *, _Scratch_lifecycle_definition, _Scra
 
     class Scratch_State:
         __slots__ = ('_y_transaction_manager', '_y_default_ref', '_y_current_ref', '_y_working_ref', '_y_seed_initvar', '_y_label_current', '_y_label_working', '_y_marker_current', '_y_marker_working', '_y_items_current', '_y_items_working', '_y_buffer_current', '_y_buffer_working', '_y_audit_buffer_current', '_y_audit_buffer_working', '_y_working_tx_ids')
-        __yidl_tx_index_to_key__ = _Scratch_tx_groups
-        __yidl_tx_key_to_index__ = {key: index for index, key in enumerate(_Scratch_tx_groups)}
+        __yidl_tx_index_to_key__ = _Scratch_tx_keys
+        __yidl_tx_key_to_index__ = {key: index for index, key in enumerate(_Scratch_tx_keys)}
 
         def _y_get_default_facade(self):
             ref = self._y_default_ref
@@ -313,8 +313,8 @@ def build_lifecycle_class(decorated_cls, *, _Scratch_lifecycle_definition, _Scra
         __yidl_lifecycle_generated__ = True
         __yidl_lifecycle_user_class__ = decorated_cls
         __yidl_lifecycle_definition__ = _Scratch_lifecycle_definition
-        __yidl_tx_index_to_key__ = _Scratch_tx_groups
-        __yidl_tx_key_to_index__ = {key: index for index, key in enumerate(_Scratch_tx_groups)}
+        __yidl_tx_index_to_key__ = _Scratch_tx_keys
+        __yidl_tx_key_to_index__ = {key: index for index, key in enumerate(_Scratch_tx_keys)}
 
         @property
         def label(self):
@@ -411,7 +411,7 @@ def build_lifecycle_class(decorated_cls, *, _Scratch_lifecycle_definition, _Scra
             object.__setattr__(self, '_y_state', state)
             object.__setattr__(self, '_y_current_facade', None)
             object.__setattr__(self, '_y_working_facade', None)
-            state._y_transaction_manager = transaction_manager or TransactionManager(tx_groups=tuple((group for group in _Scratch_tx_groups if group != DEFAULT_TRANSACTION)))
+            state._y_transaction_manager = transaction_manager or TransactionManager(tx_keys=tuple((group for group in _Scratch_tx_keys if group != DEFAULT_TRANSACTION)))
             state._y_default_ref = weakref.ref(self)
             state._y_current_ref = None
             state._y_working_ref = None
@@ -428,7 +428,7 @@ def build_lifecycle_class(decorated_cls, *, _Scratch_lifecycle_definition, _Scra
                 items = _Scratch_items_default_factory(seed=seed)
             state._y_items_current = items
             state._y_seed_initvar = seed
-            state._y_working_tx_ids = [None for _group in _Scratch_tx_groups]
+            state._y_working_tx_ids = [None for _group in _Scratch_tx_keys]
 
     class Scratch_Current(Scratch_FacadeBase):
         __slots__ = ()

@@ -48,7 +48,7 @@ def _add_before_hook(
             source_label=f"Example.{name}",
             callable_object=callable_object,
             callable_role=BEFORE_COMMIT_HOOK,
-            tx_group="default",
+            tx_key="default",
             phase=BEFORE_COMMIT_HOOK,
             allowed_injections=allowed_injections,
             callable_path=name,

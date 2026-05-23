@@ -86,7 +86,7 @@ as one large handwritten code generator.
 
 | Helper | Main lifecycle facts | Current DDS coverage | Main gaps |
 | --- | --- | --- | --- |
-| `managed` | Stored current/working value, transaction group, compare mode, default/factory, initial working, freeze/thaw, state factory/copy | Field-like records, matchers, property/init snippets | Transaction indexing, state refs, operation pipeline, callable injection, init phase ordering |
+| `managed` | Stored current/working value, transaction key, compare mode, default/factory, initial working, freeze/thaw, state factory/copy | Field-like records, matchers, property/init snippets | Transaction indexing, state refs, operation pipeline, callable injection, init phase ordering |
 | `const` | Stored once at construction or default, immutable after init, value comparison | Frozen property templates and init fields | Immutable write diagnostics, default/factory phase, class/facade state routing |
 | `static` | Stored once lazily or explicitly, immutable after first assignment | Property templates can be selected | Single-write runtime state, lazy default factory, setter template variants |
 | `binding` | Retained external resource, accept/retain/release behavior, scalar/map shape | Matchers can select resource policy templates | Annotation shape facts, cleanup phases, refcount operation resources |
@@ -96,9 +96,9 @@ as one large handwritten code generator.
 | `derived` | Derived store, reset on commit/rollback, user setter/getter behavior | Can select property templates | Dependency/invalidation model, reset phase contributions |
 | `initvar` | Constructor-only value, may be retained if a late consumer needs it | Init parameter records and parameter templates | Dependency closure, retained initvar storage, unused initvar diagnostics |
 | `classvar` | Class body materialization, optional default/default_factory(cls) | Class body ports and snippets | Class-materialized value resources, helper signature policy |
-| `commit_order_key` | One per transaction group, callable injection, sort key | Matcher resources and records can represent callables | At-most-one keyed validation, tx-group index, generated runner injection |
-| `commit_validator` | One per transaction group, callable injection, validation phase | Same as order key | Validation phase, ExceptionGroup policy, callable injection |
-| Hook helpers | Many per transaction group, callable injection, before/after/rollback phases | Records and ordered ports can represent contributions | Runtime hook runners, phase ordering, rollback error aggregation |
+| `commit_order_key` | One per transaction key, callable injection, sort key | Matcher resources and records can represent callables | At-most-one keyed validation, tx-group index, generated runner injection |
+| `commit_validator` | One per transaction key, callable injection, validation phase | Same as order key | Validation phase, ExceptionGroup policy, callable injection |
+| Hook helpers | Many per transaction key, callable injection, before/after/rollback phases | Records and ordered ports can represent contributions | Runtime hook runners, phase ordering, rollback error aggregation |
 | `lifecycle_field` | Low-level escape hatch with explicit kind and parameters | Unions/variants can represent low-level records | Kind resource model, parameter validation, diagnostics |
 | `managed_context` | Decorator, MRO merge, state/facade classes, helper functions | Class concepts can emit class shells | Generated library/decorator surface, MRO merge, multi-facade topology |
 
@@ -195,7 +195,7 @@ Use a single union for field specs:
   `ClassVarField`, `HookField`, and so on.
 - Common properties: `Name`, `Annotation`, `DeclarationOrder`,
   `DeclarationSpace`, `SourceLabel`.
-- Variant properties: transaction group, factory callables, resource policy,
+- Variant properties: transaction key, factory callables, resource policy,
   hook phase, class materialization, and storage mode.
 
 Computed collections then select `InitFields`, `StoredFields`, `HookFields`,
@@ -243,7 +243,7 @@ layered merge API is too much for the first lifecycle slice.
 
 ## Gap 5: Transaction Group Indexing
 
-The reference backend maps transaction group names to dense indices. Hot runtime
+The reference backend maps transaction key names to dense indices. Hot runtime
 code can then use integer transaction slots instead of repeatedly looking up
 hashable group names.
 
@@ -255,15 +255,15 @@ Current DDS can filter and produce records, but it does not have a stable
 Add a computed collection or production:
 
 ```python
-TxGroups = dds.distinct_indexed_collection(
-    "TxGroups",
+TxKeys = dds.distinct_indexed_collection(
+    "TxKeys",
     source=ManagedFields,
-    value=TxGroup,
+    value=TxKey,
     order=DeclarationOrder,
 )
 ```
 
-It emits records containing `TxGroupName`, `TxIndex`, and stable ordering. Later
+It emits records containing `TxKeyName`, `TxIndex`, and stable ordering. Later
 productions join fields to the matching `TxIndex`.
 
 ### Proposal B: Tx Index As A Generated Resource
@@ -271,10 +271,10 @@ productions join fields to the matching `TxIndex`.
 Keep indexed groups outside normal records and provide an index resource:
 
 ```python
-tx_index = resources.distinct_index(TxGroup, source=ManagedFields)
+tx_index = resources.distinct_index(TxKey, source=ManagedFields)
 ```
 
-Templates bind `tx_index(field.tx_group)` into generated code. This may be
+Templates bind `tx_index(field.tx_key)` into generated code. This may be
 lighter if transaction indexing is the only distinct-index use case.
 
 ## Gap 6: State, Store, And Facade Topology
@@ -415,7 +415,7 @@ binding, and future lifecycle features all need to add phases independently.
 ## Gap 10: Callable Injection
 
 Lifecycle callables may accept names such as `self`, `current`, `working`,
-`previous`, `tx_group`, and initvars. The reference implementation inspects
+`previous`, `tx_key`, and initvars. The reference implementation inspects
 signatures and builds callable runners.
 
 Current DDS matchers can use evaluated fields, but there is no standardized
@@ -628,15 +628,15 @@ This is preferable if classvars share override and MRO behavior with fields.
 
 ## Gap 17: Special Per-Transaction Declarations
 
-Commit order keys and commit validators are at-most-one per transaction group.
-Hooks are many per transaction group and phase.
+Commit order keys and commit validators are at-most-one per transaction key.
+Hooks are many per transaction key and phase.
 
 Current write policies can reject duplicate identities, but the model for
 special declaration uniqueness is not explicit.
 
 ### Proposal A: Keyed Special Collections
 
-Add special collections keyed by `(SpecialKind, TxGroup)`:
+Add special collections keyed by `(SpecialKind, TxKey)`:
 
 - `CommitOrderKeys`
 - `CommitValidators`
@@ -657,7 +657,7 @@ but it is more work than strict keyed writes.
 
 The lifecycle reference raises detailed `TypeError` and runtime errors for
 invalid helper usage, duplicate declarations, invalid signatures, unknown
-transaction groups, unused initvars, and illegal state transitions.
+transaction keys, unused initvars, and illegal state transitions.
 
 Current DDS errors are useful for core mechanics but are not a complete
 diagnostic system for a generated lifecycle library.
@@ -836,7 +836,7 @@ Create YIDL-owned goldens in increasing complexity:
 
 1. Plain managed field with init and property.
 2. Frozen/const/static variants.
-3. Multiple transaction groups.
+3. Multiple transaction keys.
 4. Transient and local-store fields.
 5. Binding/owned scalar resources.
 6. Binding/owned mapping resources.
@@ -898,7 +898,7 @@ staircase:
 2. One direct managed facade.
 3. Managed and const fields.
 4. Constructor parameters and defaults.
-5. One transaction group index.
+5. One transaction key index.
 6. Current/working slot refs.
 7. Getter, setter, commit, and rollback method bodies.
 

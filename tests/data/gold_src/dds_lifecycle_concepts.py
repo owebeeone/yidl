@@ -27,7 +27,7 @@ def _build_container():
             name="count",
             kind=MANAGED_KIND,
             order=0,
-            tx_group="default",
+            tx_key="default",
         ),
     )
     builder.add(
@@ -45,8 +45,8 @@ def _build_container():
 def render_case() -> str:
     namespace, container = _build_container()
 
-    tx_group = container.TxGroups.by_identity("default")
-    assert tx_group.tx_index == 0
+    tx_key = container.TxKeys.by_identity("default")
+    assert tx_key.tx_index == 0
     contribution = container.OperationContributions.by_identity(
         (MAIN_FACADE, "count", PROPERTY_PHASE)
     )

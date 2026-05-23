@@ -17,7 +17,7 @@ concept LifecycleManaged extends core.LifecycleCore {
     # Transaction facts.
     # -------------------------------------------------------------------------
 
-    property TxGroupOrder: int = 0
+    property TxKeyOrder: int = 0
     property TxOwner: str = ""
     property CommitOrderKeyFunctionName: str = ""
     property RequiresValidationFunctionName: str = ""
@@ -33,14 +33,14 @@ concept LifecycleManaged extends core.LifecycleCore {
         FieldOwner
         FieldName
         FieldOrder
-        TxGroupKey
+        TxKeyKey
     }
 
-    record TxGroup {
+    record TxKey {
         TxOwner
-        TxGroupKey
+        TxKeyKey
         TxIndex
-        TxGroupOrder
+        TxKeyOrder
         CommitOrderKeyFunctionName
         RequiresValidationFunctionName
         ValidateCommitFunctionName
@@ -57,7 +57,7 @@ concept LifecycleManaged extends core.LifecycleCore {
         FieldOwner
         FieldName
         FieldOrder
-        TxGroupKey
+        TxKeyKey
         TxIndex
         CurrentSlotName
         WorkingSlotName
@@ -70,7 +70,7 @@ concept LifecycleManaged extends core.LifecycleCore {
     }
 
     collection TransactionalFields: TransactionalField identity FieldId many
-    collection TxGroups: TxGroup identity (TxOwner, TxGroupKey) many
+    collection TxKeys: TxKey identity (TxOwner, TxKeyKey) many
     collection IndexedTransactionalFields: IndexedTransactionalField identity FieldId many
 
     resource BuildTransactionFactsBody = code $[
@@ -88,12 +88,12 @@ concept LifecycleManaged extends core.LifecycleCore {
         for lifecycle_class in classes:
             seen = {DEFAULT_TRANSACTION: 0}
             ctx.write(
-                TxGroupsCollection,
-                TxGroup(
+                TxKeysCollection,
+                TxKey(
                     tx_owner=lifecycle_class.class_id,
-                    tx_group_key=DEFAULT_TRANSACTION,
+                    tx_key_key=DEFAULT_TRANSACTION,
                     tx_index=0,
-                    tx_group_order=0,
+                    tx_key_order=0,
                     commit_order_key_function_name="_commit_order_key_tx_0",
                     requires_validation_function_name="_requires_validation_tx_0",
                     validate_commit_function_name="_validate_commit_tx_0",
@@ -113,50 +113,50 @@ concept LifecycleManaged extends core.LifecycleCore {
                 if field.field_kind not in {"managed", "owned", "transient"}:
                     continue
 
-                tx_group = field.tx_group_key
-                if tx_group is None:
-                    tx_group = DEFAULT_TRANSACTION
-                if tx_group not in seen:
-                    seen[tx_group] = len(seen)
+                tx_key = field.tx_key_key
+                if tx_key is None:
+                    tx_key = DEFAULT_TRANSACTION
+                if tx_key not in seen:
+                    seen[tx_key] = len(seen)
                     ctx.write(
-                        TxGroupsCollection,
-                        TxGroup(
+                        TxKeysCollection,
+                        TxKey(
                             tx_owner=lifecycle_class.class_id,
-                            tx_group_key=tx_group,
-                            tx_index=seen[tx_group],
-                            tx_group_order=field.field_order,
+                            tx_key_key=tx_key,
+                            tx_index=seen[tx_key],
+                            tx_key_order=field.field_order,
                             commit_order_key_function_name=(
-                                f"_commit_order_key_tx_{seen[tx_group]}"
+                                f"_commit_order_key_tx_{seen[tx_key]}"
                             ),
                             requires_validation_function_name=(
-                                f"_requires_validation_tx_{seen[tx_group]}"
+                                f"_requires_validation_tx_{seen[tx_key]}"
                             ),
                             validate_commit_function_name=(
-                                f"_validate_commit_tx_{seen[tx_group]}"
+                                f"_validate_commit_tx_{seen[tx_key]}"
                             ),
                             before_commit_function_name=(
-                                f"_before_commit_tx_{seen[tx_group]}"
+                                f"_before_commit_tx_{seen[tx_key]}"
                             ),
                             after_commit_function_name=(
-                                f"_after_commit_tx_{seen[tx_group]}"
+                                f"_after_commit_tx_{seen[tx_key]}"
                             ),
                             after_rollback_function_name=(
-                                f"_after_rollback_tx_{seen[tx_group]}"
+                                f"_after_rollback_tx_{seen[tx_key]}"
                             ),
                             prepare_commit_fields_function_name=(
-                                f"_prepare_commit_tx_{seen[tx_group]}_fields"
+                                f"_prepare_commit_tx_{seen[tx_key]}_fields"
                             ),
                             apply_prepared_commit_fields_function_name=(
-                                f"_apply_prepared_commit_tx_{seen[tx_group]}_fields"
+                                f"_apply_prepared_commit_tx_{seen[tx_key]}_fields"
                             ),
                             rollback_fields_function_name=(
-                                f"_rollback_tx_{seen[tx_group]}_fields"
+                                f"_rollback_tx_{seen[tx_key]}_fields"
                             ),
                         ),
                         policy=RejectDuplicate,
                     )
 
-                tx_index = seen[tx_group]
+                tx_index = seen[tx_key]
                 ctx.write(
                     TransactionalFieldsCollection,
                     TransactionalField(
@@ -164,7 +164,7 @@ concept LifecycleManaged extends core.LifecycleCore {
                         field_owner=field.field_owner,
                         field_name=field.field_name,
                         field_order=field.field_order,
-                        tx_group_key=tx_group,
+                        tx_key_key=tx_key,
                     ),
                     policy=RejectDuplicate,
                 )
@@ -177,7 +177,7 @@ concept LifecycleManaged extends core.LifecycleCore {
                         field_owner=field.field_owner,
                         field_name=field.field_name,
                         field_order=field.field_order,
-                        tx_group_key=tx_group,
+                        tx_key_key=tx_key,
                         tx_index=tx_index,
                         current_slot_name=field.current_slot_name,
                         working_slot_name=field.working_slot_name,
@@ -192,15 +192,15 @@ concept LifecycleManaged extends core.LifecycleCore {
                 )
     ]$ {
         keep ctx, ClassesCollection, FieldsCollection
-        keep TxGroupsCollection, TransactionalFieldsCollection
+        keep TxKeysCollection, TransactionalFieldsCollection
         keep IndexedTransactionalFieldsCollection
-        keep TxGroup, TransactionalField, IndexedTransactionalField
+        keep TxKey, TransactionalField, IndexedTransactionalField
         keep RejectDuplicate
     }
 
     operation BuildTransactionFacts
         inputs(Classes, Fields)
-        outputs(TransactionalFields, TxGroups, IndexedTransactionalFields)
+        outputs(TransactionalFields, TxKeys, IndexedTransactionalFields)
         using BuildTransactionFactsBody
 
     # -------------------------------------------------------------------------
@@ -1203,51 +1203,51 @@ concept LifecycleManaged extends core.LifecycleCore {
         default -> ManagedRollback
     }
 
-    matcher CommitOrderKeyHelperContributions(tx_group: TxGroups) -> contribution {
+    matcher CommitOrderKeyHelperContributions(tx_key: TxKeys) -> contribution {
         default -> CommitOrderKeyHelper
     }
 
-    matcher RequiresValidationHelperContributions(tx_group: TxGroups) -> contribution {
+    matcher RequiresValidationHelperContributions(tx_key: TxKeys) -> contribution {
         default -> RequiresValidationHelper
     }
 
-    matcher ValidateCommitHelperContributions(tx_group: TxGroups) -> contribution {
+    matcher ValidateCommitHelperContributions(tx_key: TxKeys) -> contribution {
         default -> ValidateCommitHelper
     }
 
-    matcher BeforeCommitHelperContributions(tx_group: TxGroups) -> contribution {
+    matcher BeforeCommitHelperContributions(tx_key: TxKeys) -> contribution {
         default -> BeforeCommitHelper
     }
 
-    matcher AfterCommitHelperContributions(tx_group: TxGroups) -> contribution {
+    matcher AfterCommitHelperContributions(tx_key: TxKeys) -> contribution {
         default -> AfterCommitHelper
     }
 
-    matcher AfterRollbackHelperContributions(tx_group: TxGroups) -> contribution {
+    matcher AfterRollbackHelperContributions(tx_key: TxKeys) -> contribution {
         default -> AfterRollbackHelper
     }
 
-    matcher CommitOrderKeyDispatchContributions(tx_group: TxGroups) -> contribution {
+    matcher CommitOrderKeyDispatchContributions(tx_key: TxKeys) -> contribution {
         default -> CommitOrderKeyDispatch
     }
 
-    matcher RequiresValidationDispatchContributions(tx_group: TxGroups) -> contribution {
+    matcher RequiresValidationDispatchContributions(tx_key: TxKeys) -> contribution {
         default -> RequiresValidationDispatch
     }
 
-    matcher ValidateCommitDispatchContributions(tx_group: TxGroups) -> contribution {
+    matcher ValidateCommitDispatchContributions(tx_key: TxKeys) -> contribution {
         default -> ValidateCommitDispatch
     }
 
-    matcher BeforeCommitDispatchContributions(tx_group: TxGroups) -> contribution {
+    matcher BeforeCommitDispatchContributions(tx_key: TxKeys) -> contribution {
         default -> BeforeCommitDispatch
     }
 
-    matcher AfterCommitDispatchContributions(tx_group: TxGroups) -> contribution {
+    matcher AfterCommitDispatchContributions(tx_key: TxKeys) -> contribution {
         default -> AfterCommitDispatch
     }
 
-    matcher AfterRollbackDispatchContributions(tx_group: TxGroups) -> contribution {
+    matcher AfterRollbackDispatchContributions(tx_key: TxKeys) -> contribution {
         default -> AfterRollbackDispatch
     }
 
@@ -1275,27 +1275,27 @@ concept LifecycleManaged extends core.LifecycleCore {
         rule helper when MethodKind == "after_rollback" -> AfterRollbackHelperMethodCall
     }
 
-    matcher ApplyPreparedCommitFieldsContributions(tx_group: TxGroups) -> contribution {
+    matcher ApplyPreparedCommitFieldsContributions(tx_key: TxKeys) -> contribution {
         default -> ApplyPreparedCommitFields
     }
 
-    matcher PrepareCommitFieldsContributions(tx_group: TxGroups) -> contribution {
+    matcher PrepareCommitFieldsContributions(tx_key: TxKeys) -> contribution {
         default -> PrepareCommitFields
     }
 
-    matcher RollbackFieldsContributions(tx_group: TxGroups) -> contribution {
+    matcher RollbackFieldsContributions(tx_key: TxKeys) -> contribution {
         default -> RollbackFields
     }
 
-    matcher PrepareCommitDispatchContributions(tx_group: TxGroups) -> contribution {
+    matcher PrepareCommitDispatchContributions(tx_key: TxKeys) -> contribution {
         default -> PrepareCommitDispatch
     }
 
-    matcher ApplyPreparedCommitDispatchContributions(tx_group: TxGroups) -> contribution {
+    matcher ApplyPreparedCommitDispatchContributions(tx_key: TxKeys) -> contribution {
         default -> ApplyPreparedCommitDispatch
     }
 
-    matcher RollbackDispatchContributions(tx_group: TxGroups) -> contribution {
+    matcher RollbackDispatchContributions(tx_key: TxKeys) -> contribution {
         default -> RollbackDispatch
     }
 
@@ -1341,8 +1341,8 @@ concept LifecycleManaged extends core.LifecycleCore {
             apply managed_staged_state_slots using ManagedStagedStateSlotContributions
         }
 
-        phase tx_group_helpers after tx_fallbacks order 10
-            from tx_group: TxGroups
+        phase tx_key_helpers after tx_fallbacks order 10
+            from tx_key: TxKeys
             where TxOwner == ClassId {
             apply commit_order_key_helpers using CommitOrderKeyHelperContributions
             apply requires_validation_helpers using RequiresValidationHelperContributions
@@ -1352,8 +1352,8 @@ concept LifecycleManaged extends core.LifecycleCore {
             apply after_rollback_helpers using AfterRollbackHelperContributions
         }
 
-        phase tx_group_dispatch after tx_fallbacks order 20
-            from tx_group: TxGroups
+        phase tx_key_dispatch after tx_fallbacks order 20
+            from tx_key: TxKeys
             where TxOwner == ClassId {
             apply commit_order_key_dispatch using CommitOrderKeyDispatchContributions
             apply requires_validation_dispatch using RequiresValidationDispatchContributions
@@ -1406,37 +1406,37 @@ concept LifecycleManaged extends core.LifecycleCore {
         }
 
         phase tx_apply_prepared_helpers after properties_plain order 200
-            from tx_group: TxGroups
+            from tx_key: TxKeys
             where TxOwner == ClassId {
             apply apply_prepared_commit_helpers using ApplyPreparedCommitFieldsContributions
         }
 
         phase tx_prepare_helpers after properties_plain order 210
-            from tx_group: TxGroups
+            from tx_key: TxKeys
             where TxOwner == ClassId {
             apply prepare_commit_helpers using PrepareCommitFieldsContributions
         }
 
         phase tx_rollback_helpers after properties_plain order 220
-            from tx_group: TxGroups
+            from tx_key: TxKeys
             where TxOwner == ClassId {
             apply rollback_helpers using RollbackFieldsContributions
         }
 
         phase tx_prepare_dispatch after properties_plain order 230
-            from tx_group: TxGroups
+            from tx_key: TxKeys
             where TxOwner == ClassId {
             apply prepare_commit_dispatch using PrepareCommitDispatchContributions
         }
 
         phase tx_apply_prepared_dispatch after properties_plain order 240
-            from tx_group: TxGroups
+            from tx_key: TxKeys
             where TxOwner == ClassId {
             apply apply_prepared_commit_dispatch using ApplyPreparedCommitDispatchContributions
         }
 
         phase tx_rollback_dispatch after properties_plain order 250
-            from tx_group: TxGroups
+            from tx_key: TxKeys
             where TxOwner == ClassId {
             apply rollback_dispatch using RollbackDispatchContributions
         }

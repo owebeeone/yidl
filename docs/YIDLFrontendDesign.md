@@ -47,14 +47,14 @@ Output:
 The harvester owns source-level composition and schema extraction. It does not
 own the full runtime layout.
 
-### 2.1 Harvested `tx_group`
+### 2.1 Harvested `tx_key`
 
-When a helper or related source declaration includes `tx_group`, the harvester
+When a helper or related source declaration includes `tx_key`, the harvester
 must preserve that value in harvested/spec metadata so later codegen and the
 runtime/class model can place the field or hook into the correct transaction
 group.
 
-At the frontend layer, `tx_group` is:
+At the frontend layer, `tx_key` is:
 
 - harvested source/spec metadata
 - not itself a runtime execution rule

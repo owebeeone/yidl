@@ -14,7 +14,7 @@ def build_lifecycle_class(
     *,
     _Example_lifecycle_definition,
     _Example_annotations,
-    _Example_tx_groups,
+    _Example_tx_keys,
     _Example_SCALE_default,
     _Example_seed_default,
     _Example_temp_default_factory,
@@ -72,9 +72,9 @@ def build_lifecycle_class(
             "_y_v5_staged",
             "_y_working_tx_ids",
         )
-        __yidl_tx_index_to_key__ = _Example_tx_groups
+        __yidl_tx_index_to_key__ = _Example_tx_keys
         __yidl_tx_key_to_index__ = {
-            key: index for index, key in enumerate(_Example_tx_groups)
+            key: index for index, key in enumerate(_Example_tx_keys)
         }
 
         def _y_get_default_facade(self):
@@ -372,9 +372,9 @@ def build_lifecycle_class(
         __yidl_lifecycle_generated__ = True
         __yidl_lifecycle_user_class__ = decorated_cls
         __yidl_lifecycle_definition__ = _Example_lifecycle_definition
-        __yidl_tx_index_to_key__ = _Example_tx_groups
+        __yidl_tx_index_to_key__ = _Example_tx_keys
         __yidl_tx_key_to_index__ = {
-            key: index for index, key in enumerate(_Example_tx_groups)
+            key: index for index, key in enumerate(_Example_tx_keys)
         }
 
         @property
@@ -442,10 +442,10 @@ def build_lifecycle_class(
             object.__setattr__(self, "_y_current_facade", None)
             object.__setattr__(self, "_y_working_facade", None)
             state._y_transaction_manager = transaction_manager or TransactionManager(
-                tx_groups=tuple(
+                tx_keys=tuple(
                     (
                         group
-                        for group in _Example_tx_groups
+                        for group in _Example_tx_keys
                         if group != DEFAULT_TRANSACTION
                     )
                 )
@@ -474,7 +474,7 @@ def build_lifecycle_class(
             state._y_v4_current = v4
             v5 = _Example_v5_default_factory(SCALE=self.SCALE, v4=self.v4)
             state._y_v5_current = v5
-            state._y_working_tx_ids = [None for _group in _Example_tx_groups]
+            state._y_working_tx_ids = [None for _group in _Example_tx_keys]
 
     class Example_Current(Example_FacadeBase):
         __slots__ = ()

@@ -14,7 +14,7 @@ def build_lifecycle_class(
     *,
     _Config_lifecycle_definition,
     _Config_annotations,
-    _Config_tx_groups,
+    _Config_tx_keys,
     _Config_seed_default,
     _Config_slot_id_default,
     _Config_derived_id_default_factory,
@@ -64,9 +64,9 @@ def build_lifecycle_class(
             "_y_seeded_static_value",
             "_y_working_tx_ids",
         )
-        __yidl_tx_index_to_key__ = _Config_tx_groups
+        __yidl_tx_index_to_key__ = _Config_tx_keys
         __yidl_tx_key_to_index__ = {
-            key: index for index, key in enumerate(_Config_tx_groups)
+            key: index for index, key in enumerate(_Config_tx_keys)
         }
 
         def _y_get_default_facade(self):
@@ -422,9 +422,9 @@ def build_lifecycle_class(
         __yidl_lifecycle_generated__ = True
         __yidl_lifecycle_user_class__ = decorated_cls
         __yidl_lifecycle_definition__ = _Config_lifecycle_definition
-        __yidl_tx_index_to_key__ = _Config_tx_groups
+        __yidl_tx_index_to_key__ = _Config_tx_keys
         __yidl_tx_key_to_index__ = {
-            key: index for index, key in enumerate(_Config_tx_groups)
+            key: index for index, key in enumerate(_Config_tx_keys)
         }
 
         def __init__(
@@ -444,12 +444,8 @@ def build_lifecycle_class(
             object.__setattr__(self, "_y_current_facade", None)
             object.__setattr__(self, "_y_working_facade", None)
             state._y_transaction_manager = transaction_manager or TransactionManager(
-                tx_groups=tuple(
-                    (
-                        group
-                        for group in _Config_tx_groups
-                        if group != DEFAULT_TRANSACTION
-                    )
+                tx_keys=tuple(
+                    (group for group in _Config_tx_keys if group != DEFAULT_TRANSACTION)
                 )
             )
             state._y_default_ref = weakref.ref(self)
@@ -481,7 +477,7 @@ def build_lifecycle_class(
                 _Config_items_default_factory()
             if False:
                 _Config_seeded_static_default_factory(slot_id=self.slot_id)
-            state._y_working_tx_ids = [None for _group in _Config_tx_groups]
+            state._y_working_tx_ids = [None for _group in _Config_tx_keys]
 
     class Config_Current(Config_FacadeBase):
         __slots__ = ()

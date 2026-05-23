@@ -147,7 +147,7 @@ This prevents invalid combinations and keeps template/harvester code explicit.
 | Type | Field-scoped | Tx-scoped | Meaning |
 |---|---|---|---|
 | `PublishedValueRef` | Yes | No | Authoritative committed value home for a field |
-| `WorkingValueRef` | Yes | Yes | Working overlay value home for a field in a tx group |
+| `WorkingValueRef` | Yes | Yes | Working overlay value home for a field in a tx key |
 | `CurrentFieldStateRef` | Yes | No | Current runtime sidecar state for a field |
 | `WorkingFieldStateRef` | Yes | Yes | Working copied runtime sidecar state for a field |
 | `WorkingPresentRef` | No | Yes | Whether a working overlay currently exists for that tx |

@@ -29,11 +29,11 @@ import "core.yidl" as core
 export concept ManagedFields
 
 concept ManagedFields extends core.LifecycleCore {
-    property TxGroup: str = "default" storage tx_group
+    property TxKey: str = "default" storage tx_key
 
     family core.FieldSpecs {
         variant ManagedField {
-            TxGroup
+            TxKey
             Kind
         }
     }
@@ -75,7 +75,7 @@ def validate_case(source: str) -> None:
             name="owner",
             kind="managed",
             source_order=1,
-            tx_group="tx",
+            tx_key="tx",
         ),
     )
     container = builder.freeze()

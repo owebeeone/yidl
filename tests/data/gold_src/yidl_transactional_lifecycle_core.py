@@ -102,7 +102,7 @@ def _container(namespace: Mapping[str, object]) -> object:
             working_facade_class_name="Counter_Working",
             lifecycle_definition_param_name="_Counter_lifecycle_definition",
             annotations_param_name="_Counter_annotations",
-            tx_groups_param_name="_Counter_tx_groups",
+            tx_keys_param_name="_Counter_tx_keys",
         ),
     )
     builder.add(
@@ -158,7 +158,7 @@ def _assert_generated_class(namespace: Mapping[str, object]) -> None:
         Counter,
         _Counter_lifecycle_definition=lifecycle_definition,
         _Counter_annotations=annotations,
-        _Counter_tx_groups=(DEFAULT_TRANSACTION,),
+        _Counter_tx_keys=(DEFAULT_TRANSACTION,),
         _Counter_plain_default=3,
         _Counter_seed_default=2,
         _Counter_KIND_default="counter",

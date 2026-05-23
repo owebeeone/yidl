@@ -3,7 +3,7 @@
 # This is a design specimen, not an input accepted by the current parser.
 # It explores target-class + transducer syntax for:
 #
-# 1. State classes per field / per transaction group.
+# 1. State classes per field / per transaction key.
 # 2. Functions on state classes.
 # 3. Contributing functions to facade and transaction event stages.
 # 4. Default exposure of fields on all facades.
@@ -173,12 +173,12 @@ transducer TransactionGroupLifecycle:
         tx_name: TxName = required()
 
     compile_state:
-        # Stable compile-time id for this transaction group.
+        # Stable compile-time id for this transaction key.
         tx_index: int = tx_index_for(tx_name)
 
-    state TxGroupStore per tx_group:
+    state TxKeyStore per tx_key:
         %%
-        class TxGroupStore:
+        class TxKeyStore:
             current_tx_iteration_id: int = state_slot(default=VOID)
             begin_depth: int = state_slot(default=0)
             rollback_errors: list[BaseException] = state_slot(default_factory=list)
@@ -305,14 +305,14 @@ transducer TransactionalValue:
             def has_working(self) -> bool:
                 return self.working_value is not VOID
 
-            def require_current_iteration(self, tx: TxGroupStore) -> int:
+            def require_current_iteration(self, tx: TxKeyStore) -> int:
                 tx_iteration_id = tx.require_active()
                 if self.has_working() and self.working_tx_iteration_id != tx_iteration_id:
                     raise RuntimeError("working state belongs to another transaction iteration")
                 return tx_iteration_id
 
             @on.facades(WorkingValueFacade).get.resolve(order=10)
-            def resolve_value(self, committed: CommittedStore[T], tx: TxGroupStore) -> T:
+            def resolve_value(self, committed: CommittedStore[T], tx: TxKeyStore) -> T:
                 if self.has_working():
                     self.require_current_iteration(tx)
                     return self.working_value
@@ -323,7 +323,7 @@ transducer TransactionalValue:
                 return resolved
 
             @on.facades(WorkingValueFacade).set.prepare(order=10)
-            def require_transaction(self, tx: TxGroupStore) -> None:
+            def require_transaction(self, tx: TxKeyStore) -> None:
                 tx.require_active()
 
             @on.facades(WorkingValueFacade).set.stage(order=10)
@@ -331,7 +331,7 @@ transducer TransactionalValue:
                 return thaw_runner(value)
 
             @on.facades(WorkingValueFacade).set.assign(order=10)
-            def assign_working(self, staged: T, tx: TxGroupStore) -> None:
+            def assign_working(self, staged: T, tx: TxKeyStore) -> None:
                 self.working_tx_iteration_id = self.require_current_iteration(tx)
                 self.working_value = staged
 
@@ -340,7 +340,7 @@ transducer TransactionalValue:
                 mark_mutated()
 
             @on.tx.commit.apply(mutated_fields(tx_name), order=10)
-            def commit_to(self, committed: CommittedStore[T], tx: TxGroupStore) -> None:
+            def commit_to(self, committed: CommittedStore[T], tx: TxKeyStore) -> None:
                 if not self.has_working():
                     return
                 self.require_current_iteration(tx)

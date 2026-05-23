@@ -56,8 +56,8 @@ _LifecycleDefinitionParamNameProperty = RuntimeProperty(
 _AnnotationsParamNameProperty = RuntimeProperty(
     "AnnotationsParamName", str, default="", storage_name="annotations_param_name"
 )
-_TxGroupsParamNameProperty = RuntimeProperty(
-    "TxGroupsParamName", str, default="", storage_name="tx_groups_param_name"
+_TxKeysParamNameProperty = RuntimeProperty(
+    "TxKeysParamName", str, default="", storage_name="tx_keys_param_name"
 )
 _FieldIdProperty = RuntimeProperty(
     "FieldId", str, default=REQUIRED, storage_name="field_id"
@@ -105,8 +105,8 @@ _DefaultFactoryParamNamesProperty = RuntimeProperty(
     default=(),
     storage_name="default_factory_param_names",
 )
-_TxGroupKeyProperty = RuntimeProperty(
-    "TxGroupKey", object, default=None, storage_name="tx_group_key"
+_TxKeyKeyProperty = RuntimeProperty(
+    "TxKeyKey", object, default=None, storage_name="tx_key_key"
 )
 _ValueSlotNameProperty = RuntimeProperty(
     "ValueSlotName", str, default="", storage_name="value_slot_name"
@@ -144,8 +144,8 @@ _TargetFacadeIdProperty = RuntimeProperty(
 _ExposureOrderProperty = RuntimeProperty(
     "ExposureOrder", int, default=0, storage_name="exposure_order"
 )
-_TxGroupOrderProperty = RuntimeProperty(
-    "TxGroupOrder", int, default=0, storage_name="tx_group_order"
+_TxKeyOrderProperty = RuntimeProperty(
+    "TxKeyOrder", int, default=0, storage_name="tx_key_order"
 )
 _TxIndexProperty = RuntimeProperty("TxIndex", int, default=0, storage_name="tx_index")
 _InitParameterIdProperty = RuntimeProperty(
@@ -305,7 +305,7 @@ _LifecycleClassSpec = RuntimeRecord(
         _WorkingFacadeClassNameProperty,
         _LifecycleDefinitionParamNameProperty,
         _AnnotationsParamNameProperty,
-        _TxGroupsParamNameProperty,
+        _TxKeysParamNameProperty,
     ),
 )
 _FacadeClassSpec = RuntimeRecord(
@@ -336,12 +336,12 @@ _TransactionalFieldSpec = RuntimeRecord(
         _FieldOwnerProperty,
         _FieldNameProperty,
         _FieldOrderProperty,
-        _TxGroupKeyProperty,
+        _TxKeyKeyProperty,
     ),
 )
-_TxGroupSpec = RuntimeRecord(
-    "TxGroup",
-    (_ClassIdProperty, _TxGroupKeyProperty, _TxIndexProperty, _TxGroupOrderProperty),
+_TxKeySpec = RuntimeRecord(
+    "TxKey",
+    (_ClassIdProperty, _TxKeyKeyProperty, _TxIndexProperty, _TxKeyOrderProperty),
 )
 _IndexedTransactionalFieldSpec = RuntimeRecord(
     "IndexedTransactionalField",
@@ -350,7 +350,7 @@ _IndexedTransactionalFieldSpec = RuntimeRecord(
         _FieldOwnerProperty,
         _FieldNameProperty,
         _FieldOrderProperty,
-        _TxGroupKeyProperty,
+        _TxKeyKeyProperty,
         _TxIndexProperty,
         _CurrentSlotNameProperty,
         _WorkingSlotNameProperty,
@@ -444,7 +444,7 @@ _PlainFieldSpec = RuntimeRecord(
         _DefaultFactoryProperty,
         _DefaultFactoryParamNameProperty,
         _DefaultFactoryParamNamesProperty,
-        _TxGroupKeyProperty,
+        _TxKeyKeyProperty,
         _ValueSlotNameProperty,
         _CurrentSlotNameProperty,
         _WorkingSlotNameProperty,
@@ -467,7 +467,7 @@ _InitVarFieldSpec = RuntimeRecord(
         _DefaultFactoryProperty,
         _DefaultFactoryParamNameProperty,
         _DefaultFactoryParamNamesProperty,
-        _TxGroupKeyProperty,
+        _TxKeyKeyProperty,
         _ValueSlotNameProperty,
         _CurrentSlotNameProperty,
         _WorkingSlotNameProperty,
@@ -490,7 +490,7 @@ _ClassVarFieldSpec = RuntimeRecord(
         _DefaultFactoryProperty,
         _DefaultFactoryParamNameProperty,
         _DefaultFactoryParamNamesProperty,
-        _TxGroupKeyProperty,
+        _TxKeyKeyProperty,
         _ValueSlotNameProperty,
         _CurrentSlotNameProperty,
         _WorkingSlotNameProperty,
@@ -513,7 +513,7 @@ _ManagedFieldSpec = RuntimeRecord(
         _DefaultFactoryProperty,
         _DefaultFactoryParamNameProperty,
         _DefaultFactoryParamNamesProperty,
-        _TxGroupKeyProperty,
+        _TxKeyKeyProperty,
         _ValueSlotNameProperty,
         _CurrentSlotNameProperty,
         _WorkingSlotNameProperty,
@@ -537,7 +537,7 @@ class LifecycleClass:
         "working_facade_class_name",
         "lifecycle_definition_param_name",
         "annotations_param_name",
-        "tx_groups_param_name",
+        "tx_keys_param_name",
     )
     __dds_record_spec__ = _LifecycleClassSpec
     class_id: str
@@ -550,7 +550,7 @@ class LifecycleClass:
     working_facade_class_name: str
     lifecycle_definition_param_name: str
     annotations_param_name: str
-    tx_groups_param_name: str
+    tx_keys_param_name: str
 
     def __init__(
         self,
@@ -565,7 +565,7 @@ class LifecycleClass:
         working_facade_class_name: str,
         lifecycle_definition_param_name: str = "",
         annotations_param_name: str = "",
-        tx_groups_param_name: str = "",
+        tx_keys_param_name: str = "",
     ):
         if not isinstance(class_id, str):
             raise TypeError("ClassId must be str, got " + type(class_id).__name__)
@@ -616,12 +616,11 @@ class LifecycleClass:
                 + type(annotations_param_name).__name__
             )
         object.__setattr__(self, "annotations_param_name", annotations_param_name)
-        if not isinstance(tx_groups_param_name, str):
+        if not isinstance(tx_keys_param_name, str):
             raise TypeError(
-                "TxGroupsParamName must be str, got "
-                + type(tx_groups_param_name).__name__
+                "TxKeysParamName must be str, got " + type(tx_keys_param_name).__name__
             )
-        object.__setattr__(self, "tx_groups_param_name", tx_groups_param_name)
+        object.__setattr__(self, "tx_keys_param_name", tx_keys_param_name)
 
     def __setattr__(self, name, value):
         if name in (
@@ -635,7 +634,7 @@ class LifecycleClass:
             "working_facade_class_name",
             "lifecycle_definition_param_name",
             "annotations_param_name",
-            "tx_groups_param_name",
+            "tx_keys_param_name",
         ):
             raise AttributeError("LifecycleClass records are immutable")
         object.__setattr__(self, name, value)
@@ -659,7 +658,7 @@ class LifecycleClass:
             + repr(self.lifecycle_definition_param_name)
         )
         pieces.append("annotations_param_name=" + repr(self.annotations_param_name))
-        pieces.append("tx_groups_param_name=" + repr(self.tx_groups_param_name))
+        pieces.append("tx_keys_param_name=" + repr(self.tx_keys_param_name))
         return "LifecycleClass" + "(" + ", ".join(pieces) + ")"
 
 
@@ -817,13 +816,13 @@ _FacadeExposureSpec.bind_record_class(FacadeExposure)
 
 
 class TransactionalField:
-    __slots__ = ("field_id", "field_owner", "field_name", "field_order", "tx_group_key")
+    __slots__ = ("field_id", "field_owner", "field_name", "field_order", "tx_key_key")
     __dds_record_spec__ = _TransactionalFieldSpec
     field_id: str
     field_owner: str
     field_name: str
     field_order: int
-    tx_group_key: object
+    tx_key_key: object
 
     def __init__(
         self,
@@ -832,7 +831,7 @@ class TransactionalField:
         field_owner: str,
         field_name: str,
         field_order: int,
-        tx_group_key: object = None,
+        tx_key_key: object = None,
     ):
         if not isinstance(field_id, str):
             raise TypeError("FieldId must be str, got " + type(field_id).__name__)
@@ -846,7 +845,7 @@ class TransactionalField:
         if not isinstance(field_order, int):
             raise TypeError("FieldOrder must be int, got " + type(field_order).__name__)
         object.__setattr__(self, "field_order", field_order)
-        object.__setattr__(self, "tx_group_key", tx_group_key)
+        object.__setattr__(self, "tx_key_key", tx_key_key)
 
     def __setattr__(self, name, value):
         if name in (
@@ -854,7 +853,7 @@ class TransactionalField:
             "field_owner",
             "field_name",
             "field_order",
-            "tx_group_key",
+            "tx_key_key",
         ):
             raise AttributeError("TransactionalField records are immutable")
         object.__setattr__(self, name, value)
@@ -865,57 +864,57 @@ class TransactionalField:
         pieces.append("field_owner=" + repr(self.field_owner))
         pieces.append("field_name=" + repr(self.field_name))
         pieces.append("field_order=" + repr(self.field_order))
-        pieces.append("tx_group_key=" + repr(self.tx_group_key))
+        pieces.append("tx_key_key=" + repr(self.tx_key_key))
         return "TransactionalField" + "(" + ", ".join(pieces) + ")"
 
 
 _TransactionalFieldSpec.bind_record_class(TransactionalField)
 
 
-class TxGroup:
-    __slots__ = ("class_id", "tx_group_key", "tx_index", "tx_group_order")
-    __dds_record_spec__ = _TxGroupSpec
+class TxKey:
+    __slots__ = ("class_id", "tx_key_key", "tx_index", "tx_key_order")
+    __dds_record_spec__ = _TxKeySpec
     class_id: str
-    tx_group_key: object
+    tx_key_key: object
     tx_index: int
-    tx_group_order: int
+    tx_key_order: int
 
     def __init__(
         self,
         *,
         class_id: str,
-        tx_group_key: object = None,
+        tx_key_key: object = None,
         tx_index: int = 0,
-        tx_group_order: int = 0,
+        tx_key_order: int = 0,
     ):
         if not isinstance(class_id, str):
             raise TypeError("ClassId must be str, got " + type(class_id).__name__)
         object.__setattr__(self, "class_id", class_id)
-        object.__setattr__(self, "tx_group_key", tx_group_key)
+        object.__setattr__(self, "tx_key_key", tx_key_key)
         if not isinstance(tx_index, int):
             raise TypeError("TxIndex must be int, got " + type(tx_index).__name__)
         object.__setattr__(self, "tx_index", tx_index)
-        if not isinstance(tx_group_order, int):
+        if not isinstance(tx_key_order, int):
             raise TypeError(
-                "TxGroupOrder must be int, got " + type(tx_group_order).__name__
+                "TxKeyOrder must be int, got " + type(tx_key_order).__name__
             )
-        object.__setattr__(self, "tx_group_order", tx_group_order)
+        object.__setattr__(self, "tx_key_order", tx_key_order)
 
     def __setattr__(self, name, value):
-        if name in ("class_id", "tx_group_key", "tx_index", "tx_group_order"):
-            raise AttributeError("TxGroup records are immutable")
+        if name in ("class_id", "tx_key_key", "tx_index", "tx_key_order"):
+            raise AttributeError("TxKey records are immutable")
         object.__setattr__(self, name, value)
 
     def __repr__(self):
         pieces = []
         pieces.append("class_id=" + repr(self.class_id))
-        pieces.append("tx_group_key=" + repr(self.tx_group_key))
+        pieces.append("tx_key_key=" + repr(self.tx_key_key))
         pieces.append("tx_index=" + repr(self.tx_index))
-        pieces.append("tx_group_order=" + repr(self.tx_group_order))
-        return "TxGroup" + "(" + ", ".join(pieces) + ")"
+        pieces.append("tx_key_order=" + repr(self.tx_key_order))
+        return "TxKey" + "(" + ", ".join(pieces) + ")"
 
 
-_TxGroupSpec.bind_record_class(TxGroup)
+_TxKeySpec.bind_record_class(TxKey)
 
 
 class IndexedTransactionalField:
@@ -924,7 +923,7 @@ class IndexedTransactionalField:
         "field_owner",
         "field_name",
         "field_order",
-        "tx_group_key",
+        "tx_key_key",
         "tx_index",
         "current_slot_name",
         "working_slot_name",
@@ -934,7 +933,7 @@ class IndexedTransactionalField:
     field_owner: str
     field_name: str
     field_order: int
-    tx_group_key: object
+    tx_key_key: object
     tx_index: int
     current_slot_name: str
     working_slot_name: str
@@ -946,7 +945,7 @@ class IndexedTransactionalField:
         field_owner: str,
         field_name: str,
         field_order: int,
-        tx_group_key: object = None,
+        tx_key_key: object = None,
         tx_index: int = 0,
         current_slot_name: str = "",
         working_slot_name: str = "",
@@ -963,7 +962,7 @@ class IndexedTransactionalField:
         if not isinstance(field_order, int):
             raise TypeError("FieldOrder must be int, got " + type(field_order).__name__)
         object.__setattr__(self, "field_order", field_order)
-        object.__setattr__(self, "tx_group_key", tx_group_key)
+        object.__setattr__(self, "tx_key_key", tx_key_key)
         if not isinstance(tx_index, int):
             raise TypeError("TxIndex must be int, got " + type(tx_index).__name__)
         object.__setattr__(self, "tx_index", tx_index)
@@ -984,7 +983,7 @@ class IndexedTransactionalField:
             "field_owner",
             "field_name",
             "field_order",
-            "tx_group_key",
+            "tx_key_key",
             "tx_index",
             "current_slot_name",
             "working_slot_name",
@@ -998,7 +997,7 @@ class IndexedTransactionalField:
         pieces.append("field_owner=" + repr(self.field_owner))
         pieces.append("field_name=" + repr(self.field_name))
         pieces.append("field_order=" + repr(self.field_order))
-        pieces.append("tx_group_key=" + repr(self.tx_group_key))
+        pieces.append("tx_key_key=" + repr(self.tx_key_key))
         pieces.append("tx_index=" + repr(self.tx_index))
         pieces.append("current_slot_name=" + repr(self.current_slot_name))
         pieces.append("working_slot_name=" + repr(self.working_slot_name))
@@ -1614,7 +1613,7 @@ class PlainField:
         "default_factory",
         "default_factory_param_name",
         "default_factory_param_names",
-        "tx_group_key",
+        "tx_key_key",
         "value_slot_name",
         "current_slot_name",
         "working_slot_name",
@@ -1634,7 +1633,7 @@ class PlainField:
     default_factory: object
     default_factory_param_name: str
     default_factory_param_names: object
-    tx_group_key: object
+    tx_key_key: object
     value_slot_name: str
     current_slot_name: str
     working_slot_name: str
@@ -1656,7 +1655,7 @@ class PlainField:
         default_factory: object = None,
         default_factory_param_name: str = "",
         default_factory_param_names: object = (),
-        tx_group_key: object = None,
+        tx_key_key: object = None,
         value_slot_name: str = "",
         current_slot_name: str = "",
         working_slot_name: str = "",
@@ -1710,7 +1709,7 @@ class PlainField:
         object.__setattr__(
             self, "default_factory_param_names", default_factory_param_names
         )
-        object.__setattr__(self, "tx_group_key", tx_group_key)
+        object.__setattr__(self, "tx_key_key", tx_key_key)
         if not isinstance(value_slot_name, str):
             raise TypeError(
                 "ValueSlotName must be str, got " + type(value_slot_name).__name__
@@ -1743,7 +1742,7 @@ class PlainField:
             "default_factory",
             "default_factory_param_name",
             "default_factory_param_names",
-            "tx_group_key",
+            "tx_key_key",
             "value_slot_name",
             "current_slot_name",
             "working_slot_name",
@@ -1771,7 +1770,7 @@ class PlainField:
         pieces.append(
             "default_factory_param_names=" + repr(self.default_factory_param_names)
         )
-        pieces.append("tx_group_key=" + repr(self.tx_group_key))
+        pieces.append("tx_key_key=" + repr(self.tx_key_key))
         pieces.append("value_slot_name=" + repr(self.value_slot_name))
         pieces.append("current_slot_name=" + repr(self.current_slot_name))
         pieces.append("working_slot_name=" + repr(self.working_slot_name))
@@ -1797,7 +1796,7 @@ class InitVarField:
         "default_factory",
         "default_factory_param_name",
         "default_factory_param_names",
-        "tx_group_key",
+        "tx_key_key",
         "value_slot_name",
         "current_slot_name",
         "working_slot_name",
@@ -1817,7 +1816,7 @@ class InitVarField:
     default_factory: object
     default_factory_param_name: str
     default_factory_param_names: object
-    tx_group_key: object
+    tx_key_key: object
     value_slot_name: str
     current_slot_name: str
     working_slot_name: str
@@ -1839,7 +1838,7 @@ class InitVarField:
         default_factory: object = None,
         default_factory_param_name: str = "",
         default_factory_param_names: object = (),
-        tx_group_key: object = None,
+        tx_key_key: object = None,
         value_slot_name: str = "",
         current_slot_name: str = "",
         working_slot_name: str = "",
@@ -1893,7 +1892,7 @@ class InitVarField:
         object.__setattr__(
             self, "default_factory_param_names", default_factory_param_names
         )
-        object.__setattr__(self, "tx_group_key", tx_group_key)
+        object.__setattr__(self, "tx_key_key", tx_key_key)
         if not isinstance(value_slot_name, str):
             raise TypeError(
                 "ValueSlotName must be str, got " + type(value_slot_name).__name__
@@ -1926,7 +1925,7 @@ class InitVarField:
             "default_factory",
             "default_factory_param_name",
             "default_factory_param_names",
-            "tx_group_key",
+            "tx_key_key",
             "value_slot_name",
             "current_slot_name",
             "working_slot_name",
@@ -1954,7 +1953,7 @@ class InitVarField:
         pieces.append(
             "default_factory_param_names=" + repr(self.default_factory_param_names)
         )
-        pieces.append("tx_group_key=" + repr(self.tx_group_key))
+        pieces.append("tx_key_key=" + repr(self.tx_key_key))
         pieces.append("value_slot_name=" + repr(self.value_slot_name))
         pieces.append("current_slot_name=" + repr(self.current_slot_name))
         pieces.append("working_slot_name=" + repr(self.working_slot_name))
@@ -1980,7 +1979,7 @@ class ClassVarField:
         "default_factory",
         "default_factory_param_name",
         "default_factory_param_names",
-        "tx_group_key",
+        "tx_key_key",
         "value_slot_name",
         "current_slot_name",
         "working_slot_name",
@@ -2000,7 +1999,7 @@ class ClassVarField:
     default_factory: object
     default_factory_param_name: str
     default_factory_param_names: object
-    tx_group_key: object
+    tx_key_key: object
     value_slot_name: str
     current_slot_name: str
     working_slot_name: str
@@ -2022,7 +2021,7 @@ class ClassVarField:
         default_factory: object = None,
         default_factory_param_name: str = "",
         default_factory_param_names: object = (),
-        tx_group_key: object = None,
+        tx_key_key: object = None,
         value_slot_name: str = "",
         current_slot_name: str = "",
         working_slot_name: str = "",
@@ -2076,7 +2075,7 @@ class ClassVarField:
         object.__setattr__(
             self, "default_factory_param_names", default_factory_param_names
         )
-        object.__setattr__(self, "tx_group_key", tx_group_key)
+        object.__setattr__(self, "tx_key_key", tx_key_key)
         if not isinstance(value_slot_name, str):
             raise TypeError(
                 "ValueSlotName must be str, got " + type(value_slot_name).__name__
@@ -2109,7 +2108,7 @@ class ClassVarField:
             "default_factory",
             "default_factory_param_name",
             "default_factory_param_names",
-            "tx_group_key",
+            "tx_key_key",
             "value_slot_name",
             "current_slot_name",
             "working_slot_name",
@@ -2137,7 +2136,7 @@ class ClassVarField:
         pieces.append(
             "default_factory_param_names=" + repr(self.default_factory_param_names)
         )
-        pieces.append("tx_group_key=" + repr(self.tx_group_key))
+        pieces.append("tx_key_key=" + repr(self.tx_key_key))
         pieces.append("value_slot_name=" + repr(self.value_slot_name))
         pieces.append("current_slot_name=" + repr(self.current_slot_name))
         pieces.append("working_slot_name=" + repr(self.working_slot_name))
@@ -2163,7 +2162,7 @@ class ManagedField:
         "default_factory",
         "default_factory_param_name",
         "default_factory_param_names",
-        "tx_group_key",
+        "tx_key_key",
         "value_slot_name",
         "current_slot_name",
         "working_slot_name",
@@ -2183,7 +2182,7 @@ class ManagedField:
     default_factory: object
     default_factory_param_name: str
     default_factory_param_names: object
-    tx_group_key: object
+    tx_key_key: object
     value_slot_name: str
     current_slot_name: str
     working_slot_name: str
@@ -2205,7 +2204,7 @@ class ManagedField:
         default_factory: object = None,
         default_factory_param_name: str = "",
         default_factory_param_names: object = (),
-        tx_group_key: object = None,
+        tx_key_key: object = None,
         value_slot_name: str = "",
         current_slot_name: str = "",
         working_slot_name: str = "",
@@ -2259,7 +2258,7 @@ class ManagedField:
         object.__setattr__(
             self, "default_factory_param_names", default_factory_param_names
         )
-        object.__setattr__(self, "tx_group_key", tx_group_key)
+        object.__setattr__(self, "tx_key_key", tx_key_key)
         if not isinstance(value_slot_name, str):
             raise TypeError(
                 "ValueSlotName must be str, got " + type(value_slot_name).__name__
@@ -2292,7 +2291,7 @@ class ManagedField:
             "default_factory",
             "default_factory_param_name",
             "default_factory_param_names",
-            "tx_group_key",
+            "tx_key_key",
             "value_slot_name",
             "current_slot_name",
             "working_slot_name",
@@ -2320,7 +2319,7 @@ class ManagedField:
         pieces.append(
             "default_factory_param_names=" + repr(self.default_factory_param_names)
         )
-        pieces.append("tx_group_key=" + repr(self.tx_group_key))
+        pieces.append("tx_key_key=" + repr(self.tx_key_key))
         pieces.append("value_slot_name=" + repr(self.value_slot_name))
         pieces.append("current_slot_name=" + repr(self.current_slot_name))
         pieces.append("working_slot_name=" + repr(self.working_slot_name))
@@ -2352,11 +2351,11 @@ TransactionalFieldsCollection = RuntimeCollection(
     allows_multiple=True,
     identity=_FieldIdProperty,
 )
-TxGroupsCollection = RuntimeCollection(
-    "TxGroups",
-    _TxGroupSpec,
+TxKeysCollection = RuntimeCollection(
+    "TxKeys",
+    _TxKeySpec,
     allows_multiple=True,
-    identity=(_ClassIdProperty, _TxGroupKeyProperty),
+    identity=(_ClassIdProperty, _TxKeyKeyProperty),
 )
 IndexedTransactionalFieldsCollection = RuntimeCollection(
     "IndexedTransactionalFields",
@@ -2419,7 +2418,7 @@ _RUNTIME_SPEC = RuntimeContainerSpec(
         FacadeClassesCollection,
         FacadeExposuresCollection,
         TransactionalFieldsCollection,
-        TxGroupsCollection,
+        TxKeysCollection,
         IndexedTransactionalFieldsCollection,
         InitParametersCollection,
         InitAssignmentsCollection,
@@ -2448,12 +2447,12 @@ def run_build_transaction_facts(builder):
     for lifecycle_class in classes:
         seen = {DEFAULT_TRANSACTION: 0}
         ctx.write(
-            TxGroupsCollection,
-            TxGroup(
+            TxKeysCollection,
+            TxKey(
                 class_id=lifecycle_class.class_id,
-                tx_group_key=DEFAULT_TRANSACTION,
+                tx_key_key=DEFAULT_TRANSACTION,
                 tx_index=0,
-                tx_group_order=0,
+                tx_key_order=0,
             ),
             policy=RejectDuplicate,
         )
@@ -2462,22 +2461,22 @@ def run_build_transaction_facts(builder):
                 continue
             if field.field_kind != "managed":
                 continue
-            tx_group = field.tx_group_key
-            if tx_group is None:
-                tx_group = DEFAULT_TRANSACTION
-            if tx_group not in seen:
-                seen[tx_group] = len(seen)
+            tx_key = field.tx_key_key
+            if tx_key is None:
+                tx_key = DEFAULT_TRANSACTION
+            if tx_key not in seen:
+                seen[tx_key] = len(seen)
                 ctx.write(
-                    TxGroupsCollection,
-                    TxGroup(
+                    TxKeysCollection,
+                    TxKey(
                         class_id=lifecycle_class.class_id,
-                        tx_group_key=tx_group,
-                        tx_index=seen[tx_group],
-                        tx_group_order=field.field_order,
+                        tx_key_key=tx_key,
+                        tx_index=seen[tx_key],
+                        tx_key_order=field.field_order,
                     ),
                     policy=RejectDuplicate,
                 )
-            tx_index = seen[tx_group]
+            tx_index = seen[tx_key]
             ctx.write(
                 TransactionalFieldsCollection,
                 TransactionalField(
@@ -2485,7 +2484,7 @@ def run_build_transaction_facts(builder):
                     field_owner=field.field_owner,
                     field_name=field.field_name,
                     field_order=field.field_order,
-                    tx_group_key=tx_group,
+                    tx_key_key=tx_key,
                 ),
                 policy=RejectDuplicate,
             )
@@ -2496,7 +2495,7 @@ def run_build_transaction_facts(builder):
                     field_owner=field.field_owner,
                     field_name=field.field_name,
                     field_order=field.field_order,
-                    tx_group_key=tx_group,
+                    tx_key_key=tx_key,
                     tx_index=tx_index,
                     current_slot_name=field.current_slot_name,
                     working_slot_name=field.working_slot_name,
@@ -2761,8 +2760,8 @@ ASSEMBLY_PROPERTIES = {
     "AnnotationsParamName": _YidlSimpleNamespace(
         name="AnnotationsParamName", storage_name="annotations_param_name"
     ),
-    "TxGroupsParamName": _YidlSimpleNamespace(
-        name="TxGroupsParamName", storage_name="tx_groups_param_name"
+    "TxKeysParamName": _YidlSimpleNamespace(
+        name="TxKeysParamName", storage_name="tx_keys_param_name"
     ),
     "FieldId": _YidlSimpleNamespace(name="FieldId", storage_name="field_id"),
     "FieldOwner": _YidlSimpleNamespace(name="FieldOwner", storage_name="field_owner"),
@@ -2790,7 +2789,7 @@ ASSEMBLY_PROPERTIES = {
     "DefaultFactoryParamNames": _YidlSimpleNamespace(
         name="DefaultFactoryParamNames", storage_name="default_factory_param_names"
     ),
-    "TxGroupKey": _YidlSimpleNamespace(name="TxGroupKey", storage_name="tx_group_key"),
+    "TxKeyKey": _YidlSimpleNamespace(name="TxKeyKey", storage_name="tx_key_key"),
     "ValueSlotName": _YidlSimpleNamespace(
         name="ValueSlotName", storage_name="value_slot_name"
     ),
@@ -2821,9 +2820,7 @@ ASSEMBLY_PROPERTIES = {
     "ExposureOrder": _YidlSimpleNamespace(
         name="ExposureOrder", storage_name="exposure_order"
     ),
-    "TxGroupOrder": _YidlSimpleNamespace(
-        name="TxGroupOrder", storage_name="tx_group_order"
-    ),
+    "TxKeyOrder": _YidlSimpleNamespace(name="TxKeyOrder", storage_name="tx_key_order"),
     "TxIndex": _YidlSimpleNamespace(name="TxIndex", storage_name="tx_index"),
     "InitParameterId": _YidlSimpleNamespace(
         name="InitParameterId", storage_name="init_parameter_id"
@@ -2955,12 +2952,12 @@ fields = sorted(
 for lifecycle_class in classes:
     seen = {DEFAULT_TRANSACTION: 0}
     ctx.write(
-        TxGroupsCollection,
-        TxGroup(
+        TxKeysCollection,
+        TxKey(
             class_id=lifecycle_class.class_id,
-            tx_group_key=DEFAULT_TRANSACTION,
+            tx_key_key=DEFAULT_TRANSACTION,
             tx_index=0,
-            tx_group_order=0,
+            tx_key_order=0,
         ),
         policy=RejectDuplicate,
     )
@@ -2971,23 +2968,23 @@ for lifecycle_class in classes:
         if field.field_kind != "managed":
             continue
 
-        tx_group = field.tx_group_key
-        if tx_group is None:
-            tx_group = DEFAULT_TRANSACTION
-        if tx_group not in seen:
-            seen[tx_group] = len(seen)
+        tx_key = field.tx_key_key
+        if tx_key is None:
+            tx_key = DEFAULT_TRANSACTION
+        if tx_key not in seen:
+            seen[tx_key] = len(seen)
             ctx.write(
-                TxGroupsCollection,
-                TxGroup(
+                TxKeysCollection,
+                TxKey(
                     class_id=lifecycle_class.class_id,
-                    tx_group_key=tx_group,
-                    tx_index=seen[tx_group],
-                    tx_group_order=field.field_order,
+                    tx_key_key=tx_key,
+                    tx_index=seen[tx_key],
+                    tx_key_order=field.field_order,
                 ),
                 policy=RejectDuplicate,
             )
 
-        tx_index = seen[tx_group]
+        tx_index = seen[tx_key]
         ctx.write(
             TransactionalFieldsCollection,
             TransactionalField(
@@ -2995,7 +2992,7 @@ for lifecycle_class in classes:
                 field_owner=field.field_owner,
                 field_name=field.field_name,
                 field_order=field.field_order,
-                tx_group_key=tx_group,
+                tx_key_key=tx_key,
             ),
             policy=RejectDuplicate,
         )
@@ -3006,7 +3003,7 @@ for lifecycle_class in classes:
                 field_owner=field.field_owner,
                 field_name=field.field_name,
                 field_order=field.field_order,
-                tx_group_key=tx_group,
+                tx_key_key=tx_key,
                 tx_index=tx_index,
                 current_slot_name=field.current_slot_name,
                 working_slot_name=field.working_slot_name,
@@ -3019,10 +3016,10 @@ for lifecycle_class in classes:
             "ctx",
             "ClassesCollection",
             "FieldsCollection",
-            "TxGroupsCollection",
+            "TxKeysCollection",
             "TransactionalFieldsCollection",
             "IndexedTransactionalFieldsCollection",
-            "TxGroup",
+            "TxKey",
             "TransactionalField",
             "IndexedTransactionalField",
             "RejectDuplicate",
@@ -3550,12 +3547,12 @@ class state_class_decl_name__astichi_arg__:
         "_y_working_tx_ids",
     )
     __yidl_tx_index_to_group__ = astichi_pass(
-        tx_groups_for_index_name__astichi_arg__,
+        tx_keys_for_index_name__astichi_arg__,
         outer_bind=True,
     )
-    __yidl_tx_group_to_index__ = {
+    __yidl_tx_key_to_index__ = {
         group: index for index, group in enumerate(
-            astichi_pass(tx_groups_for_map_name__astichi_arg__, outer_bind=True)
+            astichi_pass(tx_keys_for_map_name__astichi_arg__, outer_bind=True)
         )
     }
 
@@ -3587,8 +3584,8 @@ class state_class_decl_name__astichi_arg__:
         return facade
 
     def _y_require_active_transaction(self, tx_index):
-        tx_group = self.__yidl_tx_index_to_group__[tx_index]
-        transaction = self._y_transaction_manager.active_transaction_for(tx_group)
+        tx_key = self.__yidl_tx_index_to_group__[tx_index]
+        transaction = self._y_transaction_manager.active_transaction_for(tx_key)
         if transaction is None:
             if self._y_working_tx_ids[tx_index] is not None:
                 raise RuntimeError(
@@ -3605,34 +3602,34 @@ class state_class_decl_name__astichi_arg__:
     def _y_ensure_working_transaction(self, tx_index):
         transaction = self._y_require_active_transaction(tx_index)
         if self._y_working_tx_ids[tx_index] is None:
-            tx_group = self.__yidl_tx_index_to_group__[tx_index]
+            tx_key = self.__yidl_tx_index_to_group__[tx_index]
             self._y_working_tx_ids[tx_index] = (
-                self._y_transaction_manager.enlist(self, tx_group)
+                self._y_transaction_manager.enlist(self, tx_key)
             )
         return transaction
 
-    def commit_order_key_for(self, tx_group=DEFAULT_TRANSACTION):
-        del tx_group
+    def commit_order_key_for(self, tx_key=DEFAULT_TRANSACTION):
+        del tx_key
         return ()
 
-    def requires_validation_for(self, tx_group=DEFAULT_TRANSACTION):
-        del tx_group
+    def requires_validation_for(self, tx_key=DEFAULT_TRANSACTION):
+        del tx_key
         return False
 
-    def validate_commit_for(self, tx_group=DEFAULT_TRANSACTION):
-        del tx_group
+    def validate_commit_for(self, tx_key=DEFAULT_TRANSACTION):
+        del tx_key
         return True
 
-    def _commit_transaction(self, tx_id, tx_group=DEFAULT_TRANSACTION):
-        tx_index = self.__yidl_tx_group_to_index__[tx_group]
+    def _commit_transaction(self, tx_id, tx_key=DEFAULT_TRANSACTION):
+        tx_index = self.__yidl_tx_key_to_index__[tx_key]
         if self._y_working_tx_ids[tx_index] != tx_id:
             return self._y_get_default_facade()
         astichi_hole(commit_transaction_body)
         self._y_working_tx_ids[tx_index] = None
         return self._y_get_default_facade()
 
-    def _rollback_transaction(self, tx_id, tx_group=DEFAULT_TRANSACTION):
-        tx_index = self.__yidl_tx_group_to_index__[tx_group]
+    def _rollback_transaction(self, tx_id, tx_key=DEFAULT_TRANSACTION):
+        tx_index = self.__yidl_tx_key_to_index__[tx_key]
         if self._y_working_tx_ids[tx_index] != tx_id:
             return self._y_get_default_facade()
         astichi_hole(rollback_transaction_body)
@@ -3657,20 +3654,20 @@ class facade_base_decl_name__astichi_arg__(
     def working(self):
         return self._y_state._y_get_working_facade()
 
-    def begin(self, *tx_groups):
-        return self._y_state._y_transaction_manager.begin(*tx_groups)
+    def begin(self, *tx_keys):
+        return self._y_state._y_transaction_manager.begin(*tx_keys)
 
-    def validate(self, *tx_groups):
-        return self._y_state._y_transaction_manager.validate(*tx_groups)
+    def validate(self, *tx_keys):
+        return self._y_state._y_transaction_manager.validate(*tx_keys)
 
-    def commit_only(self, *tx_groups):
-        return self._y_state._y_transaction_manager.commit_only(*tx_groups)
+    def commit_only(self, *tx_keys):
+        return self._y_state._y_transaction_manager.commit_only(*tx_keys)
 
-    def commit(self, *tx_groups):
-        return self._y_state._y_transaction_manager.commit(*tx_groups)
+    def commit(self, *tx_keys):
+        return self._y_state._y_transaction_manager.commit(*tx_keys)
 
-    def rollback(self, *tx_groups):
-        return self._y_state._y_transaction_manager.rollback(*tx_groups)
+    def rollback(self, *tx_keys):
+        return self._y_state._y_transaction_manager.rollback(*tx_keys)
 
     astichi_hole(facade_base_body)
     astichi_hole(facade_properties)
@@ -3694,13 +3691,13 @@ class default_facade_class_decl_name__astichi_arg__(
         outer_bind=True,
     )
     __yidl_tx_index_to_group__ = astichi_pass(
-        tx_groups_for_class_index_name__astichi_arg__,
+        tx_keys_for_class_index_name__astichi_arg__,
         outer_bind=True,
     )
-    __yidl_tx_group_to_index__ = {
+    __yidl_tx_key_to_index__ = {
         group: index for index, group in enumerate(
             astichi_pass(
-                tx_groups_for_class_map_name__astichi_arg__,
+                tx_keys_for_class_map_name__astichi_arg__,
                 outer_bind=True,
             )
         )
@@ -3712,9 +3709,9 @@ class default_facade_class_decl_name__astichi_arg__(
         state = object.__new__(state_class_ref__astichi_arg__)
         object.__setattr__(self, "_y_state", state)
         state._y_transaction_manager = transaction_manager or TransactionManager(
-            tx_groups=tuple(
+            tx_keys=tuple(
                 group for group in astichi_pass(
-                    tx_groups_for_manager_name__astichi_arg__,
+                    tx_keys_for_manager_name__astichi_arg__,
                     outer_bind=True,
                 )
                 if group != DEFAULT_TRANSACTION
@@ -3727,7 +3724,7 @@ class default_facade_class_decl_name__astichi_arg__(
         state._y_working_tx_ids = [
             None
             for _group in astichi_pass(
-                tx_groups_for_slots_name__astichi_arg__,
+                tx_keys_for_slots_name__astichi_arg__,
                 outer_bind=True,
             )
         ]
@@ -3839,11 +3836,11 @@ ASSEMBLY_CONTRIBUTIONS = {
             ),
         ),
     ),
-    "TxGroupsBuilderParam": ContributionSpec(
-        name="TxGroupsBuilderParam",
+    "TxKeysBuilderParam": ContributionSpec(
+        name="TxKeysBuilderParam",
         source_name="BuilderParam",
         source_kind="resource",
-        build_name="TxGroupsBuilderParam",
+        build_name="TxKeysBuilderParam",
         index=ValueRef("ClassOrder"),
         order=ValueRef("ClassOrder"),
         target=TargetSpec(
@@ -3861,7 +3858,7 @@ ASSEMBLY_CONTRIBUTIONS = {
         ),
         bindings=(
             BindingSpec(
-                kind="ident", name="value_name", value=ValueRef("TxGroupsParamName")
+                kind="ident", name="value_name", value=ValueRef("TxKeysParamName")
             ),
         ),
     ),
@@ -5160,14 +5157,14 @@ ASSEMBLY_MATCHERS = {
         default_contribution_name="AnnotationsBuilderParam",
         rules=(),
     ),
-    "TxGroupsBuilderParamContributions": ContributionMatcherSpec(
-        name="TxGroupsBuilderParamContributions",
+    "TxKeysBuilderParamContributions": ContributionMatcherSpec(
+        name="TxKeysBuilderParamContributions",
         inputs=(
             AssemblyInputSpec(
                 name="lifecycle_class", collection_name="Classes", collection=None
             ),
         ),
-        default_contribution_name="TxGroupsBuilderParam",
+        default_contribution_name="TxKeysBuilderParam",
         rules=(),
     ),
     "FieldDefaultBuilderParamContributions": ContributionMatcherSpec(
@@ -5905,8 +5902,8 @@ ASSEMBLY_EDGES = {
         condition=None,
         matcher_name="AnnotationsBuilderParamContributions",
     ),
-    "ModuleProduction.tx_groups_params": AssemblyEdgeSpec(
-        name="ModuleProduction.tx_groups_params",
+    "ModuleProduction.tx_keys_params": AssemblyEdgeSpec(
+        name="ModuleProduction.tx_keys_params",
         context_inputs=(),
         from_inputs=(
             AssemblyInputSpec(
@@ -5914,7 +5911,7 @@ ASSEMBLY_EDGES = {
             ),
         ),
         condition=None,
-        matcher_name="TxGroupsBuilderParamContributions",
+        matcher_name="TxKeysBuilderParamContributions",
     ),
     "ModuleProduction.field_default_params": AssemblyEdgeSpec(
         name="ModuleProduction.field_default_params",
@@ -6422,7 +6419,7 @@ ASSEMBLY_PRODUCTIONS = {
             ),
             InlineApplySpec(
                 edge=AssemblyEdgeSpec(
-                    name="ModuleProduction.tx_groups_params",
+                    name="ModuleProduction.tx_keys_params",
                     context_inputs=(),
                     from_inputs=(
                         AssemblyInputSpec(
@@ -6432,7 +6429,7 @@ ASSEMBLY_PRODUCTIONS = {
                         ),
                     ),
                     condition=None,
-                    matcher_name="TxGroupsBuilderParamContributions",
+                    matcher_name="TxKeysBuilderParamContributions",
                 )
             ),
             InlineApplySpec(
@@ -6553,33 +6550,33 @@ ASSEMBLY_PRODUCTIONS = {
                 ),
                 BindingSpec(
                     kind="ident",
-                    name="tx_groups_for_index_name",
-                    value=ValueRef("TxGroupsParamName"),
+                    name="tx_keys_for_index_name",
+                    value=ValueRef("TxKeysParamName"),
                 ),
                 BindingSpec(
                     kind="ident",
-                    name="tx_groups_for_map_name",
-                    value=ValueRef("TxGroupsParamName"),
+                    name="tx_keys_for_map_name",
+                    value=ValueRef("TxKeysParamName"),
                 ),
                 BindingSpec(
                     kind="ident",
-                    name="tx_groups_for_class_index_name",
-                    value=ValueRef("TxGroupsParamName"),
+                    name="tx_keys_for_class_index_name",
+                    value=ValueRef("TxKeysParamName"),
                 ),
                 BindingSpec(
                     kind="ident",
-                    name="tx_groups_for_class_map_name",
-                    value=ValueRef("TxGroupsParamName"),
+                    name="tx_keys_for_class_map_name",
+                    value=ValueRef("TxKeysParamName"),
                 ),
                 BindingSpec(
                     kind="ident",
-                    name="tx_groups_for_manager_name",
-                    value=ValueRef("TxGroupsParamName"),
+                    name="tx_keys_for_manager_name",
+                    value=ValueRef("TxKeysParamName"),
                 ),
                 BindingSpec(
                     kind="ident",
-                    name="tx_groups_for_slots_name",
-                    value=ValueRef("TxGroupsParamName"),
+                    name="tx_keys_for_slots_name",
+                    value=ValueRef("TxKeysParamName"),
                 ),
                 BindingSpec(
                     kind="ident",

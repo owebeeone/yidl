@@ -2,7 +2,7 @@
 
 ## Goal
 
-Establish that parity tests can load **`pyrolyze.lifecycle`** without importing **`pyrolyze.api`** (Python 3.10–safe stub in `tests/baseline/_impl_switch.py`), and that the **default transaction group** commit path works end-to-end for a trivial `managed` field.
+Establish that parity tests can load **`pyrolyze.lifecycle`** without importing **`pyrolyze.api`** (Python 3.10–safe stub in `tests/baseline/_impl_switch.py`), and that the **default transaction key** commit path works end-to-end for a trivial `managed` field.
 
 ## Support code
 

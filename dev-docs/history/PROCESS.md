@@ -90,7 +90,7 @@ Coverage is tracked at two levels throughout the project:
 1. **Comprehensive baseline** — a shared “all-up” baseline context/class and companion tests that accumulate cross-feature interactions as the baseline grows.
 2. **Per-feature slice** — focused hand-crafted/generated-shape code and tests for the current helper or behavior under review.
 
-The comprehensive baseline exists because lifecycle field specs are not independent: defaults, views, tx groups, hooks, bindings, and initvar injection can interact in ways that isolated tests will miss. Per-feature tests remain required so each slice has a small, reviewable target and a clear generator contract.
+The comprehensive baseline exists because lifecycle field specs are not independent: defaults, views, tx keys, hooks, bindings, and initvar injection can interact in ways that isolated tests will miss. Per-feature tests remain required so each slice has a small, reviewable target and a clear generator contract.
 
 Code generation is also tracked continuously. The hand-crafted baseline is a target shape and debugging aid, not a substitute for advancing the generator.
 

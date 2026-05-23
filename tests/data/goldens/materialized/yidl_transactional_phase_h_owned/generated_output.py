@@ -7,7 +7,7 @@ from yidl.runtime.transaction_yidl import DEFAULT_TRANSACTION
 from yidl.runtime.transaction_yidl import TransactionManager
 VOID = object()
 
-def build_lifecycle_class(decorated_cls, *, _Owner_lifecycle_definition, _Owner_annotations, _Owner_tx_groups, _Owner_child_default, _Owner_children_default_factory, _Owner_handle_default, _Owner_handles_default_factory):
+def build_lifecycle_class(decorated_cls, *, _Owner_lifecycle_definition, _Owner_annotations, _Owner_tx_keys, _Owner_child_default, _Owner_children_default_factory, _Owner_handle_default, _Owner_handles_default_factory):
 
     def _y_validate_binding_value(field_name, value):
         if value is not None and (not isinstance(value, BindingBase)):
@@ -27,8 +27,8 @@ def build_lifecycle_class(decorated_cls, *, _Owner_lifecycle_definition, _Owner_
 
     class Owner_State:
         __slots__ = ('_y_transaction_manager', '_y_default_ref', '_y_current_ref', '_y_working_ref', '_y_child_current', '_y_child_working', '_y_child_staged', '_y_children_current', '_y_children_working', '_y_children_staged', '_y_handle_value', '_y_handles_value', '_y_working_tx_ids')
-        __yidl_tx_index_to_key__ = _Owner_tx_groups
-        __yidl_tx_key_to_index__ = {key: index for index, key in enumerate(_Owner_tx_groups)}
+        __yidl_tx_index_to_key__ = _Owner_tx_keys
+        __yidl_tx_key_to_index__ = {key: index for index, key in enumerate(_Owner_tx_keys)}
 
         def _y_get_default_facade(self):
             ref = self._y_default_ref
@@ -298,8 +298,8 @@ def build_lifecycle_class(decorated_cls, *, _Owner_lifecycle_definition, _Owner_
         __yidl_lifecycle_generated__ = True
         __yidl_lifecycle_user_class__ = decorated_cls
         __yidl_lifecycle_definition__ = _Owner_lifecycle_definition
-        __yidl_tx_index_to_key__ = _Owner_tx_groups
-        __yidl_tx_key_to_index__ = {key: index for index, key in enumerate(_Owner_tx_groups)}
+        __yidl_tx_index_to_key__ = _Owner_tx_keys
+        __yidl_tx_key_to_index__ = {key: index for index, key in enumerate(_Owner_tx_keys)}
 
         @property
         def child(self):
@@ -332,7 +332,7 @@ def build_lifecycle_class(decorated_cls, *, _Owner_lifecycle_definition, _Owner_
             object.__setattr__(self, '_y_state', state)
             object.__setattr__(self, '_y_current_facade', None)
             object.__setattr__(self, '_y_working_facade', None)
-            state._y_transaction_manager = transaction_manager or TransactionManager(tx_groups=tuple((group for group in _Owner_tx_groups if group != DEFAULT_TRANSACTION)))
+            state._y_transaction_manager = transaction_manager or TransactionManager(tx_keys=tuple((group for group in _Owner_tx_keys if group != DEFAULT_TRANSACTION)))
             state._y_default_ref = weakref.ref(self)
             state._y_current_ref = None
             state._y_working_ref = None
@@ -351,7 +351,7 @@ def build_lifecycle_class(decorated_cls, *, _Owner_lifecycle_definition, _Owner_
             if handles is _HAS_DEFAULT_FACTORY:
                 handles = _Owner_handles_default_factory()
             self.handles = handles
-            state._y_working_tx_ids = [None for _group in _Owner_tx_groups]
+            state._y_working_tx_ids = [None for _group in _Owner_tx_keys]
 
     class Owner_Current(Owner_FacadeBase):
         __slots__ = ()

@@ -25,8 +25,8 @@ Legend: **needs** = generated or hand-crafted code must cooperate with this runt
 | Runtime feature | What it does | Field helpers / specs that need it |
 |-----------------|--------------|-------------------------------------|
 | **TM: single group begin/commit** | `with txm.begin():` binds validate+commit on exit | All transactional fields: `managed`, `binding`, `owned`, `transient`, `derived` (reset), metadata used at commit |
-| **TM: multi-group** | `begin(PUBLISH, PASS)`, per-group managers, independent dirty sets | Any helper with non-default `tx_group`; `transient`, `commit_order_key`, `commit_validator`, hooks per group |
-| **Enlist + tx_id (“dirty”)** | When a working overlay is created, `TransactionManager.enlist(context, tx_group)` runs; stale-tx checks. (No separate `mark_dirty` on the manager—unlike some design sketches.) | `managed`, `binding`, `owned`, `transient` (writes promote working) |
+| **TM: multi-group** | `begin(PUBLISH, PASS)`, per-group managers, independent dirty sets | Any helper with non-default `tx_key`; `transient`, `commit_order_key`, `commit_validator`, hooks per group |
+| **Enlist + tx_id (“dirty”)** | When a working overlay is created, `TransactionManager.enlist(context, tx_key)` runs; stale-tx checks. (No separate `mark_dirty` on the manager—unlike some design sketches.) | `managed`, `binding`, `owned`, `transient` (writes promote working) |
 | **Validate → commit order → apply** | `LifecycleTransaction.validate_commit`, `commit_order`, `apply_commits` → `context._commit_transaction` | All dirty contexts; **`commit_order_key`** (sorting), **`commit_validator`** (gate) |
 | **Record overlay** | Sparse `working` `Record` vs `current` `Record`; `get_field` / `set_working_field` routing | `managed`, `binding`, `owned`, `transient`; **`local_store`** / **`derived`** use alternate storage hooks inside same state machine |
 | **Factory runners** | `default_factory`, `working_default_factory` with cycle detection and injected params | `managed`, `static`, `transient`, `initvar` consumers, etc. |

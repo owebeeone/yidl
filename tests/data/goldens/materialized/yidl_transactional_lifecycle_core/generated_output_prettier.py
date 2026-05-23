@@ -12,7 +12,7 @@ def build_lifecycle_class(
     *,
     _Counter_lifecycle_definition,
     _Counter_annotations,
-    _Counter_tx_groups,
+    _Counter_tx_keys,
     _Counter_plain_default,
     _Counter_seed_default,
     _Counter_KIND_default,
@@ -27,9 +27,9 @@ def build_lifecycle_class(
             "_y_plain_value",
             "_y_working_tx_ids",
         )
-        __yidl_tx_index_to_key__ = _Counter_tx_groups
+        __yidl_tx_index_to_key__ = _Counter_tx_keys
         __yidl_tx_key_to_index__ = {
-            key: index for index, key in enumerate(_Counter_tx_groups)
+            key: index for index, key in enumerate(_Counter_tx_keys)
         }
 
         def _y_get_default_facade(self):
@@ -258,9 +258,9 @@ def build_lifecycle_class(
         __yidl_lifecycle_generated__ = True
         __yidl_lifecycle_user_class__ = decorated_cls
         __yidl_lifecycle_definition__ = _Counter_lifecycle_definition
-        __yidl_tx_index_to_key__ = _Counter_tx_groups
+        __yidl_tx_index_to_key__ = _Counter_tx_keys
         __yidl_tx_key_to_index__ = {
-            key: index for index, key in enumerate(_Counter_tx_groups)
+            key: index for index, key in enumerate(_Counter_tx_keys)
         }
         pass
 
@@ -276,10 +276,10 @@ def build_lifecycle_class(
             object.__setattr__(self, "_y_current_facade", None)
             object.__setattr__(self, "_y_working_facade", None)
             state._y_transaction_manager = transaction_manager or TransactionManager(
-                tx_groups=tuple(
+                tx_keys=tuple(
                     (
                         group
-                        for group in _Counter_tx_groups
+                        for group in _Counter_tx_keys
                         if group != DEFAULT_TRANSACTION
                     )
                 )
@@ -288,7 +288,7 @@ def build_lifecycle_class(
             state._y_current_ref = None
             state._y_working_ref = None
             state._y_plain_value = plain
-            state._y_working_tx_ids = [None for _group in _Counter_tx_groups]
+            state._y_working_tx_ids = [None for _group in _Counter_tx_keys]
 
     class Counter_Current(Counter_FacadeBase):
         __slots__ = ()

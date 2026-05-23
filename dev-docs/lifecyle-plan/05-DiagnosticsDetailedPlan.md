@@ -17,7 +17,7 @@ This feature supports:
 - invalid overrides
 - invalid callable signatures
 - unused initvars
-- missing transaction groups
+- missing transaction keys
 - production/write conflicts
 
 ## Problem
@@ -29,7 +29,7 @@ Lifecycle generation needs errors that mention semantic context:
 - helper name
 - source label
 - concept name
-- transaction group
+- transaction key
 - base/derived layer
 - callable name/signature
 
@@ -148,14 +148,14 @@ Duplicate commit validator:
 CommitValidators = dds.collection(
     "CommitValidators",
     CommitValidator,
-    identity=(SpecialKind, TxGroup),
+    identity=(SpecialKind, TxKey),
 )
 
 ctx.write(
     CommitValidators,
     CommitValidator(
         special_kind=COMMIT_VALIDATOR,
-        tx_group="default_transaction",
+        tx_key="default_transaction",
         name="validate_a",
         source_label="Example.validate_a",
     ),
@@ -171,7 +171,7 @@ a validation production writes:
 Diagnostic(
     severity=ERROR,
     category=DESIGN_CONFLICT,
-    message="duplicate commit_validator for transaction group 'default_transaction'",
+    message="duplicate commit_validator for transaction key 'default_transaction'",
     source_label="Example.validate_b",
     field_name="validate_b",
     concept_name="LifecycleSpecialDeclarations",
@@ -270,7 +270,7 @@ V1 lifecycle diagnostics should cover:
 
 - duplicate field names in one declaration layer
 - invalid override across layers
-- duplicate validator/order key per transaction group
+- duplicate validator/order key per transaction key
 - unsupported callable parameter
 - unused initvar
 - helper parameter scrub/fixed mismatch

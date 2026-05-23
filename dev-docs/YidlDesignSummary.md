@@ -54,8 +54,8 @@ process rules live in `dev-docs/YidlCodingRules.md`.
 7. **Transaction group**. Named subset of fields/hooks/validators that share
    begin/commit/rollback. Groups are independent by default; no implicit
    cross-group coupling.
-8. **`tx_index`**. Stable integer id in `0..num_tx_groups-1` assigned to every
-   transaction group at class generation time. Transaction-aware value fields
+8. **`tx_index`**. Stable integer id in `0..num_tx_keys-1` assigned to every
+   transaction key at class generation time. Transaction-aware value fields
    may belong to at most one `tx_index`; non-transactional fields do not carry
    one.
 9. **Sentinel types**. Each public sentinel has its own concrete type. There
@@ -165,14 +165,14 @@ one-liners:
 10. `classvar` — class-level attribute materialized at decoration; no instance
     storage.
 11. `commit_order_key` — sortable key controlling commit ordering within a tx
-    group. At most one per tx group.
+    group. At most one per tx key.
 12. `commit_validator` — callable validating committability; raises or returns
-    False to reject. At most one per tx group.
-13. `on_before_commit` — hook fired before a tx group commits; multiple per
+    False to reject. At most one per tx key.
+13. `on_before_commit` — hook fired before a tx key commits; multiple per
     group allowed.
-14. `on_after_commit` — hook fired after a tx group commits; multiple per
+14. `on_after_commit` — hook fired after a tx key commits; multiple per
     group allowed.
-15. `on_after_rollback` — hook fired after a tx group rolls back; multiple per
+15. `on_after_rollback` — hook fired after a tx key rolls back; multiple per
     group allowed.
 
 Plus the two primitive surfaces, also generated from or backed by transducer
@@ -201,18 +201,18 @@ metadata rather than treated as final hand-written lifecycle machinery:
       `False` requires `default`/`default_factory`).
    3. `classvar`: `init` scrubbed (not applicable).
    4. `commit_validator`, hook helpers: `init` fixed to `False`.
-5. `tx_group` exposure:
+5. `tx_key` exposure:
    1. Exposed on `managed`, `owned`, `transient`,
       `commit_order_key`, `commit_validator`, `on_*`.
    2. Scrubbed on `initvar`, `classvar` (no tx semantics).
    3. Absent on `local_store`, `derived` (non-transactional).
 6. Mutable-default rejection: `default=list()` / `dict()` / `set()` raises at
    decoration time. Mutables must use `default_factory`.
-7. At-most-one rule: per tx group, at most one `commit_order_key` field and
+7. At-most-one rule: per tx key, at most one `commit_order_key` field and
    at most one `commit_validator` field. Hooks are unrestricted.
 8. Override rules on inheritance (`managed_context` subclasses):
    1. `kind` must match (no changing helper kind in a subclass override).
-   2. `compare`, `tx_group`, `initial_working`, `freeze`, `thaw`,
+   2. `compare`, `tx_key`, `initial_working`, `freeze`, `thaw`,
       `state_factory`, `state_copy` must match the base unless the derived
       value is the neutral/default.
    3. `init` must match when both base and derived specify it.
@@ -229,9 +229,9 @@ names by name match):
 | Callable kind | Allowed names |
 |---|---|
 | `default_factory`; transient `working_default_factory` | `self`, `current`, `working` |
-| `on_before_commit` | `self`, `current`, `working`, `tx_group` |
-| `on_after_commit` | `self`, `previous`, `current`, `tx_group` |
-| `on_after_rollback` | `self`, `current`, `tx_group` |
+| `on_before_commit` | `self`, `current`, `working`, `tx_key` |
+| `on_after_commit` | `self`, `previous`, `current`, `tx_key` |
+| `on_after_rollback` | `self`, `current`, `tx_key` |
 | `commit_validator` | `self` |
 | `commit_order_key` (`default_factory`) | `self`, `current`, `working` |
 
@@ -245,7 +245,7 @@ Rules:
 4. `self` refers to the facade instance appropriate to the call site.
 5. `current` / `working` / `previous` are facade views onto the corresponding
    state snapshots.
-6. `tx_group` is the literal group identifier passed through from the
+6. `tx_key` is the literal group identifier passed through from the
    transaction manager.
 7. Initvar names bind to their declared values: construction-phase values are
    always available; retained storage is materialized only if at least one
@@ -316,7 +316,7 @@ Additional per-field sidecars (exist only for fields that need them):
 5. Generator-emitted internals use the reserved prefixes from section 2.14.
 6. Per-class immutable metadata:
    1. `tx_index_to_group`: tuple indexed by `tx_index`.
-   2. `tx_group_to_index`: frozen mapping.
+   2. `tx_key_to_index`: frozen mapping.
    3. `commit_order_key_field_by_group`: 0-or-1 entry per group.
    4. `commit_validator_field_by_group`: 0-or-1 entry per group.
    5. `before_commit_runners[group]`, `after_commit_runners[group]`,
@@ -365,7 +365,7 @@ Additional per-field sidecars (exist only for fields that need them):
    default groups are declared explicitly and mapped to additional
    `tx_index` values.
 4. Class metadata carries `tx_index_to_group` (tuple) and
-   `tx_group_to_index` (frozen mapping).
+   `tx_key_to_index` (frozen mapping).
 5. Generated code for transaction-aware value fields carries the field's
    `tx_index` directly; the hot path does not consult class metadata.
 6. Class tx metadata exists for external utilities, reflection, diagnostics,
@@ -383,7 +383,7 @@ Additional per-field sidecars (exist only for fields that need them):
    3. Validator-context tracking.
    4. Commit, rollback, drop, commit-only behavior.
    5. Enlistment API for contexts that acquire a working overlay.
-9. `TransactionManager` construction requires an explicit `tx_groups`
+9. `TransactionManager` construction requires an explicit `tx_keys`
    iterable for non-default groups; begin on unknown group raises.
 10. Nested transaction begins are counted per group. Inner `commit()` /
     `commit_only()` decrements the begin count and returns without validating
@@ -392,7 +392,7 @@ Additional per-field sidecars (exist only for fields that need them):
     actual apply path.
 12. `commit_only()` applies commits without validation. It is a runtime escape
     surface and must not be used accidentally by generated normal commit code.
-13. `drop(context, tx_id, tx_group)` removes a stale context from dirty and
+13. `drop(context, tx_id, tx_key)` removes a stale context from dirty and
     validator tracking for the active transaction. Generated code calls this
     when it discards an enlisted working overlay out of band.
 14. Cross-group read visibility is explicitly open and must not be relied on
@@ -712,7 +712,7 @@ Rules:
 | `state_factory` | Yes | Yes/direct | creates runtime sidecar state |
 | `state_copy` | Yes | Yes/direct | copies current sidecar state into working sidecar |
 | `compare` | No | No | `"value"` / `"identity"` per section 5.3 |
-| `tx_group` | No | No | maps to field `tx_index` |
+| `tx_key` | No | No | maps to field `tx_index` |
 | `init` | No | No | constructor participation; per section 5.4 |
 | hook defaults | Yes | Yes | commit hook runner or direct call |
 | validator default | Yes | Yes | commit validation runner or direct call |
@@ -789,7 +789,7 @@ independent snippets without respecting the pipeline they imply.
 3. **`commit_order_key` + `commit_validator` + `on_*commit`** — single
    commit pipeline per group. Exact order is proposed in section 14 and
    still needs ratification.
-4. **Multi-group `tx_group`** — cross-group reads while another group has
+4. **Multi-group `tx_key`** — cross-group reads while another group has
    an active tx have no defined visibility yet (section 27.2). Generator
    must not emit code that assumes a barrier.
 5. **`local_store` + `derived` peer read** — routing must compose: both
@@ -817,7 +817,7 @@ independent snippets without respecting the pipeline they imply.
    3. Free-load resolution, single-evaluation lowering, dead-path elision.
    4. Python `ast` compatibility shims across versions.
 2. Astichi does not know lifecycle semantics by name. It never knows what
-   `managed` means, what `PublishedStore` is, or what a tx group is.
+   `managed` means, what `PublishedStore` is, or what a tx key is.
 3. YIDL owns:
    1. Semantic meaning of field kinds, stores, views, phases.
    2. Which fragments are supplied for each helper.
@@ -1325,7 +1325,7 @@ Implementation order:
     rejected for P1; revisit only under the conditions in section 12.3.
 23. **3-phase init is mandatory**: allocate → wire → sequential unroll
     in declaration order.
-24. Commit pipeline is one per transaction group. P1 defaults to the
+24. Commit pipeline is one per transaction key. P1 defaults to the
     reference's validate-first shape; remaining hook/write/cleanup ordering is
     proposed, not fully ratified.
 25. Nested transactions are counted per group. Inner commits decrement only;

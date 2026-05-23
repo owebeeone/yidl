@@ -49,7 +49,7 @@ from astichi.model import BasicComposable
 class FieldSpec:
     name: str
     kind: str
-    tx_group: Hashable = "default"
+    tx_key: Hashable = "default"
     default: Any = None
     default_factory: Any = None
 
@@ -183,9 +183,9 @@ def compose_commit_demo(specs: list[FieldSpec]) -> str:
 
 if __name__ == "__main__":
     demo_specs = [
-        FieldSpec(name="key1_total", kind="managed", tx_group="key1"),
-        FieldSpec(name="items", kind="managed", tx_group="key1"),
-        FieldSpec(name="first_pass", kind="managed", tx_group="key1"),
+        FieldSpec(name="key1_total", kind="managed", tx_key="key1"),
+        FieldSpec(name="items", kind="managed", tx_key="key1"),
+        FieldSpec(name="first_pass", kind="managed", tx_key="key1"),
     ]
     print("# Generated _commit_transaction shape for 3 managed fields:")
     print()

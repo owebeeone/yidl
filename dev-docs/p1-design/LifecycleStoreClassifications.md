@@ -35,7 +35,7 @@ Current value-home and generated-state classification for P1 lifecycle helpers.
 
 | State | Purpose |
 |---|---|
-| Working-present flag | Whether this tx group has an active working overlay |
+| Working-present flag | Whether this tx key has an active working overlay |
 | `working_tx_id[tx_index]` | Active transaction id for stale overlay checks |
 | Working value namespace | Singular sparse or flat storage; transaction-aware value fields carry at most one `tx_index` |
 

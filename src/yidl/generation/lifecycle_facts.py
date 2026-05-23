@@ -9,7 +9,7 @@ from inspect import signature
 
 CURRENT_FACADE = "current_facade"
 WORKING_FACADE = "working_facade"
-TX_GROUP = "tx_group"
+TX_KEY = "tx_key"
 INITVAR = "initvar"
 
 
@@ -101,8 +101,8 @@ def _injection_kind(name: str, allowed_initvars: frozenset[str], label: str) -> 
         return CURRENT_FACADE
     if name == "working":
         return WORKING_FACADE
-    if name == "tx_group":
-        return TX_GROUP
+    if name == "tx_key":
+        return TX_KEY
     if name in allowed_initvars:
         return INITVAR
     raise TypeError(f"{label}: unknown injection parameter {name!r}")
@@ -116,7 +116,7 @@ __all__ = [
     "CURRENT_FACADE",
     "CallableAnalysis",
     "INITVAR",
-    "TX_GROUP",
+    "TX_KEY",
     "WORKING_FACADE",
     "analyze_callable",
 ]

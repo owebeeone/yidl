@@ -25,7 +25,7 @@ Tie-breaking should prefer consistency with:
 
 Shortcoming:
 
-`tx_group` and related multi-group semantics now have explicit ownership in the
+`tx_key` and related multi-group semantics now have explicit ownership in the
 split design docs, but the completion details remain thin. In particular,
 visibility across groups and cross-group interaction rules are still open.
 
@@ -35,8 +35,8 @@ Recommendations:
    `docs/YIDLRuntimeClassModel.md` defining visibility, isolation, commit order,
    and rollback behavior across groups.
 2. Add a source/frontend note in `docs/YIDLFrontendDesign.md` describing where
-   `tx_group` enters the harvested/spec model.
-3. Leave `tx_group` implicit and rely on commit-path notes scattered across the
+   `tx_key` enters the harvested/spec model.
+3. Leave `tx_key` implicit and rely on commit-path notes scattered across the
    docs.
 
 Preferred:
@@ -93,7 +93,7 @@ Generated example fix:
 Shortcoming:
 
 The lifecycle reference has concrete injectable-name behavior (`self`,
-`current`, `working`, `tx_group`, `previous`, initvar names), but the split YIDL
+`current`, `working`, `tx_key`, `previous`, initvar names), but the split YIDL
 design docs do not yet define one authoritative registry of what names exist in
 which contexts.
 

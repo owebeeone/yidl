@@ -31,7 +31,7 @@ concept LifecycleOwned extends transient.LifecycleTransient {
         FieldName
         FieldOrder
         BindingShape
-        TxGroupKey
+        TxKeyKey
         TxIndex
         CurrentSlotName
         WorkingSlotName
@@ -43,16 +43,16 @@ concept LifecycleOwned extends transient.LifecycleTransient {
     resource BuildOwnedFactsBody = code $[
         from yidl.runtime.transaction_yidl import DEFAULT_TRANSACTION
 
-        tx_groups = {
-            (tx_group.tx_owner, tx_group.tx_group_key): tx_group.tx_index
-            for tx_group in ctx.records(TxGroupsCollection)
+        tx_keys = {
+            (tx_key.tx_owner, tx_key.tx_key_key): tx_key.tx_index
+            for tx_key in ctx.records(TxKeysCollection)
         }
         for field in ctx.records(FieldsCollection):
             if field.field_kind != "owned":
                 continue
-            tx_group = field.tx_group_key
-            if tx_group is None:
-                tx_group = DEFAULT_TRANSACTION
+            tx_key = field.tx_key_key
+            if tx_key is None:
+                tx_key = DEFAULT_TRANSACTION
             ctx.write(
                 IndexedOwnedFieldsCollection,
                 IndexedOwnedField(
@@ -61,8 +61,8 @@ concept LifecycleOwned extends transient.LifecycleTransient {
                     field_name=field.field_name,
                     field_order=field.field_order,
                     binding_shape=field.binding_shape,
-                    tx_group_key=tx_group,
-                    tx_index=tx_groups[(field.field_owner, tx_group)],
+                    tx_key_key=tx_key,
+                    tx_index=tx_keys[(field.field_owner, tx_key)],
                     current_slot_name=field.current_slot_name,
                     working_slot_name=field.working_slot_name,
                     staged_slot_name=field.staged_slot_name,
@@ -70,13 +70,13 @@ concept LifecycleOwned extends transient.LifecycleTransient {
                 policy=RejectDuplicate,
             )
     ]$ {
-        keep ctx, FieldsCollection, TxGroupsCollection
+        keep ctx, FieldsCollection, TxKeysCollection
         keep IndexedOwnedFieldsCollection, IndexedOwnedField
         keep RejectDuplicate
     }
 
     operation BuildOwnedFacts
-        inputs(Fields, TxGroups)
+        inputs(Fields, TxKeys)
         outputs(IndexedOwnedFields)
         using BuildOwnedFactsBody
 

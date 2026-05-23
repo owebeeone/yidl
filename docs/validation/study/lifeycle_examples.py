@@ -1,7 +1,7 @@
 """Lifecycle example exercising every `pyrolyze.lifecycle` surface.
 
 Covers the 15 concrete ``LCKind`` helpers plus managed-class inheritance,
-two ``tx_group``\\s (``Key1``, ``Key2``), initvars in both ``init=True`` and
+two ``tx_key``\\s (``Key1``, ``Key2``), initvars in both ``init=True`` and
 ``init=False`` flavours, a ``default_factory`` that consumes an initvar, and a
 ``managed`` field using ``freeze=/thaw=``/``initial_working=``.
 
@@ -51,22 +51,22 @@ def _validate_key1_commit(self, salt: int) -> bool:
     return self.key1_total >= 0 and salt >= 0
 
 
-def _before_commit_key1(self, working, tx_group) -> None:
-    self.audit_log.append(("before_commit", tx_group, working.key1_total))
+def _before_commit_key1(self, working, tx_key) -> None:
+    self.audit_log.append(("before_commit", tx_key, working.key1_total))
 
 
-def _after_commit_key1(self, previous, current, tx_group) -> None:
+def _after_commit_key1(self, previous, current, tx_key) -> None:
     self.audit_log.append(
-        ("after_commit", tx_group, previous.key1_total, current.key1_total)
+        ("after_commit", tx_key, previous.key1_total, current.key1_total)
     )
 
 
-def _after_rollback_key1(self, current, tx_group) -> None:
-    self.audit_log.append(("after_rollback", tx_group, current.key1_total))
+def _after_rollback_key1(self, current, tx_key) -> None:
+    self.audit_log.append(("after_rollback", tx_key, current.key1_total))
 
 
-def _after_commit_key2(self, previous, current, tx_group) -> None:
-    self.audit_log.append(("after_commit", tx_group, current.key2_total))
+def _after_commit_key2(self, previous, current, tx_key) -> None:
+    self.audit_log.append(("after_commit", tx_key, current.key2_total))
 
 
 # ---- nested managed context ---------------------------------------------
@@ -88,17 +88,17 @@ class Counter:
 class BaseMultiTxMultiCounter:
     """Base class: the two per-group totals that hooks/validators read."""
 
-    key1_total: int = managed(default=0, tx_group=Key1)
-    key2_total: int = managed(default=0, tx_group=Key2)
+    key1_total: int = managed(default=0, tx_key=Key1)
+    key2_total: int = managed(default=0, tx_key=Key2)
 
 
 @managed_context
 class MultiTxMultiCounter(BaseMultiTxMultiCounter):
     # managed with overlay knobs: freeze/thaw and initial_working
     items: tuple[int, ...] = managed(
-        default_factory=tuple, freeze=tuple, thaw=list, tx_group=Key1,
+        default_factory=tuple, freeze=tuple, thaw=list, tx_key=Key1,
     )
-    first_pass: bool = managed(default=False, initial_working=True, tx_group=Key1)
+    first_pass: bool = managed(default=False, initial_working=True, tx_key=Key1)
 
     # initvars: constructor-provided and factory-provided
     seed: int = initvar(default=0)
@@ -106,7 +106,7 @@ class MultiTxMultiCounter(BaseMultiTxMultiCounter):
 
     # default_factory that pulls in an initvar by parameter name
     seeded_items: list[int] = managed(
-        default_factory=_seeded_items_factory, tx_group=Key1,
+        default_factory=_seeded_items_factory, tx_key=Key1,
     )
 
     # const / static / classvar
@@ -122,32 +122,32 @@ class MultiTxMultiCounter(BaseMultiTxMultiCounter):
 
     # transient scratch with working-only factory
     key1_scratch: list[int] | None = transient(
-        default=None, working_default_factory=list, tx_group=Key1,
+        default=None, working_default_factory=list, tx_key=Key1,
     )
 
     # binding / owned identity-compared resources
-    handle: Handle | None = binding(default=None, tx_group=Key1)
-    child: Handle | None = owned(default=None, tx_group=Key2)
+    handle: Handle | None = binding(default=None, tx_key=Key1)
+    child: Handle | None = owned(default=None, tx_key=Key2)
 
     # per-group commit metadata (at most one order_key / validator per group)
-    key1_order: tuple[int, ...] = commit_order_key(default=(1,), tx_group=Key1)
-    key2_order: tuple[int, ...] = commit_order_key(default=(2,), tx_group=Key2)
+    key1_order: tuple[int, ...] = commit_order_key(default=(1,), tx_key=Key1)
+    key2_order: tuple[int, ...] = commit_order_key(default=(2,), tx_key=Key2)
     key1_validator: object | None = commit_validator(
-        default=_validate_key1_commit, tx_group=Key1,
+        default=_validate_key1_commit, tx_key=Key1,
     )
 
     # hooks per group (before commit, after commit, after rollback)
     key1_before: object | None = on_before_commit(
-        default=_before_commit_key1, tx_group=Key1,
+        default=_before_commit_key1, tx_key=Key1,
     )
     key1_after: object | None = on_after_commit(
-        default=_after_commit_key1, tx_group=Key1,
+        default=_after_commit_key1, tx_key=Key1,
     )
     key1_rollback: object | None = on_after_rollback(
-        default=_after_rollback_key1, tx_group=Key1,
+        default=_after_rollback_key1, tx_key=Key1,
     )
     key2_after: object | None = on_after_commit(
-        default=_after_commit_key2, tx_group=Key2,
+        default=_after_commit_key2, tx_key=Key2,
     )
 
     # drivers
@@ -161,7 +161,7 @@ class MultiTxMultiCounter(BaseMultiTxMultiCounter):
 
 
 if __name__ == "__main__":
-    manager = TransactionManager(tx_groups={Key1, Key2})
+    manager = TransactionManager(tx_keys={Key1, Key2})
     ctx = MultiTxMultiCounter(
         transaction_manager=manager,
         seed=5,

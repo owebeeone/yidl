@@ -99,7 +99,7 @@ def _container(namespace: Mapping[str, object]) -> object:
             working_facade_class_name="Counter_Working",
             lifecycle_definition_param_name="_Counter_lifecycle_definition",
             annotations_param_name="_Counter_annotations",
-            tx_groups_param_name="_Counter_tx_groups",
+            tx_keys_param_name="_Counter_tx_keys",
         ),
     )
     builder.add(
@@ -167,7 +167,7 @@ def _container(namespace: Mapping[str, object]) -> object:
             annotation="int",
             has_default=True,
             default_value_param_name="_Counter_audit_count_default",
-            tx_group_key="audit",
+            tx_key_key="audit",
             current_slot_name="_y_audit_count_current",
             working_slot_name="_y_audit_count_working",
         ),
@@ -186,7 +186,7 @@ def _assert_generated_class(namespace: Mapping[str, object]) -> None:
         Counter,
         _Counter_lifecycle_definition=lifecycle_definition,
         _Counter_annotations=annotations,
-        _Counter_tx_groups=(DEFAULT_TRANSACTION, "audit"),
+        _Counter_tx_keys=(DEFAULT_TRANSACTION, "audit"),
         _Counter_plain_default=3,
         _Counter_seed_default=2,
         _Counter_KIND_default="counter",
@@ -202,7 +202,7 @@ def _assert_generated_class(namespace: Mapping[str, object]) -> None:
     assert generated.__yidl_lifecycle_user_class__ is Counter
     assert generated.__yidl_lifecycle_definition__ is lifecycle_definition
     assert generated.__yidl_tx_index_to_group__ == (DEFAULT_TRANSACTION, "audit")
-    assert generated.__yidl_tx_group_to_index__ == {
+    assert generated.__yidl_tx_key_to_index__ == {
         DEFAULT_TRANSACTION: 0,
         "audit": 1,
     }

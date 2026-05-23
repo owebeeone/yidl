@@ -65,8 +65,8 @@ Construction budget:
 
 | Metadata | Shape | Purpose |
 |---|---|---|
-| `tx_index_to_group` | tuple | `tx_index -> tx_group` |
-| `tx_group_to_index` | frozen mapping | `tx_group -> tx_index` |
+| `tx_index_to_group` | tuple | `tx_index -> tx_key` |
+| `tx_key_to_index` | frozen mapping | `tx_key -> tx_index` |
 | `commit_order_key_field_by_group` | 0-or-1 mapping | Enforce at-most-one order key per group |
 | `commit_validator_field_by_group` | 0-or-1 mapping | Enforce at-most-one validator per group |
 | Hook runners | per-group lists | Before/after commit and after rollback execution |
