@@ -49,7 +49,7 @@ def _edge(name: str, matcher_name: str) -> InlineApplySpec:
     )
 
 
-def test_nested_production_contribution_runs_in_one_astichi_build(monkeypatch) -> None:
+def test_nested_production_contribution_uses_lower_astichi_build(monkeypatch) -> None:
     concept = SimpleNamespace(
         properties={},
         resources={
@@ -137,4 +137,4 @@ def test_nested_production_contribution_runs_in_one_astichi_build(monkeypatch) -
     result = run_assembly(concept, "Module", SimpleNamespace()).materialize()
 
     assert result.emit(provenance=False) == "item = 1\n"
-    assert counts["build_merge"] == 1
+    assert counts["build_merge"] == 0
