@@ -15,7 +15,6 @@ from astichi.assembler.scope import BindingCandidate
 from astichi.assembler.scope import as_composable
 from astichi.assembler.scope import as_external_value
 from astichi.assembler.scope import as_identifier
-from astichi.assembler.scope import find_candidates
 from astichi.assembler.scope import require_one
 from astichi.pathmatch import parse_path_selector
 
@@ -564,8 +563,7 @@ def _apply_resource_to_target(
         for owner_match in owner_selectors:
             try:
                 candidate = require_one(
-                    find_candidates(
-                        scope.inventory,
+                    scope.find_candidates(
                         resource,
                         name=contribution.target.name,
                         build_match=build_match,
@@ -668,8 +666,7 @@ def _apply_bindings(
             resource = as_external_value(evaluate_external(binding.value, stack))
         try:
             candidate = _binding_candidate(
-                find_candidates(
-                    scope.inventory,
+                scope.find_candidates(
                     resource,
                     name=binding.name,
                     build_match=build_match,
