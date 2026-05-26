@@ -3,13 +3,16 @@ from __future__ import annotations
 from types import SimpleNamespace
 
 import astichi
+from astichi.perf_counters import collect_perf_counters
 
 from yidl.generation.assembly_plan import AssemblyEdgeSpec
 from yidl.generation.assembly_plan import AssemblySpec
+from yidl.generation.assembly_plan import BindingSpec
 from yidl.generation.assembly_plan import ComposableProductionSpec
 from yidl.generation.assembly_plan import ContributionMatcherSpec
 from yidl.generation.assembly_plan import ContributionSpec
 from yidl.generation.assembly_plan import InlineApplySpec
+from yidl.generation.assembly_plan import LiteralValueRef
 from yidl.generation.assembly_plan import PathSegmentSpec
 from yidl.generation.assembly_plan import PathSpec
 from yidl.generation.assembly_plan import RootSpec
@@ -138,3 +141,86 @@ def test_nested_production_contribution_uses_lower_astichi_build(monkeypatch) ->
 
     assert result.emit(provenance=False) == "item = 1\n"
     assert counts["build_merge"] == 0
+
+
+def test_run_assembly_uses_astichi_batch_scope(monkeypatch) -> None:
+    monkeypatch.setenv("ASTICHI_LOWER_ENGINE", "python")
+    concept = SimpleNamespace(
+        properties={},
+        resources={
+            "ModuleRoot": from_astichi_code(
+                "class class_name__astichi_arg__:\n"
+                "    astichi_hole(body)\n"
+            ),
+            "Body": from_astichi_code(
+                "def run(self):\n"
+                "    return astichi_bind_external(result)\n"
+            ),
+        },
+        contributions={
+            "BodyContribution": ContributionSpec(
+                name="BodyContribution",
+                source_name="Body",
+                source_kind="resource",
+                build_name="Body",
+                index=None,
+                order=None,
+                target=_target("body", "Root"),
+                bindings=(
+                    BindingSpec(
+                        kind="external",
+                        name="result",
+                        value=LiteralValueRef("ok"),
+                    ),
+                ),
+            ),
+        },
+        contribution_matchers={
+            "BodyMatcher": ContributionMatcherSpec(
+                name="BodyMatcher",
+                inputs=(),
+                default_contribution_name="BodyContribution",
+                rules=(),
+            ),
+        },
+        assembly_edges={},
+        composable_productions={
+            "ModuleProduction": ComposableProductionSpec(
+                name="ModuleProduction",
+                inputs=(),
+                root=RootSpec(
+                    build_name="Root",
+                    resource_name="ModuleRoot",
+                    bindings=(
+                        BindingSpec(
+                            kind="ident",
+                            name="class_name",
+                            value=LiteralValueRef("Generated"),
+                        ),
+                    ),
+                ),
+                applies=(_edge("module.body", "BodyMatcher"),),
+            ),
+        },
+        assemblies={
+            "Module": AssemblySpec(
+                name="Module",
+                production_name="ModuleProduction",
+            ),
+        },
+    )
+
+    with collect_perf_counters() as counters:
+        result = run_assembly(concept, "Module", SimpleNamespace()).materialize()
+
+    source = result.emit(provenance=False)
+    namespace: dict[str, object] = {}
+    exec(source, namespace)
+    counts = counters.snapshot()["counts"]
+
+    assert namespace["Generated"]().run() == "ok"  # type: ignore[operator]
+    assert counts["scope_batch"] == 3
+    assert counts["scope_batch_apply_count"] == 3
+    assert counts["scope_batch_candidate_count"] == 3
+    assert counts.get("candidate_lookup_lower", 0) == 0
+    assert counts.get("assembly_scope_apply", 0) == 0

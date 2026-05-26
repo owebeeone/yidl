@@ -11,11 +11,10 @@ from typing import cast
 
 import astichi
 from astichi.assembler.scope import AssemblyScope
-from astichi.assembler.scope import BindingCandidate
+from astichi.assembler.scope import BindingRequest
 from astichi.assembler.scope import as_composable
 from astichi.assembler.scope import as_external_value
 from astichi.assembler.scope import as_identifier
-from astichi.assembler.scope import require_one
 from astichi.pathmatch import parse_path_selector
 
 from yidl.generation.assembly_plan import AndConditionSpec
@@ -559,25 +558,29 @@ def _apply_resource_to_target(
     )
 
     concrete_build_paths: list[tuple[str, ...]] = []
+    requests: list[BindingRequest] = []
+    request_build_matches: list[tuple[str, ...] | None] = []
     for build_match in build_selectors:
         for owner_match in owner_selectors:
-            try:
-                candidate = require_one(
-                    scope.find_candidates(
-                        resource,
-                        name=contribution.target.name,
-                        build_match=build_match,
-                        owner_match=owner_match,
-                    )
+            requests.append(
+                BindingRequest(
+                    resource,
+                    name=contribution.target.name,
+                    build_match=build_match,
+                    owner_match=owner_match,
                 )
-            except ValueError as exc:
-                raise ValueError(
-                    f"contribution {contribution.name!r}: failed to target "
-                    f"{contribution.target.name!r}"
-                ) from exc
-            scope.apply(candidate)
-            if build_match is not None and not _selector_is_dynamic(build_match):
-                concrete_build_paths.append(build_match + (resource.instance_name,))
+            )
+            request_build_matches.append(build_match)
+    try:
+        scope.apply_batch(tuple(requests))
+    except ValueError as exc:
+        raise ValueError(
+            f"contribution {contribution.name!r}: failed to target "
+            f"{contribution.target.name!r}"
+        ) from exc
+    for build_match in request_build_matches:
+        if build_match is not None and not _selector_is_dynamic(build_match):
+            concrete_build_paths.append(build_match + (resource.instance_name,))
     return tuple(concrete_build_paths)
 
 
@@ -659,42 +662,26 @@ def _apply_bindings(
     build_match: tuple[str, ...],
     context: str,
 ) -> None:
+    if not bindings:
+        return
+    requests: list[BindingRequest] = []
     for binding in bindings:
         if binding.kind == "ident":
             resource = as_identifier(evaluate_identifier(binding.value, stack))
         else:
             resource = as_external_value(evaluate_external(binding.value, stack))
-        try:
-            candidate = _binding_candidate(
-                scope.find_candidates(
-                    resource,
-                    name=binding.name,
-                    build_match=build_match,
-                ),
+        requests.append(
+            BindingRequest(
+                resource,
+                name=binding.name,
+                build_match=build_match,
+                allow_equivalent_demand_sites=True,
             )
-            scope.apply(candidate)
-        except ValueError as exc:
-            raise ValueError(f"{context}: failed to bind {binding.name!r}") from exc
-
-
-def _binding_candidate(
-    candidates: tuple[BindingCandidate, ...],
-) -> BindingCandidate:
-    """Return one binding candidate, accepting repeated same-name demand sites."""
-    if len(candidates) <= 1:
-        return require_one(candidates)
-    first = candidates[0]
-    first_record = first.demand_record
-    for candidate in candidates[1:]:
-        record = candidate.demand_record
-        if (
-            record.build_path != first_record.build_path
-            or record.code_owner != first_record.code_owner
-            or record.name != first_record.name
-            or record.kind != first_record.kind
-        ):
-            return require_one(candidates)
-    return first
+        )
+    try:
+        scope.apply_batch(tuple(requests))
+    except ValueError as exc:
+        raise ValueError(f"{context}: failed to apply bindings") from exc
 
 
 def _target_selectors(
