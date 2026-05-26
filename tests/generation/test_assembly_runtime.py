@@ -219,8 +219,10 @@ def test_run_assembly_uses_astichi_batch_scope(monkeypatch) -> None:
     counts = counters.snapshot()["counts"]
 
     assert namespace["Generated"]().run() == "ok"  # type: ignore[operator]
-    assert counts["scope_batch"] == 3
+    assert counts["scope_batch"] == 2
     assert counts["scope_batch_apply_count"] == 3
     assert counts["scope_batch_candidate_count"] == 3
+    assert counts["yidl_chained_contribution_batches"] == 1
+    assert counts["yidl_chained_contribution_request_count"] == 2
     assert counts.get("candidate_lookup_lower", 0) == 0
     assert counts.get("assembly_scope_apply", 0) == 0

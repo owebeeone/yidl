@@ -16,6 +16,7 @@ from astichi.assembler.scope import as_composable
 from astichi.assembler.scope import as_external_value
 from astichi.assembler.scope import as_identifier
 from astichi.pathmatch import parse_path_selector
+from astichi.perf_counters import active_perf_counters
 
 from yidl.generation.assembly_plan import AndConditionSpec
 from yidl.generation.assembly_plan import AssemblyConditionSpec
@@ -57,6 +58,14 @@ class AssemblyDiagnosticError(ValueError):
 
 class OperationExecutionError(RuntimeError):
     """Raised when a generated operation body fails unexpectedly."""
+
+
+@dataclass(frozen=True, slots=True)
+class AppliedTarget:
+    """Result of applying a resource contribution target."""
+
+    concrete_build_paths: tuple[tuple[str, ...], ...]
+    bindings_applied: bool = False
 
 
 @dataclass(frozen=True, slots=True)
@@ -446,15 +455,19 @@ def _apply_contribution(
         build_index=evaluate_index(contribution.index, stack),
         order=_contribution_order(contribution, stack),
     )
-    concrete_build_paths = _apply_resource_to_target(
+    applied = _apply_resource_to_target(
         scope,
         resource,
         contribution,
         stack,
         root_mapping=root_mapping,
+        binding_groups=((contribution.bindings, stack, f"contribution {contribution.name!r}"),),
     )
 
-    for build_path in concrete_build_paths:
+    if applied.bindings_applied:
+        return
+
+    for build_path in applied.concrete_build_paths:
         _apply_bindings(
             scope,
             contribution.bindings,
@@ -487,29 +500,34 @@ def _apply_production_contribution(
         build_index=evaluate_index(contribution.index, stack),
         order=_contribution_order(contribution, stack),
     )
-    concrete_build_paths = _apply_resource_to_target(
+    root_stack = _records_stack(concept, active_context_records.values())
+    applied = _apply_resource_to_target(
         scope,
         resource,
         contribution,
         stack,
         root_mapping=root_mapping,
+        binding_groups=(
+            (production.root.bindings, root_stack, f"production {production.name!r} root"),
+            (contribution.bindings, stack, f"contribution {contribution.name!r}"),
+        ),
     )
-    root_stack = _records_stack(concept, active_context_records.values())
-    for build_path in concrete_build_paths:
-        _apply_bindings(
-            scope,
-            production.root.bindings,
-            root_stack,
-            build_match=build_path,
-            context=f"production {production.name!r} root",
-        )
-        _apply_bindings(
-            scope,
-            contribution.bindings,
-            stack,
-            build_match=build_path,
-            context=f"contribution {contribution.name!r}",
-        )
+    for build_path in applied.concrete_build_paths:
+        if not applied.bindings_applied:
+            _apply_bindings(
+                scope,
+                production.root.bindings,
+                root_stack,
+                build_match=build_path,
+                context=f"production {production.name!r} root",
+            )
+            _apply_bindings(
+                scope,
+                contribution.bindings,
+                stack,
+                build_match=build_path,
+                context=f"contribution {contribution.name!r}",
+            )
         _run_production_edges(
             concept,
             production,
@@ -539,7 +557,11 @@ def _apply_resource_to_target(
     stack: DataStack,
     *,
     root_mapping: Mapping[str, tuple[str, ...]],
-) -> tuple[tuple[str, ...], ...]:
+    binding_groups: tuple[
+        tuple[tuple[BindingSpec, ...], DataStack, str],
+        ...,
+    ] = (),
+) -> AppliedTarget:
     if contribution.target is None:
         raise ValueError(f"contribution {contribution.name!r} must declare a target")
     build_selectors = _target_selectors(
@@ -557,7 +579,6 @@ def _apply_resource_to_target(
         context=f"contribution {contribution.name!r} owner",
     )
 
-    concrete_build_paths: list[tuple[str, ...]] = []
     requests: list[BindingRequest] = []
     request_build_matches: list[tuple[str, ...] | None] = []
     for build_match in build_selectors:
@@ -571,6 +592,38 @@ def _apply_resource_to_target(
                 )
             )
             request_build_matches.append(build_match)
+    if _can_chain_contribution_requests(request_build_matches, owner_selectors):
+        build_match = request_build_matches[0]
+        assert build_match is not None
+        concrete_build_path = build_match + (resource.instance_name,)
+        chained_requests = list(requests)
+        for bindings, binding_stack, _binding_context in binding_groups:
+            chained_requests.extend(
+                _binding_requests(
+                    bindings,
+                    binding_stack,
+                    build_match=concrete_build_path,
+                )
+            )
+        try:
+            scope.apply_batch(tuple(chained_requests))
+        except ValueError as exc:
+            raise ValueError(
+                f"contribution {contribution.name!r}: failed to target "
+                f"{contribution.target.name!r}"
+            ) from exc
+        counters = active_perf_counters()
+        if counters is not None and len(chained_requests) > len(requests):
+            counters.increment("yidl_chained_contribution_batches")
+            counters.increment(
+                "yidl_chained_contribution_request_count",
+                len(chained_requests),
+            )
+        return AppliedTarget(
+            concrete_build_paths=(concrete_build_path,),
+            bindings_applied=bool(binding_groups),
+        )
+
     try:
         scope.apply_batch(tuple(requests))
     except ValueError as exc:
@@ -578,10 +631,21 @@ def _apply_resource_to_target(
             f"contribution {contribution.name!r}: failed to target "
             f"{contribution.target.name!r}"
         ) from exc
+    concrete_build_paths: list[tuple[str, ...]] = []
     for build_match in request_build_matches:
         if build_match is not None and not _selector_is_dynamic(build_match):
             concrete_build_paths.append(build_match + (resource.instance_name,))
-    return tuple(concrete_build_paths)
+    return AppliedTarget(tuple(concrete_build_paths))
+
+
+def _can_chain_contribution_requests(
+    request_build_matches: list[tuple[str, ...] | None],
+    owner_selectors: tuple[tuple[str, ...] | None, ...],
+) -> bool:
+    if len(request_build_matches) != 1 or len(owner_selectors) != 1:
+        return False
+    build_match = request_build_matches[0]
+    return build_match is not None and not _selector_is_dynamic(build_match)
 
 
 def _is_empty_resource_contribution(
@@ -664,6 +728,19 @@ def _apply_bindings(
 ) -> None:
     if not bindings:
         return
+    requests = _binding_requests(bindings, stack, build_match=build_match)
+    try:
+        scope.apply_batch(tuple(requests))
+    except ValueError as exc:
+        raise ValueError(f"{context}: failed to apply bindings") from exc
+
+
+def _binding_requests(
+    bindings: tuple[BindingSpec, ...],
+    stack: DataStack,
+    *,
+    build_match: tuple[str, ...],
+) -> list[BindingRequest]:
     requests: list[BindingRequest] = []
     for binding in bindings:
         if binding.kind == "ident":
@@ -678,10 +755,7 @@ def _apply_bindings(
                 allow_equivalent_demand_sites=True,
             )
         )
-    try:
-        scope.apply_batch(tuple(requests))
-    except ValueError as exc:
-        raise ValueError(f"{context}: failed to apply bindings") from exc
+    return requests
 
 
 def _target_selectors(
