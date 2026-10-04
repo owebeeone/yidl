@@ -8,8 +8,8 @@ from generated_example.managed_owned_generated_example import (
     YidlCantWriteWithoutActiveTransaction,
     build_generated_owned_context,
 )
-from yidl.runtime import BindingList
-from yidl.runtime import TransactionManager
+from tests.support.binding_resources import BindingList
+from tests.support.transaction_resources import TransactionManager
 
 
 GeneratedOwnedContext = build_generated_owned_context(OwnedSource)

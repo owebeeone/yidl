@@ -13,11 +13,13 @@ to restore that implementation to the generic compiler package.
 
 ## Working Material
 
-Local cleanup notes (`YidlCleanupReccomendations.md`,
-`YidlDesignSummary-gaps2.md`) and the `paper/` writing effort may be present as
-uncommitted work. They are not required by this index, not replacement
-authorities for the canonical documents, and not implementation acceptance.
-Promote their links here when those documents are committed separately.
+- [Cleanup recommendations](YidlCleanupReccomendations.md): candidate cleanup,
+  not implementation acceptance.
+- [Design gap notes](YidlDesignSummary-gaps2.md): working analysis, not a
+  replacement for the canonical summary.
+- [Paper draft](paper/paper-draft.md), [evidence index](paper/evidence-index.md),
+  and [research gaps](paper/research-gaps.md): writing material, not a submitted
+  paper or validated novelty claim.
 
 ## History
 

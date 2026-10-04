@@ -765,3 +765,355 @@ The design pressure should therefore be:
 If that holds, then "compiler compiler" becomes less of a slogan and more of a
 practical engineering tool: a way to design a domain once, then generate the
 right compilers and artifacts for that domain.
+
+## 2026-05-24 - The Five-Week Detour And AI-Assisted Architecture
+
+The Pyrolyze lifecycle work exposed a second-order insight: the economics of
+architectural detours have changed under AI-assisted development.
+
+The original trigger was not abstract. `pyrolyze/lifecycle.py` had become too
+large, too intertwined, and too fragile for safe incremental agent edits. It was
+roughly the exact shape that causes agents to fail in practice: many implicit
+semantic rules, lots of cross-cutting field behavior, transaction phases,
+facades, inheritance, hooks, default factories, and performance pressure all
+living in one handwritten runtime.
+
+The first instinct was not "invent YIDL as it exists now." The path moved
+through several false starts:
+
+- lifecycle-specific generation
+- template-driven IDL
+- dataclass-like decorator compilation
+- fact tables and DDS-style records
+- matcher-selected resources
+- production and assembly modeling
+- Astichi as the code-stitching substrate
+- phases and mergeable feature layers
+- extracted `yidl-lifecycle` as a downstream proof package
+
+The current YIDL concepts surface was not even clearly visible at the start.
+The failures were useful because each one narrowed the solution space. The
+important discovery was that code generation was not the core problem by
+itself. The core problem was making architecture explicit enough that code
+generation, validation, variation, and AI-assisted edits could operate on the
+same model.
+
+Astichi emerged because code stitching was not a helper detail. Safe,
+inspectable, hygienic composition of real Python source is one of the hard
+problems. In practice, Astichi is comparable in complexity to YIDL itself:
+YIDL records and selects architectural facts; Astichi gives those facts a way
+to become source without collapsing back into string concatenation.
+
+The five-week detour would have been an unreasonable bet under the old
+engineering economy unless the destination was already well understood. With
+human developers, this amount of exploration could easily have become months
+or years of design churn, review cycles, and abandoned prototypes. AI did not
+make the detour free, and it did not automatically discover the right answer.
+In several places the AI-assisted direction was opposite to the direction that
+eventually proved useful.
+
+What AI changed was the cost curve of exploration.
+
+It became possible to iterate through:
+
+- draft a model
+- implement a small slice
+- generate source
+- inspect the output
+- run goldens
+- hit a mismatch
+- revise the model
+- discard the wrong abstraction
+
+That loop is still guided by human taste and judgment. The AI is useful because
+it compresses the mechanical cost of exploring, not because it removes the need
+to decide.
+
+This suggests a different detour rule for AI-assisted software engineering.
+The traditional rule was close to:
+
+```text
+Avoid architectural detours unless the destination is already obvious.
+```
+
+The new rule may be closer to:
+
+```text
+Allow architectural detours when the current path is structurally blocked,
+the problem recurs across domains, and each exploration step can be tested,
+rolled forward, or abandoned cheaply.
+```
+
+The YIDL/Astichi detour was justified because it did not produce only a
+one-off replacement for lifecycle. It produced a reusable substrate:
+
+- architecture as recorded data
+- facts and collections as the design surface
+- matchers as the variation and override surface
+- productions/resources as the lowering surface
+- generated source as an inspectable artifact
+- goldens as the architectural regression contract
+- downstream package extraction as proof that the substrate is separable
+
+This changes the discourse of complex-system design. Contemporary software
+architecture often exists as a mixture of prose, conventions, review memory,
+and unspoken assumptions. YIDL makes it possible to encode those assumptions
+as a DDS, then generate code directly from the documented model. The DDS is
+not merely documentation; it is compiler input.
+
+That is the "mind blowing" part. The human and the AI get a shared
+architectural substrate. Instead of asking an agent to understand and patch a
+large implicit runtime, the task becomes: change the facts, add a matcher rule,
+add or replace a production, regenerate, and compare the goldens.
+
+This is a much better fit for AI-assisted engineering because agents are weak
+at maintaining large implicit systems. They drift, duplicate, miss invariants,
+and spaghettify handwritten runtimes. A YIDL-style model gives them smaller,
+typed, inspectable places to operate.
+
+The implication is larger than dataclass-like decorator builders. YIDL can
+model a broad class of systems:
+
+- lifecycle/decorator compilers
+- FastAPI or FastAPI++ style route/dependency/auth compilers
+- protobuf or schema-to-code generators
+- SQLAlchemy-like declarative model compilers
+- agent skill compilers
+- XML/media/schema descriptor compilers
+- cross-language codegen experiments
+
+For something like FastAPI++, the interesting part is not "generate route
+decorators." The interesting part is modeling endpoints, dependency injection,
+auth policies, request/response schemas, validation, background jobs,
+transaction scopes, OpenAPI exposure, error mapping, caching, and observability
+as facts and mergeable feature layers.
+
+That is different from a library of decorators. The cross-cutting rules become
+inspectable and overridable.
+
+The breakthrough, if this proves out across more than lifecycle, is not that
+AI writes more code. It is that AI and humans can collaborate on an explicit
+architecture model and produce fast, boring, inspectable generated code from
+that model.
+
+The risk remains real:
+
+- YIDL still has rough edges.
+- Astichi still has rough edges.
+- The language surface may become too abstract.
+- The generated code can still become ugly if the lowering model is wrong.
+- The model must prove itself in more than one domain.
+
+But the goal right now is not polish. The goal is to push the envelope until
+the model is proven or disproven under real pressure. Pyrolyze lifecycle was
+the first hard proof case. Pyro LCM is the next pressure test. After that, a
+second domain such as FastAPI++, protobuf, or an Astichi data-model generator
+would tell us whether this is a local solution or a general pattern.
+
+Working thesis:
+
+```text
+AI-assisted development makes structured architectural exploration cheaper.
+YIDL/Astichi make the result of that exploration explicit, executable, and
+regression-testable.
+```
+
+If that holds, then the practical breakthrough is a new unit of software
+collaboration: not a prompt, not a design document, and not a handwritten
+runtime, but a recorded architectural model that generates the runtime.
+
+## 2026-05-24 - Meta3, Self Description, And Runtime Boundaries
+
+There is another possible layer here: Meta3.
+
+If Meta2 is:
+
+```text
+program
+<- generated by a compiler/generator
+<- generated from a compiler description model
+```
+
+Then Meta3 is the point where the compiler-description machinery can describe
+and generate parts of itself:
+
+```text
+program
+<- generated compiler
+<- generated from YIDL concepts
+<- YIDL concepts that can model YIDL-like compiler systems
+```
+
+In principle, YIDL could be used to build parts of YIDL. That is clever, but
+it is not the immediate goal. Full self-hosting would be an interesting exercise
+to unleash an agent on one day, but it is probably a rabbit hole if attempted
+before the model is proven across practical domains.
+
+The more important question is the conceptual boundary:
+
+- Which parts belong in the architecture model?
+- Which parts belong in the generated compiler?
+- Which parts belong in ordinary runtime libraries?
+- Which parts are target-specific backend work?
+- Which parts are merely self-hosting cleverness?
+
+Self-description is useful as a coherence test. If YIDL can model its own
+properties, records, collections, matchers, productions, resources, phases,
+imports, diagnostics, and lowering surfaces, then the language is probably
+internally coherent. If it cannot, the failure tells us where the current
+implementation is still ad hoc.
+
+But Meta3 should not be confused with practical necessity. The goal is not to
+turn every piece of software into YIDL. YIDL describes architectural facts and
+the rules for lowering those facts into artifacts. It does not replace
+ordinary code.
+
+There is still a "meat and potatoes" layer of fundamental implementation
+libraries:
+
+- transaction managers
+- binding containers
+- graph algorithms
+- topological sorting
+- request parsing
+- validation libraries
+- database drivers
+- HTTP servers
+- serialization libraries
+- target-language runtime helpers
+
+YIDL can call those libraries from generated code, and Astichi snippets can
+include direct implementation code when that is the pragmatic move. But the
+better boundary is usually to keep such machinery in external libraries and
+let YIDL model when and how those libraries are used.
+
+This is similar to a conventional compiler depending on a runtime library.
+Some hardware targets might not provide an integer divide instruction, so the
+compiler emits a call into a runtime helper. The compiler does not need to
+model every transistor-level detail of division. It needs to know that the
+operation exists, what contract it has, and when to lower to that helper.
+
+YIDL should take the same stance.
+
+The DDS describes the architecture. It should not absorb every useful
+algorithm or low-level operation. A healthy YIDL system probably has:
+
+- a semantic model in YIDL
+- target-independent validation and planning
+- generated source using Astichi or another backend
+- external runtime libraries for concrete operations
+- goldens/integration tests proving the whole stack composes
+
+That boundary matters because without it YIDL risks becoming a place where
+all code is dumped into snippets. That would reproduce the original
+`lifecycle.py` problem at a different layer.
+
+Working rule:
+
+```text
+Put architecture, selection, composition, and artifact shape in YIDL.
+Put reusable algorithms and runtime mechanics in libraries.
+Use Astichi snippets as the bridge, not as the dumping ground.
+```
+
+Meta3 remains valuable as a future stress test. A small exercise could model a
+subset of YIDL in YIDL, generate documentation or a tiny compiler fragment, and
+see where the model becomes awkward. That would test the conceptual layering
+without making self-hosting the project goal.
+
+## 2026-05-24 - YIDL As Problem-Space Inversion
+
+Another useful framing is problem-space inversion.
+
+The normal software direction is:
+
+```text
+implementation structure -> inferred architecture
+```
+
+Classes, decorators, descriptors, handlers, callbacks, and glue code are
+written first. The architecture is then inferred from the implementation.
+
+YIDL inverts that:
+
+```text
+explicit architecture model -> generated implementation structure
+```
+
+Facts, constraints, matchers, productions, resources, and phases become the
+primary design surface. Code is a projection of that model.
+
+This is similar in spirit to attribute-based content systems such as Android
+resources: the author asks for a resource, and the context determines which
+resource is selected. YIDL applies that idea to compiler construction. A
+production needs a semantic contribution; the matcher and current fact context
+select the resource that should lower there.
+
+Nested inversions:
+
+- facts own meaning; code materializes it
+- context selects implementation; callers do not hard-code every choice
+- application semantics shape framework output; framework concepts become
+  backend details
+- compile-time specialization replaces runtime generic dispatch where possible
+- AI edits explicit intent instead of inferring architecture from tangled code
+
+Short form:
+
+```text
+YIDL makes architecture the input and code the output.
+```
+
+## 2026-05-24 - Capitalizing Without Losing The Thread
+
+The immediate priority is still Pyrolyze. YIDL is convincing enough now that
+the next proof is not more theory; it is finishing the monster that created
+the need for YIDL in the first place. The lifecycle replacement passing most
+of the old lifecycle tests is enough evidence that the model works. The rest
+is polish, productization, and proof under real pressure.
+
+Suggestions for capitalizing on the work:
+
+- Preserve the authorship trail. Keep dated commits, tags, design notes, and
+  public artifacts that show the evolution of DDS, Astichi, YIDL, matchers,
+  productions, phases, and lifecycle generation.
+- Write a clear defensive publication when the dust settles. The public story
+  should describe the method, not just the implementation: executable
+  architecture, mergeable facts, matcher-selected resources, hygienic code
+  synthesis, generated goldens, and AI-assisted iteration.
+- Own the narrative. Do not describe YIDL as merely a DSL generator or code
+  generator. The stronger framing is executable architecture for AI-assisted
+  software construction.
+- Keep `yidl-lifecycle` as the first proof product. It shows that a large,
+  fragile, handwritten lifecycle engine can become a generated, test-backed,
+  sliceable compiler output.
+- Use Pyrolyze LCM as the pragmatic validation point. If the LCM work can move
+  forward cleanly on the generated lifecycle model, the detour has paid for
+  itself in the original problem domain.
+- Package adoption later. There is time to decide whether YIDL, Astichi, and
+  lifecycle should be open source, dual licensed, commercial, or split between
+  public core and private applications. The immediate task is to prove the
+  model repeatedly.
+- Build one or two more wedges after Pyrolyze. Good candidates are a
+  `yidl-fastapi`-style framework compiler, protocol/interface generation, or a
+  cross-language Astichi target. The goal is to show the model is not
+  lifecycle-specific.
+- Keep runtime-library boundaries clean. YIDL should model architecture,
+  selection, composition, and artifact shape. Fundamental algorithms and
+  runtime mechanics should usually live in ordinary libraries.
+- Treat Astichi performance as a later leverage point. The generated lifecycle
+  performance already looks viable; faster Astichi mostly improves build-time
+  and iteration speed.
+- Avoid stopping to perfect the theory. The useful capital comes from
+  high-quality evidence: working systems, tests, generated artifacts,
+  documentation, and a coherent explanation of why this changes the software
+  construction workflow.
+
+Working priority:
+
+```text
+Finish Pyrolyze first.
+Use YIDL where it removes lifecycle complexity.
+Turn the implications into publication/product strategy after the proof is
+boring.
+```

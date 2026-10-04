@@ -45,7 +45,8 @@ from collections.abc import Hashable
 from typing import Any, Final
 
 from study.contract import StudySubject
-from yidl.runtime import DEFAULT_TRANSACTION, TransactionManager
+from tests.support.transaction_resources import DEFAULT_TRANSACTION
+from tests.support.transaction_resources import TransactionManager
 
 
 _VOID: Final[Any] = object()

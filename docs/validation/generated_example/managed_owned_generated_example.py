@@ -7,10 +7,10 @@ from dataclasses import field
 from typing import Any
 from typing import Iterable
 
-from yidl.runtime import BindingBase
-from yidl.runtime import BindingList
-from yidl.runtime import DEFAULT_TRANSACTION
-from yidl.runtime import TransactionManager
+from tests.support.binding_resources import BindingBase
+from tests.support.binding_resources import BindingList
+from tests.support.transaction_resources import DEFAULT_TRANSACTION
+from tests.support.transaction_resources import TransactionManager
 
 
 class YidlCantWriteWithoutActiveTransaction(RuntimeError):

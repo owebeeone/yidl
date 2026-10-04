@@ -27,7 +27,7 @@ from study.generated_strategy_a_backend import (
     YidlCantWriteWithoutActiveTransaction,
     _VOID,
 )
-from yidl.runtime import TransactionManager
+from tests.support.transaction_resources import TransactionManager
 
 
 def _make() -> Counter:

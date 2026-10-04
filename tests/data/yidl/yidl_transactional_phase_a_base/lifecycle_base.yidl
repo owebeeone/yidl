@@ -154,7 +154,7 @@ concept LifecycleBase {
     collection IndexedTransactionalFields: IndexedTransactionalField identity FieldId many
 
     resource BuildTransactionFactsBody = code $[
-        from yidl.runtime.transaction_yidl import DEFAULT_TRANSACTION
+        from tests.support.transaction_resources import DEFAULT_TRANSACTION
 
         classes = sorted(
             ctx.records(ClassesCollection),
@@ -619,11 +619,12 @@ concept LifecycleBase {
 
         import weakref
 
-        from yidl.runtime.lifecycle import _HAS_DEFAULT_FACTORY
-        from yidl.runtime.transaction_yidl import DEFAULT_TRANSACTION
-        from yidl.runtime.transaction_yidl import TransactionManager
+        from yidl.sentinel_maker import sentinels
+        from tests.support.transaction_resources import DEFAULT_TRANSACTION
+        from tests.support.transaction_resources import TransactionManager
 
 
+        _HAS_DEFAULT_FACTORY = sentinels.HAS_DEFAULT_FACTORY
         VOID = object()
 
 

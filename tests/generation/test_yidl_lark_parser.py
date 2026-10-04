@@ -12,7 +12,7 @@ from yidl.concept_parser import parse_yidl_source
 from yidl.generation.data_def_sys import emit_concept_runtime_source
 from yidl.generation.data_def_sys import AstichiTemplateValue
 from yidl.generation.data_def_sys import MatcherGeneratedValue
-from yidl.runtime.transaction_yidl import DEFAULT_TRANSACTION
+from tests.support.transaction_resources import DEFAULT_TRANSACTION as _DEFAULT_TRANSACTION
 
 _DATA_YIDL = Path(__file__).resolve().parents[1] / "data" / "yidl"
 
@@ -276,14 +276,14 @@ def test_yidl_transactional_phase_a_tx_facts_are_computed() -> None:
         (record.class_id, record.tx_key_key, record.tx_index, record.tx_key_order)
         for record in container.TxKeys.sequence()
     ] == [
-        ("Counter", DEFAULT_TRANSACTION, 0, 0),
+        ("Counter", _DEFAULT_TRANSACTION, 0, 0),
         ("Counter", "audit", 1, 30),
     ]
     assert [
         (record.field_id, record.tx_key_key, record.tx_index)
         for record in container.IndexedTransactionalFields.sequence()
     ] == [
-        ("Counter.count", DEFAULT_TRANSACTION, 0),
+        ("Counter.count", _DEFAULT_TRANSACTION, 0),
         ("Counter.audit_count", "audit", 1),
     ]
 
