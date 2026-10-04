@@ -1025,7 +1025,7 @@ def test_yidl_lark_empty_code_resource_lowers_to_no_output_resource() -> None:
 
     assert isinstance(empty, MatcherGeneratedValue)
     assert empty.source == ""
-    assert empty.to_generator().tree.body == []
+    assert empty.to_generator().to_executable_ast().body == []
 
 
 def test_yidl_lark_template_resource_lowers_edges() -> None:
