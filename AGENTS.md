@@ -4,6 +4,8 @@
 This file defines repository-specific coding instructions for `yidl`.
 
 ## Active docs
+- `dev-docs/README.md` indexes current work and historical material; it does not
+  replace the canonical documents below.
 - `dev-docs/YidlDesignSummary.md` is the canonical semantic/design summary.
 - `dev-docs/YidlCodingRules.md` is the definitive implementation/coding-rules
   document.
