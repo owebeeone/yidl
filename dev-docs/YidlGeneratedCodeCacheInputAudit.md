@@ -1,8 +1,16 @@
 # Generated code cache input audit
 
-Status: source audit completed; no cache implementation or measured cache hit.
+Status: source audit completed; the standalone cache and opt-in Lifecycle adapter
+are implemented in the isolated lane. Fresh-process tests prove compiled-builder
+reuse and current-value binding. No representative application speedup is measured
+yet. See [integration evidence](../../yidl-lifecycle/dev-docs/LifecycleCodeCache.md).
 Policy: operator-selected timestamp-and-size dependency invalidation, including
 editable checkouts. This is not an immutable-source or exact-content guarantee.
+
+Scope amendment: the cache will be a standalone `yidl-cache` project. YIDL core
+must remain independent of it. The data-record audit below is retained as
+read-only reference; it no longer proposes a YIDL integration. The active reuse
+proof is an independent standard-library-only test producer in the cache project.
 
 Source baseline: YIDL `1731f1de64422463356201aa65b4925b97b752c9`, Lifecycle
 `c2502f1a7a565624f20cf930fde92f581b123e9f`, Astichi
@@ -66,12 +74,13 @@ factory-signature projection, `:527` optional-None and binding shape. The author
 layers under `src/yidl_lifecycle/yidl/` show annotation external bindings,
 builder-name references, factory dependency derivation and key indexing.
 
-## Data-record consumer
+## Data-record reference audit (not an integration target)
 
 `src/yidl/generation/data_schema.py:1672` materializes a record AST and executes
 compiled module code. `RecordSpec.record_class` already memoizes the live class
-inside one schema instance; the shared cache adds reuse across new instances
-and processes, without replacing that existing instance-level behavior.
+inside one schema instance. The original proposal explored compiled-code reuse
+across new instances and processes without replacing that instance-level
+behavior; the revised plan does not change this YIDL path.
 
 | Input | Generation effect | Cache treatment |
 | --- | --- | --- |
@@ -95,12 +104,12 @@ Evidence: `data_schema.py:1684` materialization, `:1730` property emission,
 `:1815` compilation/execution and `:1830` type constraints;
 Astichi `src/astichi/model/external_values.py:16` literal conversion.
 
-The second consumer has an import-boundary cost: `data_schema.py:1560` builds
+This reference path has an import-boundary cost: `data_schema.py:1560` builds
 templates through Astichi during module import. Caching only
 `_execute_record_class` is too late: AST materialization has already occurred.
 Lookup must precede `_materialize_record_class`, and template initialization
-needs lazy access if the second-consumer proof claims generation-free startup.
-This is a bounded consumer change, not a reason to add parser work to the cache.
+would need lazy access to claim generation-free startup. This is audit evidence,
+not authorization to change YIDL or add parser work to the cache.
 
 ## Dependency inventory and process policy
 
@@ -146,8 +155,10 @@ invisible between checks remain accepted development limitations.
    require distinct definition keys and canonical outputs.
 3. Replace equal-topology transaction objects: preserve fresh key identity;
    alter grouping/indexes: require a miss. Include inherited keys and methods.
-4. Data records: change default, property order/storage name, type or record
-   name: miss; identical shapes in new schema instances create fresh classes.
+4. Independent test producer: change an embedded literal or generated record
+   layout: miss; identical generation inputs reuse code while new execution
+   namespaces create fresh classes. Different producer namespaces must not share
+   entries even when their normalized definition input is identical.
 5. Fresh process after an ordinary dependency edit: invalidate. Observable edit
    during a miss: no publication. Timestamp-preserving edit: document caveat,
    not a guaranteed-detection test.
@@ -156,7 +167,12 @@ invisible between checks remain accepted development limitations.
 7. Check code objects contain no unsupported external runtime payloads before
    persistence; unknown encodings take the ordinary generation path.
 
-These are future tests, not results of this documentation-only source audit.
-The input classification is ready to drive adapter implementation; cache-hit
-parity, exact supported normalization cases, package inventory coverage and
-startup savings still require execution evidence.
+The adapter's canonical fresh-process fixture and focused fingerprint/failure
+checks now cover Lifecycle reuse, rebinding, topology, schema/annotation bypass,
+and diagnostic boundaries. The standalone suite covers artifact trust and
+invalidation mechanics. The original source audit itself remains historical
+evidence, not a benchmark. Separate
+[startup measurements](../../yidl-lifecycle/dev-docs/LifecycleCodeCacheStartup.md)
+now demonstrate fresh-process savings on the real thirteen-class context path
+and Tk six-control startup without GUI creation. Cross-platform approval,
+application rendering verification, review, and default activation remain pending.

@@ -2,9 +2,39 @@
 
 Status: implementation plan accepted by the operator, including the amended
 development invalidation policy; another review cycle was explicitly waived.
-No runtime implementation or default activation is accepted. Initial consumer: YIDL Lifecycle;
-second-consumer proof: YIDL data-record generation. Existing generation and
-runtime semantics remain authoritative.
+No runtime implementation or default activation is accepted. Initial consumer:
+YIDL Lifecycle; reuse proof: an independent standard-library-only test producer.
+Existing generation and runtime semantics remain authoritative.
+
+Implementation checkpoint: the standalone shared cache and Lifecycle's initial opt-in
+adapter are implemented in the isolated GWZ lane, including fresh-process
+reuse tests. The operator subsequently directed default-on automatic placement,
+specified in the separately dual-reviewed
+[location policy](../../yidl-cache/dev-docs/CacheLocationPolicyPlan.md).
+That policy supersedes this plan's initial opt-in clauses for Lifecycle only;
+shared-cache activation stays explicit and YIDL core stays independent.
+Implementation remains uncommitted. See
+[Lifecycle integration](../../yidl-lifecycle/dev-docs/LifecycleCodeCache.md) and
+[shared-cache evidence](../../yidl-cache/dev-docs/SharedCacheCheckpoint.md).
+Representative non-GUI startup measurements are now recorded in
+[Lifecycle startup evidence](../../yidl-lifecycle/dev-docs/LifecycleCodeCacheStartup.md):
+five fresh-process samples per configuration, with thirteen warm hits and no
+generation. The normal-context median falls from 1.346 to 0.175 seconds; Tk
+six-control startup falls from 1.781 to 0.256 seconds. These local Python
+3.14/macOS measurements include cache setup and do not cover GUI/render latency.
+Implementation review and cross-platform approval remain pending;
+implementation and performance evidence do not supersede those gates.
+
+Operator packaging amendment: the shared cache belongs in a standalone
+`yidl-cache` repository and Python distribution, imported as `yidl_cache`.
+This supersedes the original proposal to ship it inside the YIDL distribution.
+The amendment changes ownership and packaging, not generation or cache semantics;
+this plan edit does not create the repository or activate caching.
+
+Operator dependency amendment: YIDL core must not depend on or invoke
+`yidl-cache`. Its data-record generation is no longer an integration target in
+this plan. Generator applications may use YIDL and the cache independently;
+their adapters, not YIDL core, connect the two.
 
 Operator amendment: timestamp-and-size dependency invalidation is selected,
 including editable installations. This supersedes the immutable-provenance
@@ -34,20 +64,57 @@ policy or claiming that target.
 
 ## Ownership and package boundary
 
-The YIDL project owns a small reusable code-artifact cache. Lifecycle owns the
-adapter that determines its generation inputs and binds its current class.
-Other YIDL generators provide their own adapters; the cache does not know field
-kinds, transaction semantics, data-record properties, or Pyrolyze internals.
+The standalone `yidl-cache` project owns the reusable code-artifact cache.
+Lifecycle owns the adapter that determines its generation inputs and binds its
+current class. Other generator applications provide their own adapters; the
+cache does not know field kinds, transaction semantics, data-record properties,
+or Pyrolyze internals. It is not a cache of arbitrary decorator results or live
+classes.
 
-Proposed import surface: a lightweight `yidl_cache` package shipped with the
-existing YIDL distribution. This avoids importing `yidl.__init__`, which
-currently eagerly imports the parser, merely to read a cache entry. Verify wheel
-and source-distribution inclusion explicitly. A separate distribution or new
-repository is not required for the first checkpoint.
+The import surface is a lightweight `yidl_cache` package in its own Python
+distribution. Its runtime implementation depends only on the standard library;
+it must not import or depend on YIDL, Astichi, YIDL Lifecycle, or Pyrolyze.
+Retrieving an entry therefore cannot import `yidl.__init__`, the parser, or
+generator resources through the cache package. Consumer adapters must also keep
+their expensive generation imports deferred until a miss.
+
+Dependency direction is consumer to cache:
+
+```text
+yidl-lifecycle -> yidl-cache
+future code-generating consumers -> yidl-cache
+```
+
+Lifecycle separately depends on YIDL for generation. There is no dependency
+edge in either direction between YIDL core and `yidl-cache`. No YIDL runtime,
+compiler, or dependency-metadata change is required for this integration.
+
+Each consumer declares an explicit runtime dependency when its integration
+lands. Installing the cache package does not enable caching; initial integrations
+remain consumer-owned. Lifecycle's default-on amendment is linked above; it does
+not set other consumers' defaults. A future YIDL FastAPI or other generator can supply the same
+request and deferred code-producing callback without adding domain-specific
+behavior to the cache. Additional production integrations are not part of this
+plan.
+
+Create a sibling `yidl-cache` member in the isolated GWZ lane through GWZ
+membership operations before implementing the shared cache; do not manually
+edit workspace configuration. Give it independent project instructions,
+`pyproject.toml`, README, `src/yidl_cache/`, and tests. The independent repository
+and distribution must build, install, and test without neighboring checkouts.
+Verify its wheel and source distribution separately, then verify consumer
+dependency installation and imports. Repository creation is an implementation
+preflight, not an action performed by approving this document edit.
 
 Keep storage, format validation, and neutral request/result carriers cohesive.
 Handwritten carriers should be frozen dataclasses; do not use enums or string
 status tags. Keep lifecycle-specific concrete adapters in `yidl-lifecycle`.
+Future standalone data-class or FastAPI generator applications would own their
+own adapters. Consumers supply their dependency inventories and generation
+fingerprints; the cache may provide neutral inventory mechanics but must not
+hard-code consumer package names or discover their generation schemas. Execution,
+namespaces, validation, and live-value binding remain entirely consumer-owned.
+
 No changes to lifecycle markers, decorators, generated public APIs, transaction
 completion, or Astichi's assembly semantics are in scope.
 
@@ -173,32 +240,52 @@ requests and fingerprint input size, not scan prior entries per request.
 
 ## Implementation checkpoints
 
-1. **Input audit and contract proof.** Record generation-versus-binding dependency
-   tables for Lifecycle and the existing data-record AST execution path in
-   `src/yidl/generation/data_schema.py`. Pin baseline latency and generated
-   behavior. Resolve unsupported inputs and trust policy before broad caching.
-2. **Shared artifact cache.** Implement the lightweight package, request identity,
-   compatibility envelope, deferred compilation, atomic publication, bypass and
-   diagnostics. Prove fresh-process hits avoid the producer callback. Test format
-   failures, disabled/unwritable storage, concurrency, reentry, and packaging.
+1. **Repository preflight, input audit and contract proof.** Establish the
+   independent `yidl-cache` repository/distribution and GWZ membership in the
+   isolated lane without changing the active LCM workspace. Record
+   generation-versus-binding dependency tables for Lifecycle and the independent
+   test producer. Keep the existing `src/yidl/generation/data_schema.py` audit as
+   read-only reference, not a requirement to integrate caching into YIDL core.
+   Pin baseline latency and generated behavior. Resolve unsupported inputs and
+   trust policy before broad caching.
+2. **Shared artifact cache.** Implement `src/yidl_cache/` in the standalone
+   repository: request identity, compatibility envelope, deferred compilation,
+   atomic publication, bypass and diagnostics. Prove fresh-process hits avoid the
+   producer callback. Test format
+   failures, disabled/unwritable storage, concurrency, reentry, and independent
+   wheel/source-distribution packaging. In an isolated installation with no
+   consumers present, prove the cache imports and works without YIDL, Astichi,
+   Lifecycle, or Pyrolyze. Cache tests belong in `yidl-cache`; they do not require
+   those projects or their generator fixtures.
 3. **Lifecycle opt-in integration.** Integrate after harvesting and before AST
    generation/compilation. Preserve the existing execution and binding stages.
+   Add Lifecycle's explicit dependency and keep its fingerprint/compile adapter
+   in the Lifecycle repository, not in `yidl-cache`.
    Use canonical lifecycle golden/integration fixtures to compare hit and miss
    behavior, not a second handwritten lifecycle implementation.
-4. **Second-consumer proof.** Exercise a representative generated data-record
-   schema through the same cache with its own fingerprint and fresh namespace.
-   Reuse current canonical fixture assertions. Do not broadly cache all data
-   generators or change YIDL-generated classes into Python dataclasses.
+4. **Independent-producer proof.** Exercise a small standard-library-only
+   generated plain-record example in `yidl-cache` tests through the same contract
+   with its own namespace/fingerprint and fresh execution namespace. Its deferred
+   callback builds and compiles a structural AST; it does not import YIDL,
+   Astichi, or Lifecycle. Use a canonical fixture to prove code reuse, fresh
+   classes, binding, and cross-producer isolation. This is a test consumer, not
+   a new production decorator framework or a claim of a second production
+   integration. Do not modify YIDL's data-record generation or package metadata.
 5. **Performance and invalidation acceptance.** Run fresh processes with empty,
    warm, and disabled caches. Report at least five unprofiled repetitions,
    medians and spread, generation callback counts, phase times, cache size, and
    import overhead. Compare the real thirteen-class startup path without GUI
    creation, then check the relevant application separately. Keep profiler runs
    separate from latency benchmarks.
-6. **Review and default policy.** Run relevant YIDL and Lifecycle suites and the
-   supported Python/backend matrix. Review fingerprint completeness, trust,
+6. **Review and default policy.** Run the standalone cache suite, relevant YIDL
+   and Lifecycle suites, and the supported Python/backend matrix. Review
+   fingerprint completeness, trust,
    failures, and packaging before default activation. Commit accepted checkpoints
    only when requested; this plan does not authorize implementation or pushing.
+   Validate cache and Lifecycle distributions and dependency direction, including
+   YIDL core's continued independence from the cache. Independent cache
+   releases and format revisions must not require synchronized consumer releases;
+   unsupported cache formats are misses, not producer-generation failures.
 
 Each behavioral checkpoint follows red/green/refactor. Use bespoke tests for
 cache mechanics, diagnostics, and fault cases; use existing canonical/golden
@@ -221,6 +308,9 @@ coverage for successful generated behavior without duplicate success suites.
 | User validation, generation, or binding exception | Original error propagates; no misleading cache-success report. |
 | Definition reload or separate process | Fresh classes/namespaces; no retained callback or state from earlier execution. |
 | Second generator namespace | Same storage mechanism; no accidental cross-producer reuse. |
+| Standalone cache installation | Works with the standard library only; no consumer package or template import is required. |
+| Consumer integration installation | Explicit cache dependency resolves; adapters remain consumer-owned; Lifecycle alone adopts the reviewed default-on policy. |
+| YIDL core installation and execution | No dependency on, import of, or invocation of `yidl_cache` is introduced. |
 | Increasing request count | Constant-time entry lookup plus bounded per-request fingerprint work; no quadratic scan. |
 
 ## References
