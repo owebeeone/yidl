@@ -1,9 +1,16 @@
 # YIDL Generated Code Cache Plan
 
-Status: proposed implementation plan. No cache implementation or new runtime
-contract is accepted by this document. Initial consumer: YIDL Lifecycle;
+Status: implementation plan accepted by the operator, including the amended
+development invalidation policy; another review cycle was explicitly waived.
+No runtime implementation or default activation is accepted. Initial consumer: YIDL Lifecycle;
 second-consumer proof: YIDL data-record generation. Existing generation and
 runtime semantics remain authoritative.
+
+Operator amendment: timestamp-and-size dependency invalidation is selected,
+including editable installations. This supersedes the immutable-provenance
+restriction reviewed at `1731f1de64422463356201aa65b4925b97b752c9`.
+Earlier reports remain historical evidence, not approval of this amendment.
+The operator explicitly accepted this amendment without another review cycle.
 
 ## Objective and evidence
 
@@ -61,34 +68,31 @@ No callback receives a mutable cached AST.
 The shared compatibility identity includes the cache-format revision, Python
 implementation, bytecode magic/cache tag, supported interpreter version, and
 optimization/compilation settings. Producer identity includes its complete
-generation dependency revision, not only its package version. Source checkouts
-must never reuse or publish code under a revision different from the producer
-snapshot actually executed. Memoize dependency identity only within a verified
-immutable producer epoch, not merely for the lifetime of a process. A warm hit
-must not load the expensive generated assembly module to obtain its hash.
+generation dependency revision, not only its package version. Editable and
+ordinary installations may cache. For generator code, templates, and native
+dependencies, use a deterministic inventory of file modification timestamps and
+sizes, plus an explicit generator/cache revision. Stat dependencies once when
+establishing the process identity, not once per field or decorated class. This
+is a Python-style practical invalidation policy, not exact content identity.
 
-Initial policy: editable installations, source checkouts, hot-reloaded producers,
-or uncertain import provenance bypass persistent cache reads and writes. Normal
-generation continues. This deliberately forgoes source-checkout speedups rather
-than claiming a disk hash identifies already-loaded Python code. Supporting
-mutable checkouts later requires a separately reviewed snapshot/provenance
-mechanism; rehashing current files alone is insufficient.
+Timestamp-and-size-preserving edits may reuse stale entries. This limitation is
+explicitly accepted for development; document a cache-clear/disable mechanism
+and restarting the process after generator changes. Definition fingerprints
+still include normalized generation inputs, not only source-file metadata.
+Bytecode compatibility and private-cache trust checks remain required.
 
-For cache-enabled installations, the producer adapter must establish a coherent
-immutable generation snapshot covering transitive code, templates, and native
-dependencies. Its manifest identity must bind both already-loaded dependencies
-and deferred imports to that same snapshot. An installed package label or
-version is not proof. If this cannot be established without importing expensive
-templates on a hit, bypass caching rather than weakening verification. Loaded
-dependencies with missing or conflicting provenance also require bypass.
+Do not silently relabel already-loaded generators using later disk metadata.
+Supported operation assumes generator dependencies stay unchanged during a
+process, as with ordinary imported Python modules. No automatic hot reload is
+promised. Before publishing a miss, recheck the dependency inventory once; an
+observed change disables persistent use for that producer for the remainder of
+the process, while normal uncached generation continues. Missing dependencies
+also bypass caching. Changes that occur and restore identical metadata between
+checks are an accepted limitation, not a strict race-safety guarantee.
 
-The producer epoch is invalidated by dependency replacement, reload, or loss of
-snapshot guarantees. Never migrate a request into a new epoch implicitly. Before
-accepting a hit or publishing a miss, require the same verified epoch as request
-construction. A producer returning code from another or unverifiable epoch must
-not publish it under the old identity; ordinary uncached generation semantics
-remain authoritative. Identity work is shared within the epoch, not repeated
-per field, and no per-request whole-dependency scan is permitted.
+Tests must cover fresh-process invalidation after ordinary edits and detected
+changes around deferred imports. A warm hit must not import expensive templates
+to construct its identity. No per-class whole-dependency scan is permitted.
 
 On a valid hit, deserialize code. On a miss, call the producer, then store its
 code if cacheable. Disabled, unavailable, incompatible, or unusable cache storage
@@ -101,7 +105,8 @@ producer errors with the current diagnostic boundaries.
 Before implementation, audit every input actually consumed by each producer's
 generation path. Maintain a dependency table distinguishing embedded code,
 generation-time branch decisions, and runtime builder arguments. A source-file
-timestamp or class name alone is not a correct fingerprint.
+timestamp or class name alone does not represent definition-generation inputs;
+dependency invalidation uses the separately accepted timestamp-and-size policy.
 
 For Lifecycle, audit `lifecycle.py`, `lifecycle_harvester.py`, the generated
 lifecycle base, and its template dependencies in the Lifecycle repository.
@@ -207,9 +212,10 @@ coverage for successful generated behavior without duplicate success suites.
 | Changed generation input or inherited layout | Miss and correct regeneration, even if the class name is unchanged. |
 | Changed runtime-only default/factory/key | Safe code reuse only when proven independent; new live value is bound. |
 | Changed generator/template or Python compatibility | Miss; no stale code execution or incompatible unmarshalling. |
-| Generator replaced between fingerprint and deferred import, then restored | Bypass or reject publication; a fresh reader cannot accept replacement code under the original identity. |
-| Old generator already loaded when disk files change | Never infer loaded-code provenance from new disk hashes; bypass if the immutable epoch cannot be proven. |
-| Editable checkout or unverifiable installation | No persistent reads or writes; normal generation and errors remain unchanged. |
+| Observable dependency edit during a miss | Do not publish; disable persistent use for this producer until process restart. |
+| Generator edited while already imported | No automatic hot reload; restart after edits, without relabeling the process identity from later disk metadata. |
+| Editable checkout, unchanged timestamp/size inventory | Persistent hits are allowed; no blanket editable-install bypass. |
+| Edit preserving timestamps and sizes | Document accepted stale-cache limitation and cache clearing; no guaranteed detection. |
 | Malformed, truncated, corrupt, untrusted entry | Rejection/bypass before deserialization where applicable; normal generation. |
 | Cache write failure or concurrent interrupted writer | Correct current result; no partial artifact becomes a valid hit. |
 | User validation, generation, or binding exception | Original error propagates; no misleading cache-success report. |
