@@ -13,6 +13,9 @@ to restore that implementation to the generic compiler package.
 
 ## Working Material
 
+- [Generated code cache plan](YidlGeneratedCodeCachePlan.md): proposed reusable
+  AST-to-bytecode cache with Lifecycle as the first consumer and data-record
+  generation as the reuse proof; not implemented or accepted for activation.
 - [Cleanup recommendations](YidlCleanupReccomendations.md): candidate cleanup,
   not implementation acceptance.
 - [Design gap notes](YidlDesignSummary-gaps2.md): working analysis, not a
