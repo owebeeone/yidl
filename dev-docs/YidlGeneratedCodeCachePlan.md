@@ -62,9 +62,33 @@ The shared compatibility identity includes the cache-format revision, Python
 implementation, bytecode magic/cache tag, supported interpreter version, and
 optimization/compilation settings. Producer identity includes its complete
 generation dependency revision, not only its package version. Source checkouts
-must invalidate after unversioned generator or template edits. Compute shared
-dependency hashes once per process, not once per field or cached class; a warm
-hit must not load the expensive generated assembly module to obtain its hash.
+must never reuse or publish code under a revision different from the producer
+snapshot actually executed. Memoize dependency identity only within a verified
+immutable producer epoch, not merely for the lifetime of a process. A warm hit
+must not load the expensive generated assembly module to obtain its hash.
+
+Initial policy: editable installations, source checkouts, hot-reloaded producers,
+or uncertain import provenance bypass persistent cache reads and writes. Normal
+generation continues. This deliberately forgoes source-checkout speedups rather
+than claiming a disk hash identifies already-loaded Python code. Supporting
+mutable checkouts later requires a separately reviewed snapshot/provenance
+mechanism; rehashing current files alone is insufficient.
+
+For cache-enabled installations, the producer adapter must establish a coherent
+immutable generation snapshot covering transitive code, templates, and native
+dependencies. Its manifest identity must bind both already-loaded dependencies
+and deferred imports to that same snapshot. An installed package label or
+version is not proof. If this cannot be established without importing expensive
+templates on a hit, bypass caching rather than weakening verification. Loaded
+dependencies with missing or conflicting provenance also require bypass.
+
+The producer epoch is invalidated by dependency replacement, reload, or loss of
+snapshot guarantees. Never migrate a request into a new epoch implicitly. Before
+accepting a hit or publishing a miss, require the same verified epoch as request
+construction. A producer returning code from another or unverifiable epoch must
+not publish it under the old identity; ordinary uncached generation semantics
+remain authoritative. Identity work is shared within the epoch, not repeated
+per field, and no per-request whole-dependency scan is permitted.
 
 On a valid hit, deserialize code. On a miss, call the producer, then store its
 code if cacheable. Disabled, unavailable, incompatible, or unusable cache storage
@@ -183,6 +207,9 @@ coverage for successful generated behavior without duplicate success suites.
 | Changed generation input or inherited layout | Miss and correct regeneration, even if the class name is unchanged. |
 | Changed runtime-only default/factory/key | Safe code reuse only when proven independent; new live value is bound. |
 | Changed generator/template or Python compatibility | Miss; no stale code execution or incompatible unmarshalling. |
+| Generator replaced between fingerprint and deferred import, then restored | Bypass or reject publication; a fresh reader cannot accept replacement code under the original identity. |
+| Old generator already loaded when disk files change | Never infer loaded-code provenance from new disk hashes; bypass if the immutable epoch cannot be proven. |
+| Editable checkout or unverifiable installation | No persistent reads or writes; normal generation and errors remain unchanged. |
 | Malformed, truncated, corrupt, untrusted entry | Rejection/bypass before deserialization where applicable; normal generation. |
 | Cache write failure or concurrent interrupted writer | Correct current result; no partial artifact becomes a valid hit. |
 | User validation, generation, or binding exception | Original error propagates; no misleading cache-success report. |
