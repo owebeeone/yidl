@@ -1,7 +1,51 @@
 # End-user documentation review checkpoint
 
-Date: 2026-10-23. Status: **initial dual review NO-GO; first bounded
-documentation correction implemented and verified, independent re-verdicts pending**.
+Date: 2026-10-23. Status: **accepted at
+`ae2a44f3632b551af3a169d0684ee7c16f7df55c` after
+[Consistency round 2](EndUserDocs-ReviewConsistency-2.md) and
+[Safety round 2](EndUserDocs-ReviewSafety-2.md) reported GO; this accepts the
+delivered end-user documentation and bounded example-help correction only**.
+
+## Accepted-through ledger
+
+| Reviewed revision | Consistency | Safety | Owner disposition |
+| --- | --- | --- | --- |
+| `e98a22cc987342e1326384ee77cac6198b8bc647` | NO-GO | NO-GO | Two shared blocking roots and three additional nonblocking roots; one merged remediation. |
+| `ae2a44f3632b551af3a169d0684ee7c16f7df55c` | GO | GO | All original findings closed by their originating axes; no new finding established. |
+
+One remediation round was used, within the two-round cap. Both original
+reviewers continued independently with retained context and did not read the
+peer's current-round report. They each verified the exact corrected HEAD at
+start and end, supplied closure tables and examined the changed range. Both
+classified the correction as local presentation of the existing architecture,
+with no new architectural root or material change in review premises.
+
+The two initial blocking roots were the beginner reading sequence and the
+outside-checkout path procedure. Both axes independently converged on them.
+The excerpt, help/default and cleanup findings also closed. No defect escaped
+this completed review cycle on the evidence examined; this is not a claim of
+universal defect absence or broader release qualification.
+
+Round-two prompts are preserved as
+[Consistency](EndUserDocs-PromptConsistency-2.md) and
+[Safety](EndUserDocs-PromptSafety-2.md). Their SHA-256 values are respectively
+`17f22115cbc1b94014bcc87165fc867c61fdb949f96c2ecb1528693796863ce2`
+and `6f0cf1b94b47e1afcde58cff831b0aec532dd6465fbbb953b9de4d8fd1de79b8`.
+Reports are filed verbatim, including original transport formatting.
+
+Acceptance combines author execution evidence with independent source,
+command/evidence, provenance, AST and served-HTML inspection. Reviewers did not
+rerun tests, installs, examples or cleanup. Current visual layout, interactive
+search and diagram rendering were not independently re-exercised; the Safety
+reviewer's browser was unavailable, so it used the permitted HTTP/HTML route.
+These limits do not reopen the demonstrated counterexamples but remain explicit.
+
+Subsequent audit-only commits may file these reports and this ledger; accepted
+public/source bytes remain those of the exact revision above. The prior scoped
+commit/push instruction permits landing documentation and audit evidence. It
+does not authorize site deployment, package publication, tags, a release, or
+implementation in reference-only projects. The initial process record below is
+retained as history of this review, not the current acceptance status.
 
 ## Operator authority and boundary
 
@@ -20,7 +64,7 @@ remain outside scope. Astichi Python 3.11 remains a proposal by explicit user
 direction. The earlier file-view navigation concern was resolved by using the
 served browser preview; no link defect is presumed from that report.
 
-## Settled object
+## Initial settled object
 
 - YIDL HEAD: `e98a22cc987342e1326384ee77cac6198b8bc647`.
 - Full delivered documentation range:
@@ -80,7 +124,7 @@ is required to remedy them.
 
 [Remediation round 1](EndUserDocs-RemPlan-1.md) maps every original finding to one
 disposition and closure check in a single bounded documentation patch. Acceptance
-is **NO-GO** while either blocking root remains open. Original reviewers must
+was **NO-GO** while either blocking root remained open. Original reviewers must
 verify their counterexamples; the author cannot self-close. P3-only findings
 are nonblocking. The two-remediation-round cap and architectural-root stop apply.
 No public deployment or release follows merely from a successful site build.
@@ -98,6 +142,6 @@ The patch changes prose/navigation, pinned excerpt boundaries and the tutorial
 example's help presentation only. Existing option names/actions/defaults and all
 compiler/runtime/metadata bytes remain unchanged. This is a local correction of
 the reviewed learning/interface presentation, not a new product architecture,
-language contract or platform premise. The original two reviewers will recheck
-their exact counterexamples, closure tables and changed range on a new committed
-tuple. These implementer results do not self-close any finding.
+language contract or platform premise. The original two reviewers subsequently
+rechecked their exact counterexamples, closure tables and changed range on the
+accepted committed tuple above. Implementer results did not self-close findings.

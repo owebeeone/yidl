@@ -1,7 +1,24 @@
 # End-user documentation remediation — round 1
 
-Date: 2026-10-23. Status: **one bounded correction implemented and verified;
-independent acceptance pending**.
+Date: 2026-10-23. Status: **completed and independently accepted at
+`ae2a44f3632b551af3a169d0684ee7c16f7df55c` after
+[Consistency round 2](EndUserDocs-ReviewConsistency-2.md) and
+[Safety round 2](EndUserDocs-ReviewSafety-2.md) reported GO**.
+
+## Closure record
+
+Each originating reviewer verified every finding on its axis as closed. The
+shared beginner-foundation and external-path roots closed on both axes; excerpt
+completeness, help/defaults and bounded cleanup also closed. Neither reviewer
+established a new finding or new architectural root. One merged remediation
+round was used; no further correction is required by this review cycle.
+
+The independent re-reviews inspected source, exact public commands against
+recorded execution, provenance and served HTML. They did not rerun runtime
+verification or current visual/interactive browser checks. Execution evidence
+and those limits are recorded in the reports and the
+[owner acceptance ledger](EndUserDocs-ReviewCheckpoint.md). The original plan
+below records the process followed; its pending gates are now satisfied.
 
 ## Authority and reviewed object
 
@@ -81,7 +98,7 @@ need an evidence-based written disposition. The author cannot self-close finding
    reviewers per revision; no third Surface reviewer.
 
 Initial full review: one revision, two axes. First remediation round: one of at
-most two. Acceptance remains NO-GO until the relevant reviewers verify closure
+most two. Acceptance remained NO-GO until the relevant reviewers verified closure
 of both blocking roots. No site deployment, tag or registry release follows
 from docs acceptance. The earlier commit/push request applies to reviewable docs
 and audit evidence, not publication of an unaccepted correction as a release.
@@ -92,5 +109,5 @@ pinned excerpts, rendered beginner route and existing example/site checks.
 These support re-review without changing either original report. No product
 semantics, existing option actions/defaults, dependency or platform contract
 changed. Local prose/navigation/interface presentation corrections retain the
-original review premises; use focused re-verdicts by the original two reviewers.
-The author has not self-closed findings or granted acceptance.
+original review premises; focused re-verdicts by the original two reviewers
+verified closure. The author did not self-close findings or grant acceptance.
