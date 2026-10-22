@@ -1,19 +1,30 @@
 # Build a Python generator with YIDL
 
-YIDL turns **definitions and facts into Python code**. Define the records your
-generator needs, reusable Astichi resources, rules that select those resources,
-and assembly instructions that bind and insert them. The result can be a plain
-slotted class with direct field stores.
+YIDL helps you build **Python code generators**. You supply reusable Python code
+pieces, structured inputs describing what to generate, and rules for combining
+them. A generator can produce plain classes with direct field stores, select
+property accessors, or assemble ordered method statements. The generated classes
+then run as ordinary Python.
 
-**Development documentation — 0.1.0 candidate, qualified 2026-10-23.** This site
-teaches the current braced concept/DDS/assembly compiler. The initial release plan
-has been reviewed; packaging and publication are separate gates. Start with the
-explicit Python backend and installation route below. Other configurations need
-their own qualification.
+There are two products to understand. YIDL first turns your definitions into a
+**generator library** with input-row types and assembly functions. Your program
+supplies rows to that library to produce **application code**, such as Point.
+Only after executing that generated code do you call `Point(3, 4)` to make an
+object. A field-name input `x` describes code to generate; 3 is an instance value.
 
-[Generate your first class](start/first-generator.md){ .md-button .md-button--primary }
-[Install the candidate](start/install.md){ .md-button }
-[Language reference](reference/language.md){ .md-button }
+## Start with the model
+
+For your first visit, follow **How YIDL works → Generation stages → Installation
+→ First generator**. This is also the Start Here navigation and footer sequence.
+It introduces the vocabulary and YIDL/Astichi/application responsibilities before
+the complete tutorial source.
+
+[How YIDL works](concepts/model.md){ .md-button .md-button--primary }
+[Generation stages](concepts/generation-pipeline.md){ .md-button }
+
+Already familiar with Python generators? After
+[installation](start/install.md), take the
+[direct run route](start/first-generator.md#run-and-inspect).
 
 ## What you will build
 
@@ -21,24 +32,29 @@ The first tutorial creates `Point(3, 4)`, whose `x` and `y` are direct slots:
 
 {{source:tests/data/goldens/materialized/documentation_classes/first_model.py|python}}
 
-The displayed source is extracted from the canonical executable example. Its
-assertions check values, signature order, direct stores and absence of an instance
-dictionary. Source snapshots help inspection; behavior assertions establish the
-intended result.
+The tutorial explains which definitions, input rows and assembly steps produce
+this code before showing its full source. YIDL selects and places the pieces;
+its Astichi dependency combines Python syntax trees and manages names/scopes.
+Your application decides field policy and supplies the instance values.
 
-## Choose a route
+**Development documentation — 0.1.0 candidate, CPython 3.12+.** Exact executed
+example environments and remaining limits are recorded in
+[compatibility](reference/compatibility.md). Packaging and publication are
+separate gates. The current tutorial uses the explicit Python backend.
+
+## Choose a task
 
 | You want to… | Read |
 | --- | --- |
-| Build something useful first | [First generator](start/first-generator.md) |
-| Understand concepts, facts and generated objects | [The model](concepts/model.md) |
+| Learn the parts and their responsibilities | [How YIDL works](concepts/model.md), then [generation stages](concepts/generation-pipeline.md) |
+| Generate and inspect the first result | [First generator](start/first-generator.md) |
 | Follow a property into a generated parameter | [Matching and data flow](guides/matching-and-data-flow.md) |
 | Extend a generator | [Inheritance and specialization](concepts/composition.md) |
 | Diagnose generation | [Debugging assembly](guides/debugging-assembly.md) |
-| Find exact contracts | [APIs](reference/apis-and-cli.md), [compatibility](reference/compatibility.md) |
-| Run or inspect examples | [Example catalog](examples/index.md) |
+| Find exact contracts | [Language](reference/language.md), [APIs](reference/apis-and-cli.md), [compatibility](reference/compatibility.md) |
+| Run other examples | [Example catalog](examples/index.md) |
 
-YIDL is the generic compiler. Lifecycle, Dataclass and Undoable are consumers that
-supply their own object-model policy. Astichi owns Python stitching and hygiene.
-Do not infer transaction, factory-injection or dataclass semantics from a generic
-YIDL collection. [Consumer examples](examples/consumers.md) show the boundary.
+Lifecycle, Dataclass and Undoable are larger applications of the generic
+compiler. Their transaction and field policies are their own;
+[qualified consumer excerpts](examples/consumers.md) illustrate their uses after
+the standalone tutorial.

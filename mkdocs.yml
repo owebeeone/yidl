@@ -63,13 +63,13 @@ validation:
 nav:
   - Home: index.md
   - Start Here:
+      - How YIDL works: concepts/model.md
+      - Generation stages: concepts/generation-pipeline.md
       - Installation: start/install.md
       - First generator: start/first-generator.md
       - Project layout: start/project-layout.md
       - Inspect output: start/inspect-output.md
   - Concepts:
-      - Definitions and facts: concepts/model.md
-      - Generation pipeline: concepts/generation-pipeline.md
       - Surfaces and shapes: concepts/surfaces-and-shapes.md
       - Composition: concepts/composition.md
       - Binding and ownership: concepts/binding-and-ownership.md

@@ -135,12 +135,12 @@
     "repository": "yidl-lifecycle",
     "revision": "ee5ba633efdeac9fbdd74cfe67ecd975eab8a26d",
     "path": "src/yidl_lifecycle/yidl/lifecycle_managed.yidl",
-    "start": 1266,
-    "end": 1268,
+    "start": 1268,
+    "end": 1270,
     "source_sha256": "cd1195a48fef62118337b6ddee5372f0c81f38457eb45e54b93fa88a4fea377c",
-    "excerpt_sha256": "289ad6f1760520ca363bc2a626fa71c16dafa6ce4bc540aee606a1daf604bcac",
-    "text": "    }\n\n    matcher ManagedDefaultFacadePropertyContributions(field: IndexedTransactionalFields) -> contribution {\n",
-    "url": "https://github.com/owebeeone/yidl-lifecycle/blob/ee5ba633efdeac9fbdd74cfe67ecd975eab8a26d/src/yidl_lifecycle/yidl/lifecycle_managed.yidl#L1266-L1268"
+    "excerpt_sha256": "41a9aae43345ad7d826ef47327464ee0c07a312a4872e06231f35895827ba76d",
+    "text": "    matcher ManagedDefaultFacadePropertyContributions(field: IndexedTransactionalFields) -> contribution {\n        default -> ManagedDefaultFacadeProperty\n    }\n",
+    "url": "https://github.com/owebeeone/yidl-lifecycle/blob/ee5ba633efdeac9fbdd74cfe67ecd975eab8a26d/src/yidl_lifecycle/yidl/lifecycle_managed.yidl#L1268-L1270"
   },
   "lifecycle_output": {
     "repository": "yidl-lifecycle",

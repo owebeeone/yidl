@@ -87,7 +87,7 @@ This exact existing test is the minimal in-memory Python-API recipe. Four
 combinations yield one selected result; original records remain ordered field,
 facade, while the extracted tuple contains only the derived boolean.
 
-{{source:tests/generation/test_matcher.py@245:303|python}}
+{{source:tests/generation/test_matcher.py@245:305|python}}
 
 For emitted runtime source, use `emit_matcher_runtime_source` with explicit
 `evaluator_names=((callable, "generated_name"),)` and provide that callable under

@@ -33,3 +33,11 @@ requirement, then receive an inspected output refresh.
 For failures, preserve the traceback chain and locate its stage with
 [debugging assembly](../guides/debugging-assembly.md). There is no promised
 all-in-one trace flag.
+
+## Keep authority, remove disposable output
+
+`runtime.py` and `model.py` are generated files in your selected `--out`
+directory. Remove that destination if it belongs only to this experiment; retain
+`classes.yidl` and `generate.py`, which are the authored inputs needed to rebuild
+it. The [installation cleanup steps](install.md#clean-up-the-walkthrough) also
+cover the created environment and wheel directory without deleting authored files.

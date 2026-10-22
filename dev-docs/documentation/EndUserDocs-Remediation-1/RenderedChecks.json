@@ -1,0 +1,29 @@
+{
+  "routes_http_200": [
+    "",
+    "concepts/model/",
+    "concepts/generation-pipeline/",
+    "start/install/",
+    "start/first-generator/",
+    "examples/consumers/",
+    "guides/matching-and-data-flow/"
+  ],
+  "primary_beginner_destination": "concepts/model/",
+  "reading_sequence": [
+    "How YIDL works",
+    "Generation stages",
+    "Installation",
+    "First generator"
+  ],
+  "full_concept_listing_code_block_index": 5,
+  "preceding_blocks": [
+    "run command",
+    "input declarations excerpt",
+    "resource excerpt",
+    "contribution excerpt",
+    "help command"
+  ],
+  "decisive_consumer_selection_rendered": true,
+  "both_original_records_and_extracted_tuple_rendered": true,
+  "help_checks": "every option described, output default/current-directory behavior and scenario defaults present"
+}

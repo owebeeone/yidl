@@ -1,0 +1,84 @@
+{
+  "base_revision": "e98a22cc987342e1326384ee77cac6198b8bc647",
+  "method": "Literal public shell blocks extracted without edits and executed in a disposable checkout copy; then external tutorial copy",
+  "public_commands": {
+    "build": "uv build --wheel --out-dir build/wheels\nuv venv build/example-env --python 3.12\nuv pip install --python build/example-env/bin/python \\\n  build/wheels/yidl-0.1.0-py3-none-any.whl 'astichi==1.1.3'",
+    "first_use": "ASTICHI_LOWER_ENGINE=python build/example-env/bin/python \\\n  example/documentation/generate.py --out build/first",
+    "help": "build/example-env/bin/python example/documentation/generate.py --help",
+    "external": "yidl_project_dir=\"$PWD\"\nyidl_python=\"$(build/example-env/bin/python -c 'import sys; print(sys.executable)')\"\nyidl_example_dir=\"$(mktemp -d)\"\ncp -R example/documentation \"$yidl_example_dir/tutorial\"\ncd \"$yidl_example_dir/tutorial\"\nenv -u PYTHONPATH -u PYTHONHOME ASTICHI_LOWER_ENGINE=python \\\n  \"$yidl_python\" generate.py --out generated",
+    "cleanup": [
+      "rm -rf -- generated\ncd \"$yidl_project_dir\"",
+      "rm -rf -- build/first build/example-env build/wheels"
+    ]
+  },
+  "environment": {
+    "astichi": "1.1.3",
+    "engine": {
+      "fallback_scope": null,
+      "reason_detail": null,
+      "reason_key": null,
+      "requested_engine": "python",
+      "selected_engine": "python"
+    },
+    "origins": "installed site-packages",
+    "output_files": [
+      "generated/model.py",
+      "generated/runtime.py"
+    ],
+    "python": "3.12.12",
+    "yidl": "0.1.0"
+  },
+  "observations": [
+    {
+      "engine": {
+        "fallback_scope": null,
+        "reason_detail": null,
+        "reason_key": null,
+        "requested_engine": "python",
+        "selected_engine": "python"
+      },
+      "observations": {
+        "Point": [
+          3,
+          4
+        ],
+        "parameters": [
+          "x",
+          "y"
+        ]
+      },
+      "python": "3.12.12"
+    },
+    {
+      "engine": {
+        "fallback_scope": null,
+        "reason_detail": null,
+        "reason_key": null,
+        "requested_engine": "python",
+        "selected_engine": "python"
+      },
+      "observations": {
+        "Point": [
+          3,
+          4
+        ],
+        "parameters": [
+          "x",
+          "y"
+        ]
+      },
+      "python": "3.12.12"
+    }
+  ],
+  "outside_workspace": true,
+  "ambient_python_overrides": "removed before build and explicitly unset for external run",
+  "cleanup": "generated/, build/first, build/example-env and build/wheels absent; original and copied authored .yidl/.py retained",
+  "authored_hashes_unchanged": {
+    "example/documentation/generate.py": "228b7d98fade72280f93378a2fb20dedc9d7c5ece3098103aa3c7924f7a1b8fa",
+    "example/documentation/control_flow.py": "ffab704514cb68dd4b3248bacee43f3ec698261c7cda1af81b7f230780474d14",
+    "example/documentation/comparison.py": "4c444914ee9f6c1dfe0415a01143b988ccf2ca219ba6bb9ad5d1a24ac5cfea86",
+    "example/documentation/captures.py": "2e5968cc82d0b1b0077cadd24466d354357117eea2dd7f8be922d1a05ec3091a",
+    "example/documentation/classes.yidl": "14373e4a18de40af293dbbf5ca02d62e2b991d4b4182e808d532b86f4a1e2dc1"
+  },
+  "exit": 0
+}

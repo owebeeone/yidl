@@ -1,16 +1,33 @@
 # YIDL
 
-YIDL is a declarative Python generator compiler. Define a fact schema, reusable
-Astichi resources, matching rules and ordered assembly; populate facts and build
-plain Python classes. Lifecycle, Dataclass and Undoable are separate consumers.
+YIDL helps you write Python code generators. You describe the information a
+generator needs, reusable pieces of Python code, and rules for choosing and
+combining those pieces. Your Python program supplies the particular inputs and
+runs generation to obtain classes or functions, which applications then use as
+ordinary Python.
 
-**0.1.0 development candidate.** Release planning is accepted; packaging and
-publication readiness are separate. Current metadata omits Astichi, so install
-it explicitly. The existing `yidl-compile` command targets the legacy transducer
-frontend; use the Python concept API for current braced `.yidl` files.
+For example, field-name inputs `x` and `y` can produce a plain slotted Point class
+whose constructor stores its arguments directly. Those generation inputs are
+separate from the instance values supplied later by `Point(3, 4)`.
 
-- [Installation and qualified environment](docs/start/install.md)
-- [Generate a two-field slotted class](docs/start/first-generator.md)
+**New to YIDL?** Follow this sequence before studying the complete example:
+
+1. [How YIDL works](docs/concepts/model.md): what you author, the generator
+   library versus generated application code, and YIDL's relationship to Astichi.
+2. [Generation stages](docs/concepts/generation-pipeline.md): preparation,
+   generation and application execution.
+3. [Installation](docs/start/install.md), then
+   [generate a two-field slotted class](docs/start/first-generator.md).
+
+Already familiar with Python generation? Use the
+[direct run route](docs/start/first-generator.md#run-and-inspect) after installation.
+
+**0.1.0 development candidate; CPython 3.12+.** The recorded example environment
+is qualified separately from that minimum. Current metadata omits Astichi, so
+install it explicitly. The existing `yidl-compile` command targets the legacy
+transducer frontend; use the Python concept API taught here for current braced
+`.yidl` files. Packaging and publication readiness remain separate gates.
+
 - [Matching/property/parameter flow](docs/guides/matching-and-data-flow.md)
 - [Language reference](docs/reference/language.md)
 - [Versions and limitations](docs/reference/compatibility.md)
@@ -18,6 +35,5 @@ frontend; use the Python concept API for current braced `.yidl` files.
 - [Build the navigable HTML documentation](docs/contributing/documentation.md)
 
 The canonical developer contracts are `dev-docs/YidlDesignSummary.md` and
-`dev-docs/YidlCodingRules.md`. Public documentation explains the current generic
-route; older lifecycle design and internal validation material are preserved and
-excluded from public site output. No site deployment is enabled by this change.
+`dev-docs/YidlCodingRules.md`. Older lifecycle design and internal validation
+material are preserved and excluded from public site output.

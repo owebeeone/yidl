@@ -1,0 +1,15 @@
+usage: generate.py [-h] [--out OUT] [--extended] [--empty] [--disabled]
+
+Generate Point(x, y) using installed YIDL and Astichi packages. With no
+scenario flag, generate the two-field Point class. Choose at most one scenario
+flag. Output paths are relative to the current working directory.
+
+options:
+  -h, --help  show this help message and exit
+  --out OUT   Directory for runtime.py and model.py; relative to the current
+              working directory (default: build/documentation)
+  --extended  Generate Point(x, y) and Size(x) (default: False)
+  --empty     Generate Point with no fields and a zero-parameter constructor
+              (default: False)
+  --disabled  Generate Point with slots but omit its __init__ method (default:
+              False)

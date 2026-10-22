@@ -1,4 +1,8 @@
-"""Run from the repository root; uses installed YIDL and Astichi packages."""
+"""Generate Point(x, y) using installed YIDL and Astichi packages.
+
+With no scenario flag, generate the two-field Point class. Choose at most one
+scenario flag. Output paths are relative to the current working directory.
+"""
 
 from __future__ import annotations
 
@@ -108,11 +112,30 @@ def generate(
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--out", type=Path, default=Path("build/documentation"))
-    parser.add_argument("--extended", action="store_true")
-    parser.add_argument("--empty", action="store_true")
-    parser.add_argument("--disabled", action="store_true")
+    parser = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.ArgumentDefaultsHelpFormatter
+    )
+    parser.add_argument(
+        "--out",
+        type=Path,
+        default=Path("build/documentation"),
+        help="Directory for runtime.py and model.py; relative to the current working directory",
+    )
+    parser.add_argument(
+        "--extended",
+        action="store_true",
+        help="Generate Point(x, y) and Size(x)",
+    )
+    parser.add_argument(
+        "--empty",
+        action="store_true",
+        help="Generate Point with no fields and a zero-parameter constructor",
+    )
+    parser.add_argument(
+        "--disabled",
+        action="store_true",
+        help="Generate Point with slots but omit its __init__ method",
+    )
     args = parser.parse_args()
     output = generate(extended=args.extended, empty=args.empty, disabled=args.disabled)
     args.out.mkdir(parents=True, exist_ok=True)
