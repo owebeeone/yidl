@@ -1,5 +1,11 @@
 # Qualified versions and limitations
 
+YIDL's declared Python requirement is **CPython 3.12 or newer (3.12+)**, matching
+`requires-python >=3.12`. The exact CPython 3.12.12 version below records the
+environment used to reproduce these examples. The table describes executed
+qualification; it does not restrict installation to that patch version or qualify
+every Python/backend/platform combination.
+
 **Documentation candidate:** YIDL revision `ee5ded0854aa5b1fc0ddfa7213b765009b63bb95`
 for compiler/runtime bytes, package version 0.1.0; documentation changes are local
 and uncommitted. Version metadata does not establish registry release readiness.

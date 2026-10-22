@@ -1,10 +1,15 @@
 # Install a qualified environment
 
-Use CPython **3.12.12**, YIDL **0.1.0 built from this documentation candidate**,
-Astichi **1.1.3**, and `ASTICHI_LOWER_ENGINE=python` for the demonstrated first use.
-The isolated example run used installed wheels without sibling imports. This is
-a qualified development route, not a claim that `pip install yidl` fetches this
-compiler from a registry.
+YIDL requires **CPython 3.12 or newer (3.12+)**. For the demonstrated first-use
+route, build YIDL **0.1.0 from this documentation candidate**, install Astichi
+**1.1.3** explicitly, and select `ASTICHI_LOWER_ENGINE=python`.
+
+The recorded reproduction environment used CPython **3.12.12** and installed
+wheels without sibling imports. That exact patch version identifies the test
+environment; installation requires 3.12+. Qualification of other Python, backend
+and platform combinations is recorded separately in
+[compatibility](../reference/compatibility.md). This development route does not
+claim that `pip install yidl` fetches this compiler from a registry.
 
 ## Build and install explicitly
 
@@ -13,10 +18,13 @@ installed:
 
 ```sh
 uv build --wheel --out-dir build/wheels
-uv venv build/example-env --python 3.12.12
+uv venv build/example-env --python 3.12
 uv pip install --python build/example-env/bin/python \
   build/wheels/yidl-0.1.0-py3-none-any.whl 'astichi==1.1.3'
 ```
+
+The example selects the CPython 3.12 series; you can select another installed
+CPython 3.12+ interpreter with `--python`.
 
 On Windows the interpreter is `build/example-env/Scripts/python.exe`; use that
 path in place of `build/example-env/bin/python`. Native Windows and other Python
