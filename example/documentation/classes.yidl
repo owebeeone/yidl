@@ -1,0 +1,133 @@
+module documentation.classes
+export concept Classes
+
+concept Classes {
+    property ClassId: str
+    property ClassName: str
+    property ClassOrder: int
+    property SlotNames: object
+    property EnableInit: bool = True
+    property FieldId: str
+    property Owner: str
+    property FieldName: str
+    property FieldOrder: int
+    property Selected: bool = True
+
+    record ClassRow { ClassId ClassName ClassOrder SlotNames EnableInit }
+    record FieldRow { FieldId Owner FieldName FieldOrder Selected }
+    collection Classes: ClassRow identity ClassId many
+    collection Fields: FieldRow identity FieldId many
+
+    resource Module = code $[
+        astichi_hole(classes)
+    ]$
+    resource ClassShell = template $[
+        class class_name__astichi_arg__:
+            __slots__ = astichi_bind_external(slots)
+            astichi_hole(methods)
+    ]$
+    resource Init = template $[
+        def __init__(self, params__astichi_param_hole__):
+            pass
+            astichi_hole(stores)
+    ]$ { keep self, __init__ }
+    resource Parameter = template $[
+        def astichi_params(field_name__astichi_arg__):
+            pass
+    ]$
+    resource Store = template $[
+        astichi_pass(self, outer_bind=True).astichi_ref(external=slot)._ = astichi_pass(value__astichi_arg__, outer_bind=True)
+    ]$
+    resource Empty = template ``
+    resource EmptyParams = template $[
+        def astichi_params():
+            pass
+    ]$
+    resource EmptyStore = template `pass`
+    contribution ClassPass = EmptyStore {
+        as ClassPass
+        target methods { build /ClassDef }
+    }
+    matcher ClassPassSelection(cls: Classes) -> contribution {
+        default -> ClassPass
+    }
+    contribution EmptyParameters = EmptyParams {
+        as EmptyParameters
+        target params { build /InitMethod }
+    }
+    contribution EmptyStatements = EmptyStore {
+        as EmptyStatements
+        target stores { build /InitMethod }
+    }
+    matcher EmptyParameterSelection(cls: Classes) -> contribution {
+        default -> EmptyParameters
+    }
+    matcher EmptyStatementSelection(cls: Classes) -> contribution {
+        default -> EmptyStatements
+    }
+
+    contribution ClassContribution = ClassProduction {
+        as ClassDef
+        index ClassOrder
+        order ClassOrder
+        target classes { build /Root }
+    }
+    contribution InitContribution = InitProduction {
+        as InitMethod
+        target methods { build /ClassDef }
+    }
+    contribution NoInit = Empty {
+        as NoInit
+        target methods { build /ClassDef }
+    }
+    contribution Param = Parameter {
+        as Param
+        index (ClassOrder, FieldOrder)
+        order FieldOrder
+        target params { build /InitMethod }
+        ident field_name = FieldName
+    }
+    contribution Assignment = Store {
+        as Store
+        index (ClassOrder, FieldOrder)
+        order FieldOrder
+        target stores { build /InitMethod }
+        ident value = FieldName
+        external slot = FieldName
+    }
+    matcher ClassSelection(cls: Classes) -> contribution {
+        default -> ClassContribution
+    }
+    matcher InitSelection(cls: Classes) -> contribution {
+        default -> NoInit
+        rule enabled when EnableInit == True -> InitContribution
+    }
+    matcher Params(cls: Classes, field: Fields) -> contribution {
+        rule selected when Owner == ClassId and Selected == True -> Param
+    }
+    matcher Stores(cls: Classes, field: Fields) -> contribution {
+        rule selected when Owner == ClassId and Selected == True -> Assignment
+    }
+    production ModuleProduction -> composable {
+        root Root = Module
+        apply classes from cls: Classes using ClassSelection
+    }
+    production ClassProduction(cls: Classes) -> composable {
+        root ClassDef = ClassShell {
+            ident class_name = ClassName
+            external slots = SlotNames
+        }
+        apply class_pass using ClassPassSelection
+        apply init using InitSelection
+    }
+    production InitProduction(cls: Classes) -> composable {
+        root InitMethod = Init
+        apply empty_params using EmptyParameterSelection
+        apply empty_stores using EmptyStatementSelection
+        apply params from field: Fields
+            where Owner == ClassId and Selected == True using Params
+        apply stores from field: Fields
+            where Owner == ClassId and Selected == True using Stores
+    }
+    assembly Module = ModuleProduction
+}

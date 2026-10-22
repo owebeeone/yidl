@@ -1,0 +1,74 @@
+[
+  {
+    "url": "https://docs.astral.sh/uv/",
+    "status": 403
+  },
+  {
+    "url": "https://github.com/owebeeone/astichi",
+    "status": 200
+  },
+  {
+    "url": "https://github.com/owebeeone/yidl",
+    "status": 200
+  },
+  {
+    "url": "https://github.com/owebeeone/yidl-dataclass/blob/202b01c879eb0ffb724158efe783b379fe522031/src/yidl_dataclass/dataclass.py",
+    "status": 200
+  },
+  {
+    "url": "https://github.com/owebeeone/yidl-dataclass/blob/202b01c879eb0ffb724158efe783b379fe522031/src/yidl_dataclass/yidl/dataclass_core.yidl",
+    "status": 200
+  },
+  {
+    "url": "https://github.com/owebeeone/yidl-dataclass/blob/202b01c879eb0ffb724158efe783b379fe522031/tests/data/goldens/materialized/dataclass_plain/bindings.py",
+    "status": 200
+  },
+  {
+    "url": "https://github.com/owebeeone/yidl-dataclass/blob/202b01c879eb0ffb724158efe783b379fe522031/tests/data/goldens/materialized/dataclass_plain/generated_output_prettier_py312.py",
+    "status": 200
+  },
+  {
+    "url": "https://github.com/owebeeone/yidl-dataclass/tree/202b01c879eb0ffb724158efe783b379fe522031/tests/data/goldens/materialized/comparison_neutral",
+    "status": 200
+  },
+  {
+    "url": "https://github.com/owebeeone/yidl-dataclass/tree/202b01c879eb0ffb724158efe783b379fe522031/tests/data/goldens/materialized/dataclass_field_removal",
+    "status": 200
+  },
+  {
+    "url": "https://github.com/owebeeone/yidl-lifecycle/blob/ee5ba633efdeac9fbdd74cfe67ecd975eab8a26d/src/yidl_lifecycle/yidl/lifecycle_managed.yidl",
+    "status": 200
+  },
+  {
+    "url": "https://github.com/owebeeone/yidl-lifecycle/blob/ee5ba633efdeac9fbdd74cfe67ecd975eab8a26d/tests/data/goldens/materialized/yidl_transactional_phase_f_hooks/generated_output_prettier.py",
+    "status": 200
+  },
+  {
+    "url": "https://github.com/owebeeone/yidl-lifecycle/tree/ee5ba633efdeac9fbdd74cfe67ecd975eab8a26d/tests/data/goldens/materialized/yidl_transactional_phase_f_hooks",
+    "status": 200
+  },
+  {
+    "url": "https://github.com/owebeeone/yidl-undoable/blob/ca68b8271841931506297db316911fe0ed3ad332/src/yidl_undoable/undoable.py",
+    "status": 200
+  },
+  {
+    "url": "https://github.com/owebeeone/yidl-undoable/blob/ca68b8271841931506297db316911fe0ed3ad332/src/yidl_undoable/yidl/undoable_managed.yidl",
+    "status": 200
+  },
+  {
+    "url": "https://github.com/owebeeone/yidl-undoable/blob/ca68b8271841931506297db316911fe0ed3ad332/tests/data/gold_src/02_transactions.py",
+    "status": 200
+  },
+  {
+    "url": "https://github.com/owebeeone/yidl-undoable/blob/ca68b8271841931506297db316911fe0ed3ad332/tests/data/golden/02_transactions.generated.py",
+    "status": 200
+  },
+  {
+    "url": "https://squidfunk.github.io/mkdocs-material/",
+    "status": 200
+  },
+  {
+    "url": "https://squidfunk.github.io/mkdocs-material/getting-started/",
+    "status": 200
+  }
+]

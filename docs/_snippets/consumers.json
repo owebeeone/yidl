@@ -1,0 +1,156 @@
+{
+  "dataclass_resources": {
+    "repository": "yidl-dataclass",
+    "revision": "202b01c879eb0ffb724158efe783b379fe522031",
+    "path": "src/yidl_dataclass/yidl/dataclass_core.yidl",
+    "start": 88,
+    "end": 102,
+    "source_sha256": "1fe335035abae3b473c9af8bd1ea8b44df6df806d7226c2c04c82bd8dcd0f1d7",
+    "excerpt_sha256": "1ae9d79b0f492a5415618fc9f247f499ec6dd850621323f58ba1c2cc7ec1fdb3",
+    "text": "    resource EmptyParams = template $[\n        def astichi_params():\n            pass\n    ]$\n    resource RequiredParam = template $[\n        def astichi_params(param_name__astichi_arg__: annotation_name__astichi_arg__):\n            pass\n    ]$\n    resource DefaultParam = template $[\n        def astichi_params(param_name__astichi_arg__: annotation_name__astichi_arg__ = default_name__astichi_arg__):\n            pass\n    ]$\n    resource InputStore = template $[\n        astichi_pass(self, outer_bind=True).astichi_ref(external=slot_name)._ = astichi_pass(param_name__astichi_arg__, outer_bind=True)\n    ]$\n",
+    "url": "https://github.com/owebeeone/yidl-dataclass/blob/202b01c879eb0ffb724158efe783b379fe522031/src/yidl_dataclass/yidl/dataclass_core.yidl#L88-L102"
+  },
+  "dataclass_binding": {
+    "repository": "yidl-dataclass",
+    "revision": "202b01c879eb0ffb724158efe783b379fe522031",
+    "path": "src/yidl_dataclass/yidl/dataclass_core.yidl",
+    "start": 146,
+    "end": 170,
+    "source_sha256": "1fe335035abae3b473c9af8bd1ea8b44df6df806d7226c2c04c82bd8dcd0f1d7",
+    "excerpt_sha256": "163f758aab65ea90e720670e40b760b574af2da9e7c901770e33780353d75cf9",
+    "text": "    contribution RequiredParamContribution = RequiredParam {\n        as Parameter\n        index ParamOrder\n        order ParamOrder\n        target params { build /InitMethod }\n        ident param_name = FieldName\n        ident annotation_name = AnnotationName\n    }\n    contribution DefaultParamContribution = DefaultParam {\n        as Parameter\n        index ParamOrder\n        order ParamOrder\n        target params { build /InitMethod }\n        ident param_name = FieldName\n        ident annotation_name = AnnotationName\n        ident default_name = DefaultName\n    }\n    contribution InputStoreContribution = InputStore {\n        as Store\n        index FieldOrder\n        order FieldOrder\n        target stores { build /InitMethod }\n        ident param_name = FieldName\n        external slot_name = FieldName\n    }\n",
+    "url": "https://github.com/owebeeone/yidl-dataclass/blob/202b01c879eb0ffb724158efe783b379fe522031/src/yidl_dataclass/yidl/dataclass_core.yidl#L146-L170"
+  },
+  "dataclass_rules": {
+    "repository": "yidl-dataclass",
+    "revision": "202b01c879eb0ffb724158efe783b379fe522031",
+    "path": "src/yidl_dataclass/yidl/dataclass_core.yidl",
+    "start": 260,
+    "end": 267,
+    "source_sha256": "1fe335035abae3b473c9af8bd1ea8b44df6df806d7226c2c04c82bd8dcd0f1d7",
+    "excerpt_sha256": "0fc726f7564233fcf126c4c8279bc02687fff641dd4c198f92d1306da5b1d0b3",
+    "text": "    matcher ParamContributions(field: Fields, cls: Classes) -> contribution {\n        rule required when IncludeParam == True and KwOnly == False and HasDefault == False and HasFactory == False -> RequiredParamContribution\n        rule defaulted when IncludeParam == True and KwOnly == False and HasDefault == True -> DefaultParamContribution\n        rule factory when IncludeParam == True and KwOnly == False and HasFactory == True -> FactoryParamContribution\n        rule required_kw when IncludeParam == True and KwOnly == True and HasDefault == False and HasFactory == False -> RequiredKwParamContribution\n        rule defaulted_kw when IncludeParam == True and KwOnly == True and HasDefault == True -> DefaultKwParamContribution\n        rule factory_kw when IncludeParam == True and KwOnly == True and HasFactory == True -> FactoryKwParamContribution\n    }\n",
+    "url": "https://github.com/owebeeone/yidl-dataclass/blob/202b01c879eb0ffb724158efe783b379fe522031/src/yidl_dataclass/yidl/dataclass_core.yidl#L260-L267"
+  },
+  "dataclass_facts": {
+    "repository": "yidl-dataclass",
+    "revision": "202b01c879eb0ffb724158efe783b379fe522031",
+    "path": "src/yidl_dataclass/dataclass.py",
+    "start": 179,
+    "end": 197,
+    "source_sha256": "884b3784452247628e8955c98e17332141a502dbcb5a776b9edfbbe0e1840e69",
+    "excerpt_sha256": "cf7ce32c04dcc7585ee8559c7b7cc13450c474749511e3415f9e80da9bf71d39",
+    "text": "            builder.add(\n                generated.FieldsCollection,\n                generated.DataclassField(\n                    field_id=f\"Model.{item.name}\",\n                    field_owner=\"Model\",\n                    field_name=item.name,\n                    field_order=index,\n                    annotation_name=item.annotation_name,\n                    default_name=item.default_name,\n                    factory_name=item.factory_name,\n                    has_default=metadata.default is not std.MISSING,\n                    has_factory=metadata.default_factory is not std.MISSING,\n                    include_param=metadata.init,\n                    param_order=item.parameter_order,\n                    kw_only=metadata.kw_only,\n                    install_default=install_default,\n                    install_factory=install_factory,\n                ),\n            )\n",
+    "url": "https://github.com/owebeeone/yidl-dataclass/blob/202b01c879eb0ffb724158efe783b379fe522031/src/yidl_dataclass/dataclass.py#L179-L197"
+  },
+  "dataclass_output": {
+    "repository": "yidl-dataclass",
+    "revision": "202b01c879eb0ffb724158efe783b379fe522031",
+    "path": "tests/data/goldens/materialized/dataclass_plain/generated_output_prettier_py312.py",
+    "start": 1,
+    "end": 14,
+    "source_sha256": "6d831663930b1a1bc076fe26efa7cf8ad182e2b105100239c2f86798391416a4",
+    "excerpt_sha256": "029a80c14f7d5e07fcb77c152b48d1d22489d339cb6bddad2e628c4c38652bbd",
+    "text": "class Inventory(*_y_dc_bases, metaclass=_y_dc_metaclass):\n    locals().update(_y_dc_namespace)\n    __slots__ = (\"count\", \"label\", \"reserve\")\n\n    def __init__(\n        self,\n        count: _y_dc_annotation_0,\n        label: _y_dc_annotation_1 = _y_dc_default_1,\n        reserve: _y_dc_annotation_2 = _y_dc_default_2,\n    ) -> None:\n        pass\n        self.count = count\n        self.label = label\n        self.reserve = reserve\n",
+    "url": "https://github.com/owebeeone/yidl-dataclass/blob/202b01c879eb0ffb724158efe783b379fe522031/tests/data/goldens/materialized/dataclass_plain/generated_output_prettier_py312.py#L1-L14"
+  },
+  "dataclass_behavior": {
+    "repository": "yidl-dataclass",
+    "revision": "202b01c879eb0ffb724158efe783b379fe522031",
+    "path": "tests/data/goldens/materialized/dataclass_plain/bindings.py",
+    "start": 1,
+    "end": 24,
+    "source_sha256": "7a2d9e1262cab697d419d558685c09f2f42a9cb5497487d55182c00a9c05cb19",
+    "excerpt_sha256": "ae7d02b3069fec7df5ccb8d9c042c1244185a8b8f02791f39920af918e7b5780",
+    "text": "\"\"\"Canonical direct-storage and constructor contrast; no comparison/repr yet.\"\"\"\n\nfrom inspect import signature\nfrom yidl_dataclass import dataclass, generated_source\n\n\ndef render_case():\n    @dataclass(eq=False, repr=False)\n    class Inventory:\n        count: int\n        label: str = \"stock\"\n        reserve: int = 2\n\n    assert Inventory.__slots__ == (\"count\", \"label\", \"reserve\")\n    first = Inventory(3)\n    second = Inventory(8, \"custom\", 5)\n    third = Inventory(count=0, reserve=9)\n    assert not hasattr(first, \"__dict__\")\n    first.count = 4\n    assert (first.count, first.label, first.reserve) == (4, \"stock\", 2)\n    assert (second.count, second.label, second.reserve) == (8, \"custom\", 5)\n    assert (third.count, third.label, third.reserve) == (0, \"stock\", 9)\n\n    class SharedSlot:\n",
+    "url": "https://github.com/owebeeone/yidl-dataclass/blob/202b01c879eb0ffb724158efe783b379fe522031/tests/data/goldens/materialized/dataclass_plain/bindings.py#L1-L24"
+  },
+  "undoable_resource": {
+    "repository": "yidl_undoable",
+    "revision": "ca68b8271841931506297db316911fe0ed3ad332",
+    "path": "src/yidl_undoable/yidl/undoable_managed.yidl",
+    "start": 1,
+    "end": 26,
+    "source_sha256": "e550d63f3b405415f2159797992039893498100835dbd189b8417255ec268bc4",
+    "excerpt_sha256": "e550d63f3b405415f2159797992039893498100835dbd189b8417255ec268bc4",
+    "text": "module undoable.managed\nimport \"undoable_const_static.yidl\" as previous\nexport concept UndoableManaged\nconcept UndoableManaged extends previous.UndoableConstStatic {\n    family previous.UndoableField {\n        variant ManagedField {}\n    }\n    computed collection ManagedFields: UndoableField from Fields where FieldKind == \"managed\"\n    resource ManagedFieldProperty = template $[\n        @property\n        def getter__astichi_arg__(self):\n            return self._u_read_managed(astichi_bind_external(field_name))\n        @setter_target__astichi_arg__.setter\n        def setter__astichi_arg__(self, value):\n            self._u_write_managed(astichi_bind_external(field_name), value)\n    ]$\n    contribution ManagedFieldAccessor = ManagedFieldProperty {\n        index FieldOrder order FieldOrder target properties { build /ClassDef }\n        ident getter = FieldName ident setter_target = FieldName ident setter = FieldName\n        external field_name = FieldName\n    }\n    matcher ManagedFieldAccessors(field: ManagedFields) -> contribution { default -> ManagedFieldAccessor }\n    extend production ClassProduction {\n        phase properties_managed after properties_plain from field: ManagedFields { apply ManagedField_properties using ManagedFieldAccessors }\n    }\n}\n",
+    "url": "https://github.com/owebeeone/yidl-undoable/blob/ca68b8271841931506297db316911fe0ed3ad332/src/yidl_undoable/yidl/undoable_managed.yidl#L1-L26"
+  },
+  "undoable_facts": {
+    "repository": "yidl_undoable",
+    "revision": "ca68b8271841931506297db316911fe0ed3ad332",
+    "path": "src/yidl_undoable/undoable.py",
+    "start": 25,
+    "end": 44,
+    "source_sha256": "2b96f54085a729b384ca837bfd8eb29c7500d0565651574e4ff2f7f07a22095f",
+    "excerpt_sha256": "954b094ff08e5fd2f6fae58a053134f26d7a021da315b5d681c1360e9f26ffb9",
+    "text": "def build_composable(schema, *, generation_module=generated):\n    generated = generation_module\n    builder = generated.new_builder()\n    aliases = capture_ids(schema.name)\n    builder.add(\n        generated.ClassesCollection,\n        generated.UndoableClass(\n            class_id=aliases[0],\n            class_name=schema.name,\n            current_class_name=schema.name + \"_Current\",\n            working_class_name=schema.name + \"_Working\",\n            restore_identity=schema.restore_identity,\n            restore_order=schema.restore_order,\n        ),\n    )\n    for fact in schema.fields:\n        record = getattr(generated, RECORDS[fact[\"field_kind\"]])\n        kwargs = {name: fact[name] for name in record.__slots__ if name in fact}\n        kwargs[\"is_lazy\"] = fact[\"field_kind\"] == \"static\"\n        builder.add(generated.FieldsCollection, record(**kwargs))\n",
+    "url": "https://github.com/owebeeone/yidl-undoable/blob/ca68b8271841931506297db316911fe0ed3ad332/src/yidl_undoable/undoable.py#L25-L44"
+  },
+  "undoable_output": {
+    "repository": "yidl_undoable",
+    "revision": "ca68b8271841931506297db316911fe0ed3ad332",
+    "path": "tests/data/golden/02_transactions.generated.py",
+    "start": 25,
+    "end": 32,
+    "source_sha256": "9b3d5b6ca2a9f0c1324db7a6978de6374322a4246f2a92b26eaefd625152e315",
+    "excerpt_sha256": "43fd03b1dfbd3a0380662939397ad697e299cf8a009bffa9d406ab5274ee5468",
+    "text": "\n        @property\n        def value(self):\n            return self._u_read_managed('value')\n\n        @value.setter\n        def value(self, value):\n            self._u_write_managed('value', value)\n",
+    "url": "https://github.com/owebeeone/yidl-undoable/blob/ca68b8271841931506297db316911fe0ed3ad332/tests/data/golden/02_transactions.generated.py#L25-L32"
+  },
+  "undoable_behavior": {
+    "repository": "yidl_undoable",
+    "revision": "ca68b8271841931506297db316911fe0ed3ad332",
+    "path": "tests/data/gold_src/02_transactions.py",
+    "start": 1,
+    "end": 25,
+    "source_sha256": "d4ce37e629d00c788d3e10e422221dec7841310bd117ebd7f2f4e0339bf18de5",
+    "excerpt_sha256": "b0b085682bdec3f6fe76ed6082a5662bc94134bf6ed86a9442ccc0e7e0ae9dd6",
+    "text": "import pytest\nfrom yidl_undoable import *\n\n\n@undoable\nclass Item:\n    value: int = managed(default=1)\n    sequence: tuple = managed(default=(1,), thaw=list, freeze=tuple)\n    plain: int = field(default=0)\n\n\nh = UndoRedoManager()\na = Item(transaction_manager=h)\nh.initialize(a)\nwith pytest.raises(TransactionRequiredError):\n    a.value = 2\nwith h.begin() as token:\n    assert h.active_transaction_for() is token\n    a.value = 2\n    a.plain = 7\n    assert a.value == a.working.value == 2 and a.current.value == 1\n    assert a.sequence == (1,)\n    working = a.working.sequence\n    assert working is a.working.sequence\n    working.append(2)\n",
+    "url": "https://github.com/owebeeone/yidl-undoable/blob/ca68b8271841931506297db316911fe0ed3ad332/tests/data/gold_src/02_transactions.py#L1-L25"
+  },
+  "lifecycle_resource": {
+    "repository": "yidl-lifecycle",
+    "revision": "ee5ba633efdeac9fbdd74cfe67ecd975eab8a26d",
+    "path": "src/yidl_lifecycle/yidl/lifecycle_managed.yidl",
+    "start": 241,
+    "end": 265,
+    "source_sha256": "cd1195a48fef62118337b6ddee5372f0c81f38457eb45e54b93fa88a4fea377c",
+    "excerpt_sha256": "08c19420b684f86e4c7424080bb0e175d57b03da76d358a41c55041f63f66446",
+    "text": "    resource ManagedDefaultProperty = template $[\n        @property\n        def property_getter_name__astichi_arg__(self):\n            state = self._y_state\n            if state.astichi_ref(external=working_slot) is not VOID:\n                return state.astichi_ref(external=working_slot)\n            return state.astichi_ref(external=current_slot)\n\n        @property_setter_target_name__astichi_arg__.setter\n        def property_setter_name__astichi_arg__(self, value):\n            state = self._y_state\n            state._y_require_active_transaction(astichi_bind_external(tx_index))\n            if state.astichi_ref(external=working_slot) is not VOID:\n                current = state.astichi_ref(external=working_slot)\n            else:\n                current = state.astichi_ref(external=current_slot)\n            next_value = value\n            with astichi_hole(compare_guard) as astichi_fallback:\n                if current == next_value:\n                    return\n            state._y_ensure_working_transaction(astichi_bind_external(tx_index))\n            state.astichi_ref(external=working_slot)._ = next_value\n    ]$ {\n        keep VOID\n    }\n",
+    "url": "https://github.com/owebeeone/yidl-lifecycle/blob/ee5ba633efdeac9fbdd74cfe67ecd975eab8a26d/src/yidl_lifecycle/yidl/lifecycle_managed.yidl#L241-L265"
+  },
+  "lifecycle_binding": {
+    "repository": "yidl-lifecycle",
+    "revision": "ee5ba633efdeac9fbdd74cfe67ecd975eab8a26d",
+    "path": "src/yidl_lifecycle/yidl/lifecycle_managed.yidl",
+    "start": 761,
+    "end": 777,
+    "source_sha256": "cd1195a48fef62118337b6ddee5372f0c81f38457eb45e54b93fa88a4fea377c",
+    "excerpt_sha256": "7c6e7d03cc6c5031bb77bf84a370d3de9d70e1756bb0297c3e88753e58f5a0b1",
+    "text": "    }\n\n    contribution ManagedDefaultFacadeProperty = ManagedDefaultProperty {\n        as ManagedDefaultFacadeProperty\n        index FieldOrder\n        order FieldOrder\n\n        target default_facade_properties {\n            build /ClassDef\n        }\n\n        ident property_getter_name = FieldName\n        ident property_setter_target_name = FieldName\n        ident property_setter_name = FieldName\n        external current_slot = CurrentSlotName\n        external working_slot = WorkingSlotName\n        external tx_index = TxIndex\n",
+    "url": "https://github.com/owebeeone/yidl-lifecycle/blob/ee5ba633efdeac9fbdd74cfe67ecd975eab8a26d/src/yidl_lifecycle/yidl/lifecycle_managed.yidl#L761-L777"
+  },
+  "lifecycle_rule": {
+    "repository": "yidl-lifecycle",
+    "revision": "ee5ba633efdeac9fbdd74cfe67ecd975eab8a26d",
+    "path": "src/yidl_lifecycle/yidl/lifecycle_managed.yidl",
+    "start": 1266,
+    "end": 1268,
+    "source_sha256": "cd1195a48fef62118337b6ddee5372f0c81f38457eb45e54b93fa88a4fea377c",
+    "excerpt_sha256": "289ad6f1760520ca363bc2a626fa71c16dafa6ce4bc540aee606a1daf604bcac",
+    "text": "    }\n\n    matcher ManagedDefaultFacadePropertyContributions(field: IndexedTransactionalFields) -> contribution {\n",
+    "url": "https://github.com/owebeeone/yidl-lifecycle/blob/ee5ba633efdeac9fbdd74cfe67ecd975eab8a26d/src/yidl_lifecycle/yidl/lifecycle_managed.yidl#L1266-L1268"
+  },
+  "lifecycle_output": {
+    "repository": "yidl-lifecycle",
+    "revision": "ee5ba633efdeac9fbdd74cfe67ecd975eab8a26d",
+    "path": "tests/data/goldens/materialized/yidl_transactional_phase_f_hooks/generated_output_prettier.py",
+    "start": 482,
+    "end": 501,
+    "source_sha256": "9d3f0bd4f27e4d5ee14ea836768c22e7823d64a09e56eb335f7ca21b5ffa9966",
+    "excerpt_sha256": "f214c7f3bb8aabda346ac5f74eb0bfe2f842999d05de56b4685a4359bde4f54e",
+    "text": "        def count(self):\n            state = self._y_state\n            if state._y_count_working is not VOID:\n                return state._y_count_working\n            return state._y_count_current\n\n        @count.setter\n        def count(self, value):\n            state = self._y_state\n            state._y_require_active_transaction(0)\n            if state._y_count_working is not VOID:\n                current = state._y_count_working\n            else:\n                current = state._y_count_current\n            next_value = value\n            if current == next_value:\n                return\n            state._y_ensure_working_transaction(0)\n            state._y_count_working = next_value\n\n",
+    "url": "https://github.com/owebeeone/yidl-lifecycle/blob/ee5ba633efdeac9fbdd74cfe67ecd975eab8a26d/tests/data/goldens/materialized/yidl_transactional_phase_f_hooks/generated_output_prettier.py#L482-L501"
+  }
+}

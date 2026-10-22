@@ -1,0 +1,103 @@
+site_name: YIDL
+site_description: Generate Python from concepts, facts, resources and assembly rules.
+site_url: https://owebeeone.github.io/yidl/
+repo_url: https://github.com/owebeeone/yidl
+repo_name: owebeeone/yidl
+edit_uri: edit/main/docs/
+docs_dir: docs
+site_dir: build/docs-site
+strict: true
+exclude_docs: |
+  /validation/
+  /YIDLDesign.md
+  /YIDLFrontendDesign.md
+  /YIDLRuntimeClassModel.md
+  /YIDLCodegenDesign.md
+  /_snippets/
+hooks:
+  - dev-docs/documentation/site_hooks.py
+theme:
+  name: material
+  palette:
+    - media: '(prefers-color-scheme: light)'
+      scheme: default
+      primary: deep purple
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - media: '(prefers-color-scheme: dark)'
+      scheme: slate
+      primary: deep purple
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.sections
+    - navigation.footer
+    - navigation.top
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+plugins:
+  - search
+markdown_extensions:
+  - admonition
+  - attr_list
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.highlight
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+validation:
+  nav:
+    omitted_files: warn
+    not_found: warn
+  links:
+    not_found: warn
+    anchors: warn
+    unrecognized_links: warn
+nav:
+  - Home: index.md
+  - Start Here:
+      - Installation: start/install.md
+      - First generator: start/first-generator.md
+      - Project layout: start/project-layout.md
+      - Inspect output: start/inspect-output.md
+  - Concepts:
+      - Definitions and facts: concepts/model.md
+      - Generation pipeline: concepts/generation-pipeline.md
+      - Surfaces and shapes: concepts/surfaces-and-shapes.md
+      - Composition: concepts/composition.md
+      - Binding and ownership: concepts/binding-and-ownership.md
+  - Guides and Recipes:
+      - Classes and methods: guides/classes-and-methods.md
+      - Constructors and calls: guides/constructors-and-calls.md
+      - Expressions and order: guides/expressions-and-order.md
+      - Scopes and targets: guides/scopes-and-targets.md
+      - Extending concepts: guides/extending-concepts.md
+      - Fact production: guides/fact-production.md
+      - Matching and data flow: guides/matching-and-data-flow.md
+      - Shared resources: guides/shared-resources.md
+      - Debugging assembly: guides/debugging-assembly.md
+  - Reference:
+      - Language: reference/language.md
+      - Data model: reference/data-model.md
+      - Matchers: reference/matchers.md
+      - Assembly: reference/assembly.md
+      - Generated values: reference/generated-values.md
+      - Astichi bridge: reference/astichi-bridge.md
+      - APIs and CLI: reference/apis-and-cli.md
+      - Compatibility: reference/compatibility.md
+      - Caching and performance: reference/caching-and-performance.md
+  - Examples:
+      - Runnable catalog: examples/index.md
+      - Generated gallery: examples/generated-gallery.md
+      - Used in practice: examples/consumers.md
+  - Troubleshooting: troubleshooting/index.md
+  - Contributing:
+      - Documentation: contributing/documentation.md
+      - Preview and publication: contributing/site-publication.md
