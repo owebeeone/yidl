@@ -1,0 +1,1064 @@
+{
+  "schema": "yidl.original-candidate-qualification.v1",
+  "date": "2026-10-23",
+  "source_commits": {
+    "astichi": "ce47c629973d8e5a6340ceaa89b0bc3e8788d5fe",
+    "yidl": "ee5ded0854aa5b1fc0ddfa7213b765009b63bb95",
+    "yidl-lifecycle": "ee5ba633efdeac9fbdd74cfe67ecd975eab8a26d",
+    "yidl-dataclass": "202b01c879eb0ffb724158efe783b379fe522031",
+    "yidl_undoable": "ca68b8271841931506297db316911fe0ed3ad332",
+    "yidl-cache": "a4ae595e0f9835a86dadec3bedebd383ebf9ae2f"
+  },
+  "published_root": "e5ac6a77ca1dadcfde4afe7554b55fad3835b4a6",
+  "windows_root": "f5f318a798b75a6a8bcd45bd4ee7ae54064052f2",
+  "reference_pyrolyze": {
+    "mac": "092d055294df97666bee473126708c2868379c2d",
+    "pi": "092d055294df97666bee473126708c2868379c2d",
+    "windows": "0ae2e710eafe4a9b7729e2e40f83a2a19540911d"
+  },
+  "native_call_sample_limit": 500,
+  "qualification_plugin_sha256": "9649bc3425fb344cb2f1a722e0724e8a6ff6e20c76f2d87ee25cee64e284a636",
+  "common_environment": {
+    "YIDL_LIFECYCLE_CACHE": "off",
+    "PYTHONDONTWRITEBYTECODE": "1",
+    "PYTEST_DISABLE_PLUGIN_AUTOLOAD": "1"
+  },
+  "pytest_arguments": [
+    "-q",
+    "-p",
+    "no:cacheprovider",
+    "-p",
+    "yidl_qual_plugin"
+  ],
+  "rust_toolchains": {
+    "mac": "1.96.0 (ac68faa20 2026-05-25)",
+    "pi": "1.96.0 (ac68faa20 2026-05-25)",
+    "windows": "1.98.1 (797e8a9bc 2026-08-05)"
+  },
+  "hosts": {
+    "mac": {
+      "python": "3.12.12 (main, Feb  4 2026, 01:57:59) [Clang 21.1.4 ]",
+      "platform": "macOS-26.6.2-arm64-arm-64bit",
+      "machine": "arm64",
+      "native": {
+        "file": "../astichi/native_engine/_astichi_native_engine.cpython-312-darwin.so",
+        "sha256": "8266d234e9de1767b04c7a8291727b70164d3e6376f2562651252fa363f895c5",
+        "capabilities": {
+          "abi_schema_version": 1,
+          "version": "1.0.7",
+          "backend_label": "rust-pyo3-core",
+          "build_profile": "cargo release",
+          "engine_features": [
+            "native.extension.v1",
+            "native.engine_core.v1",
+            "native.parser_ir.v1",
+            "native.surface_registry.v1",
+            "native.pattern_registry.v1",
+            "native.template_snapshot.empty.v1",
+            "native.template_extract.direct_call.v1",
+            "native.template_extract.identifier_suffix.v1",
+            "native.template_extract.payload.v1",
+            "native.template_extract.insert_metadata.v1",
+            "native.occurrence_store.v1",
+            "native.record_indexes.v1",
+            "native.candidate_query.v1",
+            "native.overlay_store.v1",
+            "native.materialization_operation_stream.v1",
+            "native.materialization_overlay_stream.v1",
+            "native.materialization_workspace.v1",
+            "native.materialization_expression.v1",
+            "native.materialization_block.v1",
+            "native.materialization_parameters.v1",
+            "native.materialization_call_arguments.v1",
+            "native.materialization_identifier_overlay.v1",
+            "native.materialization_literal_ref.v1",
+            "native.materialization_external_overlay_literal.v1",
+            "native.hygiene_gate.v1",
+            "native.artifact_builder.python_ast.baseline.v1",
+            "native.lower_template_package_v2.snapshot.partial.v1",
+            "native.lower_template_package_v2.v1",
+            "native.full_lower_engine.current_surfaces.v1",
+            "native.self_native.literal_payload_abi.v1",
+            "native.self_native.scope_no_mirror_replay.v1",
+            "native.self_native.bind_external.v1",
+            "native.self_native.bind_identifier.v1",
+            "native.self_native.keep_names.v1",
+            "native.self_native.reproject.v1",
+            "native.self_native.facade_builder_tree_projection.v1",
+            "native.self_native.compile_validation.v1",
+            "native.self_native.no_python_parse_compile.v1",
+            "native.self_native.materialize_no_python_fallback.v1",
+            "native.self_native.current_surfaces.v1",
+            "native.self_native.handoff_transfer.v1",
+            "native.self_native.no_pydict_snapshots.v1"
+          ],
+          "supported_bundle_schema_versions": [
+            1
+          ],
+          "supported_snapshot_schema_versions": [
+            1
+          ],
+          "supported_operation_primitives": [],
+          "artifact_kinds": [
+            "python_ast"
+          ],
+          "parser_backend": "rustpython-parser 0.4.0",
+          "parser_grammar_version": "python-3-compatible",
+          "parsing_releases_gil": true,
+          "materialization_releases_gil": false
+        }
+      }
+    },
+    "windows": {
+      "python": "3.13.5 (tags/v3.13.5:6cb20a2, Jun 11 2025, 16:15:46) [MSC v.1943 64 bit (AMD64)]",
+      "platform": "Windows-11-10.0.26200-SP0",
+      "machine": "AMD64",
+      "native": {
+        "file": "../astichi/native_engine/_astichi_native_engine.cp313-win_amd64.pyd",
+        "sha256": "db81f125ed30c3b39eea2160c2f296493b2aee59ff712f187e9aa540d3572da6",
+        "capabilities": {
+          "abi_schema_version": 1,
+          "version": "1.0.7",
+          "backend_label": "rust-pyo3-core",
+          "build_profile": "cargo release",
+          "engine_features": [
+            "native.extension.v1",
+            "native.engine_core.v1",
+            "native.parser_ir.v1",
+            "native.surface_registry.v1",
+            "native.pattern_registry.v1",
+            "native.template_snapshot.empty.v1",
+            "native.template_extract.direct_call.v1",
+            "native.template_extract.identifier_suffix.v1",
+            "native.template_extract.payload.v1",
+            "native.template_extract.insert_metadata.v1",
+            "native.occurrence_store.v1",
+            "native.record_indexes.v1",
+            "native.candidate_query.v1",
+            "native.overlay_store.v1",
+            "native.materialization_operation_stream.v1",
+            "native.materialization_overlay_stream.v1",
+            "native.materialization_workspace.v1",
+            "native.materialization_expression.v1",
+            "native.materialization_block.v1",
+            "native.materialization_parameters.v1",
+            "native.materialization_call_arguments.v1",
+            "native.materialization_identifier_overlay.v1",
+            "native.materialization_literal_ref.v1",
+            "native.materialization_external_overlay_literal.v1",
+            "native.hygiene_gate.v1",
+            "native.artifact_builder.python_ast.baseline.v1",
+            "native.lower_template_package_v2.snapshot.partial.v1",
+            "native.lower_template_package_v2.v1",
+            "native.full_lower_engine.current_surfaces.v1",
+            "native.self_native.literal_payload_abi.v1",
+            "native.self_native.scope_no_mirror_replay.v1",
+            "native.self_native.bind_external.v1",
+            "native.self_native.bind_identifier.v1",
+            "native.self_native.keep_names.v1",
+            "native.self_native.reproject.v1",
+            "native.self_native.facade_builder_tree_projection.v1",
+            "native.self_native.compile_validation.v1",
+            "native.self_native.no_python_parse_compile.v1",
+            "native.self_native.materialize_no_python_fallback.v1",
+            "native.self_native.current_surfaces.v1",
+            "native.self_native.handoff_transfer.v1",
+            "native.self_native.no_pydict_snapshots.v1"
+          ],
+          "supported_bundle_schema_versions": [
+            1
+          ],
+          "supported_snapshot_schema_versions": [
+            1
+          ],
+          "supported_operation_primitives": [],
+          "artifact_kinds": [
+            "python_ast"
+          ],
+          "parser_backend": "rustpython-parser 0.4.0",
+          "parser_grammar_version": "python-3-compatible",
+          "parsing_releases_gil": true,
+          "materialization_releases_gil": false
+        }
+      },
+      "computer_name": "DABEEST"
+    },
+    "pi": {
+      "python": "3.13.5 (main, Jun 25 2025, 18:55:22) [GCC 14.2.0]",
+      "platform": "Linux-6.12.62+rpt-rpi-2712-aarch64-with-glibc2.41",
+      "machine": "aarch64",
+      "native": {
+        "file": "../astichi/native_engine/_astichi_native_engine.cpython-313-aarch64-linux-gnu.so",
+        "sha256": "0332446883d2d9ecd68a8d5e23049db28aad99947cf5b189920cb43aaa0dc783",
+        "capabilities": {
+          "abi_schema_version": 1,
+          "version": "1.0.7",
+          "backend_label": "rust-pyo3-core",
+          "build_profile": "cargo release",
+          "engine_features": [
+            "native.extension.v1",
+            "native.engine_core.v1",
+            "native.parser_ir.v1",
+            "native.surface_registry.v1",
+            "native.pattern_registry.v1",
+            "native.template_snapshot.empty.v1",
+            "native.template_extract.direct_call.v1",
+            "native.template_extract.identifier_suffix.v1",
+            "native.template_extract.payload.v1",
+            "native.template_extract.insert_metadata.v1",
+            "native.occurrence_store.v1",
+            "native.record_indexes.v1",
+            "native.candidate_query.v1",
+            "native.overlay_store.v1",
+            "native.materialization_operation_stream.v1",
+            "native.materialization_overlay_stream.v1",
+            "native.materialization_workspace.v1",
+            "native.materialization_expression.v1",
+            "native.materialization_block.v1",
+            "native.materialization_parameters.v1",
+            "native.materialization_call_arguments.v1",
+            "native.materialization_identifier_overlay.v1",
+            "native.materialization_literal_ref.v1",
+            "native.materialization_external_overlay_literal.v1",
+            "native.hygiene_gate.v1",
+            "native.artifact_builder.python_ast.baseline.v1",
+            "native.lower_template_package_v2.snapshot.partial.v1",
+            "native.lower_template_package_v2.v1",
+            "native.full_lower_engine.current_surfaces.v1",
+            "native.self_native.literal_payload_abi.v1",
+            "native.self_native.scope_no_mirror_replay.v1",
+            "native.self_native.bind_external.v1",
+            "native.self_native.bind_identifier.v1",
+            "native.self_native.keep_names.v1",
+            "native.self_native.reproject.v1",
+            "native.self_native.facade_builder_tree_projection.v1",
+            "native.self_native.compile_validation.v1",
+            "native.self_native.no_python_parse_compile.v1",
+            "native.self_native.materialize_no_python_fallback.v1",
+            "native.self_native.current_surfaces.v1",
+            "native.self_native.handoff_transfer.v1",
+            "native.self_native.no_pydict_snapshots.v1"
+          ],
+          "supported_bundle_schema_versions": [
+            1
+          ],
+          "supported_snapshot_schema_versions": [
+            1
+          ],
+          "supported_operation_primitives": [],
+          "artifact_kinds": [
+            "python_ast"
+          ],
+          "parser_backend": "rustpython-parser 0.4.0",
+          "parser_grammar_version": "python-3-compatible",
+          "parsing_releases_gil": true,
+          "materialization_releases_gil": false
+        }
+      },
+      "hardware_model": "Raspberry Pi 5 Model B Rev 1.0"
+    }
+  },
+  "runs": [
+    {
+      "host": "mac",
+      "phase": "original-shared-environment",
+      "run": "native-rust-yidl-cache",
+      "backend_independent": true,
+      "exit_code": 1,
+      "exit_code_source": "runner JSONL",
+      "final_for_scope": false,
+      "original_log_sha256": "a8faa3e526bd5410d2b07f21de0351eda21ea4f7d22c5694c811c7efab2fe099",
+      "engine": {
+        "requested_engine": "native-rust",
+        "selected_engine": "native-rust",
+        "fallback_scope": null,
+        "reason_key": null,
+        "reason_detail": null
+      },
+      "native_call_sample": {},
+      "summary": [
+        "1 failed, 56 passed in 0.31s"
+      ],
+      "failures": [
+        "tests/test_generated_code_cache.py::test_independent_record_fixture_reuses_code_in_a_fresh_process"
+      ]
+    },
+    {
+      "host": "mac",
+      "phase": "original-shared-environment",
+      "run": "native-rust-yidl-dataclass",
+      "backend_independent": false,
+      "exit_code": 0,
+      "exit_code_source": "runner JSONL",
+      "final_for_scope": true,
+      "original_log_sha256": "79006beb188b0d18e64e67d47bd760f8e496a2ffc85cc53432213ee13686df75",
+      "engine": {
+        "requested_engine": "native-rust",
+        "selected_engine": "native-rust",
+        "fallback_scope": null,
+        "reason_key": null,
+        "reason_detail": null
+      },
+      "native_call_sample": {
+        "_astichi_native_engine.capabilities": 336,
+        "_astichi_native_engine.compile_validate_source": 38,
+        "_astichi_native_engine.engine_create": 2,
+        "_astichi_native_engine.register_surface_bundle": 2,
+        "_astichi_native_engine.register_template_package_v2_source": 52,
+        "_astichi_native_engine.lower_template_package_v2_from_registered_template": 38,
+        "_astichi_native_engine.engine_snapshot": 1,
+        "_astichi_native_engine.assembly_state_create": 1,
+        "_astichi_native_engine.assembly_state_append_occurrence": 1,
+        "_astichi_native_engine.assembly_state_apply_request_batch": 29
+      },
+      "summary": [
+        "259 passed, 3 skipped in 56.61s"
+      ],
+      "failures": []
+    },
+    {
+      "host": "mac",
+      "phase": "original-shared-environment",
+      "run": "native-rust-yidl-lifecycle",
+      "backend_independent": false,
+      "exit_code": 0,
+      "exit_code_source": "runner JSONL",
+      "final_for_scope": true,
+      "original_log_sha256": "6424e2c73f4efbb341b29dce7cee64ec28e2cc59f4559a2c9dc9fb718e8e2ced",
+      "engine": {
+        "requested_engine": "native-rust",
+        "selected_engine": "native-rust",
+        "fallback_scope": null,
+        "reason_key": null,
+        "reason_detail": null
+      },
+      "native_call_sample": {
+        "_astichi_native_engine.capabilities": 340,
+        "_astichi_native_engine.compile_validate_source": 39,
+        "_astichi_native_engine.engine_create": 2,
+        "_astichi_native_engine.register_surface_bundle": 2,
+        "_astichi_native_engine.register_template_package_v2_source": 54,
+        "_astichi_native_engine.lower_template_package_v2_from_registered_template": 39,
+        "_astichi_native_engine.engine_snapshot": 1,
+        "_astichi_native_engine.assembly_state_create": 1,
+        "_astichi_native_engine.assembly_state_append_occurrence": 1,
+        "_astichi_native_engine.assembly_state_apply_request_batch": 21
+      },
+      "summary": [
+        "434 passed, 46 skipped in 75.68s (0:01:15)"
+      ],
+      "failures": []
+    },
+    {
+      "host": "mac",
+      "phase": "original-shared-environment",
+      "run": "native-rust-yidl",
+      "backend_independent": false,
+      "exit_code": 0,
+      "exit_code_source": "runner JSONL",
+      "final_for_scope": true,
+      "original_log_sha256": "5bcb42fcd9da1d16b198ed2293d75f5ce81dbbcd36261af9e20d0f9a9b52d30a",
+      "engine": {
+        "requested_engine": "native-rust",
+        "selected_engine": "native-rust",
+        "fallback_scope": null,
+        "reason_key": null,
+        "reason_detail": null
+      },
+      "native_call_sample": {
+        "_astichi_native_engine.capabilities": 305,
+        "_astichi_native_engine.compile_validate_source": 33,
+        "_astichi_native_engine.engine_create": 11,
+        "_astichi_native_engine.register_surface_bundle": 10,
+        "_astichi_native_engine.register_template_package_v2_source": 33,
+        "_astichi_native_engine.lower_template_package_v2_from_registered_template": 33,
+        "_astichi_native_engine.engine_snapshot": 10,
+        "_astichi_native_engine._copy_template": 9,
+        "_astichi_native_engine.materialization_workspace_create": 5,
+        "_astichi_native_engine.assembly_state_create": 5,
+        "_astichi_native_engine.assembly_state_append_occurrence": 5,
+        "_astichi_native_engine.assembly_state_record_handle": 9,
+        "_astichi_native_engine.assembly_state_append_overlay": 9,
+        "_astichi_native_engine.materialization_workspace_apply_identifier_overlay": 4,
+        "_astichi_native_engine.materialization_workspace_copy_to_python_ast": 5,
+        "_astichi_native_engine._workspace_registration_snapshots": 5,
+        "_astichi_native_engine.engine_close": 4,
+        "_astichi_native_engine.materialization_workspace_apply_external_overlay_literal": 5
+      },
+      "summary": [
+        "299 passed, 2 skipped in 42.70s"
+      ],
+      "failures": []
+    },
+    {
+      "host": "mac",
+      "phase": "original-shared-environment",
+      "run": "native-rust-yidl_undoable",
+      "backend_independent": false,
+      "exit_code": 0,
+      "exit_code_source": "runner JSONL",
+      "final_for_scope": true,
+      "original_log_sha256": "abc00719f97c3c45f95fa8ae17fe2941da40780ea31bf55cd7b2833184710ef0",
+      "engine": {
+        "requested_engine": "native-rust",
+        "selected_engine": "native-rust",
+        "fallback_scope": null,
+        "reason_key": null,
+        "reason_detail": null
+      },
+      "native_call_sample": {
+        "_astichi_native_engine.capabilities": 329,
+        "_astichi_native_engine.compile_validate_source": 35,
+        "_astichi_native_engine.engine_create": 3,
+        "_astichi_native_engine.register_surface_bundle": 3,
+        "_astichi_native_engine.register_template_package_v2_source": 52,
+        "_astichi_native_engine.lower_template_package_v2_from_registered_template": 35,
+        "_astichi_native_engine.engine_snapshot": 2,
+        "_astichi_native_engine.assembly_state_create": 2,
+        "_astichi_native_engine.assembly_state_append_occurrence": 2,
+        "_astichi_native_engine.assembly_state_apply_request_batch": 36,
+        "_astichi_native_engine.assembly_state_materialize_to_python_ast": 1
+      },
+      "summary": [
+        "350 passed in 6.10s"
+      ],
+      "failures": []
+    },
+    {
+      "host": "mac",
+      "phase": "original-shared-environment",
+      "run": "python-yidl-cache",
+      "backend_independent": true,
+      "exit_code": 1,
+      "exit_code_source": "runner JSONL",
+      "final_for_scope": false,
+      "original_log_sha256": "6aa6cf7a268414fa2ac6470b4c58dc1cbabaa478d4c583c86e598c5cad6abf4a",
+      "engine": {
+        "requested_engine": "python",
+        "selected_engine": "python",
+        "fallback_scope": null,
+        "reason_key": null,
+        "reason_detail": null
+      },
+      "native_call_sample": {},
+      "summary": [
+        "1 failed, 56 passed in 0.33s"
+      ],
+      "failures": [
+        "tests/test_generated_code_cache.py::test_independent_record_fixture_reuses_code_in_a_fresh_process"
+      ]
+    },
+    {
+      "host": "mac",
+      "phase": "original-shared-environment",
+      "run": "python-yidl-dataclass",
+      "backend_independent": false,
+      "exit_code": 1,
+      "exit_code_source": "runner JSONL",
+      "final_for_scope": false,
+      "original_log_sha256": "8a1638ae0cc5ec3f322536c223f729f5006ef0c7c7a4afe169db7c03e3ebee73",
+      "engine": {
+        "requested_engine": "python",
+        "selected_engine": "python",
+        "fallback_scope": null,
+        "reason_key": null,
+        "reason_detail": null
+      },
+      "native_call_sample": {},
+      "summary": [
+        "2 failed, 257 passed, 3 skipped in 72.01s (0:01:12)"
+      ],
+      "failures": [
+        "tests/test_distribution_contract.py::test_wheel_and_sdist_include_public_documentation_and_example",
+        "tests/test_installation.py::test_consumer_wheel_contains_resources_and_locked_sdk_metadata"
+      ]
+    },
+    {
+      "host": "mac",
+      "phase": "original-shared-environment",
+      "run": "python-yidl-lifecycle",
+      "backend_independent": false,
+      "exit_code": 1,
+      "exit_code_source": "runner JSONL",
+      "final_for_scope": true,
+      "original_log_sha256": "72f243c4fb32a87b3808bea8bca48c53347232c6c29df3c302e1d49b24ef43ee",
+      "engine": {
+        "requested_engine": "python",
+        "selected_engine": "python",
+        "fallback_scope": null,
+        "reason_key": null,
+        "reason_detail": null
+      },
+      "native_call_sample": {},
+      "summary": [
+        "1 failed, 433 passed, 46 skipped in 99.71s (0:01:39)"
+      ],
+      "failures": [
+        "tests/test_yidl_goldens.py::test_fixture_outputs_match_goldens[yidl_transactional_phase_h_owned.py]"
+      ]
+    },
+    {
+      "host": "mac",
+      "phase": "original-shared-environment",
+      "run": "python-yidl",
+      "backend_independent": false,
+      "exit_code": 0,
+      "exit_code_source": "runner JSONL",
+      "final_for_scope": true,
+      "original_log_sha256": "dfb6e9cfdb67ca5858059d056f72de1962a620086da5b1f82fa9ba231dff655f",
+      "engine": {
+        "requested_engine": "python",
+        "selected_engine": "python",
+        "fallback_scope": null,
+        "reason_key": null,
+        "reason_detail": null
+      },
+      "native_call_sample": {},
+      "summary": [
+        "299 passed, 2 skipped in 52.39s"
+      ],
+      "failures": []
+    },
+    {
+      "host": "mac",
+      "phase": "original-shared-environment",
+      "run": "python-yidl_undoable",
+      "backend_independent": false,
+      "exit_code": 1,
+      "exit_code_source": "runner JSONL",
+      "final_for_scope": false,
+      "original_log_sha256": "834c9e73b10e62c51b4597c0d6d57f4dfe1f1a3cffd43dc5b65af3ac3ce3a5b1",
+      "engine": {
+        "requested_engine": "python",
+        "selected_engine": "python",
+        "fallback_scope": null,
+        "reason_key": null,
+        "reason_detail": null
+      },
+      "native_call_sample": {},
+      "summary": [
+        "1 failed, 349 passed in 13.28s"
+      ],
+      "failures": [
+        "tests/test_distribution_contract.py::test_wheel_and_sdist_include_public_documentation_and_example"
+      ]
+    },
+    {
+      "host": "mac",
+      "phase": "prepared-source-consumers",
+      "run": "python-yidl-dataclass",
+      "backend_independent": false,
+      "exit_code": 0,
+      "exit_code_source": "runner JSONL",
+      "final_for_scope": true,
+      "original_log_sha256": "b8f57a55dd470e6059a6be645a463b03c88c9e9d293fc5c7d7757b0518752146",
+      "engine": {
+        "requested_engine": "python",
+        "selected_engine": "python",
+        "fallback_scope": null,
+        "reason_key": null,
+        "reason_detail": null
+      },
+      "native_call_sample": {},
+      "summary": [
+        "259 passed, 3 skipped in 68.10s (0:01:08)"
+      ],
+      "failures": []
+    },
+    {
+      "host": "mac",
+      "phase": "prepared-source-consumers",
+      "run": "python-yidl_undoable",
+      "backend_independent": false,
+      "exit_code": 0,
+      "exit_code_source": "runner JSONL",
+      "final_for_scope": true,
+      "original_log_sha256": "7661fe387c774f72dff8f8b5e133f667e06307a7e73e6bb71353e7f779682f8c",
+      "engine": {
+        "requested_engine": "python",
+        "selected_engine": "python",
+        "fallback_scope": null,
+        "reason_key": null,
+        "reason_detail": null
+      },
+      "native_call_sample": {},
+      "summary": [
+        "350 passed in 13.22s"
+      ],
+      "failures": []
+    },
+    {
+      "host": "windows",
+      "phase": "original-candidate",
+      "run": "native-rust-installed-consumers",
+      "backend_independent": false,
+      "exit_code": 0,
+      "exit_code_source": "PowerShell terminal output",
+      "final_for_scope": true,
+      "original_log_sha256": "98e30920fdca65acf817a3dbc5a222e8bb72909ecd0c4d5a2a34e078a9785b96",
+      "engine": {
+        "requested_engine": "native-rust",
+        "selected_engine": "native-rust",
+        "fallback_scope": null,
+        "reason_key": null,
+        "reason_detail": null
+      },
+      "native_call_sample": {
+        "_astichi_native_engine.capabilities": 338,
+        "_astichi_native_engine.compile_validate_source": 39,
+        "_astichi_native_engine.engine_create": 2,
+        "_astichi_native_engine.register_surface_bundle": 2,
+        "_astichi_native_engine.register_template_package_v2_source": 54,
+        "_astichi_native_engine.lower_template_package_v2_from_registered_template": 39,
+        "_astichi_native_engine.engine_snapshot": 1,
+        "_astichi_native_engine.assembly_state_create": 1,
+        "_astichi_native_engine.assembly_state_append_occurrence": 1,
+        "_astichi_native_engine.assembly_state_apply_request_batch": 23
+      },
+      "summary": [
+        "4 passed in 1.76s"
+      ],
+      "failures": []
+    },
+    {
+      "host": "windows",
+      "phase": "original-candidate",
+      "run": "native-rust-yidl-lifecycle",
+      "backend_independent": false,
+      "exit_code": 1,
+      "exit_code_source": "runner JSONL",
+      "final_for_scope": true,
+      "original_log_sha256": "63212916eb9b3f86416fd7b260b6ed15160745cbd80e462b49875846740ab933",
+      "engine": {
+        "requested_engine": "native-rust",
+        "selected_engine": "native-rust",
+        "fallback_scope": null,
+        "reason_key": null,
+        "reason_detail": null
+      },
+      "native_call_sample": {
+        "_astichi_native_engine.capabilities": 340,
+        "_astichi_native_engine.compile_validate_source": 39,
+        "_astichi_native_engine.engine_create": 2,
+        "_astichi_native_engine.register_surface_bundle": 2,
+        "_astichi_native_engine.register_template_package_v2_source": 54,
+        "_astichi_native_engine.lower_template_package_v2_from_registered_template": 39,
+        "_astichi_native_engine.engine_snapshot": 1,
+        "_astichi_native_engine.assembly_state_create": 1,
+        "_astichi_native_engine.assembly_state_append_occurrence": 1,
+        "_astichi_native_engine.assembly_state_apply_request_batch": 21
+      },
+      "summary": [
+        "1 failed, 424 passed, 55 skipped in 70.73s (0:01:10)"
+      ],
+      "failures": [
+        "tests/test_lifecycle_code_cache.py::test_public_diagnostics_expose_failed_publication_and_exhausted_routes\r"
+      ]
+    },
+    {
+      "host": "windows",
+      "phase": "original-candidate",
+      "run": "native-rust-yidl",
+      "backend_independent": false,
+      "exit_code": 0,
+      "exit_code_source": "runner JSONL",
+      "final_for_scope": true,
+      "original_log_sha256": "a32cd11c6fdf58bb781f5aab66af978f220cd78b5fc2d66ec46c193f6263b953",
+      "engine": {
+        "requested_engine": "native-rust",
+        "selected_engine": "native-rust",
+        "fallback_scope": null,
+        "reason_key": null,
+        "reason_detail": null
+      },
+      "native_call_sample": {
+        "_astichi_native_engine.capabilities": 305,
+        "_astichi_native_engine.compile_validate_source": 33,
+        "_astichi_native_engine.engine_create": 11,
+        "_astichi_native_engine.register_surface_bundle": 10,
+        "_astichi_native_engine.register_template_package_v2_source": 33,
+        "_astichi_native_engine.lower_template_package_v2_from_registered_template": 33,
+        "_astichi_native_engine.engine_snapshot": 10,
+        "_astichi_native_engine._copy_template": 9,
+        "_astichi_native_engine.materialization_workspace_create": 5,
+        "_astichi_native_engine.assembly_state_create": 5,
+        "_astichi_native_engine.assembly_state_append_occurrence": 5,
+        "_astichi_native_engine.assembly_state_record_handle": 9,
+        "_astichi_native_engine.assembly_state_append_overlay": 9,
+        "_astichi_native_engine.materialization_workspace_apply_identifier_overlay": 4,
+        "_astichi_native_engine.materialization_workspace_copy_to_python_ast": 5,
+        "_astichi_native_engine._workspace_registration_snapshots": 5,
+        "_astichi_native_engine.engine_close": 4,
+        "_astichi_native_engine.materialization_workspace_apply_external_overlay_literal": 5
+      },
+      "summary": [
+        "299 passed, 2 skipped in 47.16s"
+      ],
+      "failures": []
+    },
+    {
+      "host": "windows",
+      "phase": "original-candidate",
+      "run": "python-installed-consumers",
+      "backend_independent": false,
+      "exit_code": 0,
+      "exit_code_source": "PowerShell terminal output",
+      "final_for_scope": true,
+      "original_log_sha256": "78b6753533bedc38d795b9eb7baaf3070c3058335715fa4488c9b861819ec662",
+      "engine": {
+        "requested_engine": "python",
+        "selected_engine": "python",
+        "fallback_scope": null,
+        "reason_key": null,
+        "reason_detail": null
+      },
+      "native_call_sample": {},
+      "summary": [
+        "4 passed in 2.18s"
+      ],
+      "failures": []
+    },
+    {
+      "host": "windows",
+      "phase": "original-candidate",
+      "run": "python-yidl-lifecycle",
+      "backend_independent": false,
+      "exit_code": 1,
+      "exit_code_source": "runner JSONL",
+      "final_for_scope": true,
+      "original_log_sha256": "776ef44228946caa75f9b4c66829d8c05a24b50b9f688297e55b561792087201",
+      "engine": {
+        "requested_engine": "python",
+        "selected_engine": "python",
+        "fallback_scope": null,
+        "reason_key": null,
+        "reason_detail": null
+      },
+      "native_call_sample": {},
+      "summary": [
+        "2 failed, 423 passed, 55 skipped in 95.82s (0:01:35)"
+      ],
+      "failures": [
+        "tests/test_lifecycle_code_cache.py::test_public_diagnostics_expose_failed_publication_and_exhausted_routes\r",
+        "tests/test_yidl_goldens.py::test_fixture_outputs_match_goldens[yidl_transactional_phase_h_owned.py]\r"
+      ]
+    },
+    {
+      "host": "windows",
+      "phase": "original-candidate",
+      "run": "python-yidl",
+      "backend_independent": false,
+      "exit_code": 0,
+      "exit_code_source": "runner JSONL",
+      "final_for_scope": true,
+      "original_log_sha256": "5bbfe43a1f3a5b106a3b6361d1e5bfb8b2a44e7cfbb6f44c228062b38b82cd08",
+      "engine": {
+        "requested_engine": "python",
+        "selected_engine": "python",
+        "fallback_scope": null,
+        "reason_key": null,
+        "reason_detail": null
+      },
+      "native_call_sample": {},
+      "summary": [
+        "299 passed, 2 skipped in 88.34s (0:01:28)"
+      ],
+      "failures": []
+    },
+    {
+      "host": "pi",
+      "phase": "original-candidate",
+      "run": "native-rust-yidl-cache",
+      "backend_independent": true,
+      "exit_code": 0,
+      "exit_code_source": "runner JSONL",
+      "final_for_scope": true,
+      "original_log_sha256": "20b3b9bdc67524d0c1de5a26f5e080391fed310f8a09bb22141d3b7fa831366b",
+      "engine": {
+        "requested_engine": "native-rust",
+        "selected_engine": "native-rust",
+        "fallback_scope": null,
+        "reason_key": null,
+        "reason_detail": null
+      },
+      "native_call_sample": {},
+      "summary": [
+        "55 passed, 2 skipped in 0.77s"
+      ],
+      "failures": []
+    },
+    {
+      "host": "pi",
+      "phase": "original-candidate",
+      "run": "native-rust-yidl-dataclass",
+      "backend_independent": false,
+      "exit_code": 0,
+      "exit_code_source": "runner JSONL",
+      "final_for_scope": true,
+      "original_log_sha256": "d5f668d68989cf2e4b65a9614a8d557faff4eb57e76eb0c24c3b67a8d538ca5a",
+      "engine": {
+        "requested_engine": "native-rust",
+        "selected_engine": "native-rust",
+        "fallback_scope": null,
+        "reason_key": null,
+        "reason_detail": null
+      },
+      "native_call_sample": {
+        "_astichi_native_engine.capabilities": 336,
+        "_astichi_native_engine.compile_validate_source": 38,
+        "_astichi_native_engine.engine_create": 2,
+        "_astichi_native_engine.register_surface_bundle": 2,
+        "_astichi_native_engine.register_template_package_v2_source": 52,
+        "_astichi_native_engine.lower_template_package_v2_from_registered_template": 38,
+        "_astichi_native_engine.engine_snapshot": 1,
+        "_astichi_native_engine.assembly_state_create": 1,
+        "_astichi_native_engine.assembly_state_append_occurrence": 1,
+        "_astichi_native_engine.assembly_state_apply_request_batch": 29
+      },
+      "summary": [
+        "260 passed, 2 skipped in 285.40s (0:04:45)"
+      ],
+      "failures": []
+    },
+    {
+      "host": "pi",
+      "phase": "original-candidate",
+      "run": "native-rust-yidl-lifecycle",
+      "backend_independent": false,
+      "exit_code": 0,
+      "exit_code_source": "runner JSONL",
+      "final_for_scope": true,
+      "original_log_sha256": "b79e84f7c43be58b87f2e63a50108150294f83402165788a58d2eb9e27b3c559",
+      "engine": {
+        "requested_engine": "native-rust",
+        "selected_engine": "native-rust",
+        "fallback_scope": null,
+        "reason_key": null,
+        "reason_detail": null
+      },
+      "native_call_sample": {
+        "_astichi_native_engine.capabilities": 340,
+        "_astichi_native_engine.compile_validate_source": 39,
+        "_astichi_native_engine.engine_create": 2,
+        "_astichi_native_engine.register_surface_bundle": 2,
+        "_astichi_native_engine.register_template_package_v2_source": 54,
+        "_astichi_native_engine.lower_template_package_v2_from_registered_template": 39,
+        "_astichi_native_engine.engine_snapshot": 1,
+        "_astichi_native_engine.assembly_state_create": 1,
+        "_astichi_native_engine.assembly_state_append_occurrence": 1,
+        "_astichi_native_engine.assembly_state_apply_request_batch": 21
+      },
+      "summary": [
+        "433 passed, 47 skipped in 275.76s (0:04:35)"
+      ],
+      "failures": []
+    },
+    {
+      "host": "pi",
+      "phase": "original-candidate",
+      "run": "native-rust-yidl",
+      "backend_independent": false,
+      "exit_code": 0,
+      "exit_code_source": "runner JSONL",
+      "final_for_scope": true,
+      "original_log_sha256": "ccebb39cb3a9b115386acb3b8c9e2c97d8f4e472e9ac029b0b14c48faa5954a1",
+      "engine": {
+        "requested_engine": "native-rust",
+        "selected_engine": "native-rust",
+        "fallback_scope": null,
+        "reason_key": null,
+        "reason_detail": null
+      },
+      "native_call_sample": {
+        "_astichi_native_engine.capabilities": 305,
+        "_astichi_native_engine.compile_validate_source": 33,
+        "_astichi_native_engine.engine_create": 11,
+        "_astichi_native_engine.register_surface_bundle": 10,
+        "_astichi_native_engine.register_template_package_v2_source": 33,
+        "_astichi_native_engine.lower_template_package_v2_from_registered_template": 33,
+        "_astichi_native_engine.engine_snapshot": 10,
+        "_astichi_native_engine._copy_template": 9,
+        "_astichi_native_engine.materialization_workspace_create": 5,
+        "_astichi_native_engine.assembly_state_create": 5,
+        "_astichi_native_engine.assembly_state_append_occurrence": 5,
+        "_astichi_native_engine.assembly_state_record_handle": 9,
+        "_astichi_native_engine.assembly_state_append_overlay": 9,
+        "_astichi_native_engine.materialization_workspace_apply_identifier_overlay": 4,
+        "_astichi_native_engine.materialization_workspace_copy_to_python_ast": 5,
+        "_astichi_native_engine._workspace_registration_snapshots": 5,
+        "_astichi_native_engine.engine_close": 4,
+        "_astichi_native_engine.materialization_workspace_apply_external_overlay_literal": 5
+      },
+      "summary": [
+        "299 passed, 2 skipped in 129.98s (0:02:09)"
+      ],
+      "failures": []
+    },
+    {
+      "host": "pi",
+      "phase": "original-candidate",
+      "run": "native-rust-yidl_undoable",
+      "backend_independent": false,
+      "exit_code": 0,
+      "exit_code_source": "runner JSONL",
+      "final_for_scope": true,
+      "original_log_sha256": "441e6edb1e9524a3470fb286a12fa6e494189776f5e354bb5037fae8492c67b3",
+      "engine": {
+        "requested_engine": "native-rust",
+        "selected_engine": "native-rust",
+        "fallback_scope": null,
+        "reason_key": null,
+        "reason_detail": null
+      },
+      "native_call_sample": {
+        "_astichi_native_engine.capabilities": 329,
+        "_astichi_native_engine.compile_validate_source": 35,
+        "_astichi_native_engine.engine_create": 3,
+        "_astichi_native_engine.register_surface_bundle": 3,
+        "_astichi_native_engine.register_template_package_v2_source": 52,
+        "_astichi_native_engine.lower_template_package_v2_from_registered_template": 35,
+        "_astichi_native_engine.engine_snapshot": 2,
+        "_astichi_native_engine.assembly_state_create": 2,
+        "_astichi_native_engine.assembly_state_append_occurrence": 2,
+        "_astichi_native_engine.assembly_state_apply_request_batch": 36,
+        "_astichi_native_engine.assembly_state_materialize_to_python_ast": 1
+      },
+      "summary": [
+        "350 passed in 17.16s"
+      ],
+      "failures": []
+    },
+    {
+      "host": "pi",
+      "phase": "original-candidate",
+      "run": "python-yidl-cache",
+      "backend_independent": true,
+      "exit_code": 0,
+      "exit_code_source": "runner JSONL",
+      "final_for_scope": true,
+      "original_log_sha256": "caf5f4c2716c4cc6e503ee572deb2aea27488f29b7df6712bd262570aa6b135d",
+      "engine": {
+        "requested_engine": "python",
+        "selected_engine": "python",
+        "fallback_scope": null,
+        "reason_key": null,
+        "reason_detail": null
+      },
+      "native_call_sample": {},
+      "summary": [
+        "55 passed, 2 skipped in 0.44s"
+      ],
+      "failures": []
+    },
+    {
+      "host": "pi",
+      "phase": "original-candidate",
+      "run": "python-yidl-dataclass",
+      "backend_independent": false,
+      "exit_code": 0,
+      "exit_code_source": "runner JSONL",
+      "final_for_scope": true,
+      "original_log_sha256": "d695ec247977fb32f2359c8c3074bd95f33cfe3cea87bb702b1811bceeef73ab",
+      "engine": {
+        "requested_engine": "python",
+        "selected_engine": "python",
+        "fallback_scope": null,
+        "reason_key": null,
+        "reason_detail": null
+      },
+      "native_call_sample": {},
+      "summary": [
+        "260 passed, 2 skipped in 325.28s (0:05:25)"
+      ],
+      "failures": []
+    },
+    {
+      "host": "pi",
+      "phase": "original-candidate",
+      "run": "python-yidl-lifecycle",
+      "backend_independent": false,
+      "exit_code": 1,
+      "exit_code_source": "runner JSONL",
+      "final_for_scope": true,
+      "original_log_sha256": "9345dd1f61556249b61dd721456294daf44ff9702f7bf0a912f028876acc2504",
+      "engine": {
+        "requested_engine": "python",
+        "selected_engine": "python",
+        "fallback_scope": null,
+        "reason_key": null,
+        "reason_detail": null
+      },
+      "native_call_sample": {},
+      "summary": [
+        "1 failed, 432 passed, 47 skipped in 334.51s (0:05:34)"
+      ],
+      "failures": [
+        "tests/test_yidl_goldens.py::test_fixture_outputs_match_goldens[yidl_transactional_phase_h_owned.py]"
+      ]
+    },
+    {
+      "host": "pi",
+      "phase": "original-candidate",
+      "run": "python-yidl",
+      "backend_independent": false,
+      "exit_code": 0,
+      "exit_code_source": "runner JSONL",
+      "final_for_scope": true,
+      "original_log_sha256": "b1c5859bf09ca40041f7cff0cb46e1f761f0814e0472cd110f7ce79d65fd5cb2",
+      "engine": {
+        "requested_engine": "python",
+        "selected_engine": "python",
+        "fallback_scope": null,
+        "reason_key": null,
+        "reason_detail": null
+      },
+      "native_call_sample": {},
+      "summary": [
+        "299 passed, 2 skipped in 158.23s (0:02:38)"
+      ],
+      "failures": []
+    },
+    {
+      "host": "pi",
+      "phase": "original-candidate",
+      "run": "python-yidl_undoable",
+      "backend_independent": false,
+      "exit_code": 0,
+      "exit_code_source": "runner JSONL",
+      "final_for_scope": true,
+      "original_log_sha256": "4936adcbbc4e0d5ee9373f862aac9a990f5308832f681696d0c3af84f9023567",
+      "engine": {
+        "requested_engine": "python",
+        "selected_engine": "python",
+        "fallback_scope": null,
+        "reason_key": null,
+        "reason_detail": null
+      },
+      "native_call_sample": {},
+      "summary": [
+        "350 passed in 38.63s"
+      ],
+      "failures": []
+    },
+    {
+      "host": "mac",
+      "phase": "isolated-cache",
+      "run": "python-environment",
+      "final_for_scope": true,
+      "backend_independent": true,
+      "original_log_sha256": "54b30c93b5a15f0417a80917e8fed491c2ff7813b4ae0477d108607ee1cfbff9",
+      "summary": "57 passed in 0.32s",
+      "failures": []
+    },
+    {
+      "host": "mac",
+      "phase": "isolated-cache",
+      "run": "native-request-environment",
+      "final_for_scope": true,
+      "backend_independent": true,
+      "original_log_sha256": "84166c4399d867b1f428bcc83b65ff8d0be563b11193aaceaec045be16c611ac",
+      "summary": "57 passed in 0.29s",
+      "failures": []
+    }
+  ]
+}
