@@ -1,40 +1,50 @@
 # Developer Documentation
 
-## Start Here
+## Release preparation
+
+- [0.1.0 release plan](YidlReleasePlan.md): current milestones, scope, evidence,
+  release gates and separate publication authorization.
+- [Documentation and website plan](YidlDocumentationPlan.md): detailed public
+  page/example/site work; planned, not implemented.
+- [Documentation shortcomings](YidlDocShortcomings.md): consumer evidence and
+  recipe/reference inventory; classifications must be preserved.
+- [Release follow-ups](YidlReleaseFollowUps.md): unresolved cleanup, adjacent
+  ownership and optional work that must not disappear during consolidation.
+
+## Canonical contracts
 
 - [Design summary](YidlDesignSummary.md): canonical semantic/design reference.
-- [Coding rules](YidlCodingRules.md): implementation and process rules.
+- [Coding rules](YidlCodingRules.md): definitive implementation/process rules.
 - [Repository instructions](../AGENTS.md): operational shorthand.
-- [User documentation](../docs/): language and runtime reference.
+- [Public documentation](../docs/): existing design/reference material;
+  modernization is part of release preparation, not a completed deliverable.
 
-Lifecycle-specific behavior now belongs in the neighboring `yidl-lifecycle`
-project. Older lifecycle-oriented descriptions in the summary are not a reason
-to restore that implementation to the generic compiler package.
+Lifecycle behavior belongs to `yidl-lifecycle`; its historical presence in the
+design summary does not authorize restoring it to the generic compiler.
+Release planning does not override the canonical contracts.
 
-## Working Material
+## Cross-project work still in use
 
-- [Generated code cache input audit](YidlGeneratedCodeCacheInputAudit.md):
-  source-traced generation inputs, live binding values and dependency policy
-  for Lifecycle and data-record consumers; runtime cache proofs remain pending.
+- [Generated-code cache plan](YidlGeneratedCodeCachePlan.md) and
+  [input audit](YidlGeneratedCodeCacheInputAudit.md): retained here because the
+  cache project's active index references them. Shared caching and the Lifecycle
+  adapter have local implementations; the newest owning checkpoint distinguishes
+  completed draft review from release adoption and platform qualification.
+  YIDL core remains independent of the cache. Older status statements in these
+  documents are snapshots, not the current release verdict.
 
-- [Generated code cache plan](YidlGeneratedCodeCachePlan.md): proposed reusable
-  AST-to-bytecode cache with Lifecycle as the first consumer and data-record
-  generation as the reuse proof; operator-accepted plan, not implemented or
-  accepted for activation.
-- [Cleanup recommendations](YidlCleanupReccomendations.md): candidate cleanup,
-  not implementation acceptance.
-- [Design gap notes](YidlDesignSummary-gaps2.md): working analysis, not a
-  replacement for the canonical summary.
+## Deferred writing
+
 - [Paper draft](paper/paper-draft.md), [evidence index](paper/evidence-index.md),
-  and [research gaps](paper/research-gaps.md): writing material, not a submitted
-  paper or validated novelty claim.
+  and [research gaps](paper/research-gaps.md): unfinished research material,
+  outside the 0.1.0 release gates. This task does not abandon or complete it.
 
 ## History
 
-Completed/superseded grammar, merge, extraction, and early lifecycle design
-documents live under `history/`. The existing archival cleanup is preserved;
-do not revive those plans as current instructions.
+[Archive disposition](history/README.md) records the documents moved in this
+consolidation and what replaced or superseded them. Earlier grammar, merge,
+extraction and lifecycle documents remain historical background.
 
-Keep current contracts and unfinished work outside history. Preserve archived
-evidence at its original wording and revision; repair links in active documents
-when relocating it. Moving a plan does not claim its deferred ideas shipped.
+Archived files and existing references are preserved as-is, by explicit operator
+instruction. No link-repair sweep was performed. Archiving an old plan/review
+does not close its outstanding obligations or authorize source deletion.

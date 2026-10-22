@@ -2,34 +2,33 @@
 
 **First technical paper draft — intended audience: Onward! Papers.**
 
-Prepared 2026-10-03. This is an exploratory implementation paper, not a
-submission-ready manuscript. Authorship, affiliations, and human approval remain
-unset. The implementation snapshot includes uncommitted work. Claim identifiers
+Prepared 2026-10-03; evidence revision 2026-10-23. This is an exploratory
+implementation paper for an Onward! audience, not a submission-ready manuscript.
+Authorship, affiliations, and human approval remain unset. Historical and current
+checks are recorded separately. Claim identifiers
 such as C3 point to [the evidence index](evidence-index.md); outstanding research
 requirements appear in [the research gaps](research-gaps.md).
 
 ## Abstract
 
-Framework behavior often spans declarations, dependency analysis, storage,
-dispatch, inheritance, and resource lifetime. A handwritten implementation can
-support these concerns yet make their relationships difficult to inspect and
-extend. We explore an alternative in which part of the framework architecture
-becomes compiler input. YIDL packages typed properties, record families,
-collections, resources, selection rules, fact derivations, and phased assembly
-into mergeable concepts. Astichi supplies a complementary mechanism for
-composing Python AST fragments through holes, explicit identifier and external
-bindings, fallback bodies, and composition scopes. Domain packages select and
-assemble specialized code while retaining imperative algorithms and ordinary
-runtime libraries where needed. The motivating application is the replacement
-of Pyrolyze's handwritten lifecycle framework by the downstream
-`yidl-lifecycle` package. A mutable lazy field provides a concrete example of
-policy selection replacing a fallback setter while reusing the getter. Source
-inspection, canonical generated artifacts, and bounded artifact execution
-support the architectural account; fresh decoration failures in the inspected
-working checkout limit reproducibility. We distinguish the implemented
-composition mechanisms from cross-language and self-description proposals,
-and separate the architecture from an AI-assisted development account that is
-currently a practitioner observation rather than a productivity experiment.
+Framework policies often cross declarations, dependency analysis, storage and
+accessors. We present an implemented architectural synthesis in which typed
+facts select code resources, feature concepts extend named assembly phases,
+and scoped AST composition connects the selected behavior to existing code.
+YIDL supplies the fact and assembly model; Astichi supplies Python composition
+holes, fallback bodies and explicit bindings. The concrete claim is that a
+field policy can vary independently of its surrounding accessor recipe when
+that recipe exposes an explicit extension boundary. In the central Lifecycle
+case, a mutable lazy policy replaces an authored write-once setter body while
+reusing the selected getter and factory dependency wiring. We trace declarations,
+facts, selection, scoped insertion and generated Python, then validate behavior
+and exact generated output with a qualified Python-backend/string-annotation
+route. The unchanged runtime-annotation example still fails in the ambient
+workspace. Dataclass and Undoable provide additional related object-model
+applications and reported installed-package checkpoints. The contribution is
+this inspectable synthesis and its demonstrated extension contract, not the
+invention of generation, staging, hygiene or feature composition, nor evidence
+of superior productivity, performance or unrelated-domain generality.
 
 ## 1. Problem: making framework relationships inspectable
 
@@ -62,12 +61,15 @@ Astichi composes the selected code while tracking names and scopes. The
 resulting code is an inspectable artifact between the architecture and its
 runtime behavior. [C2–C8]
 
-The proposed contribution is the implemented combination and its lifecycle
-case study: a fact-oriented compiler description, explicit feature composition
-and ordering, and scoped Python code assembly. We do not claim the invention
-of generative programming, hygienic macros, staged specialization, or
-model-driven engineering. Establishing what distinguishes this combination
-from prior systems remains part of the research agenda.
+Our bounded claim is that **fact-driven policy selection and scoped insertion
+can separate a field's setter policy from its lazy-read implementation through
+an explicit assembly contract**. Section 6 follows that contract end to end:
+`Mutable` selects a contribution, an indexed property hole identifies its
+recipient, and explicit outer bindings connect the replacement to the existing
+setter state. The getter resource and dependency-argument machinery are reused.
+This is an implemented synthesis of established techniques, with a concrete
+change boundary rather than a claim of a new composition paradigm. Section 8
+positions it against AHEAD's feature refinement model. [C13, C18]
 
 ## 2. System model and boundaries
 
@@ -76,9 +78,12 @@ describe schemas, facts, derivations, resources, and assembly; they are not
 restricted to lifecycle field kinds. It has a standalone `.yidl` frontend backed
 by Lark and programmatic data-definition and recorded-concept interfaces.
 `yidl-lifecycle` supplies domain declarations and a Python class harvester on
-top of those mechanisms. Dataclass-related and computed-class fixtures provide
-additional examples, although they do not yet constitute independent,
-production-scale domain validation. [C2, C9]
+top of those mechanisms. Beyond the early dataclass/computed-class fixtures,
+separate `yidl-dataclass`
+and `yidl_undoable` packages now exercise generated dataclass policies and
+transactional undo/redo. Their accepted local functional/package checkpoints
+extend the application evidence within related object models; they do not
+establish unrelated-domain generality. [C2, C9, C23]
 
 ```mermaid
 flowchart LR
@@ -287,76 +292,29 @@ The inspected output is the ordinary function `choose_value` returning
 reference contract. The filled example was executed during drafting without
 writing generated files. It illustrates structural substitution; meaningful
 binding and hygiene claims additionally rely on the canonical scope fixtures.
-[C8, V1]
+[C8, V1, V6]
 
-### 4.2 Nested composition and declarative auto binding
+### 4.2 Nested composition and declared connections
 
-An Astichi composition can itself become a component of another composition.
-`build()` returns a composable, rather than requiring immediate conversion to
-plain Python source. A subsequent builder can register that result, insert it
-into a larger structure, and connect demands or holes carried by the earlier
-composition. This permits partially stitched pieces to remain useful generator
-components. In the canonical three-stage trace recipe, leaf fragments form a
-middle component, that component is reused twice in a larger component, and an
-outer build supplies the shared trace binding before materialization. A second
-recipe adds indexed contributions to a loop carried through an earlier build.
-These are concrete examples of composition across successive builds. [C8]
+An Astichi `build()` returns a composable that can participate in another build.
+The canonical three-stage trace recipe packages leaf fragments into a middle
+component, reuses it twice, and supplies a shared binding at the outer level.
+YIDL likewise allows a contribution source to be another production. Lifecycle's
+`CoreModuleProduction` inserts `CoreClassProduction`, whose own contributions
+fill slots, initialization, properties and transaction methods without a
+source-text round trip. These examples demonstrate composition of compositions,
+not an associativity law under arbitrary regrouping. [C7–C9]
 
-This supports an associative intuition: a group of contributions can be packaged
-as one reusable component and participate in further composition. The inspected
-examples establish this ability to compose compositions; they do not establish
-a general associativity law under arbitrary regrouping. Hole roles, contribution
-order, composition scopes, and declared binding relationships remain part of
-the component contract. In particular, an immediate-outer binding is relative
-to its enclosing scope. Nested composition therefore retains structure rather
-than treating every grouping as interchangeable. [C8]
+YIDL contributions declare resources, target constraints and bindings; assembly
+and Astichi inventory resolution establish the concrete connections. Missing or
+ambiguous required candidates produce diagnostics. Intentional sharing remains
+explicit and distinct from hygiene's collision handling. The central setter
+case below shows both target selection and outer-scope references. [C7, C8]
 
-YIDL exposes this capability at the production level. A contribution's source
-can be another production, not only a single code resource. In lifecycle,
-`CoreModuleProduction` selects `CoreClassDefinition`, whose source is
-`CoreClassProduction`, and targets the module skeleton's `function_body` hole.
-The class production has its own root and contributions for state slots,
-constructor parameters and assignments, facade properties, and transaction
-methods. The assembly implementation inserts the child production's root into
-the enclosing graph, then applies its internal contributions at the resulting
-build path. It can therefore continue filling the class while composing the
-module, without an intermediate source-text round trip. A separate canonical
-YIDL fixture exercises a module containing a class production containing a
-method contribution. [C7, C9]
-
-Concept inheritance adds a second level of composability: feature concepts
-extend the schemas, selection rules, and production phases that describe this
-assembly. For example, the local-store concept extends the class production
-with state-slot, initialization, and property phases. These levels let a feature
-contribute to a larger generator without restating the complete generator.
-Composition levels and production phases describe assembly structure and
-ordering; they do not necessarily introduce additional execution stages. [C6,
-C7, C9, C10]
-
-Auto binding makes this structure declarative at the YIDL authoring boundary.
-The author supplies the selected resource, target constraints, and bindings;
-the assembly runtime and Astichi's inventory-based resolution establish the
-concrete connections. For example, the local-store property contribution maps
-the getter name, setter target, and setter name to the field's name, and its
-storage reference to the field's value-slot name. It declares a destination
-hole under the class root rather than spelling out every concrete builder edge
-and rebinding operation. Automatic resolution realizes the declared relationship;
-it does not infer the domain policy or make equal spellings imply intentional
-sharing. Missing or ambiguous required candidates produce diagnostics. This
-resolution is distinct from hygiene, which handles accidental collisions among
-independent local bindings. [C7, C8, C9]
-
-The author's motivation was to remove imperative binding steps from earlier
-YIDL authoring: the author reports that declarative auto binding made the
-language substantially easier for an LLM to generate. That is a practitioner
-account of the design change, not a measured general advantage. The broader
-LLM-authoring benefit remains a hypothesis. For a reader constructing a
-generator, the practical model is a hierarchy of reusable composition recipes:
-facts and matchers select behavior, contributions declare how it participates,
-and the composition machinery resolves the specified connections. Following
-those declarations into generated code still requires tracing several sources;
-declarative authoring does not itself make the whole assembly immediately
-obvious. [C7–C9, C21]
+The author reports that replacing earlier imperative binding steps with
+declarative auto binding made YIDL easier for an LLM to generate. This is an
+attributed practitioner observation. A general LLM-authoring benefit remains a
+hypothesis, separate from the implemented connection mechanism. [C21]
 
 ## 5. Worked selection example: from a fact to a policy
 
@@ -396,7 +354,7 @@ facts associated with an owner-scoped initialization port. Ordering then yields
 `count` followed by `label`, while an `init=False` field is filtered out. The
 fixture connects schema, selection, derivation, and ordered assembly data;
 merely templating two functions would not express that intermediate relationship.
-[C3–C5, V2]
+[C3–C5, V2, V6]
 
 ## 6. Lifecycle case study
 
@@ -438,24 +396,85 @@ facade owns the state and retains materialized secondary facades; state-to-facad
 references are weak. Current and working facades are created on demand. Runtime
 manager calls and user factories remain runtime costs. [C9–C11]
 
-### 6.2 Mutable lazy fields as a feature composition
+### 6.2 One complete extension: mutable lazy storage
 
-The current preferred marker is `lazy`; `static` is its exact function alias.
-Both retain internal field kind `"static"`. The parity-fields fixture includes:
+The desired extension preserves first-read initialization but permits later
+replacement. A factory captures provider values only when first read; subsequent
+provider writes do not invalidate its result. Direct assignment before first
+read bypasses the factory. All facades share this nontransactional value.
+The default policy remains write-once. `lazy` is the preferred marker and
+`static` its exact alias, retaining internal field kind `"static"`. [C13]
+
+This complete executable example reduces the canonical parity-fields case to
+two fields. Postponed string annotations are an explicit reproduction condition,
+matching that fixture's existing `from __future__ import annotations`; they are
+not a correction retroactively applied to the earlier failed example. [V6–V8]
 
 ```python
-mutable_number: int = lazy(default=42, mutable=True)
-mutable_items: list[int] = lazy(
-    default_factory=make_mutable_items,
-    mutable=True,
-)
+from __future__ import annotations
+from yidl_lifecycle.lifecycle import lifecycle, lazy, static
+
+assert static is lazy
+calls: list[int] = []
+
+def make_mutable_items(mutable_number: int) -> list[int]:
+    calls.append(mutable_number)
+    return [mutable_number]
+
+@lifecycle
+class Config:
+    mutable_number: int = lazy(default=42, mutable=True)
+    mutable_items: list[int] = lazy(
+        default_factory=make_mutable_items, mutable=True
+    )
+
+item = Config()
+assert calls == []
+item.mutable_number = 12
+assert item.mutable_items == [12] and calls == [12]
+item.mutable_number = 13
+assert item.mutable_items == [12]                 # cached, not invalidated
+item.current.mutable_items = [14]
+item.working.mutable_items = [15]
+assert item.mutable_items == [15] and calls == [12]
+other = Config()
+other.mutable_items = [7]                        # assignment before read
+assert other.mutable_items == [7] and calls == [12]
 ```
 
-Here `make_mutable_items(mutable_number)` records its argument and returns a
-list containing that value. A fact with `Mutable == True` selects a setter
-contribution through this actual YIDL excerpt:
+The harvester carries marker policy into field facts. The following projection
+uses the actual full fixture's property values (its other fields account for
+orders 90 and 100); it is not a dump of the reduced example's orders:
+
+| Fact property | `mutable_number` | `mutable_items` |
+| --- | --- | --- |
+| `FieldKind` | `"static"` | `"static"` |
+| `Mutable` | `True` | `True` |
+| `FieldOrder` | `90` | `100` |
+| `HasDefault` / `HasDefaultFactory` | `True` / `False` | `False` / `True` |
+| `ValueSlotName` | `_y_mutable_number_value` | `_y_mutable_items_value` |
+| Factory parameter names | `()` | `("mutable_number",)` |
+
+`StaticFields` filters the field family by kind. Existing property matching
+selects `StaticDefaultFieldProperty` or `StaticDefaultFactoryFieldProperty`;
+existing factory-argument contributions wire the provider read. The additional
+setter selection and target are these authored declarations in
+`lifecycle_const_static.yidl` (an excerpt within the enclosing concept):
 
 ```yidl
+resource MutableLazyAssignment = template $[
+    astichi_pass(state, outer_bind=True).astichi_ref(external=state_slot)._ = astichi_pass(value, outer_bind=True)
+]$
+
+contribution MutableLazySetter = MutableLazyAssignment {
+    index FieldOrder
+    order FieldOrder
+    target lazy_setter_body {
+        build /ClassDef/StaticFieldProperty[FieldOrder]
+    }
+    external state_slot = ValueSlotName
+}
+
 matcher LazySetterContributions(field: StaticFields) -> contribution {
     rule mutable when Mutable == True -> MutableLazySetter
 }
@@ -469,33 +488,58 @@ extend production CoreClassProduction {
 }
 ```
 
-The selected `MutableLazySetter` targets `lazy_setter_body` inside the indexed
-`StaticFieldProperty` instance. Its resource assigns through the selected state
-slot and explicitly shares the enclosing setter's `state` and `value` names.
-The three lazy property variants—unset, default value, and default factory—each
-offer the same fallback setter hole. The fallback allows the first assignment
-and otherwise raises. Insertion replaces that suite with unrestricted
-assignment. Getter selection remains governed by the existing default/factory
-matchers. [C13]
+The `properties_static` phase first inserts the indexed property. Its setter
+contains an authored `lazy_setter_body` fallback that accepts a value only while
+the slot is `VOID`, then raises on later writes. The subsequent phase fills
+that hole only for mutable fields. `state_slot` binds the selected storage path;
+`astichi_pass(..., outer_bind=True)` shares the enclosing setter's `state` and
+`value`. Filling the hole discards the whole fallback suite and its inactive
+demands. With no selected contribution, the fallback remains. No getter
+replacement is selected. [C8, C13]
 
-The resulting semantics are specific. With no constructor override or prior
-assignment, the factory reads providers at first access and caches its result.
-Changing `mutable_number` before first reading `mutable_items` affects that
-first computation. Changing it afterward does not invalidate the cached list.
-Assigning directly to `mutable_items` replaces its value without rerunning the
-factory. Assignment before its first read bypasses the factory entirely.
-Replacement through current or working facades is immediate and
-nontransactional. The stored object's contents are not recursively frozen.
-Neither transaction completion nor provider changes imply automatic
-recomputation. [C13]
+The resulting getter/setter pair below is copied from the canonical formatted
+output, inside `Config_FacadeBase`; its surrounding generated builder supplies
+`VOID`, state layout and the factory binding. It is an excerpt, not a standalone
+class definition:
 
-The canonical fixture checks source shape and runtime results in raw and
-formatted output, including aliasing, repeated assignment, inheritance, and
-factory call counts. During drafting its generated-class assertions passed
-against both checked-in outputs. Fresh decorator generation of a smaller lazy
-example failed in the current checkout, as detailed below. Thus the example
-demonstrates source-level policy composition and artifact behavior, with a
-present reproducibility qualification on the frontend path. [V3–V5]
+```python
+@property
+def mutable_items(self):
+    state = self._y_state
+    value = state._y_mutable_items_value
+    if value is VOID:
+        value = _Config_mutable_items_default_factory(
+            mutable_number=self.mutable_number
+        )
+        state._y_mutable_items_value = value
+    return value
+
+@mutable_items.setter
+def mutable_items(self, value):
+    state = self._y_state
+    state._y_mutable_items_value = value
+```
+
+The constructor initializes the backing slot to `VOID` unless supplied a value.
+The getter still performs provider lookup and caching; only the setter loses
+its write-once branch. The canonical fixture checks all three lazy forms,
+constructor overrides, repeated assignments, call counts and facade sharing;
+rollback also leaves a mutable lazy write intact. In this revision both existing
+outputs passed their behavior assertions, fresh canonical decoration passed,
+and in-memory regeneration exactly matched the raw and formatted outputs.
+No golden was written. [V7, V8]
+
+The extension's actual change boundary is inspectable in Lifecycle commit
+`f8c7e49`. Authored implementation changes were confined to the marker and
+normalization module, harvester, public lifecycle export module, core field
+schema, and const/static resource layer. They added the boolean policy and
+alias, propagated inherited facts, exposed setter holes in all three property
+variants, and added the replacement resource/matcher/phase. The compiled base,
+canonical goldens, focused marker tests and documentation also changed. YIDL
+core, Astichi, the transaction manager and the getter algorithms did not change
+in that feature commit. This establishes reuse through an explicit new hole;
+it does not show an extension added without modifying its owning base recipe,
+or measure future maintenance cost. [C13]
 
 ### 6.3 Compatibility is a contract to delimit
 
@@ -524,58 +568,75 @@ references and `__del__` do not guarantee prompt external cleanup across cycles,
 Python implementations, or shutdown. A support-code comment promising immediate
 teardown is not sufficient evidence for such a guarantee. [C12, D4]
 
-### 6.4 Integration boundary
+### 6.4 Integration boundary and snapshot limits
 
-Pyrolyze's switchable context surface currently defaults to the monolithic LCM
-path. That path already uses the extracted lifecycle library but retains
-mirroring and manual publication machinery. A decomposed LCM path is the
-ongoing migration target. Current integration documents separate holder
-replacement from later manager unification and retain existing completion
-boundaries. Integration is therefore neither absent nor complete. [C15]
+The October 3 Pyrolyze snapshot defaulted to a monolithic LCM context path using
+the extracted Lifecycle library, with mirroring/manual publication still present.
+Its integration plan separated holder replacement from later manager unification.
+A bounded October 23 source check found that `runtime/context.py` now delegates
+to `context_lifecycle`, which imports the decomposed `context_state_lcm` classes.
+The old default-path description therefore cannot supply current migration status.
+This paper did not audit current integration acceptance. [C15, D8]
 
-The bounded shared-completion fixture observes that generated instances on the
-same manager/key cannot complete independently: nested commit reduces depth,
-direct child commit publishes both participants, and child rollback discards
-both. These observations limit what a shared manager proves about isolation.
-They do not establish savepoints, outer atomicity, or a general failure
-containment scheme. The migration is an application of explicit boundary
-contracts, and its unfinished state is part of the case study. [C15]
+The inspected shared-completion fixture records a useful boundary: generated
+instances on the same manager/key could not complete independently. Nested commit
+reduced depth, direct child commit published both participants, and child rollback
+discarded both. That characterization does not establish savepoints, outer
+atomicity or general failure containment. Application integration must delimit
+those contracts separately from the setter policy studied here. [C15]
+
+### 6.5 Additional related applications
+
+`yidl-dataclass` now supplies a separate generated dataclass implementation:
+ordinary fields use direct slots, while factories, conversion, validation,
+constant and lazy policies select specialized methods. Its generation guide
+identifies inheritable YIDL modules and emitted source inspection. The neutral
+comparison resource is also consumed by Undoable at regeneration time; Undoable
+adapts its field reads and equality prelude and embeds the generated resource,
+without a Dataclass runtime dependency. This is a second concrete reuse boundary
+beyond Lifecycle's setter hole. [C23]
+
+Undoable generates default/current/working facades over an in-memory transaction
+and undo/redo runtime, reusing Lifecycle markers and normalization. Its original
+transaction checkpoint and later comparison extension have separate acceptance
+records. The current READMEs and owning final reviews report accepted local
+functional/package behavior and isolated installed-wheel checks, using original
+Astichi 1.1.3 and YIDL 0.1.0 wheels (plus Lifecycle 0.1.0 for Undoable comparison).
+Those recorded runs were inspected, not rerun for this paper. Acceptance does
+not transfer their historical timings to corrected final bytes. Both packages
+remain related object-model applications, not a test of arbitrary domains or
+proof of improved human/AI productivity. [C23]
 
 ## 7. Evidence and evaluation
 
 ### 7.1 What was inspected and executed
 
-This draft is based on the existing local checkout of four repositories,
-including their dirty working state, on 2026-10-03. Current source and tests
-take precedence over historical plans. The evidence index records repository
-revisions, selected source hashes, claim locations, discrepancies, and exact
-bounded checks. No product code, tests, historical documents, or goldens were
-edited or regenerated for this paper. [V0]
+The October 3 snapshot and its failures remain in the evidence index. The
+October 23 revision inspected current sources and owning package checkpoints,
+then ran only bounded in-memory examples and canonical assertions. No product
+suite, dependency repair, golden writer or benchmark was run. [V0, V6–V9]
 
-The checks give deliberately different strengths of evidence:
-
-| Observation | Result during drafting | What it establishes |
+| Observation | October 23 result | Scope |
 | --- | --- | --- |
-| Filled Astichi fallback example | Passed | One structural composition and AST execution |
-| Generic DDS resource matcher example | Passed | Default/rule selection over typed records |
-| Canonical parity-fields generated-class assertions | Passed for raw and formatted checked-in outputs | Artifact runtime behavior for that fixture |
-| Fresh lazy decorator, `auto` selecting `native-rust` | Failed at class build: missing `build_lifecycle_class` | Current generation path not reproduced |
-| Same fresh lazy declarations, explicit `python` lower engine | Failed targeting a property contribution; missing `field_name` candidate | Python fallback does not resolve the present gap |
-| Prior reported complete lifecycle suite | 267 passed, 46 skipped; not rerun here | Provenance supplied with the task, not a new measurement |
+| Complete Astichi and DDS examples | Passed, explicit Python backend | Structural fallback substitution and typed-record resource selection |
+| Original `Config` with runtime annotations | Failed: unsupported external binding value type `type` | Same declaration remains unreproduced; no root cause assigned |
+| Same declaration with postponed string annotations | Passed fresh decoration and behavior | Qualified source-checkout route, cache off |
+| Canonical parity-fields case | Both artifact behavior checks, source-shape checks and fresh decoration passed | Existing fixture with string annotations |
+| Fresh canonical source | Exact raw and formatted golden equality | In-memory generation only; no artifact rewrite |
+| New section 6.2 complete example | Passed | Explicit Python backend and string annotations |
 
-The failures were not diagnosed to a root cause and do not license a conclusion
-that lazy policy semantics are wrong, that a particular engine alone is at
-fault, or that the prior reported suite result was false. They prevent this
-draft from claiming that its working dependency combination currently
-regenerates the demonstrated lifecycle artifacts. Artifact execution and fresh
-generation must both be part of a future reproducible release. [V1–V5]
+This closes the earlier absence of any freshly reproduced central case. It does
+not close unrestricted annotation/backend compatibility or provide a clean
+installed-release artifact. A separate release assessment reported a full YIDL
+suite result of 299 passed and 2 skipped on CPython 3.12.12 with Python lowering;
+that is YIDL evidence, not a Lifecycle suite result. Dataclass/Undoable package
+results remain attributed to their owning records. Exact commands, source hashes,
+historical failures and environment exclusions are centralized in the index.
+[C16, C23, V6–V9]
 
-Canonical goldens make output structure reviewable, while behavioral assertions
-check what the output does. Narrow parser/matcher tests cover collisions,
-ambiguity, filtering, ordering, and diagnostics. Neither golden equality nor a
-passing behavior fixture proves general semantic preservation. Expected output
-can encode a mistaken policy; review must inspect the domain contract as well
-as generated code. [C16]
+Goldens expose generated structure; behavior assertions test the resulting
+policy. Neither guarantees semantic preservation. A mistaken expectation can
+be encoded in both, so domain-contract review remains necessary. [C16]
 
 ### 7.2 Three distinct performance questions
 
@@ -588,44 +649,24 @@ facade/state objects, initializing fields, resolving factories, accessing views,
 and transaction/resource work. Moving policy to generation can reduce repeated
 interpretation while imposing substantial startup cost. [C10, C17]
 
-Historical performance documents illustrate this distinction, not a current
-speed claim. `AstichiPerfAnal.md` reports 5.268 seconds of decorator work for
-eight classes in an LCM import workload, including 4.597 seconds of assembly
-and 0.660 seconds of executable-AST materialization. Its unprofiled import
-observation is 5.72 seconds. The document predates subsequent performance work
-and does not pin a full environment manifest. An earlier analysis dated
-2026-05-20 concerns a different seven-field dataclass workload, reporting
-roughly 23–24 seconds for source-emitting decorator assembly and an unresolved
-8–23 second discrepancy between measurement approaches. These workloads and
-conditions must not be merged into a speedup ratio. [C17]
+Existing performance records concern different workloads and checkpoints:
+earlier source-emitting dataclass generation, LCM import/decorator profiling,
+native AST handoff counters, and constructors using already generated classes.
+The constructor comparison excludes generation and uses a loop-based dataclass
+post-init against specialized factory code. The newer Dataclass records also
+retain historical artifact provenance and explicitly leave corrected final
+paths untimed. None supports a combined speedup or an application-wide ranking.
+The evidence index retains the numbers, conditions and separate measurement
+entry points. No timing was performed for this revision. [C17, C23]
 
-Newer native handoff documentation reports a post-F6 eight-class sample with
-one CPython AST construction per class and about 0.030 seconds in the
-`copy_python_ast` counter. It explicitly treats that time as noise-sensitive,
-not a guaranteed import-wall reduction. Current source includes lower-engine
-selection and capability gates; an importable native extension alone does not
-establish equivalent behavior or a measured speedup. [C17]
+A future measurement should pin artifacts and engine capabilities, separate
+cold startup from warm reuse, alternate comparison order and retain repetitions.
+Generation, class specialization and instance execution require separate
+budgets; transaction, memory and cleanup workloads need equivalent behavioral
+contracts. Such measurement could strengthen the paper, but is not needed to
+establish the demonstrated setter composition. [C17]
 
-The lifecycle constructor comparison uses checked-in generated classes and
-slotted dataclasses at group sizes 5, 10, and 15, each with equally many plain,
-count, and factory-derived fields. The “derived” label in this microbenchmark
-does not refer to the unsupported lifecycle derived-cache marker. Generation
-cost is excluded from its timed loop. Moreover, the dataclass `__post_init__`
-uses a loop with dynamic attribute access, while lifecycle factory lowering is
-specialized. This is a comparison of those implementations, not an equal-code
-lower bound or application-wide performance evidence. [C17]
-
-No new throughput numbers are reported here. A reproducible evaluation should
-first resolve the generation failures and pin source plus native binary state;
-then measure all three stages separately, alternate baseline order, retain
-individual repetitions, and report dispersion and cold/warm conditions.
-Equivalent observable workloads and a carefully specialized handwritten
-baseline are needed alongside the existing comparison. Application evaluation
-must include transactions, views, factory patterns, memory, cleanup, and
-end-to-end rendering. The evidence index gives documented entry points and
-the gaps document prioritizes this work.
-
-## 8. Related work and the bounded novelty question
+## 8. Related work and the bounded synthesis claim
 
 **Generative programming.** Czarnecki and Eisenecker describe system-family
 models and automated selection/assembly of components. YIDL continues that
@@ -636,13 +677,32 @@ production phases, and scoped Python composition interact. [Generative
 Programming](https://gsd.uwaterloo.ca/publications/view/86.html),
 [Components and Generative Programming](https://gsd.uwaterloo.ca/sites/default/files/esec99.pdf).
 
-**Feature-oriented composition.** AHEAD models step-wise refinement and
-composition of feature increments. YIDL's mergeable feature layers are close
-in motivation. Selection by facts and extension of named assembly phases give
-this implementation a particular shape, but we have not established an
-expressiveness or modularity advantage over AHEAD. Neither an algebraic
-equivalence nor novelty follows merely from a different notation. [Scaling
-Step-Wise Refinement](https://www.cs.utexas.edu/~schwartz/ATS/fopdocs/AHEAD-Theory.pdf).
+**Feature-oriented composition.** AHEAD is a close architectural antecedent.
+Its model composes nested named artifact sets using artifact-specific refinement;
+class refinements add or extend members, and design rules constrain legal
+ordering. Its calculator GUI example refines initialization, layout and listener
+methods together. Thus coordinated extension of several generator surfaces is
+already established. [Scaling Step-Wise Refinement, §§2–6](https://www.cs.utexas.edu/~schwartz/ATS/fopdocs/AHEAD-Theory.pdf).
+
+The following comparison identifies this implementation's contracts rather than
+ranking expressiveness:
+
+| Question | AHEAD account | YIDL/Astichi case demonstrated here |
+| --- | --- | --- |
+| What is composed? | Named artifacts and refinements in nested sets | Schemas, facts, matchers and phased production definitions; selected scoped resources |
+| What selects the setter? | Feature composition supplies refinements | `Mutable` on each field selects an indexed setter contribution |
+| How is replacement delimited? | Artifact-specific refinement, including method extension/override | An authored fallback suite is replaced at `lazy_setter_body` |
+| What orders assembly? | Refinement order and design rules | Named phase anchors plus contribution order |
+| What connects local code? | Artifact-specific composition tools | Identifier/external bindings and explicit outer-scope sharing |
+
+AHEAD already separates design from implementation through models, and discusses
+richer refinements informed by multiple artifacts. We therefore do not infer
+that facts, policy choice or fine-grained composition are beyond its model.
+Our contribution is the traced working combination of per-field facts,
+phase-addressed insertion and scoped Python binding. The unchanged getter and
+exact generated-output/behavior checks make that combination concrete. No AHEAD
+port or comparative maintenance experiment was performed. [C13, C18]
+[Scaling Step-Wise Refinement, §§7, 9](https://www.cs.utexas.edu/~schwartz/ATS/fopdocs/AHEAD-Theory.pdf).
 
 **Language workbenches and model-driven engineering.** Fowler's workbench
 account combines semantic models, languages, generation, and editing support;
@@ -683,41 +743,25 @@ feature comparison here establishes superiority over either library.
 [Python dataclasses](https://docs.python.org/3/library/dataclasses.html),
 [Pydantic architecture](https://pydantic.dev/docs/validation/latest/internals/architecture/).
 
-**Declarative mappings and transactions.** SQLAlchemy is prior art for both
-declarative object mappings and coordinated transactional changes. Its
-declarative API constructs table and mapper structures from class declarations,
-using either a base class or a decorator. Its Session records changes across
-mapped objects as a unit of work, flushes pending changes to the database, and
-coordinates database commit or rollback. Flushing can occur before commit;
-rollback commonly expires persistent object state so it can be reloaded. These
-are established mechanisms for connecting declarations to runtime behavior and
-managing changes across objects. [SQLAlchemy declarative mapping
-styles](https://docs.sqlalchemy.org/en/20/orm/declarative_styles.html),
-[Session basics](https://docs.sqlalchemy.org/en/20/orm/session_basics.html). [C22]
+**Declarative mappings and transactions.** SQLAlchemy connects class declarations
+to tables/mappers and coordinates object changes through a Session unit of work.
+Flush and commit are distinct; rollback commonly expires persistent state, and
+explicit nested transactions can use database savepoints. [Declarative
+mapping](https://docs.sqlalchemy.org/en/20/orm/declarative_styles.html),
+[Session basics](https://docs.sqlalchemy.org/en/20/orm/session_basics.html),
+[Transactions and savepoints](https://docs.sqlalchemy.org/en/20/orm/session_transaction.html).
 
-Lifecycle's transaction model instead organizes in-memory field state through
-current and working facades. A field's transaction key assigns it to a group,
-allowing fields on the same instance to participate in different groups. Each
-key has its own active transaction, enlisted participants, and nesting depth;
-completion can address a selected key or several keys. The current multi-key
-manager processes groups sequentially, without establishing atomic completion
-across them. Repeated begins for one key share a transaction with counted
-nesting, whereas SQLAlchemy's explicit nested transactions can use database
-savepoints. These differences concern state representation and completion
-boundaries. The YIDL case study describes how declarations generate storage,
-facades, and participant methods that cooperate with the handwritten manager;
-it does not claim to originate unit-of-work transactions. These choices belong
-to the lifecycle application rather than restricting YIDL's generator model.
-A different concept could generate SQLAlchemy mappings and integration code,
-or code implementing a different transaction policy. That is a possible
-application, not an implemented and evaluated SQLAlchemy backend here. [SQLAlchemy
-transactions and savepoints](https://docs.sqlalchemy.org/en/20/orm/session_transaction.html).
-[C9, C11, C14, C15, C22]
+Lifecycle instead generates in-memory current/working field views and participant
+methods that cooperate with an ordinary manager. Fields on one instance can
+belong to separate transaction keys. Same-key nesting is counted; multi-key
+completion is sequential and does not establish atomicity across groups. These
+are application-specific representation and completion choices, not the origin
+of unit-of-work transactions or restrictions on YIDL's generic compiler model.
+No SQLAlchemy backend or parity experiment is demonstrated. [C11, C15, C22]
 
-The supportable position is therefore an exploratory architectural synthesis
-with a substantial downstream application. A sharper novelty claim needs a
-comparative example implemented in a close prior system, especially one with
-feature layers, rule-driven generation, and explicit code bindings. [C18]
+The supportable contribution is an exploratory architectural synthesis with a
+verified extension contract. A comparative implementation could test stronger
+claims about edit locality or authoring effort; neither is asserted here. [C18]
 
 ## 9. AI-assisted development and methods provenance
 
@@ -734,7 +778,8 @@ During preparation of this draft, a Codex assistant selected and read local
 implementation, reference, test, golden, and historical sources; retrieved
 primary literature and official policies; ran the bounded checks listed above;
 and drafted the manuscript and evidence documents. The checks used the existing
-environment and in-memory execution, without regeneration or product edits.
+environment and in-memory generation/execution, without writing generated
+artifacts or editing product code.
 Source artifacts and primary publications, rather than AI output, are the
 evidence for technical claims. This is also an AI-assisted evidence-selection
 process, so human review must check omissions and interpretations.
@@ -746,28 +791,19 @@ that established domain semantics. Those details are not inferred from package
 metadata or invented here. Named human authors must have substantive
 contributions and accept responsibility for every claim and artifact. [C19]
 
-On 2026-10-03, the official ACM authorship policy, updated May 14, 2026, was
-checked through indexed official content; the canonical page denied direct
-fetching. It distinguishes writing assistance, for which disclosure alone is
-no longer required, from AI used in research and relevant artifact construction,
-which requires a detailed methods account. Responsibility remains with human
-authors. Official MMSys guidance reproduces the relevant policy text; its
-conference-specific rules are not imported into Onward!. [ACM policy](https://www.acm.org/publications/policies/new-acm-policy-on-authorship),
-[official reproduction](https://2027.acmmmsys.org/research-track.html).
-
-The intended audience values exploratory implementations and substantial worked
-examples, but still requires validation. The checked 2026 Onward! call specifies
-double-blind review, 10-point SIGPLAN `acmart` formatting, a self-contained main
-body of at most 13 pages initially, and PDF submission. Its 2026 submission
-deadline has passed. This Markdown draft targets that audience, not an open
-submission window; a future call must be checked afresh. [Onward! Papers 2026
-call](https://2026.splashcon.org/track/splash-2026-onward--papers). [C20]
+The historical policy/venue check on October 3 distinguished writing assistance
+from substantial AI involvement in research/artifact construction and recorded
+Onward!'s exploratory-implementation audience and 2026 format constraints. The
+2026 deadline has passed. The evidence index retains retrieval limits and exact
+sources; a future call and policy must be checked afresh before submission.
+[ACM authorship policy](https://www.acm.org/publications/policies/new-acm-policy-on-authorship),
+[Onward! Papers 2026 call](https://2026.splashcon.org/track/splash-2026-onward--papers). [C20]
 
 ## 10. Limitations and open directions
 
-The implementation has one substantial application, related object-model
-fixtures, and a migration still exposing boundary issues. This is insufficient
-to establish domain-independent usability. More explicit architecture can make
+The implementation has Lifecycle and two additional related object-model
+packages. Current Pyrolyze integration acceptance was not audited; its earlier
+characterization records explicit completion boundaries. This evidence is insufficient to establish domain-independent usability. More explicit architecture can make
 relationships inspectable while also adding indirection and a new language to
 learn. Human comprehension and ease of LLM authoring are distinct questions;
 the LLM-authoring benefit is retained as a hypothesis rather than an evaluation
@@ -777,16 +813,12 @@ Fact typing, identity policies, matcher diagnostics, and scoped assembly constra
 composition, but do not prove the domain model correct or generated programs
 safe. Imperative operation bodies and runtime libraries can still introduce
 hidden coupling. Same-manager/key completion is not participant isolation;
-garbage collection is not a resource-retirement protocol; and current artifact
-success does not repair fresh generation failures. [C12, C15, V3–V5]
+garbage collection is not a resource-retirement protocol; and the qualified
+string-annotation route does not establish unrestricted generation compatibility. [C12, C15, V6–V9]
 
-Cross-language backends, self-hosting or Meta3/Meta-N descriptions of the
-compiler, named concept containment, and FastAPI/protobuf-style applications
-appear in the design log as future tests of the approach. The inspected system
-generates Python. Native Rust implementation work on Astichi is a compiler
-implementation choice, not a demonstrated Rust target language for YIDL domain
-output. The proposals need target semantics, capability checks, boundary
-contracts, and independent examples before becoming results. [C14]
+Cross-language output, compiler self-description and unrelated-domain examples
+remain proposals. The inspected domain output is Python; Astichi's native Rust
+implementation is not evidence of a Rust output backend. [C14]
 
 ## 11. Conclusions
 
@@ -798,11 +830,11 @@ that division concrete. Mutable lazy storage shows a setter policy selected
 and inserted without duplicating the lazy getter, while the broader package
 demonstrates generated storage, facades, and transaction participation.
 
-The evidence supports an exploratory compiler architecture and artifact-level
-case study. It leaves reproducible fresh generation, sharper comparison with
-prior work, broader-domain reuse, lifecycle integration, and measured human/AI
-benefits unresolved. Those limits define the next experiments rather than
-weakening the distinction between an implemented mechanism and a proposal.
+The evidence now includes fresh generation and exact output reproduction for
+the qualified central case, alongside attributed package evidence from related
+applications. A clean pinned artifact, broader annotation/backend qualification,
+stronger comparative claims, unrelated-domain reuse and measured performance or
+human/AI benefits remain separate evidence obligations.
 
 ## References
 
@@ -846,7 +878,8 @@ weakening the distinction between an implemented mechanism and a proposal.
     [Session basics](https://docs.sqlalchemy.org/en/20/orm/session_basics.html),
     [Transactions](https://docs.sqlalchemy.org/en/20/orm/session_transaction.html).
 
-Online sources checked 2026-10-03; SQLAlchemy sources checked 2026-10-04.
+Online sources checked 2026-10-03; SQLAlchemy sources checked 2026-10-04;
+AHEAD comparison refreshed from the author-hosted paper on 2026-10-23.
 This first-pass bibliography verifies
 publication identities and the bounded comparisons above; it is not a complete
 novelty review. Retrieval limits are recorded in the evidence index.

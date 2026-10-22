@@ -1,87 +1,75 @@
 # Research gaps and next evidence
 
-For [paper-draft.md](paper-draft.md), prepared 2026-10-03. This list requests
-evidence, not product edits, submission, contact, or publication. Claim and
-validation IDs refer to [evidence-index.md](evidence-index.md).
+For [paper-draft.md](paper-draft.md), prepared 2026-10-03 and revised 2026-10-23.
+This is an evidence agenda, not authorization for product edits, new experiments,
+submission or publication. Claim/validation IDs refer to [evidence-index.md](evidence-index.md).
 
-## Required before a submission-ready paper
+## What this revision establishes
 
-1. **Reproducible generation (V4/V5).** Resolve the fresh lazy-decoration
-   failures without assuming a root cause from this draft. Ambient
-   auto/native-rust lacked `build_lifecycle_class`; explicit Python failed a
-   `field_name` binding candidate. Pin dirty source, generated-base provenance,
-   dependencies, native binary identity/capabilities and engine selection.
-   Demonstrate fresh generation, exact golden comparison, and behavioral checks
-   on the same pinned state. V3 artifact execution alone is insufficient.
+The contribution is now bounded: per-field facts select a setter policy for an
+explicit hole in an existing lazy-property recipe, with scoped bindings and
+phase ordering preserving getter/factory reuse. The case is traced end to end
+and compared with AHEAD's actual refinement account. No stronger novelty,
+expressiveness or maintainability claim depends on implementing AHEAD here.
 
-2. **Novelty comparison (C18).** Implement one concrete example in a close prior
-   framework, especially AHEAD or another feature/rule-based generator with
-   explicit code bindings. Compare fact derivation, specialization, feature
-   collision/override contracts, phase ordering, diagnostics and scope hygiene.
-   Identify the smallest defensible new contribution. A vocabulary change and
-   combined implementation do not establish a new paradigm by themselves.
+Fresh generation is no longer wholly unreproduced. V7 checks the canonical
+string-annotation fixture under explicit Python lowering with persistent cache
+off: behavior, source shape, fresh decoration and exact raw/formatted output
+all passed. V8 checks the revised complete example. V6 retains the unchanged
+runtime-annotation failure, and V4/V5 remain historical. Dataclass and Undoable
+add related object-model applications and attributed installed-package evidence;
+they do not demonstrate an unrelated domain. No whole product suite or benchmark
+was run for this revision.
 
-3. **Composition semantics (C4/C6/C7/C8).** Write a compact semantic account of
-   concept closure, diamond identity, computed filters, selector precedence,
-   contribution/operation overlap handling, phase-context replacement, and
-   fallback binding scope. Audit which contracts have negative tests and which
-   remain undocumented. Do not generalize resource-matcher overlap rejection
-   to all matcher types or claim commutativity, hygiene soundness, or semantic
-   preservation without additional evidence.
+## Remaining publication evidence
 
-4. **Lifecycle contract (C12/C15).** Create an accepted current-versus-original
-   semantic matrix from markers, resources, active tests and application
-   boundaries. Separate intentional differences from unsupported/deferred
-   features and defects. Include init/post-init, binding/reference ownership,
-   close/deactivation, lazy policy, derived cache, initial_working, sidecars,
-   transaction tokens, hook failures and shared completion. Stale copied skip
-   strings cannot supply this matrix. Record the exact integration checkpoint
-   and remaining scaffolding; manager unification is not complete.
+1. **Self-contained artifact (C16, V6–V9).** Package a clean, pinned reproduction
+   of the qualified route with source/resource hashes, dependencies and selected
+   backend. Document its annotation requirements and failures separately from
+   historical outcomes. Current source imports plus installed version metadata
+   are not original-wheel identity. The central example succeeds without SDK
+   repair; wider packaging/native/annotation shortcomings are separate findings,
+   not prerequisites for this prose deliverable.
 
-5. **Evaluation and performance (C17).** Use the three-stage plan in the evidence
-   index after generation is reproducible. Preserve raw repetitions and all
-   configurations; alternate order and avoid deadline truncation. Compare
-   equivalent behavior and a similarly specialized baseline. Include startup,
-   generated size, memory, transactions and resource lifetime, not only
-   constructor throughput. Historical numbers need full source/environment
-   manifests or must remain historical observations.
+2. **Composition contracts (C4/C6/C7/C8).** Consolidate the implemented merge,
+   diamond identity, filtering, resource precedence, phase context replacement
+   and fallback-scope contracts into a compact semantic account. Audit negative
+   coverage before broadening claims to all selector surfaces. No commutativity,
+   hygiene theorem or general semantic-preservation result is established.
 
-6. **AI methods provenance and human ownership (C19/C20).** Recover tool/model
-   versions, use dates, representative sessions, design decisions, rejected
-   suggestions, coding/testing/review involvement, and evidence of substantive
-   human contributions. Human authors must verify all technical and bibliographic
-   claims, choose authorship/affiliations, and approve the final work. The
-   current ACM research-methods requirement applies to significant AI-assisted
-   implementation, regardless of writing-assistance disclosure rules.
+3. **Case boundaries (C12/C15/C23).** Preserve a current-versus-original Lifecycle
+   contract matrix, especially initialization, ownership/cleanup, derived caches,
+   initial working state, sidecars and shared transaction completion. Current integration acceptance was not re-audited; the entry point has
+   changed since the earlier snapshot (D8). Attribute Dataclass/Undoable acceptance to their exact owning
+   checkpoints and exclusions; their results do not establish Lifecycle's full
+   suite or unrelated-domain generality.
 
-## Experiments that would strengthen the architecture argument
+4. **Human ownership and methods (C19/C20/C21).** Recover development model/tool
+   versions, dates, representative sessions and human semantic/review decisions.
+   The paper preparation itself used AI-assisted evidence selection and writing.
+   Human authors must verify technical/bibliographic claims, choose authorship
+   and approve the artifact. Recheck the intended future venue call and current
+   AI policy before submission; the 2026 call is historical. Formatting, page
+   budget and anonymization remain unfinished.
 
-7. **Independent domain (C9/C14).** Build a bounded second domain whose facts and
-   policies differ materially from object/lifecycle fields. Show reusable core
-   mechanisms, any core changes, domain-specific algorithms, and limitations.
-   FastAPI/protobuf examples in the log are proposals, not results. A
-   cross-language target or self-hosting exercise is optional future work, not
-   a prerequisite disguised as implemented evidence.
+## Optional strengthening, tied to stronger claims
 
-8. **Change isolation and usability (C1/C19).** Record comparable maintenance
-   tasks against the old and generated architectures: edits required, contract
-   violations, review burden, comprehension and regressions. Treat human
-   usability and LLM authoring as distinct questions. The auto-binding
-   motivation is attributed practitioner evidence (C21); its broader benefit
-   for LLM authoring remains a hypothesis, outside this paper's evaluation
-   commitment. The five-week account does not itself establish improved
-   productivity or that LLMs understand YIDL better.
+5. **Comparative extension task (C13/C18).** If claiming improved edit locality or
+   effort, implement an equivalent extension in a close prior framework or
+   compare documented maintenance tasks with matched contracts. The present
+   AHEAD source comparison supports synthesis positioning, not an advantage.
+   No comparative implementation is required for the current bounded claim.
 
-9. **Artifact and venue readiness (C16/C20).** Produce a self-contained,
-   anonymizable artifact with clean reproducible dependencies, source/golden
-   checks and bounded runtime examples. Expand the primary-literature review;
-   retrieve and read the staging/hygiene texts currently limited by access.
-   Check the intended future Onward! call and current ACM policy again,
-   then format and assess page count. The 2026 deadline has passed. No
-   submission is authorized by this drafting task.
+6. **Performance (C10/C17/C23).** If retaining quantitative benefit claims in a
+   future version, measure concept compilation, declaration specialization and
+   instance execution separately on pinned artifacts. Use equivalent behavior,
+   alternated order, repetitions and raw samples. Include startup, memory and
+   transactions. Existing workloads and old Dataclass measurements must retain
+   their provenance; corrected final paths are not measured speedups.
 
-The strongest present claim is an inspectable implementation of fact-driven
-selection and phased, scoped Python assembly, demonstrated through a
-substantial lifecycle package and canonical artifacts. Fresh generation,
-comparative novelty, generality, performance and AI benefits remain separate
-evidence obligations.
+7. **Generality and usability (C1/C9/C14/C19/C21).** An unrelated domain would test
+   broader reuse; a controlled change task could test comprehension and review
+   cost. Neither is required to describe this implementation. Cross-language,
+   self-hosting and FastAPI/protobuf ideas remain proposals. AI authoring benefits
+   stay attributed observations/hypotheses, not measured results or a newly
+   required productivity study.
