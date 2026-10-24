@@ -28,7 +28,7 @@ yidl-compile = "yidl.cli:main"
 [project.urls]
 Source = "https://github.com/owebeeone/yidl"
 Issues = "https://github.com/owebeeone/yidl/issues"
-Documentation = "https://github.com/owebeeone/yidl/tree/main/docs"
+Documentation = "https://owebeeone.github.io/yidl/"
 
 [project.optional-dependencies]
 dev = ["black==26.3.1", "pytest>=7.0"]

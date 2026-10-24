@@ -1,41 +1,44 @@
-# Preview and prepare publication
+# Preview and release publication
 
-The current deliverable is a **built artifact**, with build-only CI. It does not
-deploy a site, upload a package or change repository Pages settings.
+The documentation site is published to
+[owebeeone.github.io/yidl](https://owebeeone.github.io/yidl/) when a YIDL GitHub
+release is published. The release workflow builds the exact tag's sources;
+package upload and documentation deployment are separate jobs/workflows and
+must both be checked. Configuring this route does not mean the first site or
+package release has already been published.
 
-Follow [documentation build instructions](documentation.md). Preview locally:
+## Preview before release
+
+Follow the [documentation build instructions](documentation.md), then preview:
 
 ```sh
 build/docs-env/bin/python -m mkdocs serve --dev-addr 127.0.0.1:8000
 ```
 
-Open the displayed URL and try search for `FieldName`, follow a guide/reference
-link, inspect code blocks and check narrow-screen navigation. The production base
-URL is configured for `https://owebeeone.github.io/yidl/`; this is the intended
-project-site path, not a claim that a live deployment exists.
+Check the reading order, search for `FieldName`, follow guide/reference links,
+inspect code blocks and narrow-screen navigation. Pull requests and manual
+workflow runs execute installed examples, strict MkDocs and HTML/search checks,
+then retain a preview artifact. They do not deploy the production site.
 
-## Build-only CI
+## Release route
 
-The documentation workflow installs the pinned site dependencies, builds strictly,
-runs active HTML/search/output checks, and retains an artifact. It has no Pages
-deployment job or write permission. Runtime examples have their separate qualified
-installation instructions and canonical test command; a site build alone does
-not establish their semantics.
+The operator selected GEARU for release preparation; see
+[the repository release process](https://github.com/owebeeone/yidl/blob/main/RELEASE.md).
+The release event must use a tag matching the package version and its public
+version mirror. The documentation build checks out that tag, installs the
+pinned site toolchain and a freshly built package, executes the public examples
+and canonical tutorial checks, and validates the built site.
 
-## Future publication gate
+Only a published release in the owning repository uploads the Pages artifact
+and starts deployment. The deployment job has scoped Pages/OIDC write
+permissions and uses the `github-pages` environment. Its repository policy
+allows release tags matching `v*`; preview runs carry no deployment permission.
+GitHub Pages is configured to use Actions, with HTTPS and the project-site base
+path. The workflow does not create a release or publish a package by itself.
 
-Before a separately authorized deployment, verify repository ownership/visibility,
-Pages eligibility, Actions/environment controls, exact source revision, artifact
-hash and base URL. Review the completed HTML first. Use a dedicated Pages job
-with minimal scoped permissions and retain the prior artifact for rollback.
-Do not enable automatic production deployment as an incidental docs update.
-
-The project owner selected **GEARU** for eventual release tooling. Release
-configuration/operations are outside this documentation task. Tagging, commits,
-pushes, registry upload, releases and site deployment each need applicable
-authorization. A planning GO is not implementation or release acceptance.
-
-After an authorized deployment, verify homepage/navigation/search and the public
-install route against the approved revision. If bad, redeploy the prior approved
-artifact rather than moving a published release tag. Keep development docs labeled
-as such until they match a qualified supported release.
+After release, inspect both the PyPI workflow and documentation workflow. Verify
+the live homepage, navigation, search and installation instructions against the
+released candidate. If deployment fails, repair and rerun the release workflow
+for that immutable tag; do not move or reuse a release tag. If released source
+content is wrong, prepare a corrected release. Earlier artifact/evidence records
+retain their original build-only scope.

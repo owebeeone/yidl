@@ -89,3 +89,33 @@ This does not claim native-backend qualification, new cross-platform evidence,
 a hosted Actions run, a successful OIDC exchange, or independent release review.
 Existing evidence keeps its original scope and revision. The publication gate
 still requires a committed/reviewed candidate and the ordered hosted checks.
+
+## Release documentation and review follow-up
+
+The operator subsequently authorized the Cache/Lifecycle user-guide corrections,
+release-triggered YIDL Pages publication, and a correctness/readability review.
+This adds current installation/first-use routes, task-oriented reference links,
+cache troubleshooting and Lifecycle public docs in its sdist. It does not change
+compiler semantics or deploy a release during preparation. Pyrolyze's separately
+authorized sentinel migration remains owned by that repository.
+
+The Pages configuration uses Actions and the project's HTTPS URL. Deployment
+uses the exact published release tag, requires matching version metadata, and
+is scoped to the owning repository's release events. The environment permits
+`v*` tags. Manual/PR runs remain build-only. The deployment downloads the built
+Pages artifact; it does not rebuild or use a moving main-branch checkout. The
+PyPI and Pages workflows are separate: inspect both after a release.
+
+The local review has two passes: correctness against source/dependency metadata
+and executed examples, then a human reading-path pass from installation through
+first result and task reference. Findings corrected in this cycle include the
+missing Lifecycle docs in the sdist, stale Cache status text, an unlinked mixed
+Lifecycle draft/proposal, old completion-failure wording and a hard-coded wheel
+version in docs CI. Proposed APIs are now separate and clearly unavailable.
+This is a self-review with executable checks, not an independent reviewer GO.
+
+Local checks include strict MkDocs, HTML/assets/search validation, consumer
+Markdown targets/anchors, installed tutorial and cold/warm consumer examples,
+workflow syntax, release-tag rejection and preview/deployment separation. The
+first hosted deployment/OIDC exchange remains a release-time check; repository
+settings alone do not prove live content was published.

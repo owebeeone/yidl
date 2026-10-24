@@ -5,6 +5,12 @@ These larger applications show how the same mechanisms are used in practice.
 You do not need to install or build these packages to complete the tutorial;
 use the [example catalog](index.md) for examples you can run in YIDL itself.
 
+For using the current standalone libraries, start with
+[Lifecycle installation and transactions](https://github.com/owebeeone/yidl-lifecycle/blob/main/docs/GettingStarted.md)
+or [Cache installation and its consumer example](https://github.com/owebeeone/yidl-cache/blob/main/README.md).
+Those guides describe their own package boundaries; the excerpts below remain
+historical, revision-pinned evidence.
+
 These are fixed-revision excerpts of consumer-authored resources, facts and
 canonical generated output. They are attributed to their owning repositories;
 this documentation does not select or change a license. The snapshots include

@@ -46,3 +46,16 @@ proof of unrelated-domain generality.
 The [example catalog](../examples/index.md) gives commands and ownership. The
 [troubleshooting index](../troubleshooting/index.md) gives remedies without
 promoting unresolved hypotheses into compiler defects.
+
+## Downstream dependency versions
+
+Lifecycle ships generated builders and pins the exact published YIDL version
+used to regenerate and test them. Updating that pin requires a compatible
+Lifecycle release; installing a newer YIDL does not regenerate its shipped base.
+The current Lifecycle markers use compat-sentinel 0.1.2 independently of YIDL's
+helper. Astichi remains part of the generation runtime and its current tested
+version is pinned; a wider supported range needs separate qualification. See
+[Lifecycle's release contract](https://github.com/owebeeone/yidl-lifecycle/blob/main/RELEASE.md).
+
+The standalone Cache package has no YIDL or Astichi runtime dependency. These
+current package policies do not change the revisions of the excerpts above.
