@@ -2,10 +2,13 @@
 
 ## Release preparation
 
+- [Release process](../RELEASE.md): configured GEARU route and publication order.
+- [Publishing preparation](YidlPublishing.md): current dependency/license setup,
+  local checks and remaining hosted publication gates.
 - [0.1.0 release plan](YidlReleasePlan.md): current milestones, scope, evidence,
   release gates and separate publication authorization.
 - [Documentation and website plan](YidlDocumentationPlan.md): detailed public
-  page/example/site work; planned, not implemented.
+  page/example/site requirements; see the publishing record for current checks.
 - [Documentation shortcomings](YidlDocShortcomings.md): consumer evidence and
   recipe/reference inventory; classifications must be preserved.
 - [Release follow-ups](YidlReleaseFollowUps.md): unresolved cleanup, adjacent
@@ -16,8 +19,8 @@
 - [Design summary](YidlDesignSummary.md): canonical semantic/design reference.
 - [Coding rules](YidlCodingRules.md): definitive implementation/process rules.
 - [Repository instructions](../AGENTS.md): operational shorthand.
-- [Public documentation](../docs/): existing design/reference material;
-  modernization is part of release preparation, not a completed deliverable.
+- [Public documentation](../docs/): current guides, examples and reference;
+  publishing the site is a separate operation.
 
 Lifecycle behavior belongs to `yidl-lifecycle`; its historical presence in the
 design summary does not authorize restoring it to the generic compiler.

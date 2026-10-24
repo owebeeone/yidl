@@ -3,8 +3,23 @@ revision = 3
 requires-python = ">=3.12"
 
 [options]
-exclude-newer = "2026-05-08T01:48:30.932948Z"
+exclude-newer = "2026-10-17T17:55:33.410516Z"
 exclude-newer-span = "P1W"
+
+[[package]]
+name = "astichi"
+version = "1.1.3"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/c0/91/e150c098aada716b02b3fd6b090b0cf4ac06ee6e65c867056941a16ab034/astichi-1.1.3.tar.gz", hash = "sha256:120cbb15ce6f186d7aa3f47562a90a59291e79657fbe5f3ee40d5a053836b4dd", size = 974096, upload-time = "2026-10-07T17:19:56.375Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/09/85/9fb8cb84f80cf20e59475904fc27711b882312c18d78b0a9ae36f5ca64d4/astichi-1.1.3-cp312-abi3-macosx_10_13_x86_64.whl", hash = "sha256:422204b0df0f0bb54b80e95386f469e6f21a2778838f22bae4428dac090f7d12", size = 1891500, upload-time = "2026-10-07T17:19:45.997Z" },
+    { url = "https://files.pythonhosted.org/packages/82/b0/9626567b917bbcd0e381c08168be6d9a417f83c45d727895ee641811e2ab/astichi-1.1.3-cp312-abi3-macosx_11_0_arm64.whl", hash = "sha256:d817e3588a79a6a81bd16fe94a53da6f3095f6b48e67a059f96b2d3cac7985c9", size = 1792181, upload-time = "2026-10-07T17:19:47.5Z" },
+    { url = "https://files.pythonhosted.org/packages/b9/f3/4baee3d22c2cfdb0c87913c1f7ba8f185f4a2630c98a0607dcb0cd8c2cfe/astichi-1.1.3-cp312-abi3-manylinux_2_28_aarch64.whl", hash = "sha256:72c49a26fd89e72c1129ec3b62da4b1d4aa1b9d02cdb3e4a785c548997c174ef", size = 1805096, upload-time = "2026-10-07T17:19:48.933Z" },
+    { url = "https://files.pythonhosted.org/packages/96/eb/a4941feb3eb2a26ff5b1b166310d6461b18bb556cba2322f50c91311614c/astichi-1.1.3-cp312-abi3-manylinux_2_28_x86_64.whl", hash = "sha256:544da9336a8bbcf11fd693db25ebc639a8d6ae15b2f887439d11a7d55f2f4a14", size = 1947333, upload-time = "2026-10-07T17:19:50.357Z" },
+    { url = "https://files.pythonhosted.org/packages/4b/4d/b6832e452f5c1f8c27f7e23090e1512fd2c0552592d4cd0819f2c03e5273/astichi-1.1.3-cp312-cp312-win_amd64.whl", hash = "sha256:7235736bff24ca8de5e6fcc576ad72a65d90c3a9254d1b191a1804c8b71f297b", size = 1961561, upload-time = "2026-10-07T17:19:51.725Z" },
+    { url = "https://files.pythonhosted.org/packages/17/35/42b7422e9ba8ace816c7af15dca469aa9e709bbfaaeab60d6b1e3a5a988d/astichi-1.1.3-cp313-cp313-win_amd64.whl", hash = "sha256:d5b871519db7027af96524bb323890505c9fafe1618c299596e0e164b6f66a7c", size = 3648527, upload-time = "2026-10-07T17:19:53.195Z" },
+    { url = "https://files.pythonhosted.org/packages/ad/65/c159cae6444ed8b741dd1f36265932e1f09658eadef80aa1e74a2a1241e4/astichi-1.1.3-cp314-cp314-win_amd64.whl", hash = "sha256:8d511c49ecd83ff321ac65ab068f28aaef0071488d0331b5b36a3d25b907adee", size = 5669522, upload-time = "2026-10-07T17:19:54.793Z" },
+]
 
 [[package]]
 name = "black"
@@ -181,6 +196,7 @@ name = "yidl"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [
+    { name = "astichi" },
     { name = "lark" },
 ]
 
@@ -192,6 +208,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
+    { name = "astichi", specifier = "==1.1.3" },
     { name = "black", marker = "extra == 'dev'", specifier = "==26.3.1" },
     { name = "lark", specifier = ">=1.1" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=7.0" },

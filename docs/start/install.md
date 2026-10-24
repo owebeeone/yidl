@@ -10,8 +10,8 @@ next tutorial uses their distinction between a generator library and generated
 application code.
 
 YIDL requires **CPython 3.12 or newer (3.12+)**. For the demonstrated first-use
-route, build YIDL **0.1.0 from this documentation candidate**, install Astichi
-**1.1.3** explicitly, and select `ASTICHI_LOWER_ENGINE=python`.
+route, build YIDL **0.1.0 from this documentation candidate**, use its declared
+Astichi **1.1.3** dependency, and select `ASTICHI_LOWER_ENGINE=python`.
 
 The recorded reproduction environment used CPython **3.12.12** and installed
 wheels without sibling imports. That exact patch version identifies the test
@@ -29,7 +29,7 @@ installed:
 uv build --wheel --out-dir build/wheels
 uv venv build/example-env --python 3.12
 uv pip install --python build/example-env/bin/python \
-  build/wheels/yidl-0.1.0-py3-none-any.whl 'astichi==1.1.3'
+  build/wheels/yidl-0.1.0-py3-none-any.whl
 ```
 
 The example selects the CPython 3.12 series; you can select another installed
@@ -39,10 +39,10 @@ On Windows the interpreter is `build/example-env/Scripts/python.exe`; use that
 path in place of `build/example-env/bin/python`. Native Windows and other Python
 minors have not been qualified for these new documentation examples.
 
-**Astichi must be explicit:** current YIDL metadata lists Lark and omits Astichi,
-even though the concept compiler imports it. An old local `dist/` wheel may also
-lack `yidl.concept_parser`. Rebuild from the intended checkout; do not diagnose
-that stale artifact as failure of the current compiler.
+**Use a freshly built artifact:** current metadata installs Astichi 1.1.3
+automatically. Older wheels can omit that dependency or lack
+`yidl.concept_parser`. Rebuild from the intended checkout rather than diagnosing
+a stale artifact as failure of the current compiler.
 
 ## Check imports and backend
 

@@ -5,7 +5,7 @@ Retain chained exceptions and distinguish setup failures from generated behavior
 
 | Symptom | Likely layer / next check | Remedy or status |
 | --- | --- | --- |
-| No `astichi` module | Installation | Install explicit Astichi dependency; current metadata omits it |
+| No `astichi` module | Installation | Reinstall the fresh candidate with dependencies; old wheels can omit Astichi |
 | No `yidl.concept_parser` | Artifact/import origin | Rebuild current candidate; avoid stale local dist wheel |
 | Unexpected COMMA in record | Grammar | Use whitespace-separated record entries |
 | Missing imported source/export | Source map/symbols | Supply all texts under stable logical keys and export the concept |

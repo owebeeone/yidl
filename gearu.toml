@@ -1,0 +1,39 @@
+[project]
+name = "yidl"
+branch = "main"
+remote = "origin"
+tag_prefix = "v"
+github_repo = "owebeeone/yidl"
+
+[python]
+version = "static"
+manifest = "pyproject.toml"
+lockfiles = ["uv.lock"]
+# Release worktrees resolve public dependencies, never sibling source overrides.
+lock_command = ["uv", "lock", "--no-sources", "--python", "3.12"]
+
+[release]
+managed_files = ["src/yidl/__init__.py"]
+checks = [
+    ["uv", "run", "--no-project", "--python", "3.12", "python", "scripts/release_version.py", "sync", "{python_version}"],
+    ["uv", "run", "--no-project", "--no-sources", "--env-file", ".release.env", "--python", "3.12", "--with", ".", "--with", "pytest==8.4.2", "--with", "black==26.3.1", "python", "-m", "pytest", "-q", "-p", "no:cacheprovider", "--ignore=tests/test_yidl_lifecycle_external_smoke.py"],
+    ["uv", "run", "--no-project", "--no-sources", "--env-file", ".release.env", "--python", "3.13", "--with", ".", "--with", "pytest==8.4.2", "--with", "black==26.3.1", "python", "-m", "pytest", "-q", "-p", "no:cacheprovider", "--ignore=tests/test_yidl_lifecycle_external_smoke.py"],
+    ["uv", "run", "--no-project", "--no-sources", "--env-file", ".release.env", "--python", "3.14", "--with", ".", "--with", "pytest==8.4.2", "--with", "black==26.3.1", "python", "-m", "pytest", "-q", "-p", "no:cacheprovider", "--ignore=tests/test_yidl_lifecycle_external_smoke.py"],
+    ["uv", "run", "--no-project", "--python", "3.12", "--with", "build==1.6.1", "python", "-m", "build", "--outdir", "build/release/{python_version}"],
+    ["uv", "run", "--no-project", "--python", "3.12", "--with", "twine==7.0.0", "python", "-m", "twine", "check", "--strict", "build/release/{python_version}/*"],
+]
+exact_checks = [
+    ["uv", "run", "--no-project", "--python", "3.12", "python", "scripts/release_version.py", "verify", "{python_version}"],
+    ["uv", "run", "--no-project", "--no-sources", "--env-file", ".release.env", "--python", "3.12", "--with", ".", "--with", "pytest==8.4.2", "--with", "black==26.3.1", "python", "-m", "pytest", "-q", "-p", "no:cacheprovider", "--ignore=tests/test_yidl_lifecycle_external_smoke.py"],
+    ["uv", "run", "--no-project", "--no-sources", "--env-file", ".release.env", "--python", "3.13", "--with", ".", "--with", "pytest==8.4.2", "--with", "black==26.3.1", "python", "-m", "pytest", "-q", "-p", "no:cacheprovider", "--ignore=tests/test_yidl_lifecycle_external_smoke.py"],
+    ["uv", "run", "--no-project", "--no-sources", "--env-file", ".release.env", "--python", "3.14", "--with", ".", "--with", "pytest==8.4.2", "--with", "black==26.3.1", "python", "-m", "pytest", "-q", "-p", "no:cacheprovider", "--ignore=tests/test_yidl_lifecycle_external_smoke.py"],
+    ["uv", "run", "--no-project", "--python", "3.12", "--with", "build==1.6.1", "python", "-m", "build", "--outdir", "build/release/{python_version}"],
+    ["uv", "run", "--no-project", "--python", "3.12", "--with", "twine==7.0.0", "python", "-m", "twine", "check", "--strict", "build/release/{python_version}/*"],
+]
+github_notes = """
+yidl {tag} — initial alpha release, licensed LGPL-2.1-only.
+
+See RELEASE.md for the supported route and release limits. Publication verifies
+fresh wheel and sdist installations and the Python-backend source suite on
+CPython 3.12–3.14. Native and cross-platform claims require separate evidence.
+"""

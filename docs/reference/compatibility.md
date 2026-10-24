@@ -7,8 +7,9 @@ qualification; it does not restrict installation to that patch version or qualif
 every Python/backend/platform combination.
 
 **Documentation candidate:** YIDL revision `ee5ded0854aa5b1fc0ddfa7213b765009b63bb95`
-for compiler/runtime bytes, package version 0.1.0; documentation changes are local
-and uncommitted. Version metadata does not establish registry release readiness.
+for the original compiler/runtime examples, package version 0.1.0. Later metadata
+and documentation updates are assessed separately. Version metadata does not
+establish registry release readiness.
 
 | Route | Python / SDK / backend | Evidence boundary |
 | --- | --- | --- |
@@ -23,11 +24,11 @@ and uncommitted. Version metadata does not establish registry release readiness.
 
 | Case | Classification / usable disposition |
 | --- | --- |
-| Astichi omitted from YIDL dependency metadata | Confirmed packaging gap; explicit install documented |
+| Astichi runtime dependency | This candidate declares Astichi 1.1.3; older wheels may omit it |
 | Old local dist artifact missing concept API | Confirmed stale-artifact hazard; build intended candidate |
 | `yidl-compile` | Legacy transducer helper generator; Python concept API is current route |
 | `yidl.embed` | Designed bootstrap, unavailable current public route |
-| Live Lifecycle type annotations | Known failing arrangement; separate fix in progress, not accepted here; use qualified explicit string/Python route |
+| Lifecycle excerpt baseline | The pinned excerpts predate its annotation fix; these historical results do not describe the latest Lifecycle candidate |
 | Nested indexed scalar-expression chain (D17) | Unresolved mechanism; flat consumer alternative has bounded evidence |
 | Static scalar carrier / bare references (D19) | Backend-sensitive observed boundary; no universal recipe or no-overhead claim |
 | Mandatory empty holes | Explicit fillers required; demonstrated by zero-field and disabled-init tutorial |

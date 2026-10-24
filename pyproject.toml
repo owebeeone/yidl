@@ -1,13 +1,16 @@
 [build-system]
-requires = ["hatchling>=1.24"]
+requires = ["hatchling>=1.27"]
 build-backend = "hatchling.build"
 
 [project]
 name = "yidl"
 version = "0.1.0"
-description = "YIDL: declarative Ahead-of-Time metacompiler DSL for lifecycle / transducer specs"
+description = "Declarative Python code-generation compiler"
+readme = "README.md"
+license = "LGPL-2.1-only"
+license-files = ["LICENSE"]
 requires-python = ">=3.12"
-dependencies = ["lark>=1.1"]
+dependencies = ["lark>=1.1", "astichi==1.1.3"]
 authors = [{ name = "YIDL contributors" }]
 keywords = ["dsl", "compiler", "codegen", "lifecycle"]
 classifiers = [
@@ -22,6 +25,11 @@ classifiers = [
 [project.scripts]
 yidl-compile = "yidl.cli:main"
 
+[project.urls]
+Source = "https://github.com/owebeeone/yidl"
+Issues = "https://github.com/owebeeone/yidl/issues"
+Documentation = "https://github.com/owebeeone/yidl/tree/main/docs"
+
 [project.optional-dependencies]
 dev = ["black==26.3.1", "pytest>=7.0"]
 
@@ -32,7 +40,7 @@ exclude-newer = "1 week"
 sources = ["src"]
 
 [tool.hatch.build.targets.sdist]
-include = ["src/yidl", "docs", "example", "tests", "dev-docs", "spec"]
+include = ["src/yidl", "docs", "example", "tests", "dev-docs", "spec", "scripts", "RELEASE.md", "gearu.toml", ".release.env", "mkdocs.yml", "docs-requirements.txt"]
 
 # Run: python -m pytest
 # If another installed package registers a broken pytest plugin, use:

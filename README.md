@@ -23,8 +23,9 @@ Already familiar with Python generation? Use the
 [direct run route](docs/start/first-generator.md#run-and-inspect) after installation.
 
 **0.1.0 development candidate; CPython 3.12+.** The recorded example environment
-is qualified separately from that minimum. Current metadata omits Astichi, so
-install it explicitly. The existing `yidl-compile` command targets the legacy
+is qualified separately from that minimum. Astichi 1.1.3 is declared as a
+runtime dependency and is installed automatically. The existing `yidl-compile`
+command targets the legacy
 transducer frontend; use the Python concept API taught here for current braced
 `.yidl` files. Packaging and publication readiness remain separate gates.
 
