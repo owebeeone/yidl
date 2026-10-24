@@ -1,5 +1,9 @@
 # Generate your first class
 
+**Learning path · Step 4 of 4.** Use the environment from
+[Installation](install.md). Run the example first, then follow the explanation
+of one field. The complete source listings at the end are optional reference.
+
 Build a two-field slotted Point class. The beginner sequence is
 [How YIDL works](../concepts/model.md) →
 [generation stages](../concepts/generation-pipeline.md) →
@@ -145,9 +149,19 @@ its disposable output directory is `build/documentation/`. Keep authored
 and outside-copy cleanup are listed in the installation page's
 [cleanup steps](install.md#clean-up-the-walkthrough).
 
-## Complete source for reference
+## Continue after the tutorial
 
-You have now seen the roles, stage order and field path. The complete source adds
+You have completed the four-page learning path. Next,
+[inspect the generated files](inspect-output.md) to distinguish your editable
+inputs from the two outputs. To explore selection across two classes, follow
+[Matching and data flow](../guides/matching-and-data-flow.md). These are follow-up
+choices; the full listings below are available when you want to inspect the
+complete example.
+
+## Optional: complete source listings { #complete-source-for-reference }
+
+You do not need to retype these listings or run them as additional steps. The
+command above already uses these repository files. The complete source adds
 class/method shells, explicit empty contributions for mandatory holes, the other
 selections and the executable checks.
 

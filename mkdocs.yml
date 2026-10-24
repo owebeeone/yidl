@@ -66,8 +66,7 @@ nav:
       - How YIDL works: concepts/model.md
       - Generation stages: concepts/generation-pipeline.md
       - Installation: start/install.md
-      - First generator: start/first-generator.md
-      - Project layout: start/project-layout.md
+      - Generate your first class: start/first-generator.md
       - Inspect output: start/inspect-output.md
   - Concepts:
       - Surfaces and shapes: concepts/surfaces-and-shapes.md
@@ -81,6 +80,7 @@ nav:
       - Extending concepts: guides/extending-concepts.md
       - Fact production: guides/fact-production.md
       - Matching and data flow: guides/matching-and-data-flow.md
+      - Split a project and regenerate: start/project-layout.md
       - Shared resources: guides/shared-resources.md
       - Debugging assembly: guides/debugging-assembly.md
   - Reference:

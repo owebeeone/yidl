@@ -1,60 +1,70 @@
 # Build a Python generator with YIDL
 
 YIDL helps you build **Python code generators**. You supply reusable Python code
-pieces, structured inputs describing what to generate, and rules for combining
-them. A generator can produce plain classes with direct field stores, select
-property accessors, or assemble ordered method statements. The generated classes
-then run as ordinary Python.
+pieces, inputs describing what to generate, and rules for combining them. The
+resulting classes and functions run as ordinary Python.
 
-There are two products to understand. YIDL first turns your definitions into a
-**generator library** with input-row types and assembly functions. Your program
-supplies rows to that library to produce **application code**, such as Point.
-Only after executing that generated code do you call `Point(3, 4)` to make an
-object. A field-name input `x` describes code to generate; 3 is an instance value.
+This page is a guide to the documentation. Start with the learning path below;
+the later sections preview its outcome and explain where to go for specific tasks.
 
-## Start with the model
+## New to YIDL? Start here
 
-For your first visit, follow **How YIDL works → Generation stages → Installation
-→ First generator**. This is also the Start Here navigation and footer sequence.
-It introduces the vocabulary and YIDL/Astichi/application responsibilities before
-the complete tutorial source.
+Follow these four pages in order. The first two explain the ideas; the last two
+set up your environment and walk through a working generator.
 
-[How YIDL works](concepts/model.md){ .md-button .md-button--primary }
-[Generation stages](concepts/generation-pipeline.md){ .md-button }
+[Start learning: How YIDL works](concepts/model.md){ .md-button .md-button--primary }
 
-Already familiar with Python generators? After
+1. [How YIDL works](concepts/model.md) — understand what you supply and what YIDL generates.
+2. [Generation stages](concepts/generation-pipeline.md) — follow the definitions through to a usable Python class.
+3. [Installation](start/install.md) — prepare and check the example environment.
+4. [Generate your first class](start/first-generator.md) — run the generator, then follow how its parts fit together.
+
+These pages are also grouped under **Start Here** in the sidebar. After the
+tutorial, [Inspect output](start/inspect-output.md) helps you examine the files
+you generated. You do not need to work through every guide or reference page to
+finish the tutorial.
+
+Already familiar with Python code generation? After
 [installation](start/install.md), take the
 [direct run route](start/first-generator.md#run-and-inspect).
 
-## What you will build
+## Tutorial preview: a generated Point class
 
-The first tutorial creates `Point(3, 4)`, whose `x` and `y` are direct slots:
+The learning path leads to a generator that produces a two-field `Point` class.
+You describe the class and fields, run generation, then use the resulting class
+with `Point(3, 4)` to make an object whose `x` and `y` values are 3 and 4.
 
-{{source:tests/data/goldens/materialized/documentation_classes/first_model.py|python}}
+This is the tutorial's destination, not an instruction to start writing a Point
+class here. The tutorial explains the authored inputs and shows the generated
+Python. It saves two files: `runtime.py`, the generator library, and `model.py`,
+the generated Point code. [How YIDL works](concepts/model.md) explains why those
+are separate products.
 
-The tutorial explains which definitions, input rows and assembly steps produce
-this code before showing its full source. YIDL selects and places the pieces;
-its Astichi dependency combines Python syntax trees and manages names/scopes.
-Your application decides field policy and supplies the instance values.
+## After the tutorial: find a specific task
+
+Use these shortcuts when you know what you want to do. They are alternative
+destinations, not another sequence to complete after the four steps above.
+
+| You want to… | Read |
+| --- | --- |
+| Understand the generated files | [Inspect output](start/inspect-output.md) |
+| Follow a field name into a constructor parameter | [Matching and data flow](guides/matching-and-data-flow.md) |
+| Split definitions across files | [Split a project and regenerate](start/project-layout.md) |
+| Extend an existing generator | [Inheritance and specialization](concepts/composition.md) |
+| Diagnose a generation failure | [Debugging assembly](guides/debugging-assembly.md) |
+| Look up exact syntax or an API | [Language reference](reference/language.md) or [APIs and CLI](reference/apis-and-cli.md) |
+| Try another runnable example | [Example catalog](examples/index.md) |
+
+The **Concepts** pages explain individual mechanisms in more depth. **Guides and
+Recipes** help with particular changes, and **Reference** pages are for lookup.
+Under **Examples**, the catalog contains commands you can run, the gallery shows
+generated output, and **Used in practice** explains fixed-revision excerpts from
+larger applications. Those excerpts are optional reading, not extra packages
+needed for the first tutorial.
+
+## Version and example scope
 
 **Development documentation — 0.1.0 candidate, CPython 3.12+.** Exact executed
 example environments and remaining limits are recorded in
 [compatibility](reference/compatibility.md). Packaging and publication are
 separate gates. The current tutorial uses the explicit Python backend.
-
-## Choose a task
-
-| You want to… | Read |
-| --- | --- |
-| Learn the parts and their responsibilities | [How YIDL works](concepts/model.md), then [generation stages](concepts/generation-pipeline.md) |
-| Generate and inspect the first result | [First generator](start/first-generator.md) |
-| Follow a property into a generated parameter | [Matching and data flow](guides/matching-and-data-flow.md) |
-| Extend a generator | [Inheritance and specialization](concepts/composition.md) |
-| Diagnose generation | [Debugging assembly](guides/debugging-assembly.md) |
-| Find exact contracts | [Language](reference/language.md), [APIs](reference/apis-and-cli.md), [compatibility](reference/compatibility.md) |
-| Run other examples | [Example catalog](examples/index.md) |
-
-Lifecycle, Dataclass and Undoable are larger applications of the generic
-compiler. Their transaction and field policies are their own;
-[qualified consumer excerpts](examples/consumers.md) illustrate their uses after
-the standalone tutorial.

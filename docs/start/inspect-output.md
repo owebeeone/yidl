@@ -1,5 +1,9 @@
 # Inspect generated output
 
+**After the tutorial.** Use this page once you have run
+[Generate your first class](first-generator.md). It explains the files you
+already produced; there is no additional installation step.
+
 Keep these artifacts separate:
 
 | Artifact | Meaning | What to inspect |
@@ -9,8 +13,10 @@ Keep these artifacts separate:
 | `model.py` | Final generated Python | Direct slots/stores, signature, surviving markers |
 | Executed class | User-visible behavior | Values, callbacks, ordering, exceptions |
 
-Run the first-generator driver with `--out build/first`, then open those two
-Python files. `ast.unparse(composable.to_executable_ast())` provides readable
+If you used the tutorial's `--out build/first` command, open
+`build/first/runtime.py` and `build/first/model.py` from the repository root.
+If you chose another output directory, use that directory instead.
+`ast.unparse(composable.to_executable_ast())` provides readable
 Python without requiring you to evaluate a second handwritten code sample.
 `composable.emit_commented()` is another inspection surface; comments and
 hygiene spellings can differ from final AST display.
@@ -41,3 +47,11 @@ directory. Remove that destination if it belongs only to this experiment; retain
 `classes.yidl` and `generate.py`, which are the authored inputs needed to rebuild
 it. The [installation cleanup steps](install.md#clean-up-the-walkthrough) also
 cover the created environment and wheel directory without deleting authored files.
+
+## Choose what to learn next
+
+For a second walkthrough, follow a field from input to output in
+[Matching and data flow](../guides/matching-and-data-flow.md). For a generator
+spread across files, use [Split a project and regenerate](project-layout.md).
+The [example catalog](../examples/index.md) offers runnable variations. Choose
+the page that fits your next task; these are not prerequisites for one another.

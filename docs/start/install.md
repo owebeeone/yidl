@@ -1,5 +1,9 @@
 # Install a qualified environment
 
+**Learning path · Step 3 of 4.** Build and install below, then check imports and
+the backend. After those checks, continue to [Generate your first class](first-generator.md).
+The external-directory exercise and cleanup sections are optional follow-up.
+
 For a first visit, read [How YIDL works](../concepts/model.md) and
 [generation stages](../concepts/generation-pipeline.md) before installing. The
 next tutorial uses their distinction between a generator library and generated
@@ -52,7 +56,12 @@ selected engines are `python`, with no fallback reason. In PowerShell first set
 `$env:ASTICHI_LOWER_ENGINE = "python"`; then run the Python command. The Unix
 inline environment assignment syntax is not a PowerShell command.
 
-## Run outside the checkout
+## Optional: check an external copy { #run-outside-the-checkout }
+
+**Optional installation check.** You can go straight to the
+[tutorial](first-generator.md) after checking imports and the backend above.
+Use this additional exercise to verify the installed packages also work from a
+copied example outside the repository. It is not required before the tutorial.
 
 The following commands are for a POSIX shell on macOS/Linux. Start in the YIDL
 repository root, after creating the installed environment above. Capture that
@@ -83,10 +92,17 @@ The script's optional output default is `build/documentation` relative to the
 current directory; the explicit `--out generated` above replaces that default.
 
 This shell sequence is the qualified external-directory procedure; it is not a
-PowerShell sequence or a new Windows/native qualification. Continue with the
-[first generator](first-generator.md) to understand and change the inputs.
+PowerShell sequence or a new Windows/native qualification. Return to the checkout
+before following [Generate your first class](first-generator.md):
 
-## Clean up the walkthrough
+```sh
+cd "$yidl_project_dir"
+```
+
+Keep the installed environment for that tutorial. The copied example and its
+generated output can remain in the temporary directory until you finish experimenting.
+
+## Clean up after experimenting { #clean-up-the-walkthrough }
 
 Keep the environment while following the tutorial; clean up when you have
 finished experimenting.

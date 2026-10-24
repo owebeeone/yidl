@@ -1,5 +1,8 @@
 # Generation stages
 
+**Learning path · Step 2 of 4.** This page explains the process; you will run it
+in the tutorial after [Installation](../start/install.md).
+
 After [How YIDL works](model.md), keep three moments separate: preparing a
 generator, generating a particular class, and using that class. The same
 prepared generator can receive different input rows for later generations.
@@ -42,6 +45,10 @@ Ordinary Python code calls `Point(3, 4)`. Its generated constructor assigns 3 to
 it does not rerun the generator. Generation inputs specify names and behavior;
 constructor arguments supply this instance's values.
 
+**Next: [Installation](../start/install.md).** You now have the stage overview
+needed for the tutorial. The remaining section is a troubleshooting reference;
+return to it when you need to locate a failure.
+
 ## Locate an error by stage
 
 | Stage | Input → output | Typical failure |
@@ -67,5 +74,4 @@ ad hoc source parsing; that implementation rule differs from the explicit
 compiler/build boundary above. See [caching and performance](../reference/caching-and-performance.md)
 for those lifetimes and the limits of native-backend claims.
 
-Next, [install the environment](../start/install.md) and
-[generate your first class](../start/first-generator.md).
+Continue the learning path with [Installation](../start/install.md).

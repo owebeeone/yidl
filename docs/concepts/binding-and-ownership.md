@@ -15,10 +15,10 @@ a spelling; it does not supply the value or fix an unresolved binding.
 
 ```mermaid
 flowchart TB
-  N[Consumer namespace: private capture identifier → object] --> C[Generated function globals or closure]
-  F[Frozen fact: identifier/path string] --> B[Build-time binding]
+  N["Consumer namespace:<br/>private capture<br/>identifier → object"] --> C["Generated function<br/>globals or closure"]
+  F["Frozen fact:<br/>identifier/path string"] --> B["Build-time<br/>binding"]
   B --> C
-  C --> I[Instance storage after construction]
+  C --> I["Instance storage<br/>after construction"]
 ```
 
 For an arbitrary object, install it under a deterministic private name in a fresh

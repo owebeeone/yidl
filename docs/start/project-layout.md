@@ -1,5 +1,10 @@
 # Split a project and regenerate
 
+**Optional guide after the first tutorial.** Use this when your generator needs
+more than one source file. It assumes the
+[installed example environment](install.md) and the stages from
+[Generate your first class](first-generator.md); it is not part of initial setup.
+
 A source map is an explicit mapping of logical filenames to source text. The
 entry name is a **map key**, not the module declaration and not a search through
 the filesystem. Keep logical keys stable when packaging files.

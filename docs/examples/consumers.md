@@ -1,5 +1,10 @@
 # Used in practice: qualified consumer excerpts
 
+**Optional reading after the [standalone tutorial](../start/first-generator.md).**
+These larger applications show how the same mechanisms are used in practice.
+You do not need to install or build these packages to complete the tutorial;
+use the [example catalog](index.md) for examples you can run in YIDL itself.
+
 These are fixed-revision excerpts of consumer-authored resources, facts and
 canonical generated output. They are attributed to their owning repositories;
 this documentation does not select or change a license. The snapshots include

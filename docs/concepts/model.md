@@ -1,5 +1,8 @@
 # How YIDL works
 
+**Learning path · Step 1 of 4.** Start with this overview; no installation or
+commands are needed on this page. Next comes [Generation stages](generation-pipeline.md).
+
 YIDL helps you write a **Python code generator**: a program that builds other
 Python classes and functions from structured input. Use it when several related
 classes need different combinations of fields, methods or initialization steps,
@@ -66,7 +69,9 @@ that a field is named `x` is different from the value `3` stored in an object's
 
 ## Names for the pieces
 
-The declaration names describe the roles you just saw:
+The declaration names describe the roles you just saw. Use this as a glossary;
+you do not need to memorize every term before continuing. The tutorial shows how
+the pieces work together:
 
 - A **concept** groups a generator's definitions.
 - A **property** names one kind of fact, such as `FieldName`. It has a Python
@@ -127,7 +132,5 @@ library. To store a different value in an existing Point, call `Point` with
 different arguments. Editing `model.py` only changes a derived output and will
 be lost on the next generation.
 
-Continue with [generation stages](generation-pipeline.md), then
-[installation](../start/install.md) and the [first generator](../start/first-generator.md).
-If you already build Python generators, the tutorial also has a
-[direct run route](../start/first-generator.md#run-and-inspect).
+**Next: [Generation stages](generation-pipeline.md)** — follow the authored
+definitions through to a usable class before installing the example environment.

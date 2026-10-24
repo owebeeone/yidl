@@ -1,5 +1,9 @@
 # Runnable example catalog
 
+**Choose one example for your next task.** These are independent recipes, not a
+sequence of required exercises. For your first visit, follow the
+[four-page learning path](../index.md#new-to-yidl-start-here) before using this catalog.
+
 Run from the YIDL repository root with the [installed environment](../start/install.md).
 All commands below use `ASTICHI_LOWER_ENGINE=python`; outputs go under ignored
 `build/`. Existing canonical fixtures use their own assertions and one explicit
