@@ -3,7 +3,7 @@ revision = 3
 requires-python = ">=3.12"
 
 [options]
-exclude-newer = "2026-10-17T17:55:33.410516Z"
+exclude-newer = "2026-10-18T00:02:10.446185Z"
 exclude-newer-span = "P1W"
 
 [[package]]
@@ -193,7 +193,7 @@ wheels = [
 
 [[package]]
 name = "yidl"
-version = "0.1.0"
+version = "0.1.1"
 source = { editable = "." }
 dependencies = [
     { name = "astichi" },
