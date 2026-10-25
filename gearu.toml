@@ -31,7 +31,11 @@ exact_checks = [
     ["uv", "run", "--no-project", "--python", "3.12", "--with", "twine==7.0.0", "python", "-m", "twine", "check", "--strict", "build/release/{python_version}/*"],
 ]
 github_notes = """
-yidl {tag} — initial alpha release, licensed LGPL-2.1-only.
+yidl {tag} — correct documentation links in the PyPI description.
+
+The README uses absolute URLs for the published documentation. Compiler and
+runtime behavior and dependency constraints are unchanged. Lifecycle 0.1.0
+continues to pin YIDL 0.1.0.
 
 See RELEASE.md for the supported route and release limits. Publication verifies
 fresh wheel and sdist installations and the Python-backend source suite on

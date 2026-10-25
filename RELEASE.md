@@ -1,5 +1,12 @@
 # Release Process
 
+## 0.1.1 documentation patch
+
+The package README now links to the published documentation using absolute
+URLs, so its links work when rendered on PyPI as well as GitHub. This patch
+does not change compiler or runtime behavior, or dependency constraints.
+Lifecycle 0.1.0 continues to use its tested, exact YIDL 0.1.0 pin.
+
 ## Initial 0.1.0 alpha
 
 YIDL supplies the current braced concept compiler through its Python API. The existing yidl-compile entry point remains the legacy transducer route.

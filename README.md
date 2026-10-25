@@ -12,28 +12,28 @@ separate from the instance values supplied later by `Point(3, 4)`.
 
 **New to YIDL?** Follow this sequence before studying the complete example:
 
-1. [How YIDL works](docs/concepts/model.md): what you author, the generator
+1. [How YIDL works](https://owebeeone.github.io/yidl/concepts/model/): what you author, the generator
    library versus generated application code, and YIDL's relationship to Astichi.
-2. [Generation stages](docs/concepts/generation-pipeline.md): preparation,
+2. [Generation stages](https://owebeeone.github.io/yidl/concepts/generation-pipeline/): preparation,
    generation and application execution.
-3. [Installation](docs/start/install.md), then
-   [generate a two-field slotted class](docs/start/first-generator.md).
+3. [Installation](https://owebeeone.github.io/yidl/start/install/), then
+   [generate a two-field slotted class](https://owebeeone.github.io/yidl/start/first-generator/).
 
 Already familiar with Python generation? Use the
-[direct run route](docs/start/first-generator.md#run-and-inspect) after installation.
+[direct run route](https://owebeeone.github.io/yidl/start/first-generator/#run-and-inspect) after installation.
 
-**0.1.0 development candidate; CPython 3.12+.** The recorded example environment
+**Alpha release; CPython 3.12+.** The recorded example environment
 is qualified separately from that minimum. Astichi 1.1.3 is declared as a
 runtime dependency and is installed automatically. The existing `yidl-compile`
 command targets the legacy
 transducer frontend; use the Python concept API taught here for current braced
 `.yidl` files. Packaging and publication readiness remain separate gates.
 
-- [Matching/property/parameter flow](docs/guides/matching-and-data-flow.md)
-- [Language reference](docs/reference/language.md)
-- [Versions and limitations](docs/reference/compatibility.md)
-- [Run and inspect examples](docs/examples/index.md)
-- [Build the navigable HTML documentation](docs/contributing/documentation.md)
+- [Matching/property/parameter flow](https://owebeeone.github.io/yidl/guides/matching-and-data-flow/)
+- [Language reference](https://owebeeone.github.io/yidl/reference/language/)
+- [Versions and limitations](https://owebeeone.github.io/yidl/reference/compatibility/)
+- [Run and inspect examples](https://owebeeone.github.io/yidl/examples/)
+- [Build the navigable HTML documentation](https://owebeeone.github.io/yidl/contributing/documentation/)
 
 The canonical developer contracts are `dev-docs/YidlDesignSummary.md` and
 `dev-docs/YidlCodingRules.md`. Older lifecycle design and internal validation
