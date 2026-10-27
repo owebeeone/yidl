@@ -39,7 +39,7 @@ wait for its PyPI publication and verify a fresh registry-only installation befo
 starting the next package. A published GitHub release triggers the upload job;
 creating that release is a publication action, not a build-only check.
 
-`gearu.toml` runs source tests on Python 3.12–3.14, builds the wheel from the
+`gearu.toml` runs source tests on Python 3.12–3.15, builds the wheel from the
 sdist and requires strict Twine validation. GEARU checks ignore local sibling
 source overrides; Lifecycle's checks therefore require the released upstream
 packages. CI additionally verifies fresh wheel/sdist installations before upload.
