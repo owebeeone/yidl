@@ -19,6 +19,7 @@ checks = [
     ["uv", "run", "--no-project", "--no-sources", "--env-file", ".release.env", "--python", "3.12", "--with", ".", "--with", "pytest==8.4.2", "--with", "black==26.3.1", "python", "-m", "pytest", "-q", "-p", "no:cacheprovider", "--ignore=tests/test_yidl_lifecycle_external_smoke.py"],
     ["uv", "run", "--no-project", "--no-sources", "--env-file", ".release.env", "--python", "3.13", "--with", ".", "--with", "pytest==8.4.2", "--with", "black==26.3.1", "python", "-m", "pytest", "-q", "-p", "no:cacheprovider", "--ignore=tests/test_yidl_lifecycle_external_smoke.py"],
     ["uv", "run", "--no-project", "--no-sources", "--env-file", ".release.env", "--python", "3.14", "--with", ".", "--with", "pytest==8.4.2", "--with", "black==26.3.1", "python", "-m", "pytest", "-q", "-p", "no:cacheprovider", "--ignore=tests/test_yidl_lifecycle_external_smoke.py"],
+    ["uv", "run", "--no-project", "--no-sources", "--env-file", ".release.env", "--python", "3.15", "--with", ".", "--with", "pytest==8.4.2", "--with", "black==26.3.1", "python", "-m", "pytest", "-q", "-p", "no:cacheprovider", "--ignore=tests/test_yidl_lifecycle_external_smoke.py"],
     ["uv", "run", "--no-project", "--python", "3.12", "--with", "build==1.6.1", "python", "-m", "build", "--outdir", "build/release/{python_version}"],
     ["uv", "run", "--no-project", "--python", "3.12", "--with", "twine==7.0.0", "python", "-m", "twine", "check", "--strict", "build/release/{python_version}/*"],
 ]
@@ -27,17 +28,15 @@ exact_checks = [
     ["uv", "run", "--no-project", "--no-sources", "--env-file", ".release.env", "--python", "3.12", "--with", ".", "--with", "pytest==8.4.2", "--with", "black==26.3.1", "python", "-m", "pytest", "-q", "-p", "no:cacheprovider", "--ignore=tests/test_yidl_lifecycle_external_smoke.py"],
     ["uv", "run", "--no-project", "--no-sources", "--env-file", ".release.env", "--python", "3.13", "--with", ".", "--with", "pytest==8.4.2", "--with", "black==26.3.1", "python", "-m", "pytest", "-q", "-p", "no:cacheprovider", "--ignore=tests/test_yidl_lifecycle_external_smoke.py"],
     ["uv", "run", "--no-project", "--no-sources", "--env-file", ".release.env", "--python", "3.14", "--with", ".", "--with", "pytest==8.4.2", "--with", "black==26.3.1", "python", "-m", "pytest", "-q", "-p", "no:cacheprovider", "--ignore=tests/test_yidl_lifecycle_external_smoke.py"],
+    ["uv", "run", "--no-project", "--no-sources", "--env-file", ".release.env", "--python", "3.15", "--with", ".", "--with", "pytest==8.4.2", "--with", "black==26.3.1", "python", "-m", "pytest", "-q", "-p", "no:cacheprovider", "--ignore=tests/test_yidl_lifecycle_external_smoke.py"],
     ["uv", "run", "--no-project", "--python", "3.12", "--with", "build==1.6.1", "python", "-m", "build", "--outdir", "build/release/{python_version}"],
     ["uv", "run", "--no-project", "--python", "3.12", "--with", "twine==7.0.0", "python", "-m", "twine", "check", "--strict", "build/release/{python_version}/*"],
 ]
 github_notes = """
-yidl {tag} — correct documentation links in the PyPI description.
+yidl {tag} — Python 3.15 compatibility patch.
 
-The README uses absolute URLs for the published documentation. Compiler and
-runtime behavior and dependency constraints are unchanged. Lifecycle 0.1.0
-continues to pin YIDL 0.1.0.
-
-See RELEASE.md for the supported route and release limits. Publication verifies
-fresh wheel and sdist installations and the Python-backend source suite on
-CPython 3.12–3.14. Native and cross-platform claims require separate evidence.
+The source and publication matrices now include CPython 3.15 alongside
+3.12–3.14. Gearu verifies the release candidate using published dependencies;
+GitHub trusted publishing uploads only after its release checks pass.
+See RELEASE.md and dev-docs/Python315Release.md for evidence and scope.
 """

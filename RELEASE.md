@@ -1,5 +1,12 @@
 # Release Process
 
+## Python 3.15 patch
+
+The next patch adds CPython 3.15 to the source, Gearu and publication matrices,
+retaining 3.12–3.14. See `dev-docs/Python315Release.md` for current evidence.
+This does not authorize unrelated compiler or runtime changes. Astichi stays
+at the already-published 1.1.3 pin.
+
 ## 0.1.1 documentation patch
 
 The package README now links to the published documentation using absolute
