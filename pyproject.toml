@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "yidl"
-version = "0.1.1"
+version = "0.1.2"
 description = "Declarative Python code-generation compiler"
 readme = "README.md"
 license = "LGPL-2.1-only"

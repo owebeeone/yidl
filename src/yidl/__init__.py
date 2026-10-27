@@ -1,6 +1,6 @@
 """YIDL — declarative specification language for AOT lifecycle / transducer codegen."""
 
-__version__ = "0.1.1"
+__version__ = "0.1.2"
 
 from yidl.lexer import Token, lex_yidl
 from yidl.parser import AST, YIDLParser
