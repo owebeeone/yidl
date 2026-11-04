@@ -10,7 +10,7 @@ readme = "README.md"
 license = "LGPL-2.1-only"
 license-files = ["LICENSE"]
 requires-python = ">=3.12"
-dependencies = ["lark>=1.1", "astichi==1.1.3"]
+dependencies = ["lark>=1.1", "astichi==1.1.4"]
 authors = [{ name = "YIDL contributors" }]
 keywords = ["dsl", "compiler", "codegen", "lifecycle"]
 classifiers = [
@@ -36,6 +36,8 @@ dev = ["black==26.3.1", "pytest>=7.0"]
 
 [tool.uv]
 exclude-newer = "1 week"
+# Astichi is our own package, released and verified by us; skip the cooldown.
+exclude-newer-package = { astichi = false }
 
 [tool.hatch.build]
 sources = ["src"]

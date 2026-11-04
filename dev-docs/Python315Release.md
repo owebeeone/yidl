@@ -46,3 +46,20 @@ https://github.com/owebeeone/yidl-dataclass/blob/main/docs/validation/releases/p
 These are qualification results, not new independent reviews or new performance/
 cost measurements. Windows 3.15 remains outside this pass: Astichi 1.1.3 has no
 cp315 Windows wheel. No Astichi implementation change was made.
+
+## Astichi 1.1.4 follow-up
+
+Astichi 1.1.4 fixes the CPython 3.15 provenance round-trip (`is_lazy` on
+imports) and ships one stable-ABI Windows wheel that covers Windows 3.15. YIDL
+moves its exact pin to `astichi==1.1.4`, with the compiler unchanged.
+
+On Windows (CPython 3.12.14, 3.13.5, 3.14.7 and 3.15.2), the release-gate suite
+with the explicit Python backend and published Astichi 1.1.4 gave
+**297 passed, 4 skipped** on each version.
+
+An extra native-backend run on 3.15.2 gave 296 passed, 4 skipped, 1 failed. The
+failure is `test_yidl_goldens.py::test_fixture_outputs_match_goldens[documentation_classes.py]`:
+the native engine names a local `result__astichi_scoped_1` where the golden has
+`result`. It already existed before this patch: it fails the same way on 3.14
+and with released YIDL 0.1.2 and Astichi 1.1.3. It is outside the release gate,
+which uses the Python backend.

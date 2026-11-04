@@ -1,5 +1,15 @@
 # Release Process
 
+## Astichi 1.1.4 patch
+
+The next patch moves the exact Astichi pin from 1.1.3 to 1.1.4. Astichi 1.1.4
+fixes provenance round-trips on CPython 3.15 (its native parser and managed
+imports now set `is_lazy` on imports). It also ships one stable-ABI Windows
+wheel, so Windows CPython 3.15 installs without building Astichi from source.
+`[tool.uv]` exempts Astichi, our own package, from the one-week
+`exclude-newer` cooldown so the lockfile can adopt it immediately. YIDL's
+compiler and runtime are unchanged. See `dev-docs/Python315Release.md`.
+
 ## Python 3.15 patch
 
 The next patch adds CPython 3.15 to the source, Gearu and publication matrices,
