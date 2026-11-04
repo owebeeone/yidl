@@ -33,10 +33,10 @@ exact_checks = [
     ["uv", "run", "--no-project", "--python", "3.12", "--with", "twine==7.0.0", "python", "-m", "twine", "check", "--strict", "build/release/{python_version}/*"],
 ]
 github_notes = """
-yidl {tag} — Astichi 1.1.4 dependency patch.
+yidl {tag} — Astichi 1.1.5 dependency patch.
 
-YIDL now requires Astichi 1.1.4, which fixes provenance round-trips on
-CPython 3.15 and ships a stable-ABI Windows wheel covering Windows 3.15.
+YIDL now requires Astichi 1.1.5, which fixes name hygiene for block pieces
+spliced on its native engine, so native output matches the Python engine.
 YIDL's compiler and runtime are unchanged. Gearu verifies the release
 candidate using published dependencies; GitHub trusted publishing uploads
 only after its release checks pass. See RELEASE.md and

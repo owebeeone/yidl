@@ -1,5 +1,13 @@
 # Release Process
 
+## Astichi 1.1.5 patch
+
+The next patch moves the exact Astichi pin from 1.1.4 to 1.1.5. Astichi 1.1.5
+fixes name hygiene on its native engine: block pieces spliced through
+`AssemblyScope` now rename colliding locals the same way the Python engine
+does. YIDL's compiler and runtime are unchanged. See
+`dev-docs/Python315Release.md`.
+
 ## Astichi 1.1.4 patch
 
 The next patch moves the exact Astichi pin from 1.1.3 to 1.1.4. Astichi 1.1.4

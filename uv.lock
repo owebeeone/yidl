@@ -11,15 +11,15 @@ astichi = false
 
 [[package]]
 name = "astichi"
-version = "1.1.4"
+version = "1.1.5"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/e7/23/1c5bc80c0486044105c6068d340cabf17c37d187f6ecc703e117528638bd/astichi-1.1.4.tar.gz", hash = "sha256:349f8192b782ecc0534a58ce9fa90ddf08a0b93046aa9517d8dc0af9af92ac1b", size = 1075612, upload-time = "2026-11-04T14:35:12.471Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/ae/3f/d44a6ed239ef026be639f3829bfe166525fba9f49faf8a5b97e8dff92ecd/astichi-1.1.5.tar.gz", hash = "sha256:7a668e477e71f3e9247a00c57a1698b79af985a7addf2c08738c09d699833c32", size = 1079138, upload-time = "2026-11-04T16:34:29.101Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/8b/7a/848294ee96426dff4e51596f0bb4f5a137903c38dac6b43cdb014f3a1e92/astichi-1.1.4-cp312-abi3-macosx_10_13_x86_64.whl", hash = "sha256:23963c3248b52da28b6be164aa9809f1197d61e1ee7a174ecf7ffffd19f49e6d", size = 1902640, upload-time = "2026-11-04T14:35:02.852Z" },
-    { url = "https://files.pythonhosted.org/packages/aa/78/7d5c392189e362d6764e3774d164029bfb7abe55553ec0d243a572f74793/astichi-1.1.4-cp312-abi3-macosx_11_0_arm64.whl", hash = "sha256:95aab517abc2d525746c4ff57178127dd0e0504be0c44b5007ba082783328071", size = 1800464, upload-time = "2026-11-04T14:35:04.692Z" },
-    { url = "https://files.pythonhosted.org/packages/a5/b4/9442aab9f1ebe566593f297e25c4a4af477f2cbab3b5d6f5b9cd8e0082b3/astichi-1.1.4-cp312-abi3-manylinux_2_28_aarch64.whl", hash = "sha256:f1e007e6f6df2ef253b1c347e133acfa0734cbae745031a2119759eafa93a126", size = 1815887, upload-time = "2026-11-04T14:35:06.575Z" },
-    { url = "https://files.pythonhosted.org/packages/e3/a5/367da37dede3dd3cbb86fa94e2c13ba90f8df68ebe0b14b92594283a5770/astichi-1.1.4-cp312-abi3-manylinux_2_28_x86_64.whl", hash = "sha256:ecce0eb57af17595ec5af1f6d1544dc7a26fbf6c3003b73a7490870838a0e517", size = 1957256, upload-time = "2026-11-04T14:35:08.756Z" },
-    { url = "https://files.pythonhosted.org/packages/84/af/f2fad14d99bb498cb4b80d98d403b74cd8c2bbb606687d4ed1acf702ee2d/astichi-1.1.4-cp312-abi3-win_amd64.whl", hash = "sha256:a956cd97b1866c4e02394c260ffa755fb9b3b543cb739eb96b432d8b86b16d80", size = 1971039, upload-time = "2026-11-04T14:35:10.734Z" },
+    { url = "https://files.pythonhosted.org/packages/4a/09/06025a9f9b542060cdbb9a6f74f600959860178cb07ce80429e11afb05d8/astichi-1.1.5-cp312-abi3-macosx_10_13_x86_64.whl", hash = "sha256:d29f248cf796e96c9bc74d1fc4c82c3041a1ef0d416af9575fc935c0d5ed6d26", size = 1934787, upload-time = "2026-11-04T16:34:20.605Z" },
+    { url = "https://files.pythonhosted.org/packages/eb/de/cd99c4b3a9c1b6d9207ea33c95385ed573a2341a27ae17804877d3564260/astichi-1.1.5-cp312-abi3-macosx_11_0_arm64.whl", hash = "sha256:54bb2dcb0b15cb9608ae9397a495652a9c630c18c75660efa3e73b809438746b", size = 1829789, upload-time = "2026-11-04T16:34:22.188Z" },
+    { url = "https://files.pythonhosted.org/packages/8a/21/3947fbfd73fe38b0f347e478807853903a15a0091c18a519f1310d5aa06d/astichi-1.1.5-cp312-abi3-manylinux_2_28_aarch64.whl", hash = "sha256:65818b22df1b04c7a967d90b1c174d1c2d8026ad74e80195b1621153e74a25cf", size = 1845623, upload-time = "2026-11-04T16:34:23.956Z" },
+    { url = "https://files.pythonhosted.org/packages/7c/11/4aa24f981ecc159328befc21d5d1fcf15a6469c0e8948bc7710bb2bb5b69/astichi-1.1.5-cp312-abi3-manylinux_2_28_x86_64.whl", hash = "sha256:b412c87d293c74b4a86d609816ffe9b57293d0c96b869d08d7c000b1e9d00b70", size = 1991287, upload-time = "2026-11-04T16:34:25.879Z" },
+    { url = "https://files.pythonhosted.org/packages/3b/33/0381e601e2709ea67a85e9c5fc28b7f52f5a13bf82ccb653ac79ab0eae31/astichi-1.1.5-cp312-abi3-win_amd64.whl", hash = "sha256:7e9b76da38fdd6da4646411d5975fbe12be8247d6932a5e87b1a61e09384f7f4", size = 2012801, upload-time = "2026-11-04T16:34:27.588Z" },
 ]
 
 [[package]]
@@ -209,7 +209,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "astichi", specifier = "==1.1.4" },
+    { name = "astichi", specifier = "==1.1.5" },
     { name = "black", marker = "extra == 'dev'", specifier = "==26.3.1" },
     { name = "lark", specifier = ">=1.1" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=7.0" },

@@ -63,3 +63,17 @@ the native engine names a local `result__astichi_scoped_1` where the golden has
 `result`. It already existed before this patch: it fails the same way on 3.14
 and with released YIDL 0.1.2 and Astichi 1.1.3. It is outside the release gate,
 which uses the Python backend.
+
+## Astichi 1.1.5 follow-up
+
+Astichi 1.1.5 fixes name hygiene on its native engine: block pieces spliced
+through `AssemblyScope` now rename colliding locals as the Python engine does.
+YIDL moves its exact pin to `astichi==1.1.5`, with the compiler unchanged.
+
+On Windows, the release-gate suite with the explicit Python backend and
+published Astichi 1.1.5 gave **297 passed, 4 skipped** on each of CPython
+3.12.14, 3.13.5, 3.14.7 and 3.15.2.
+
+The native-backend run on 3.15.2 now also gives **297 passed, 4 skipped**. The
+`documentation_classes.py` golden failure noted above (`result__astichi_scoped_1`
+in place of `result`) is fixed by Astichi 1.1.5.
